@@ -14,7 +14,7 @@
 #define XTATE_WITH_VERSION     "xtate/2.13.1"
 #define XTATE_DESCRIPTION      "A modular all-stack network scanner for next-generation internet surveys."
 #define XTATE_AUTHOR           "Alvin Chen"
-#define XTATE_CONTACT          "chenchiyu14@nudt.edu.cn"
+#define XTATE_CONTACT          "shineccy@aliyun.com"
 #define XTATE_GITHUB_URL       "https://github.com/babycoff/xtate"
 #define XTATE_ISSUES_URL       "https://github.com/babycoff/xtate/issues"
 #define XTATE_DEFAULT_CONF     "/etc/xtate/xtate.conf"

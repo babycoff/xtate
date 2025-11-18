@@ -9,7 +9,7 @@ project(
 set(PROJECT_NAME_ALL_CAPS   "XTATE")
 set(PROJECT_NAME_TITLE_CASE "Xtate")
 set(PROJECT_AUTHOR          "Alvin Chen")
-set(PROJECT_CONTACT         "chenchiyu14@nudt.edu.cn")
+set(PROJECT_CONTACT         "shineccy@aliyun.com")
 set(PROJECT_GITHUB_URL      "https://github.com/babycoff/xtate")
 set(PROJECT_ISSUES_URL      "https://github.com/babycoff/xtate/issues")
 set(PROJECT_CONF_PATH       "/etc/xtate/xtate.conf")

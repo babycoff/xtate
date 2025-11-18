@@ -485,7 +485,7 @@ ninja -j4
 
 Xtate was created by Alvin Chen:
 
-- email: chenchiyu14@nudt.edu.cn
+- email: shineccy@aliyun.com
 
 Original code was written during my master's studies at:
 
