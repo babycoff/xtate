@@ -1,3 +1,5 @@
+
+
 <h1 id=top align="center">
   <img src="screenshots/poster.jpg" alt="xtate" width="600px">
   <br>
@@ -397,7 +399,7 @@ libpcap-dev \
 libssl-dev \
 libpcre2-dev \
 libxml2-dev \
-liblua5.X-0 \
+liblua5.4-dev \
 libbson-dev \
 libmongoc-dev
 ```
