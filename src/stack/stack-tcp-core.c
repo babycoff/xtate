@@ -851,8 +851,8 @@ static bool _tcp_seg_acknowledge(TCB *tcb, uint32_t ackno) {
                 FREE(seg->buf);
             }
             FREE(seg);
-            if (ackno == tcb->ackno_them)
-                return true; /* good ACK */
+            if (ackno == tcb->seqno_me)
+                return true; /* all outstanding data acknowledged */
         }
 
         if (tcb->segments && length < tcb->segments->length) {
@@ -875,6 +875,7 @@ static bool _tcp_seg_acknowledge(TCB *tcb, uint32_t ackno) {
                 seg->is_dynamic = 1;
             } else {
                 seg->buf += length;
+                seg->length -= length;
             }
         }
     }
@@ -886,11 +887,11 @@ static bool _tcp_seg_acknowledge(TCB *tcb, uint32_t ackno) {
 /***************************************************************************
  ***************************************************************************/
 SockRes tcpapi_set_timeout(TCP_Stack *socket, unsigned secs, unsigned usecs) {
+    if (socket == NULL || socket->tcb == NULL)
+        return SOCKERR_EBADF;
+
     TCP_Table *tcpcon = socket->tcpcon;
     TCB       *tcb    = socket->tcb;
-
-    if (socket == NULL)
-        return SOCKERR_EBADF;
 
     timeouts_add(tcpcon->timeouts, tcb->timeout, offsetof(TCB, timeout),
                  TICKS_FROM_TV(socket->secs + secs, socket->usecs + usecs));
@@ -965,8 +966,14 @@ SockRes tcpapi_close(TCP_Stack *socket) {
     if (socket == NULL || socket->tcb == NULL)
         return SOCKERR_EBADF;
 
-    _tcpcon_send_packet(socket->tcpcon, socket->tcb, TCP_FLAG_RST, 0, 0);
-    _tcpcon_destroy_tcb(socket->tcpcon, socket->tcb, Reason_Close);
+    TCB *tcb = socket->tcb;
+
+    _tcpcon_send_packet(socket->tcpcon, tcb, TCP_FLAG_RST, 0, 0);
+    _tcpcon_destroy_tcb(socket->tcpcon, tcb, Reason_Close);
+
+    /* The TCB is now on the table's freed-list. Do not leave a dangling
+     * pointer in the per-connection API handle. */
+    socket->tcb = NULL;
 
     return SOCKERR_NONE;
 }
@@ -1024,6 +1031,16 @@ void stack_incoming_tcp(TCP_Table *tcpcon, TCB *tcb, TcpWhat what,
                         const unsigned char *payload, size_t payload_length,
                         unsigned secs, unsigned usecs, unsigned seqno_them,
                         unsigned ackno_them) {
+    /* A TCP segment larger than the packet buffer is malformed for this
+     * stack; drop it instead of asserting (Debug) or continuing with
+     * undefined assumptions (Release). */
+    if (payload_length >= 2000) {
+        LOG(LEVEL_WARN,
+            "tcp.seqno: dropping oversized TCP payload (%u bytes)\n",
+            (unsigned)payload_length);
+        return;
+    }
+
     /* FILTER
      * Reject out-of-order payloads
      * NOTE: payload and ACK are handled seperately
@@ -1040,7 +1057,6 @@ void stack_incoming_tcp(TCP_Table *tcpcon, TCB *tcb, TcpWhat what,
                 payload_length += payload_offset;
                 payload -= payload_offset;
                 seqno_them -= payload_offset;
-                assert(payload_length < 2000);
             }
         } else if (payload_offset > 0) {
             /* This is an out-of-order fragment in the future. an important
@@ -1486,8 +1502,10 @@ again:
              * */
             if (pass.len)
                 tcpapi_send_data(socket, pass.data, pass.len, pass.is_dynamic);
-            if (pass.is_close)
+            if (pass.is_close) {
                 tcpapi_close(socket);
+                break;
+            }
 
             if (pass.len)
                 tcpapi_change_app_state(socket, APP_STATE_SENDING);
@@ -1529,4 +1547,59 @@ again:
             break;
         }
     }
+}
+
+/***************************************************************************
+ * Regression tests for the TCP segment acknowledgement bookkeeping and the
+ * NULL-safe API entry points. Exposed for --selftest.
+ ***************************************************************************/
+int tcp_seg_ack_selftest(void) {
+#define TCP_SELFTEST_CHECK(cond, step)                                        \
+    do {                                                                      \
+        if (!(cond)) {                                                        \
+            LOG(LEVEL_ERROR, "tcp_seg_ack_selftest failed at step %d\n",      \
+                step);                                                        \
+            return 1;                                                         \
+        }                                                                     \
+    } while (0)
+
+    TCB tcb;
+    memset(&tcb, 0, sizeof(tcb));
+    tcb.ip_them.version = 4;
+    tcb.ip_them.ipv4    = 0x01020304;
+    tcb.port_them       = 80;
+    tcb.seqno_me        = 1000;
+
+    TcpSegment *s1 = CALLOC(1, sizeof(TcpSegment));
+    TcpSegment *s2 = CALLOC(1, sizeof(TcpSegment));
+    unsigned char b1[128];
+    unsigned char b2[128];
+
+    s1->buf      = b1;
+    s1->length   = 100;
+    s1->seqno    = 1000;
+    s2->buf      = b2;
+    s2->length   = 50;
+    s2->seqno    = 1100;
+    s1->next     = s2;
+    tcb.segments = s1;
+
+    TCP_SELFTEST_CHECK(_tcp_seg_acknowledge(&tcb, 1050), 1);
+    TCP_SELFTEST_CHECK(tcb.seqno_me == 1050 && tcb.segments == s1 &&
+                           s1->length == 50,
+                       2);
+
+    TCP_SELFTEST_CHECK(_tcp_seg_acknowledge(&tcb, 1100), 3);
+    TCP_SELFTEST_CHECK(tcb.seqno_me == 1100 && tcb.segments == s2, 4);
+
+    TCP_SELFTEST_CHECK(_tcp_seg_acknowledge(&tcb, 1150), 5);
+    TCP_SELFTEST_CHECK(tcb.seqno_me == 1150 && tcb.segments == NULL, 6);
+
+    TCP_SELFTEST_CHECK(!_tcp_seg_acknowledge(&tcb, 1150), 7);
+
+    TCP_SELFTEST_CHECK(tcpapi_set_timeout(NULL, 1, 0) == SOCKERR_EBADF, 8);
+    TCP_SELFTEST_CHECK(tcpapi_close(NULL) == SOCKERR_EBADF, 9);
+
+    return 0;
+#undef TCP_SELFTEST_CHECK
 }

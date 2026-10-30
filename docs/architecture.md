@@ -57,9 +57,9 @@ logic runs, so that is the only pool you scale out when a stateful scan needs mo
 `handle_q[0..M-1]`. Because the hash only uses the source IP, every packet from a given
 host lands on the same handler thread, in arrival order. That single decision is what
 makes stateful scanning possible without locks: a handler owns its connections
-exclusively, so a TCB only ever has one writer. `M` must be a power of two, and the hash
-is 8 bits wide — see [known-limitations.md](./known-limitations.md) for what that implies
-at very large handler counts.
+exclusively, so a TCB only ever has one writer. `M` must be a power of two and at most
+256: the hash is 8 bits wide, and larger masks would leave the extra handler queues
+permanently empty. Larger values are rejected at startup.
 
 **Per-handler connection tables.** A stateful scan such as `tcp-state` allocates one
 user-space TCP connection table per handler thread, not one global table. The affinity

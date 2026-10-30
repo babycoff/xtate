@@ -103,4 +103,7 @@ SockRes tcpapi_close(TCP_Stack *socket);
 void application_event(TCP_Stack *socket, AppEvent cur_event,
                        const void *payload, size_t payload_length);
 
+/* Regression test used by --selftest. */
+int tcp_seg_ack_selftest(void);
+
 #endif

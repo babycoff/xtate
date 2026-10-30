@@ -38,6 +38,7 @@
 #include "templ/templ-init.h"
 #include "templ/templ-opts.h"
 #include "templ/templ-tcp.h"
+#include "stack/stack-tcp-core.h"
 
 #include "crypto/crypto-base64.h"
 #include "crypto/crypto-blackrock.h"
@@ -1275,6 +1276,12 @@ static ConfRes SET_rx_handler_count(void *conf, const char *name,
     } else if (!conf_is_power_of_2(count)) {
         LOG(LEVEL_ERROR,
             "%s: receive handler thread count must be power of 2.\n", value);
+        return Conf_ERR;
+    } else if (count > 256) {
+        /* dispatch hashes source IP to 8 bits; masks above 256 would leave
+         * the high handler queues permanently empty. */
+        LOG(LEVEL_ERROR, "%s: receive handler thread count must be <= 256.\n",
+            name);
         return Conf_ERR;
     }
 
@@ -4579,6 +4586,7 @@ int xconf_selftest(void) {
         x += datachain_selftest();
         x += proto_http_maker_selftest();
         x += template_selftest();
+        x += tcp_seg_ack_selftest();
     }
 
     if (x != 0)
