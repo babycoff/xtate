@@ -44,6 +44,14 @@ void stack_transmit_pktbuf(NetStack *stack, PktBuf *response) {
     }
 }
 
+void stack_release_pktbuf(NetStack *stack, PktBuf *response) {
+    int err = rte_ring_mp_enqueue(stack->packet_buffers, response);
+    if (err) {
+        LOG(LEVEL_ERROR, "failed to release packet buffer (should be "
+                         "impossible)\n");
+    }
+}
+
 /***************************************************************************
  * The receive thread doesn't transmit packets. Instead, it queues them
  * up on the transmit thread. Every so often, the transmit thread needs

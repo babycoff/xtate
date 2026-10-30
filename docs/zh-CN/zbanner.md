@@ -102,7 +102,7 @@ ZBanner 发出的报文描述的是本机内核一无所知的连接。当 SYN-A
 |:---|:---|:---|
 | `open` | `syn-ack` | 端口应答了 SYN；探测载荷已发出。 |
 | `fake-open` | `zerowin` | 窗口为零的 SYN-ACK。常见于 SYN 代理或 accept 队列已满；不会发载荷。 |
-| `closed` | `rst` | 端口用 RST 应答——除非被 `--record-ack` 吞掉，见下文。 |
+| `closed` | `rst` | 端口用 RST 应答。 |
 | `responsed` | `ack with data` | 探测模块未设置分类时的兜底值。 |
 
 同一个目标可能产生多行：SYN-ACK 带来的 `open`、每个 banner 段一行，以及启用 `--record-ack` 时的 `acknowledged` 行。把这些行合并成每目标一条记录，是使用方的工作——若在 ZBanner 内部完成，就恰好需要它当初刻意避免的每目标状态。
@@ -123,11 +123,10 @@ ZBanner 发出的报文描述的是本机内核一无所知的连接。当 SYN-A
 
 - **没有每目标超时，也没有重传。** 丢掉一个 SYN 就少一条结果；丢掉一个 banner 段就少一段 banner。`--repeat-synack`、`--repeat-banner`、`--repeat-ack` 和 `--repeat-rst` 只是把重复到达的结果重新输出，没有任何机制会重发从未到达的包。
 - **去重是近似的。** 它是一张按 `--dedup-win` 定容的四路桶表，采用随机淘汰。当某个地址段产生很高扇出时，表项会被挤掉，重复计数随之不可靠——`--all-banner` 的记账也会受牵连。
-- **`--record-ack` 可能让关闭端口消失。** 关闭端口用 `RST|ACK` 应答。启用 `--record-ack` 后，ACK 分支可能在 RST 分支之前就把它消费掉；而 ACK 分支要求 `ackno == cookie + payload_len + 1`，只要探测载荷非空，这个检查就不成立，包会被丢弃。做关闭端口普查时请关掉 `--record-ack`。
 - **零窗口一律报成 `fake-open`。** accept 队列已满的真实服务同样会通告零窗口；这类目标会被如此分类，而且永远不会去请求它的 banner。
 - **默认只读一个 banner 段。** 非 SYN 模板通告 1024 字节窗口，且首个数据段之后立即 RST，因此大 banner 和多段 TLS 握手会被截断。请使用 `--all-banner`，并调整 `--tcp-win`、`--max-packet-len` 和 `--snaplen`。
 - **不处理乱序。** 数据段按到达顺序处理，没有重组队列，也没有重新排序。
-- **载荷大小受包缓冲限制。** 放不下的探测载荷不会发出，而且失败是静默的。
+- **载荷大小受包缓冲限制。** 放不下的探测载荷不会发出，并会记录一条警告。
 - **只有一个接收线程。** 去重与校验都跑在那一个接收线程上，因此无论你配置多少发送或处理线程，接收侧处理都是吞吐上限。
 
 完整的清单（含传输层与平台方面的注意事项）见 [known-limitations.md](./known-limitations.md)。要在 ZBanner 与有状态引擎之间做选择，见 [scanning-modes.md](./scanning-modes.md) 与 [hltcp.md](./hltcp.md)。

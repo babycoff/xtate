@@ -42,6 +42,13 @@ PktBuf *stack_get_pktbuf(NetStack *stack);
  */
 void stack_transmit_pktbuf(NetStack *stack, PktBuf *response);
 
+/**
+ * Return a packet buffer that was never queued for transmission.
+ * Use this only when a packet-construction call failed and there is nothing
+ * to send; transmitting an empty buffer and releasing it are both wrong.
+ */
+void stack_release_pktbuf(NetStack *stack, PktBuf *response);
+
 void stack_flush_packets(NetStack *stack, struct NetworkAdapter *adapter,
                          struct Adapter_Cache *acache, uint64_t *packets_sent,
                          uint64_t *batchsize);

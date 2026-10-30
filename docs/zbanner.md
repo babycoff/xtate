@@ -157,7 +157,7 @@ bundled helper, and you are on your own to arrange it. Both ZBanner and
 |:---|:---|:---|
 | `open` | `syn-ack` | The port answered the SYN; the probe payload was sent. |
 | `fake-open` | `zerowin` | SYN-ACK with a zero window. Often a SYN-proxy or a full backlog; no payload is sent. |
-| `closed` | `rst` | The port answered with RST — unless `--record-ack` swallowed it, see below. |
+| `closed` | `rst` | The port answered with RST. |
 | `responsed` | `ack with data` | Fallback when the probe module set no classification. |
 
 A single target can produce several rows: `open` from the SYN-ACK, one row per banner
@@ -191,11 +191,6 @@ without a table.
 - **Deduplication is approximate.** It is a 4-way bucket table with random eviction, sized
   by `--dedup-win`. Under high fan-out from one address block, entries are evicted and the
   repeat counter becomes unreliable — which also degrades `--all-banner` bookkeeping.
-- **`--record-ack` can hide closed ports.** A closed port answers with `RST|ACK`. With
-  `--record-ack` enabled, the ACK branch can consume it before the RST branch sees it, and
-  because the ACK branch requires `ackno == cookie + payload_len + 1`, a non-empty probe
-  payload makes the check fail and the packet is dropped. Leave `--record-ack` off for
-  closed-port census.
 - **Zero window is always reported as `fake-open`.** A real service whose accept queue is
   full also advertises a zero window; such a target is classified but its banner is never
   requested.
@@ -206,7 +201,7 @@ without a table.
 - **No out-of-order handling.** Segments are processed in arrival order; there is no
   reassembly queue and no re-sorting.
 - **Payload size is bounded by the packet buffer.** A probe payload that does not fit is
-  not sent, and the failure is silent.
+  not sent; a warning is logged.
 - **Single receiver.** Deduplication and validation run on the one receive thread, so
   receive-side processing is the throughput ceiling regardless of how many transmitters or
   handlers you configure.

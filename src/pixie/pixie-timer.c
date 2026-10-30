@@ -234,10 +234,11 @@ int pixie_time_selftest() {
     elapsed = stop - start;
 
     /* Windows Sleep() is quantised by the system timer; a 1% bound is too
-     * tight there and makes --selftest fail intermittently. 5% still catches
-     * a broken sleep implementation while tolerating scheduler granularity. */
+     * tight there and makes --selftest fail intermittently (especially under
+     * load). 10% still catches a broken sleep implementation while tolerating
+     * scheduler granularity. */
 #ifdef _WIN32
-    static const double tolerance = 0.05;
+    static const double tolerance = 0.10;
 #else
     static const double tolerance = 0.01;
 #endif

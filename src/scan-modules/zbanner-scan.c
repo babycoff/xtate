@@ -7,6 +7,7 @@
 #include "../templ/templ-tcp.h"
 #include "../util-data/safe-string.h"
 #include "../util-misc/misc.h"
+#include "../util-out/logger.h"
 
 #define ZBANNER_DEDUP_TYPE_PORT   0
 #define ZBANNER_DEDUP_TYPE_ACK    1
@@ -606,8 +607,25 @@ static void zbanner_validate(uint64_t entropy, Recved *recved, PreHandle *pre) {
     uint8_t flags_them =
         TCP_FLAGS(recved->packet, recved->parsed.transport_offset);
 
+    /* A response is only meaningful for a probe slot we actually used. The
+     * source-port range is wider than multi_num, so reject out-of-range
+     * slots before handing an index to a probe. */
+    unsigned index = recved->parsed.port_dst - src_port_start;
+    if (index >= ZBannerScan.probe->multi_num) {
+        pre->go_record = 0;
+        return;
+    }
+
+    /*rst for syn (a little different)*/
+    if (TCP_FLAG_HAS(flags_them, TCP_FLAG_RST)) {
+        if (seqno_me == cookie + 1 || seqno_me == cookie) {
+            pre->go_dedup   = 1;
+            pre->dedup_type = ZBANNER_DEDUP_TYPE_PORT;
+            pre->no_dedup   = zbanner_conf.no_dedup_rst;
+        }
+    }
     /*syn-ack*/
-    if (TCP_FLAG_HAS(flags_them, TCP_FLAG_SYN | TCP_FLAG_ACK)) {
+    else if (TCP_FLAG_HAS(flags_them, TCP_FLAG_SYN | TCP_FLAG_ACK)) {
         if (cookie == seqno_me - 1) {
             pre->go_dedup   = 1;
             pre->dedup_type = ZBANNER_DEDUP_TYPE_PORT;
@@ -623,6 +641,7 @@ static void zbanner_validate(uint64_t entropy, Recved *recved, PreHandle *pre) {
     * 3.[FIN, PSH, ACK]: no more data and disconnecting
     */
     else if (TCP_FLAG_HAS(flags_them, TCP_FLAG_ACK) &&
+             !TCP_FLAG_HAS(flags_them, TCP_FLAG_RST) &&
              recved->parsed.app_length) {
         ProbeTarget ptarget = {
             .target.ip_proto  = recved->parsed.ip_protocol,
@@ -631,7 +650,7 @@ static void zbanner_validate(uint64_t entropy, Recved *recved, PreHandle *pre) {
             .target.port_them = recved->parsed.port_src,
             .target.port_me   = recved->parsed.port_dst,
             .cookie           = 0, /*zbanner can recognize reponse by itself*/
-            .index            = recved->parsed.port_dst - src_port_start,
+            .index            = index,
         };
 
         size_t payload_len;
@@ -647,6 +666,7 @@ static void zbanner_validate(uint64_t entropy, Recved *recved, PreHandle *pre) {
      * ACK for our probe without payload.
      */
     else if (TCP_FLAG_HAS(flags_them, TCP_FLAG_ACK) &&
+             !TCP_FLAG_HAS(flags_them, TCP_FLAG_RST) &&
              !recved->parsed.app_length && zbanner_conf.record_ack) {
         ProbeTarget ptarget = {
             .target.ip_proto  = recved->parsed.ip_protocol,
@@ -655,7 +675,7 @@ static void zbanner_validate(uint64_t entropy, Recved *recved, PreHandle *pre) {
             .target.port_them = recved->parsed.port_src,
             .target.port_me   = recved->parsed.port_dst,
             .cookie           = 0, /*zbanner can recognize reponse by itself*/
-            .index            = recved->parsed.port_dst - src_port_start,
+            .index            = index,
         };
 
         size_t payload_len;
@@ -665,14 +685,6 @@ static void zbanner_validate(uint64_t entropy, Recved *recved, PreHandle *pre) {
             pre->go_dedup   = 1;
             pre->dedup_type = ZBANNER_DEDUP_TYPE_ACK;
             pre->no_dedup   = zbanner_conf.no_dedup_ack;
-        }
-    }
-    /*rst for syn (a little different)*/
-    else if (TCP_FLAG_HAS(flags_them, TCP_FLAG_RST)) {
-        if (seqno_me == cookie + 1 || seqno_me == cookie) {
-            pre->go_dedup   = 1;
-            pre->dedup_type = ZBANNER_DEDUP_TYPE_PORT;
-            pre->no_dedup   = zbanner_conf.no_dedup_rst;
         }
     }
 }
@@ -692,6 +704,11 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
         TCP_SEQNO(recved->packet, recved->parsed.transport_offset);
     uint8_t flags_them =
         TCP_FLAGS(recved->packet, recved->parsed.transport_offset);
+
+    /* Defense in depth: validate() normally drops out-of-range slots. */
+    unsigned index = recved->parsed.port_dst - src_port_start;
+    if (index >= ZBannerScan.probe->multi_num)
+        return;
 
     /*SYNACK*/
     if (TCP_FLAG_HAS(flags_them, TCP_FLAG_SYN | TCP_FLAG_ACK)) {
@@ -777,7 +794,14 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
                 seqno_them + 1, TCP_FLAG_ACK, zbanner_conf.probe_ttl, 0,
                 payload, payload_len, pkt_buffer->px, PKT_BUF_SIZE);
 
-            stack_transmit_pktbuf(stack, pkt_buffer);
+            if (pkt_buffer->length == 0) {
+                LOG(LEVEL_WARN,
+                    "zbanner: probe payload does not fit the packet buffer; "
+                    "the ACK with payload is not sent\n");
+                stack_release_pktbuf(stack, pkt_buffer);
+            } else {
+                stack_transmit_pktbuf(stack, pkt_buffer);
+            }
 
             /*multi-probe Multi_IfOpen*/
             if (ZBannerScan.probe->multi_mode == Multi_IfOpen &&
@@ -1013,8 +1037,8 @@ Scanner ZBannerScan = {
     .params              = zbanner_parameters,
     /*is rst or with ack in ipv4 & ipv6*/
     .bpf_filter =
-        "(ip && tcp && (tcp[tcpflags]|tcp-ack!=0 || tcp[tcpflags]==tcp-rst)) "
-        "|| (ip6 && tcp && (ip6[40+13]|tcp-ack!=0 || ip6[40+13]==tcp-rst))",
+        "(ip && tcp && (tcp[tcpflags]&tcp-ack!=0 || tcp[tcpflags]==tcp-rst)) "
+        "|| (ip6 && tcp && (ip6[40+13]&tcp-ack!=0 || ip6[40+13]==tcp-rst))",
     .short_desc = "Stateless TCP scan with specified ProbeModule.",
     .desc =
         "ZBannerScan tries to contruct TCP conn with target port and send data "
