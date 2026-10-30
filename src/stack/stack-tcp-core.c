@@ -1050,7 +1050,9 @@ void stack_incoming_tcp(TCP_Table *tcpcon, TCB *tcb, TcpWhat what,
         if (payload_offset < 0) {
             /* This is a retransmission that we've already acknowledged */
             if (payload_offset <= 0 - (int)payload_length) {
-                /* Both begin and end are old, so simply discard it */
+                /* Both begin and end are old, so simply discard it, but
+                 * re-ACK so the peer can retire its retransmission. */
+                _tcpcon_send_packet(tcpcon, tcb, TCP_FLAG_ACK, 0, 0);
                 return;
             } else {
                 /* Otherwise shorten the payload */
@@ -1061,7 +1063,9 @@ void stack_incoming_tcp(TCP_Table *tcpcon, TCB *tcb, TcpWhat what,
         } else if (payload_offset > 0) {
             /* This is an out-of-order fragment in the future. an important
              * design of this light-weight stack is that we don't support this,
-             * and force the other side to retransmit such packets */
+             * and force the other side to retransmit such packets. Re-ACK our
+             * expected sequence so the peer can fast-retransmit. */
+            _tcpcon_send_packet(tcpcon, tcb, TCP_FLAG_ACK, 0, 0);
             return;
         }
     }
@@ -1203,10 +1207,9 @@ void stack_incoming_tcp(TCP_Table *tcpcon, TCB *tcb, TcpWhat what,
                      * this stack. */
                     break;
                 case TCP_WHAT_SYNACK:
-                    /** A delayed SYN-ACK.
-                     * It can be solved by our pkt sending if it's a
-                     * retransmission for lost ACK.
-                     */
+                    /** A delayed/duplicate SYN-ACK: our ACK was lost.
+                     * Re-ACK it so the peer does not wait for its timeout. */
+                    _tcpcon_send_packet(tcpcon, tcb, TCP_FLAG_ACK, 0, 0);
                     break;
                 default:
                     LOGnet(tcb->ip_them, tcb->port_them,
@@ -1245,10 +1248,9 @@ void stack_incoming_tcp(TCP_Table *tcpcon, TCB *tcb, TcpWhat what,
                                   seqno_them, secs, usecs);
                     break;
                 case TCP_WHAT_SYNACK:
-                    /** A delayed SYN-ACK.
-                     * Maybe a retransmission for lost ACK?
-                     * But our stack can't identify it, just give up.
-                     */
+                    /** A delayed/duplicate SYN-ACK: our ACK was lost.
+                     * Re-ACK it so the peer does not wait for its timeout. */
+                    _tcpcon_send_packet(tcpcon, tcb, TCP_FLAG_ACK, 0, 0);
                     break;
                 default:
                     LOGnet(tcb->ip_them, tcb->port_them,

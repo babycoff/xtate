@@ -14,7 +14,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 `-scan` is mandatory; `-probe` is optional only for modules that declare "no probe". Module
 parameters go through `-scan-arg` and `-probe-arg`, one quoted string each (`--help-scan <module>`, `--help-probe <module>`).
 
-> Documented against Xtate v2.16.0. The CLI is authoritative: `--help`, `--help-scan`,
+> Documented against Xtate v2.17.0. The CLI is authoritative: `--help`, `--help-scan`,
 > `--help-probe`.
 
 ## Choosing a scan module
@@ -105,8 +105,8 @@ sudo ./bin/xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
 
 Give the subprobe its own parameters with `-subprobe-arg`, quoted one level deeper:
 `-probe-arg "-subprobe http-state -subprobe-arg '-url /admin -user-agent xtate' -version"`.
-`tcp-state` only reports open ports (a RST for an unknown connection produces no result), so
-do not expect `closed` lines here.
+`tcp-state` reports a RST for an unknown TCB as `closed` at `info` level; add `-show info`
+to see those rows. Repeated RSTs are deduplicated by the receive-side table.
 
 ### UDP + echo
 

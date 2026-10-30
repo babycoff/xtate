@@ -172,6 +172,9 @@ The last row dominates: pure TCP state is cheap, a TLS connection is not, and mo
 of the per-connection cost is OpenSSL. This engine is for targeted evidence on interesting
 hosts, not for a TLS census of the Internet.
 
+The per-connection TLS scratch buffer doubles on demand but is capped at **1 MiB**; at the
+cap it stops growing and logs a warning instead of allowing unbounded memory growth.
+
 Table sizing is a guess, not a budget: roughly `rate / 5 / handlers` buckets, rounded up to a
 power of two, floored at ten and clamped between 2^10 and 2^24. A full table does not reject
 new connections, it just grows longer chains, and pooled TCBs keep peak usage resident.
@@ -216,18 +219,15 @@ listed by `--help-probe` and `--help-scan`.
 - **No SYN retransmission.** A TCB only exists after a SYN-ACK, so the `SYN_SENT` timeout
   branch can never fire. A lost SYN is a silent miss — re-run the scan, or narrow it to
   higher-value targets.
-- **No ACK repair.** If our ACK to a SYN-ACK is lost, a retransmitted SYN-ACK is ignored
-  rather than acknowledged, so the peer keeps retransmitting until our 30-second expiry fires.
-- **No out-of-order handling.** Data beyond the expected sequence number is dropped and not
-  buffered; recovery depends on the peer retransmitting. Large certificate chains and
-  multi-segment TLS flights are the usual casualties.
+- **Duplicate/lost-ACK repair is partial.** A retransmitted SYN-ACK is answered with a fresh ACK, and duplicate old data or a future segment triggers an immediate ACK of the expected sequence. The peer can then retransmit sooner; there is still no general ACK-repair state machine for arbitrary lost ACKs.
+- **No out-of-order handling.** Data beyond the expected sequence number is dropped and not buffered; the immediate ACK tells the peer what we expect, but large certificate chains and multi-segment TLS flights still depend on peer retransmission.
 - **Fixed 1-second RTO, no backoff.** Retransmits eagerly on high-latency paths.
 - **No graceful close.** FIN is answered with RST, there is no `TIME_WAIT`, and TLS sends no
   `close_notify`. Targets see an abnormal termination — acceptable for scanning, noisy for
   long-term monitoring.
-- **Closed ports produce no output.** A RST matching no TCB is not turned into a result, so
-  `tcp-state` reports open ports only. ZBanner reports both, which makes the two engines
-  non-equivalent for port census.
+- **Closed ports are reported at `info` level.** A RST matching no TCB is emitted as
+  `"closed" because "rst"`; the scanner's dedup table suppresses repeated RSTs. Without
+  `-show info`, these rows stay hidden.
 - **SNI/ALPN are opt-in.** By default virtual-host and CDN targets return the default
   certificate; set `-sni`/`-alpn` on `tls-state` when the target IPs belong to one known
   hostname.

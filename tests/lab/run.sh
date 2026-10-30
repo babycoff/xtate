@@ -125,9 +125,10 @@ grep -q "\"closed\" because \"rst\"" /tmp/zbanner-record-ack.log
 grep -q "\"acknowledged\" because \"ack\"" /tmp/zbanner-record-ack.log
 
 run_case hltcp-http \
-    -ip "$HTTP_IP" -p "$HTTP_PORT" -scan tcp-state -probe http-state \
+    -ip "$HTTP_IP" -p "$HTTP_PORT,$CLOSED_PORT" -scan tcp-state -probe http-state \
     -rate 100 --wait 2 --no-status -show info -show failed
 grep -q "\"open\" because \"syn-ack\"" /tmp/hltcp-http.log
+grep -q "\"closed\" because \"rst\"" /tmp/hltcp-http.log
 
 run_case hltcp-tls \
     -ip "$TLS_IP" -p "$TLS_PORT" -scan tcp-state -probe tls-state \

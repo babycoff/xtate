@@ -358,6 +358,19 @@ static void tcpstate_validate(uint64_t entropy, Recved *recved,
         }
     }
 
+    /* A RST for an unknown connection closes the port. There is no TCB for
+     * the connection table to deduplicate, so let the rx dedup table handle
+     * repeated RSTs. */
+    if (TCP_HAS_FLAG(recved->packet, recved->parsed.transport_offset,
+                     TCP_FLAG_RST)) {
+        if (seqno_me != cookie + 1 && seqno_me != cookie) {
+            return;
+        }
+        pre->go_dedup = 1;
+        pre->no_dedup = 0;
+        return;
+    }
+
     /*And we don't have to do dedup because TCP connection table will handle*/
     pre->go_dedup = 1;
     pre->no_dedup = 1;
@@ -393,6 +406,27 @@ static void tcpstate_handle(unsigned th_idx, uint64_t entropy,
 
     tcpcon = tcpcon_set.tcpcons[th_idx];
     tcb    = tcpcon_lookup_tcb(tcpcon, ip_me, ip_them, port_me, port_them);
+
+    /* A RST for a connection we never established is a closed port. */
+    if (!tcb && TCP_FLAG_HAS(flags_them, TCP_FLAG_RST)) {
+        item->no_output = 0;
+        item->level     = OUT_INFO;
+        safe_strcpy(item->classification, OUT_CLS_SIZE, "closed");
+        safe_strcpy(item->reason, OUT_RSN_SIZE, "rst");
+
+        if (tcpstate_conf.record_ttl || tcpstate_conf.record_all_ttl)
+            dach_set_int(&item->scan_report, "ttl", recved->parsed.ip_ttl);
+        if ((tcpstate_conf.record_ipid || tcpstate_conf.record_all_ipid) &&
+            recved->parsed.src_ip.version == 4)
+            dach_set_int(&item->scan_report, "ipid", recved->parsed.ip_v4_id);
+        if (tcpstate_conf.record_win || tcpstate_conf.record_all_win)
+            dach_set_int(&item->scan_report, "win", win_them);
+        if (tcpstate_conf.record_seqno || tcpstate_conf.record_all_seqno)
+            dach_set_int(&item->scan_report, "seqno", seqno_them);
+        if (tcpstate_conf.record_ackno || tcpstate_conf.record_all_ackno)
+            dach_set_int(&item->scan_report, "ackno", seqno_me);
+        return;
+    }
 
     if (TCP_FLAG_HAS(flags_them, TCP_FLAG_SYN | TCP_FLAG_ACK)) {
         item->no_output = 0;

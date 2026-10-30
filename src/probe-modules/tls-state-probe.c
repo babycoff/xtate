@@ -30,6 +30,7 @@
 
 #define TSP_BIO_MEM_LIMIT  16384
 #define TSP_DATA_INIT_SIZE 4096
+#define TSP_DATA_MAX_SIZE  (1024 * 1024)
 #define TSP_EXT_TGT_IDX    0
 
 /**
@@ -680,6 +681,13 @@ static bool output_tls_version(OutConf *out, ProbeTarget *target, SSL *ssl) {
 }
 
 static void _extend_buffer(unsigned char **buf, size_t *buf_len) {
+    if (*buf_len >= TSP_DATA_MAX_SIZE) {
+        LOG(LEVEL_WARN,
+            "(TSP BUFFER) maximum scratch size reached (%u bytes)\n",
+            (unsigned)*buf_len);
+        return;
+    }
+
     LOG(LEVEL_DETAIL, "(TSP BUFFER extending...) >>>\n");
     unsigned char *tmp_ptr;
     tmp_ptr  = REALLOC(*buf, *buf_len * 2);

@@ -10,7 +10,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 
 `-scan` 是必需的；只有当模块声明“不需要探测”时 `-probe` 才是可选的。模块参数分别通过 `-scan-arg` 和 `-probe-arg` 传入，每个都是一整条带引号的字符串（见 `--help-scan <module>`、`--help-probe <module>`）。
 
-> 本文档对应 Xtate v2.16.0。命令行才是最终依据：`--help`、`--help-scan`、`--help-probe`。
+> 本文档对应 Xtate v2.17.0。命令行才是最终依据：`--help`、`--help-scan`、`--help-probe`。
 
 ## 选择扫描模块
 
@@ -84,7 +84,7 @@ sudo ./bin/xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
 
 要给子探测模块传它自己的参数，就用 `-subprobe-arg`，引号层级再深一层：
 `-probe-arg "-subprobe http-state -subprobe-arg '-url /admin -user-agent xtate' -version"`。
-`tcp-state` 只报告开放端口（未知连接收到 RST 不会产生结果），所以不要期待这里出现 `closed` 行。
+`tcp-state` 会把未知 TCB 的 RST 作为 `closed` 以 `info` 等级输出；加 `-show info` 才能看到这些行。重复 RST 会被接收侧去重表抑制。
 
 ### UDP + echo
 
