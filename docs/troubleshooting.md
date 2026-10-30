@@ -103,9 +103,9 @@ IPv6 has its own traps: a link-local source address must be given explicitly (`-
 - **`tcp-state` latency and packet counts look odd.** HLTCP uses a fixed 1-second RTO and the default TCP window is 1024 bytes, producing many small packets. `-tcp-win 8192` (plus a matching `--max-packet-len`) is usually faster.
 - **`zbanner` classifies zero-window SYN-ACKs as `fake-open`** (`because "zerowin"`) and does not send the probe payload. This is a SYN-backlog/firewall signal, not necessarily a closed port.
 - **`zbanner` grabs only the first banner segment** by default and then sends RST. Long banners, multi-segment TLS ServerHellos or large HTTP headers need `-scan-arg "-all-banner"` (optionally bounded with `-all-banner-limit <n>` inside the same string).
-- **TLS probes appear to return nothing.** `tls-state` reports a failed handshake at `info` level, and it sends no SNI or ALPN, so virtual hosts/CDNs may answer with their default certificate/site. Add `-show info`, or promote failures to `failed` with `-probe-arg "-fail-handshake"`; treat stateful TLS evidence as the default virtual host, not as the requested hostname.
+- **TLS probes appear to return nothing.** `tls-state` reports a failed handshake at `info` level, and it sends no SNI or ALPN by default, so virtual hosts/CDNs may answer with their default certificate/site. Add `-show info`, use `-probe-arg "-sni <hostname> -alpn h2,http/1.1"` when the target IPs belong to one known vhost, or promote failures to `failed` with `-probe-arg "-fail-handshake"`; without an explicit SNI, treat stateful TLS evidence as the default virtual host, not as the requested hostname.
 
-These are design trade-offs in v2.15.2, not bugs; the full list with workarounds is in [Known limitations](./known-limitations.md).
+These are design trade-offs in v2.16.0, not bugs; the full list with workarounds is in [Known limitations](./known-limitations.md).
 
 ## Modules are missing or refuse to start
 

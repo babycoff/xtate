@@ -93,14 +93,33 @@ OpenSSL rather than by parsing records ourselves.
   ciphertext is `SSL_read`-decrypted and handed to the sub-probe. The nested HTTP probe has
   no idea TLS exists — it composes an HTTP request and parses an HTTP response.
 
-### No SNI, no ALPN
+### SNI and ALPN are opt-in
 
-The TLS state probe never sets a server name indication or an ALPN protocol list, so every
-handshake is addressed to the IP address rather than to a hostname. On shared hosting and
-CDNs this returns the default certificate and default virtual host, which may belong to an
-entirely different site than the one you think you are probing. The stateless probes
-(`tls-hello`, `jarm`) do build SNI and ALPN extensions; the stateful path does not. If you
-need hostname-specific evidence, this engine cannot give it to you.
+By default the TLS state probe sends no server name indication (SNI) and no ALPN protocol
+list, so every handshake is addressed to the IP address rather than to a hostname. On shared
+hosting and CDNs this returns the default certificate and default virtual host, which may
+belong to an entirely different site than the one you think you are probing.
+
+Because Xtate targets are IP addresses, there is no hostname to derive automatically. The
+stateful probe therefore takes one explicit name for the whole run:
+
+```bash
+sudo ./bin/xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
+  -probe-arg "-subprobe close-state -sni www.example.com -alpn h2,http/1.1 --dump-cert" \
+  -rate 100 -show info
+```
+
+- `-sni <hostname>` sets one SNI name for **every** target in that run. Use it when the
+  target IPs belong to one CDN/virtual host; use separate runs for different hostnames.
+- `-alpn <list>` accepts a comma/space-separated protocol list (`h2,http/1.1`), preserving
+  order. Leave it unset to omit the ALPN extension.
+- This is a `tls-state` option, not a global target/hostname resolver. It does not perform
+  reverse DNS and does not magically learn the vhost from the IP.
+- The stateless `tls-hello` and `jarm` probes keep their existing fixed extension behaviour;
+  their SNI/ALPN are not controlled by these stateful flags.
+
+A per-IP/CIDR hostname map is a possible future extension (longest-prefix match), but is not
+implemented yet. For mixed vhosts today, run one SNI value per invocation.
 
 ## Probe nesting and DataPass
 
@@ -209,8 +228,9 @@ listed by `--help-probe` and `--help-scan`.
 - **Closed ports produce no output.** A RST matching no TCB is not turned into a result, so
   `tcp-state` reports open ports only. ZBanner reports both, which makes the two engines
   non-equivalent for port census.
-- **No SNI, no ALPN.** Virtual-host and CDN targets will not return the certificate you
-  expect.
+- **SNI/ALPN are opt-in.** By default virtual-host and CDN targets return the default
+  certificate; set `-sni`/`-alpn` on `tls-state` when the target IPs belong to one known
+  hostname.
 - **OpenSSL memory.** Several kilobytes to tens of kilobytes per live TLS connection; this,
   not the TCP stack, sets the memory ceiling.
 - **Deduplication is disabled.** `tcp-state` leaves deduplication to the state machine, so

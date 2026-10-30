@@ -12,6 +12,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
+#include <ctype.h>
 #include <inttypes.h>
 
 #include <openssl/err.h>
@@ -82,6 +83,9 @@ struct TlsState {
 struct TlsStateConf {
     Probe   *subprobe;
     char    *subprobe_args;
+    char    *sni;
+    unsigned char *alpn;
+    size_t         alpn_len;
     unsigned dump_subject   : 1;
     unsigned dump_version   : 1;
     unsigned dump_cipher    : 1;
@@ -115,6 +119,65 @@ static ConfRes SET_subprobe_args(void *conf, const char *name,
     tlsstate_conf.subprobe_args = CALLOC(1, len);
     memcpy(tlsstate_conf.subprobe_args, value, len);
 
+    return Conf_OK;
+}
+
+static ConfRes SET_sni(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+
+    size_t len = strlen(value);
+    if (len == 0 || len > 255) {
+        LOG(LEVEL_ERROR,
+            "sni must contain 1..255 bytes of DNS host name, got %u bytes\n",
+            (unsigned)len);
+        return Conf_ERR;
+    }
+
+    FREE(tlsstate_conf.sni);
+    tlsstate_conf.sni = STRDUP(value);
+    return Conf_OK;
+}
+
+static ConfRes SET_alpn(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+
+    const char *p = value;
+    size_t      cap = strlen(value) + 2;
+    unsigned char *wire = MALLOC(cap);
+    size_t         n = 0;
+
+    while (*p) {
+        while (*p == ',' || isspace((unsigned char)*p))
+            p++;
+        if (!*p)
+            break;
+
+        const char *start = p;
+        while (*p && *p != ',' && !isspace((unsigned char)*p))
+            p++;
+        size_t len = (size_t)(p - start);
+        if (len == 0 || len > 255 || n + 1 + len > 65535) {
+            FREE(wire);
+            LOG(LEVEL_ERROR, "invalid or oversized ALPN protocol list\n");
+            return Conf_ERR;
+        }
+
+        wire[n++] = (unsigned char)len;
+        memcpy(wire + n, start, len);
+        n += len;
+    }
+
+    if (n == 0) {
+        FREE(wire);
+        LOG(LEVEL_ERROR, "empty ALPN protocol list\n");
+        return Conf_ERR;
+    }
+
+    FREE(tlsstate_conf.alpn);
+    tlsstate_conf.alpn     = wire;
+    tlsstate_conf.alpn_len = n;
     return Conf_OK;
 }
 
@@ -189,6 +252,20 @@ static ConfParam tlsstate_parameters[] = {
      "Specifies arguments for subprobe.\n"
      "NOTE: Use double/single quotes and backslashes to handle params with "
      "spaces in nesting."},
+    {"sni",
+     SET_sni,
+     Type_ARG,
+     {"server-name", "servername", 0},
+     "TLS SNI host name sent in ClientHello.  Targets are IP addresses, so "
+     "this is one explicit host name applied to every target in the run; "
+     "leave unset for no SNI.  Useful when scanning IPs that belong to one "
+     "CDN/virtual host."},
+    {"alpn",
+     SET_alpn,
+     Type_ARG,
+     {"alpn-protos", "alpn-proto", 0},
+     "Comma/space separated ALPN protocol list, e.g. `h2,http/1.1`.  The "
+     "order is preserved.  Leave unset for no ALPN extension."},
     {"ssl-keylog",
      SET_ssl_keylog,
      Type_FLAG,
@@ -612,7 +689,8 @@ static void _extend_buffer(unsigned char **buf, size_t *buf_len) {
 
 /*init public SSL_CTX*/
 static bool tlsstate_init(const XConf *xconf) {
-    if (tlsstate_conf.subprobe->type != ProbeType_STATE) {
+    if (!tlsstate_conf.subprobe ||
+        tlsstate_conf.subprobe->type != ProbeType_STATE) {
         LOG(LEVEL_ERROR, "TlsStateProbe need a subprobe in STATE type.\n");
         return false;
     }
@@ -777,6 +855,20 @@ static bool tlsstate_conn_init(ProbeState *state, ProbeTarget *target) {
     SSL_set_connect_state(ssl);
     /*bind BIO interfaces and SSL obj*/
     SSL_set_bio(ssl, rbio, wbio);
+
+    /*Optional SNI/ALPN. Targets are IPs, so SNI is an explicit single name
+     * selected by the operator for this run. */
+    if (tlsstate_conf.sni) {
+        if (SSL_set_tlsext_host_name(ssl, tlsstate_conf.sni) != 1) {
+            LOG(LEVEL_WARN, "(TSP Conn INIT) SSL_set_tlsext_host_name error\n");
+        }
+    }
+    if (tlsstate_conf.alpn_len) {
+        if (SSL_set_alpn_protos(ssl, tlsstate_conf.alpn,
+                                (unsigned)tlsstate_conf.alpn_len) != 0) {
+            LOG(LEVEL_WARN, "(TSP Conn INIT) SSL_set_alpn_protos error\n");
+        }
+    }
 
     /*save `target` to SSL object*/
     ProbeTarget *tgt;

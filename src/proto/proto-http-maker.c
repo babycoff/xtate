@@ -67,9 +67,17 @@ static size_t _http_insert(unsigned char **r_hdr, size_t start, size_t end,
                            const void *field) {
     size_t old_field_length  = (end - start);
     size_t new_header_length = header_length + field_length - old_field_length;
+    size_t alloc_length = (header_length > new_header_length)
+                              ? header_length
+                              : new_header_length;
     unsigned char *hdr;
 
-    *r_hdr = REALLOC(*r_hdr, new_header_length + 1);
+    /*
+     * Keep the old source bytes valid while moving them. Shrinking the
+     * allocation before memmove() can make &hdr[end] point past the new
+     * buffer; ASan catches this as a heap-buffer-overflow in the selftest.
+     */
+    *r_hdr = REALLOC(*r_hdr, alloc_length + 1);
     hdr    = *r_hdr;
 
     /* Shrink/expand the field */
@@ -77,6 +85,10 @@ static size_t _http_insert(unsigned char **r_hdr, size_t start, size_t end,
 
     /* Insert the new header at this location */
     memcpy(&hdr[start], field, field_length);
+
+    if (new_header_length < alloc_length) {
+        *r_hdr = REALLOC(*r_hdr, new_header_length + 1);
+    }
 
     return new_header_length;
 }
@@ -324,7 +336,7 @@ size_t http_change_field(unsigned char **inout_header, size_t header_length,
     } else if (what == http_field_replace) {
         /* Replace existing field */
         memmove(&hdr[offset + name_length + 2 + value_length + 2],
-                &hdr[next_offset], header_length - offset + 1);
+                &hdr[next_offset], header_length - next_offset + 1);
         header_length +=
             (name_length + 2 + value_length + 2) - (next_offset - offset);
     } else {

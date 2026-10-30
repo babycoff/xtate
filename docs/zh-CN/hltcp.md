@@ -57,9 +57,24 @@ TLS 是这个栈存在的理由，它的实现方式是把字节流交给 OpenSS
 - **记录什么。** 协商出的 TLS 版本、密码套件、对端证书链（base64，每张证书一个字段）、证书主题（subject）与主题备用名称（subject alternative names），以及通过 OpenSSL info 回调暴露的 TLS alert。
 - **握手之后**，TLS 探测模块变成嵌套应用探测模块的传输层。子探测产生的明文被 `SSL_write` 加密、作为 TCP 数据抽走；到达的密文被 `SSL_read` 解密后交给子探测。嵌套的 HTTP 探测完全不知道 TLS 的存在——它只是拼一个 HTTP 请求、解析一个 HTTP 响应。
 
-### 无 SNI，无 ALPN
+### SNI 与 ALPN 是可选开启的
 
-TLS 探测模块从不设置 SNI（server name indication）或 ALPN 协议列表，所以每次握手都是面向 IP 地址而不是主机名。在共享主机和 CDN 上，这会返回默认证书和默认虚拟主机，可能属于一个和你以为在探测的站点完全无关的站点。无状态探测（`tls-hello`、`jarm`）会构造 SNI 和 ALPN 扩展；有状态路径不会。如果你需要针对主机名的证据，这个引擎给不了。
+TLS 状态探测默认不发送 SNI（server name indication），也不发送 ALPN 协议列表；每次握手都是面向 IP 地址而不是主机名。在共享主机和 CDN 上，这会返回默认证书和默认虚拟主机，可能属于一个和你以为在探测的站点完全无关的站点。
+
+Xtate 的目标集是 IP 地址，因此不存在可自动推导的主机名。有状态探测采用**整个运行共用一份显式 SNI** 的方式：
+
+```bash
+sudo ./bin/xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
+  -probe-arg "-subprobe close-state -sni www.example.com -alpn h2,http/1.1 --dump-cert" \
+  -rate 100 -show info
+```
+
+- `-sni <hostname>` 为本次运行的**所有目标**设置同一个 SNI。适用于这一批 IP 都属于同一个 CDN/虚拟主机的情况；不同主机名请分开运行。
+- `-alpn <list>` 接受逗号/空格分隔的协议列表（如 `h2,http/1.1`），保持顺序；不设置则不发送 ALPN 扩展。
+- 这是 `tls-state` 的探测参数，不是全局目标/主机名解析器；它不会做反向 DNS，也不会自动从 IP 得到 vhost。
+- 无状态的 `tls-hello` 和 `jarm` 仍使用各自固定的扩展行为，不受这两个有状态参数控制。
+
+按 IP/CIDR 映射到主机名（最长前缀匹配）可以作为后续扩展，目前尚未实现。今天要扫描多个 vhost，就按 SNI 值分开运行。
 
 ## 探测嵌套与 DataPass
 
@@ -131,7 +146,7 @@ sudo ./bin/xtate -ip 10.0.0.0/24 -p 80 -scan tcp-state -probe http-state -show i
 - **固定 1 秒 RTO，无退避。** 在高延迟链路上会重传得过于急切。
 - **没有优雅关闭。** FIN 得到 RST 应答，没有 `TIME_WAIT`，TLS 也不发 `close_notify`。目标会看到异常终止——对扫描可接受，对长期监测则很吵。
 - **关闭端口不产生输出。** 匹配不到 TCB 的 RST 不会变成结果，所以 `tcp-state` 只报告开放端口。ZBanner 两者都报，因此两个引擎在端口普查上并不等价。
-- **无 SNI，无 ALPN。** 虚拟主机和 CDN 目标不会返回你期望的证书。
+- **SNI/ALPN 是可选开启的。** 默认情况下虚拟主机和 CDN 目标返回默认证书；当目标 IP 属于一个已知主机名时，在 `tls-state` 上设置 `-sni`/`-alpn`。
 - **OpenSSL 内存。** 每条存活的 TLS 连接占几 KB 到几十 KB；决定内存上限的是它，而不是 TCP 栈。
 - **去重被关闭。** `tcp-state` 把去重交给状态机自己处理，因此重复报文行为比 ZBanner 弱。
 

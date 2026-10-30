@@ -62,7 +62,7 @@ docker run -d --name "$TLS_TARGET" --network "$NET" "$IMAGE" bash -lc \
      apt-get install -y -qq openssl >/dev/null 2>&1 && \
      openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/key.pem \
        -out /tmp/cert.pem -subj '/CN=localhost' -days 1 >/dev/null 2>&1 && \
-     openssl s_server -accept $TLS_PORT -cert /tmp/cert.pem -key /tmp/key.pem -www" >/dev/null
+     openssl s_server -accept $TLS_PORT -cert /tmp/cert.pem -key /tmp/key.pem -tlsextdebug -www" >/dev/null
 
 wait_tcp() {
     local host="$1"
@@ -131,7 +131,7 @@ grep -q "\"open\" because \"syn-ack\"" /tmp/hltcp-http.log
 
 run_case hltcp-tls \
     -ip "$TLS_IP" -p "$TLS_PORT" -scan tcp-state -probe tls-state \
-    -probe-arg "-subprobe close-state --dump-version --dump-cipher --dump-cert" \
+    -probe-arg "-subprobe close-state -sni example.test -alpn h2,http/1.1 --dump-version --dump-cipher --dump-cert" \
     -rate 100 --wait 2 --no-status -show info -show failed
 grep -q "tls info" /tmp/hltcp-tls.log
 grep -q "TLSv1" /tmp/hltcp-tls.log
@@ -141,5 +141,15 @@ bash firewall/rm_rules.sh >/dev/null 2>&1 || true
 echo "ALL LOCAL LAB CHECKS PASSED"
 ' 
 
+if ! docker logs "$TLS_TARGET" 2>&1 | grep -q "server name"; then
+    echo "TLS target did not receive the SNI extension" >&2
+    exit 1
+fi
+if ! docker logs "$TLS_TARGET" 2>&1 | grep -q "application layer protocol negotiation"; then
+    echo "TLS target did not receive the ALPN extension" >&2
+    exit 1
+fi
+
+echo "==> SNI/ALPN extensions verified"
 echo "==> lab passed"
 

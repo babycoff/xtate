@@ -158,11 +158,15 @@ static inline uint64_t READ(uint64_t r, uint64_t R, uint64_t seed) {
 
     R ^= (seed << r) ^ (seed >> (64 - r));
 
-    r0 = sbox[GETBYTE(R, 0)] << 0 | sbox[GETBYTE(R, 1)] << 8;
-    r1 = (sbox[GETBYTE(R, 2)] << 16UL | sbox[GETBYTE(R, 3)] << 24UL) &
+    r0 = ((uint32_t)sbox[GETBYTE(R, 0)] << 0) |
+         ((uint32_t)sbox[GETBYTE(R, 1)] << 8);
+    r1 = (((uint32_t)sbox[GETBYTE(R, 2)] << 16) |
+          ((uint32_t)sbox[GETBYTE(R, 3)] << 24)) &
          0x0ffffFFFFUL;
-    r2 = sbox[GETBYTE(R, 4)] << 0 | sbox[GETBYTE(R, 5)] << 8;
-    r3 = (sbox[GETBYTE(R, 6)] << 16UL | sbox[GETBYTE(R, 7)] << 24UL) &
+    r2 = ((uint32_t)sbox[GETBYTE(R, 4)] << 0) |
+         ((uint32_t)sbox[GETBYTE(R, 5)] << 8);
+    r3 = (((uint32_t)sbox[GETBYTE(R, 6)] << 16) |
+          ((uint32_t)sbox[GETBYTE(R, 7)] << 24)) &
          0x0ffffFFFFUL;
 
     R = r0 ^ r1 ^ r2 << 23UL ^ r3 << 33UL;

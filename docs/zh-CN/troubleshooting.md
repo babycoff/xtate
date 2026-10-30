@@ -103,9 +103,9 @@ IPv6 有自己的坑：链路本地源地址必须显式给出（`-src-ip fe80::
 - **`tcp-state` 的延迟和报文数看着奇怪。** HLTCP 使用固定 1 秒的 RTO，默认 TCP 窗口只有 1024 字节，会产生大量小包。`-tcp-win 8192`（同时把 `--max-packet-len` 调到匹配的大小）通常更快。
 - **`zbanner` 把零窗口 SYN-ACK 判成 `fake-open`**（`because "zerowin"`），并且不会发送探测载荷。这是 SYN 队列/防火墙的信号，不一定是端口关闭。
 - **`zbanner` 默认只取第一个 banner 报文段**，随后发 RST。长 banner、多段 TLS ServerHello 或很长的 HTTP 头需要 `-scan-arg "-all-banner"`（可在同一个字符串里用 `-all-banner-limit <n>` 限制段数）。
-- **TLS 探测看起来没有返回。** `tls-state` 把握手失败记为 `info` 等级；它也不发送 SNI 或 ALPN，所以虚拟主机/CDN 可能用默认证书/默认站点应答。加上 `-show info`，或用 `-probe-arg "-fail-handshake"` 把失败提升为 `failed`；请把有状态 TLS 的结果当作默认虚拟主机的证据，而不是你所请求主机名的证据。
+- **TLS 探测看起来没有返回。** `tls-state` 把握手失败记为 `info` 等级；默认也不发送 SNI 或 ALPN，所以虚拟主机/CDN 可能用默认证书/默认站点应答。加上 `-show info`；当目标 IP 属于一个已知 vhost 时，用 `-probe-arg "-sni <hostname> -alpn h2,http/1.1"`；或用 `-probe-arg "-fail-handshake"` 把失败提升为 `failed`。没有显式 SNI 时，请把有状态 TLS 的结果当作默认虚拟主机的证据，而不是你所请求主机名的证据。
 
-这些是 v2.15.2 的设计取舍，不是 bug；完整清单与规避方式见[已知限制](./known-limitations.md)。
+这些是 v2.16.0 的设计取舍，不是 bug；完整清单与规避方式见[已知限制](./known-limitations.md)。
 
 ## 模块缺失或启动失败
 

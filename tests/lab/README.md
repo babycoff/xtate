@@ -25,6 +25,9 @@ $env:XTATE_LAB_IMAGE = "xtate-builder:24.04"
   RST-vs-ACK ordering fix).
 - HLTCP `http-state`: local HTTP target receives a request and the scan succeeds.
 - HLTCP `tls-state`: local TLS 1.3 target, version/cipher/certificate output.
+- HLTCP SNI/ALPN: target uses `openssl s_server -tlsextdebug`; the lab asserts that the
+  `server name` and `application layer protocol negotiation` extensions arrived
+  (`-sni example.test -alpn h2,http/1.1`).
 
 The scanner runs at 100 pps. Firewall RST suppression is installed only inside
 the throwaway scanner container. Containers, network and rules are removed by a

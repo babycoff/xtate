@@ -239,7 +239,7 @@ static void squarefree1big(uint32_t (*buf)[B32], uint64_t base, uint32_t q,
             n   = deltainverse[pos % 60];
             if (n >= 0) {
                 pos /= 60;
-                (*buf)[n + (pos >> 5)] |= two[pos & 31];
+                ((uint32_t *)buf)[n + (pos >> 5)] |= two[pos & 31];
             }
         }
 
@@ -278,7 +278,7 @@ static void squarefree1(register uint32_t (*buf)[B32], uint64_t L, uint32_t q) {
             while (ihigh < B) {
                 n = deltainverse[ilow];
                 if (n >= 0)
-                    (*buf)[n + (ihigh >> 5)] |= two[ihigh & 31];
+                    ((uint32_t *)buf)[n + (ihigh >> 5)] |= two[ihigh & 31];
 
                 ilow += 2;
                 ihigh += qqhigh;
@@ -316,7 +316,7 @@ static void squarefree49big(uint32_t (*buf)[B32], uint64_t base, uint32_t q,
             n   = deltainverse[pos % 60];
             if (n >= 0) {
                 pos /= 60;
-                (*buf)[n + (pos >> 5)] |= two[pos & 31];
+                ((uint32_t *)buf)[n + (pos >> 5)] |= two[pos & 31];
             }
         }
 
@@ -356,7 +356,7 @@ static void squarefree49(register uint32_t (*buf)[B32], uint64_t L,
             while (ihigh < B) {
                 n = deltainverse[ilow];
                 if (n >= 0)
-                    (*buf)[n + (ihigh >> 5)] |= two[ihigh & 31];
+                    ((uint32_t *)buf)[n + (ihigh >> 5)] |= two[ihigh & 31];
 
                 ilow += 38;
                 ihigh += qqhigh;
