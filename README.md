@@ -36,6 +36,7 @@ It is not a crawler, and it does not pretend to be one. It is a packet engine wi
   <a href="#modules">Modules</a> ·
   <a href="#build">Build</a> ·
   <a href="#explore-the-cli">CLI</a> ·
+  <a href="docs/README.md">Docs</a> ·
   <a href="#papers-and-citation">Papers</a> ·
   <a href="#license-and-responsible-use">License</a>
 </p>
@@ -172,6 +173,18 @@ Counts below assume a full build with all optional dependencies enabled; modules
 - **Generate:** `blackrock` (default, stateless permutation), `ip-list`, `addr-list`, `ip-stream`, `addr-stream`.
 
 Writing your own is intentionally boring: each module is a struct plus one line in a NULL-terminated registry, and the same metadata drives `--help-*`, parameter parsing, fuzzy search and interactive completion. Look for `REGISTER YOUR ... MODULE HERE` in [`src/scan-modules/scan-modules.c`](src/scan-modules/scan-modules.c) and friends.
+
+## Documentation
+
+The README is the landing page. The manual lives in [`docs/`](docs/README.md):
+
+- [Getting started](docs/getting-started.md) — build, permissions, first scan, firewall
+- [Targets and ports](docs/targets-and-ports.md) — IPv4/IPv6 input, files, ASN, excludes, sharding
+- [Scanning modes](docs/scanning-modes.md) — stateless vs stateful, scan/probe pairings, recipes
+- [Output](docs/output.md) — result levels, formats, MongoDB
+- [Modules](docs/modules.md) — the four module types and what ships with Xtate
+- [Architecture](docs/architecture.md) · [ZBanner](docs/zbanner.md) · [HLTCP](docs/hltcp.md)
+- [Troubleshooting](docs/troubleshooting.md) · [Known limitations](docs/known-limitations.md)
 
 ## Build
 
