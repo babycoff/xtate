@@ -8,7 +8,7 @@
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80 -scan tcp-syn > results.txt
 ```
 
-> 文档以 Xtate v2.14.1 为准。你所用构建的确切 flag 以 `--help` 和 `--help-output <module>` 为准。
+> 文档以 Xtate v2.14.2 为准。你所用构建的确切 flag 以 `--help` 和 `--help-output <module>` 为准。
 
 ## 结果行
 

@@ -352,7 +352,7 @@ void xconf_search_module(const char *param);
  */
 void xconf_global_refresh(XConf *xconf);
 
-void xconf_selftest();
+int xconf_selftest(void);
 
 void xconf_benchmark(unsigned blackrock_rounds);
 

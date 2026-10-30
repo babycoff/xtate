@@ -4543,7 +4543,7 @@ failure:
     return 1;
 }
 
-void xconf_selftest() {
+int xconf_selftest(void) {
     puts("Regression test: start...");
 
     int x = 0;
@@ -4581,4 +4581,6 @@ void xconf_selftest() {
         puts("Regression test: failed :(");
     else
         puts("Regression test: success!");
+
+    return x;
 }

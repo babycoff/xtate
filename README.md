@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.14.1-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.14.2-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -212,22 +212,38 @@ Recommended compilers: GCC, Clang, MSVC and MinGW-w64. Xtate requires a 64-bit l
 <details>
 <summary><b>Windows build</b></summary>
 
-Install **Npcap** (runtime), CMake, and MSVC or MinGW-w64. Optional libraries can come from vcpkg:
+Install **Npcap** (runtime), CMake, and Visual Studio 2022/2026 or MinGW-w64. The
+full platform/toolchain matrix and troubleshooting live in
+[Getting started](docs/getting-started.md#build-on-windows).
+
+Optional dependencies via Scoop (MSVC/clang-cl):
 
 ```powershell
-vcpkg install openssl pcre2 libxml2 mongo-c-driver
-
-cmake -B build -G "Visual Studio 17 2022" `
-  -DCMAKE_TOOLCHAIN_FILE=<vcpkg-root>\scripts\buildsystems\vcpkg.cmake
-cmake --build build --config Release
+scoop install openssl-lts lua54
 ```
 
-For MinGW/Clang with Unix Makefiles:
+Scoop does not package PCRE2, libbson or libmongoc; use vcpkg for the complete
+probe/output set, or accept the reduced module count.
+
+MSVC:
 
 ```powershell
-cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc
-cmake --build build
+cmake -S . -B build-msvc -G "Visual Studio 17 2022" -A x64 `
+  -DOPENSSL_ROOT_DIR="$env:USERPROFILE\scoop\apps\openssl-lts\current"
+cmake --build build-msvc --config Release -j 8
 ```
+
+MinGW:
+
+```powershell
+cmake -S . -B build-mingw -G "MinGW Makefiles" `
+  -DCMAKE_C_COMPILER=gcc -DCMAKE_BUILD_TYPE=Release
+cmake --build build-mingw -j 8
+```
+
+Or build the whole matrix with `scripts\build-windows.ps1`; it asks before
+copying the source to an ASCII staging directory and cleans the staging tree
+afterwards.
 
 Npcap must be installed for packet I/O; `wpcap.dll` is loaded at runtime.
 </details>

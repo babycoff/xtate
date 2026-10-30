@@ -233,13 +233,22 @@ int pixie_time_selftest() {
     stop    = pixie_gettime();
     elapsed = stop - start;
 
-    if (elapsed < 0.99 * duration) {
-        LOG(LEVEL_ERROR, "timing error, long delay\n");
+    /* Windows Sleep() is quantised by the system timer; a 1% bound is too
+     * tight there and makes --selftest fail intermittently. 5% still catches
+     * a broken sleep implementation while tolerating scheduler granularity. */
+#ifdef _WIN32
+    static const double tolerance = 0.05;
+#else
+    static const double tolerance = 0.01;
+#endif
+
+    if ((double)elapsed < (1.0 - tolerance) * (double)duration) {
+        LOG(LEVEL_ERROR, "timing error, short delay\n");
         return 1;
     }
-    if (1.01 * duration < elapsed) {
+    if ((1.0 + tolerance) * (double)duration < (double)elapsed) {
         LOG(LEVEL_ERROR, "timing error, long delay %5.0f%%\n",
-            elapsed * 100.0 / duration);
+            (double)elapsed * 100.0 / (double)duration);
         return 1;
     }
 

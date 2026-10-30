@@ -961,6 +961,8 @@ int main(int argc, char *argv[]) {
     _usec_start = pixie_gettime();
     global_update_time();
 
+    int exit_code = 0;
+
     switch (xconf->op) {
         /* interactive mode should avoid this case for better printing */
         case Op_Default:
@@ -1056,7 +1058,7 @@ int main(int argc, char *argv[]) {
             break;
 
         case Op_Selftest:
-            xconf_selftest();
+            exit_code = xconf_selftest();
             break;
 
         case Op_Benchmark:
@@ -1097,5 +1099,5 @@ int main(int argc, char *argv[]) {
 
     xcmd_try_reboot();
 
-    return 0;
+    return exit_code;
 }

@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.14.1-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.14.2-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -210,24 +210,35 @@ PCRE2 的发现优先使用 CMake 包配置；在 Debian/Ubuntu 上会回退到 
 <details>
 <summary><b>Windows 构建</b></summary>
 
-安装 **Npcap**（运行时）、CMake，以及 MSVC 或 MinGW-w64。可选库可以从 vcpkg 获取：
+安装 **Npcap**（运行时）、CMake，以及 Visual Studio 2022/2026 或 MinGW-w64。完整平台/工具链矩阵和问题排查见[快速上手](docs/zh-CN/getting-started.md)。
+
+可选依赖可以用 Scoop 安装（MSVC/clang-cl）：
 
 ```powershell
-vcpkg install openssl pcre2 libxml2 mongo-c-driver
-
-cmake -B build -G "Visual Studio 17 2022" `
-  -DCMAKE_TOOLCHAIN_FILE=<vcpkg-root>\scripts\buildsystems\vcpkg.cmake
-cmake --build build --config Release
+scoop install openssl-lts lua54
 ```
 
-使用 MinGW/Clang 搭配 Unix Makefiles 时：
+Scoop 没有 PCRE2、libbson 或 libmongoc；需要完整 probe/output 集合时用 vcpkg，或接受较少的模块。
+
+MSVC：
 
 ```powershell
-cmake -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc
-cmake --build build
+cmake -S . -B build-msvc -G "Visual Studio 17 2022" -A x64 `
+  -DOPENSSL_ROOT_DIR="$env:USERPROFILE\scoop\apps\openssl-lts\current"
+cmake --build build-msvc --config Release -j 8
 ```
 
-数据包 I/O 必须先装 Npcap；`wpcap.dll` 在运行时加载。
+MinGW：
+
+```powershell
+cmake -S . -B build-mingw -G "MinGW Makefiles" `
+  -DCMAKE_C_COMPILER=gcc -DCMAKE_BUILD_TYPE=Release
+cmake --build build-mingw -j 8
+```
+
+也可以用 `scripts\build-windows.ps1` 一次构建整套矩阵；脚本会在复制源码到 ASCII 中转目录前询问，并在构建后清理中转目录。
+
+Npcap 是报文收发的必需项；`wpcap.dll` 在运行时加载。
 </details>
 
 <details>
