@@ -3090,8 +3090,12 @@ ConfParam config_parameters[] = {
      "This can make " XTATE_NAME_TITLE_CASE
      " be able to scan in a local network.\n"
      "NOTE: This flag must set while we do some layer-2 protocol scan "
-     "like ARP.",
-     "Set the router MAC address to a broadcast address."},
+     "like ARP.\n"
+     "NOTE: It does not resolve a per-target MAC. Use it only for deliberate "
+     "layer-2/broadcast scans; for normal TCP/UDP scans leave it off first, "
+     "because a broadcast destination can fail across routed, Docker/bridge "
+     "or filtered segments.",
+     "Set router MAC to broadcast (L2 scans; avoid for normal TCP/UDP)."},
     {"fake-router-mac",
      SET_fake_router_mac,
      Type_FLAG,

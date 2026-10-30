@@ -112,6 +112,8 @@ ARP 是二层协议，只在本网段有效；`-lan-mode` 把目的 MAC 设为�
 sudo ./bin/xtate -ip 192.168.1.0/24 -scan arp-req -lan-mode -rate 1000
 ```
 
+`-lan-mode` 只是把路由器/目的 MAC 改成广播地址，**不会**解析每个目标的 MAC。它只适合 ARP/NDP 以及明确需要二层广播的扫描。普通 TCP/UDP 扫描请先不要加：默认的网关/单播路径通常是对的，而广播目的地址在路由、Docker/bridge 或过滤链路上可能直接失败。
+
 IPv6 邻居使用 NDP：在同一链路上使用链路本地源地址，`--fake-router-mac` 可以阻止 Xtate 为非链路本地目标解析网关。
 
 ```bash

@@ -139,6 +139,11 @@ broadcast, and `arp-req` is IPv4-only and reads no port.
 sudo ./bin/xtate -ip 192.168.1.0/24 -scan arp-req -lan-mode -rate 1000
 ```
 
+`-lan-mode` only changes the router/destination MAC to the broadcast address; it does **not**
+resolve a per-target MAC. Use it for ARP/NDP and other deliberate L2/broadcast scans. For
+normal TCP/UDP scans leave it off first: the gateway/unicast path is usually correct, and a
+broadcast destination can fail across routed, Docker/bridge or filtered segments.
+
 IPv6 neighbours use NDP with a link-local source on the same link; `--fake-router-mac` stops
 Xtate from resolving a gateway for a non-link-local target.
 

@@ -36,7 +36,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 443 -scan tcp-syn -rate 100 -show info -s
 2. **目标和端口非空。** 没有目标会报 `target IP address list empty.`；没有端口只会给出一条警告并塞入一个假的 `o:0` 端点，于是 TCP 扫描悄无声息地什么都不探测。务必传入 `-p`。
 3. **网卡与源地址。** `sudo ./bin/xtate --list-if` 列出网卡；自动选择会挑第一个带默认网关的接口。用 `-if eth0` 指定（Windows 上也可以直接用 `--list-if` 打印的数字编号，例如 `-if 3`）。`-src-ip`/`-src-port` 配错会让回包过不了 `is_my_ip`/`is_my_port` 检查而被静默丢弃；源地址/源端口区间的大小必须是 2 的幂。
 4. **报文过滤器。** 每个扫描模块都会装自己的 BPF 过滤器；`--bpf-filter` 会*替换*它，范围过窄的过滤器会藏掉有效回包。用 `--no-bpf` 重跑同一条扫描——如果结果出现了，问题就在过滤器（你的或模块的）。一个已知案例：内置的 `tcp-syn` 过滤器精确匹配裸 RST，因此用 RST+ACK 回应关闭端口的那类协议栈，其回包可能在 Xtate 看到之前就被滤掉；用 `--no-bpf` 可以确认。
-5. **路由器 MAC / ARP。** 启动时可能失败并提示 `arp timed-out resolving MAC address for router ...`。如果探测到的网关不对，用 `--router-ip <gw>` 指定；或者用 `--router-mac 66-55-44-33-22-11` 跳过 ARP（把路由器 MAC 指到另一个二层网段，只有在配合 `--lan` 时才有意义）。
+5. **路由器 MAC / ARP。** 启动时可能失败并提示 `arp timed-out resolving MAC address for router ...`。如果探测到的网关不对，用 `--router-ip <gw>` 指定；或者用 `--router-mac 66-55-44-33-22-11` 跳过 ARP（把路由器 MAC 指到另一个二层网段，只有在配合 `--lan` 时才有意义）。注意：`--lan` **不会**解析每个目标的 MAC，它只是把路由器 MAC 设为广播地址；不要把 `--lan` 当作普通 TCP/UDP 扫描的通用修复，先试默认的单播/网关路径。
 6. **路径本身。** 先用普通客户端确认目标到底回不回应；再用 `tcpdump` 或 Xtate 的 `--pcap` 镜像同样的端口/速率。目标前面的防火墙或 NAT 可能把探测包丢掉，导致 SYN-ACK 永远不回来。
 
 ## 端口开放但拿不到 banner，或连接立刻断开
