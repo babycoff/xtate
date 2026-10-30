@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.14.0-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.14.1-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -197,13 +197,15 @@ The README is the landing page. The manual lives in [`docs/`](docs/README.md):
 ### Linux
 
 ```bash
-sudo apt install build-essential cmake libpcap-dev \
+sudo apt install build-essential cmake pkg-config libpcap-dev \
   libssl-dev libpcre2-dev libxml2-dev libbson-dev libmongoc-dev
 ./build.sh                 # release build → bin/xtate
 ./build.sh debug clang     # debug build with Clang
 ```
 
 Ubuntu 22.04/24.04 are the reference environments. On Fedora/Arch, install the equivalent development packages (`libpcap`, `openssl`, `pcre2`, `libxml2`, `libbson`, `mongo-c-driver`).
+
+PCRE2 discovery uses CMake's package config when available and falls back to `pkg-config` on Debian/Ubuntu, so `pkg-config` is required alongside `libpcre2-dev` there.
 
 Recommended compilers: GCC, Clang, MSVC and MinGW-w64. Xtate requires a 64-bit little-endian host; CMake stops early otherwise.
 

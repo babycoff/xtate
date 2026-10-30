@@ -6,7 +6,7 @@ Xtate is a modular all-stack network scanner for large-scale active measurement.
 
 This page takes you from a source checkout to your first scan on Linux or Windows. It assumes you are comfortable with a shell, `sudo`, and basic TCP/IP; it is not a tutorial on scanning itself.
 
-> Documented against Xtate v2.14.0. If your build behaves differently, `--help` and the module help are authoritative.
+> Documented against Xtate v2.14.1. If your build behaves differently, `--help` and the module help are authoritative.
 
 ## Requirements
 
@@ -21,7 +21,7 @@ This page takes you from a source checkout to your first scan on Linux or Window
 ## Build on Linux
 
 ```bash
-sudo apt install build-essential cmake libpcap-dev \
+sudo apt install build-essential cmake pkg-config libpcap-dev \
   libssl-dev libpcre2-dev libxml2-dev libbson-dev libmongoc-dev
 
 git clone https://github.com/babycoff/xtate.git
@@ -42,6 +42,10 @@ Missing libraries do not break the build: the modules that need them simply disa
 | PCRE2 (8-bit) | regex matching in `hello`, `http`, `recog`, `nmap` | `-DWITH_PCRE2=OFF` |
 | LibXml2 | Recog XML fingerprint files | `-DWITH_LIBXML2=OFF` |
 | libbson / libmongoc | `bson` and `mongodb` output | `-DWITH_BSON=OFF`, `-DWITH_MONGOC=OFF` |
+
+On Debian/Ubuntu, `libpcre2-dev` ships pkg-config metadata but no CMake package
+config. The build automatically falls back to `pkg-config` for PCRE2, so install the
+`pkg-config` package together with `libpcre2-dev` to keep the PCRE2-backed probes.
 
 Lua 5.3/5.4 and PF_RING are loaded at runtime, not link time: `lua-tcp`/`lua-udp` need a Lua shared library, and PF_RING is optional Linux acceleration.
 

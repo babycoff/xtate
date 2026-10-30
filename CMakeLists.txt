@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 project(
     xtate
     LANGUAGES               C
-    VERSION                 2.14.0
+    VERSION                 2.14.1
     DESCRIPTION             "A modular all-stack network scanner for next-generation internet surveys."
     HOMEPAGE_URL            "https://github.com/babycoff/xtate"
     )
@@ -201,6 +201,20 @@ endif ()
 if (WITH_PCRE2)
     # set(PCRE2_USE_STATIC_LIBS TRUE)
     find_package(PCRE2 CONFIG COMPONENTS 8BIT)
+    if (NOT PCRE2_FOUND)
+        # Debian/Ubuntu ship only pkg-config metadata for PCRE2, not a CMake
+        # package config. Fall back to pkg-config so the 8-bit library (and the
+        # probes that depend on it) are still available there.
+        find_package(PkgConfig QUIET)
+        if (PkgConfig_FOUND)
+            pkg_check_modules(PCRE2_8BIT QUIET IMPORTED_TARGET libpcre2-8)
+            if (PCRE2_8BIT_FOUND)
+                add_library(PCRE2::8BIT ALIAS PkgConfig::PCRE2_8BIT)
+                set(PCRE2_FOUND TRUE)
+                message(STATUS "Found PCRE2 via pkg-config: ${PCRE2_8BIT_VERSION}")
+            endif()
+        endif()
+    endif()
 endif ()
 
 if (PCRE2_FOUND)

@@ -6,7 +6,7 @@ Xtate 是一款面向大规模主动测量的模块化全栈网络扫描器。�
 
 本页带你在 Linux 或 Windows 上从源码检出走到第一次扫描。阅读前你应当熟悉 shell、`sudo` 和 TCP/IP 基础；本页不是扫描方法本身的教程。
 
-> 本文档针对 Xtate v2.14.0 编写。若你的构建行为与此不同，以 `--help` 和模块帮助为准。
+> 本文档针对 Xtate v2.14.1 编写。若你的构建行为与此不同，以 `--help` 和模块帮助为准。
 
 ## 环境要求
 
@@ -21,7 +21,7 @@ Xtate 是一款面向大规模主动测量的模块化全栈网络扫描器。�
 ## 在 Linux 上构建
 
 ```bash
-sudo apt install build-essential cmake libpcap-dev \
+sudo apt install build-essential cmake pkg-config libpcap-dev \
   libssl-dev libpcre2-dev libxml2-dev libbson-dev libmongoc-dev
 
 git clone https://github.com/babycoff/xtate.git
@@ -42,6 +42,8 @@ cd xtate
 | PCRE2（8-bit） | `hello`、`http`、`recog`、`nmap` 中的正则匹配 | `-DWITH_PCRE2=OFF` |
 | LibXml2 | Recog XML 指纹文件 | `-DWITH_LIBXML2=OFF` |
 | libbson / libmongoc | `bson` 与 `mongodb` 输出 | `-DWITH_BSON=OFF`、`-DWITH_MONGOC=OFF` |
+
+Debian/Ubuntu 的 `libpcre2-dev` 只提供 pkg-config 元数据，不提供 CMake 包配置；构建时会自动回退到 `pkg-config` 发现 PCRE2。因此需要同时安装 `pkg-config` 和 `libpcre2-dev`，才能保留依赖 PCRE2 的探测模块。
 
 Lua 5.3/5.4 与 PF_RING 在运行时加载，而不是链接期依赖：`lua-tcp`/`lua-udp` 需要 Lua 共享库，PF_RING 则是 Linux 上可选的加速手段。
 
