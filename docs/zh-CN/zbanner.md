@@ -56,7 +56,7 @@ TCP 的 ACK 允许携带数据。把 `ACK + 载荷` 放进同一个报文，意�
 
 `--no-rst` 抑制 RST，让服务器一直握着这条连接直到超时。它是研究开关：适合观察目标在 banner 之后的行为，不适合做普查。
 
-`--all-banner` 是另一个方向：不在一个数据段后关闭，而是逐个确认到达的数据段（`ack = seqno_them + app_length`）并继续读。`--all-banner-limit` 限制段数，`--all-banner-floor` 抑制低于阈值的段的结果。这两个旋钮使用的“段序号”是去重表的重复计数，而不是由序号推导出的计数，因此只是一种近似（见限制一节）。
+`--all-banner` 是另一个方向：不在一个数据段后关闭，而是逐个确认到达的数据段（`ack = seqno_them + app_length`）并继续读。`--all-banner-limit` 限制段数，`--all-banner-floor` 抑制低于阈值的段的结果。`banner idx` 仍来自去重表的重复计数，只是近似值；`banner seqno` 是该段精确的 TCP 序号，是排序/去重 banner 数据的可靠字段。limit/floor 仍然使用近似 index。
 
 ## 用法
 
@@ -123,7 +123,7 @@ ZBanner 发出的报文描述的是本机内核一无所知的连接。当 SYN-A
 
 - **没有每目标超时，也没有重传。** 丢掉一个 SYN 就少一条结果；丢掉一个 banner 段就少一段 banner。`--repeat-synack`、`--repeat-banner`、`--repeat-ack` 和 `--repeat-rst` 只是把重复到达的结果重新输出，没有任何机制会重发从未到达的包。
 - **去重是近似的。** 它是一张按 `--dedup-win` 定容的四路桶表，采用随机淘汰。当某个地址段产生很高扇出时，表项会被挤掉，重复计数随之不可靠——`--all-banner` 的记账也会受牵连。
-- **零窗口一律报成 `fake-open`。** accept 队列已满的真实服务同样会通告零窗口；这类目标会被如此分类，而且永远不会去请求它的 banner。
+- **零窗口默认报成 `fake-open`。** accept 队列已满的真实服务同样会通告零窗口；这类目标会被分类为 `fake-open`，不会请求 banner。`-scan-arg "--probe-zerowin"` 是研究开关：仍然分类为 `fake-open`，但会继续发送探测载荷。
 - **默认只读一个 banner 段。** 非 SYN 模板通告 1024 字节窗口，且首个数据段之后立即 RST，因此大 banner 和多段 TLS 握手会被截断。请使用 `--all-banner`，并调整 `--tcp-win`、`--max-packet-len` 和 `--snaplen`。
 - **不处理乱序。** 数据段按到达顺序处理，没有重组队列，也没有重新排序。
 - **载荷大小受包缓冲限制。** 放不下的探测载荷不会发出，并会记录一条警告。

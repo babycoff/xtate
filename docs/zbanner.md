@@ -99,9 +99,10 @@ useful for a census.
 `--all-banner` is the other direction: instead of closing after one segment, ZBanner
 acknowledges each data segment (`ack = seqno_them + app_length`) and keeps reading.
 `--all-banner-limit` caps the number of segments, `--all-banner-floor` suppresses results
-from segments below a threshold. The segment index used by these two knobs is the dedup
-repeat counter, not a sequence-number-derived counter, which is an approximation (see
-limitations).
+from segments below a threshold. The `banner idx` field is still based on the dedup repeat
+counter and remains approximate; `banner seqno` reports the exact TCP sequence number of
+the segment and is the reliable field for ordering/deduplicating banner data. The limit and
+floor knobs still use the approximate index.
 
 ## Usage
 
@@ -191,9 +192,10 @@ without a table.
 - **Deduplication is approximate.** It is a 4-way bucket table with random eviction, sized
   by `--dedup-win`. Under high fan-out from one address block, entries are evicted and the
   repeat counter becomes unreliable — which also degrades `--all-banner` bookkeeping.
-- **Zero window is always reported as `fake-open`.** A real service whose accept queue is
-  full also advertises a zero window; such a target is classified but its banner is never
-  requested.
+- **Zero window is `fake-open` by default.** A real service whose accept queue is full also
+  advertises a zero window; such a target is classified `fake-open` and its banner is not
+  requested. `-scan-arg "--probe-zerowin"` is a research switch that still classifies it as
+  `fake-open` but sends the probe payload anyway.
 - **One banner segment by default.** The non-SYN template advertises a 1024-byte window
   and the connection is RST immediately after the first data segment, so large banners and
   multi-segment TLS handshakes are truncated. Use `--all-banner` and tune `--tcp-win`,

@@ -2865,7 +2865,9 @@ ConfParam config_parameters[] = {
      "irrespective"
      " with consecutive communication (e.g. results processing), it is better"
      " to use special thread-pool.\n"
-     "The number of receive handler must be the power of 2. (Default 1)",
+     "The number of receive handler must be the power of 2. (Default 1)\n"
+     "NOTE: Lua probes (lua-tcp/lua-udp) force this to 1 because their Lua "
+     "state is shared by all handlers.",
      "Specify the number of receive handler threads."},
     {"d",
      SET_log_level,

@@ -112,7 +112,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80 -scan zbanner -probe lua-tcp \
   -probe-arg "-script lua-probes/tcp-example.lua" -show info
 ```
 
-Lua is loaded at runtime; if no Lua shared library is available the probes are still listed but fail at startup with a load error (install Lua 5.3 or 5.4).
+Lua is loaded at runtime; if no Lua shared library is available the probes are still listed but fail at startup with a load error (install Lua 5.3 or 5.4). Lua probes share one process-wide Lua state, so selecting `lua-tcp`/`lua-udp` forces `--rx-handler-count 1`.
 The example scripts in `lua-probes/` declare `ProbeName`, `ProbeType`, `MultiMode` and
 `MultiNum` in the script header.
 

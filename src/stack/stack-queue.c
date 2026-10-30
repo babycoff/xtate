@@ -14,20 +14,14 @@ PktBuf *stack_get_pktbuf(NetStack *stack) {
 
     int err = rte_ring_mc_dequeue(stack->packet_buffers, (void **)&response);
 
-    if (err != 0) {
-        //! No need to proceed
-        LOG(LEVEL_ERROR, "failed to get packet buffer. (IMPOSSIBLE)\n");
-        fflush(stdout);
-        xcmd_try_reboot();
-        exit(1);
-    }
-
-    if (response == NULL) {
-        //! No need to proceed
-        LOG(LEVEL_ERROR, "got empty packet buffer. (IMPOSSIBLE)\n");
-        fflush(stdout);
-        xcmd_try_reboot();
-        exit(1);
+    if (err != 0 || response == NULL) {
+        /* The pool is exhausted, usually because a handler is holding buffers
+         * under load. A temporary allocation keeps the scan alive instead of
+         * making the receiver exit the whole process. The buffer is returned
+         * to the pool by stack_flush_packets() like any other PktBuf. */
+        LOG(LEVEL_WARN,
+            "packet buffer pool exhausted; allocating a temporary buffer\n");
+        response = MALLOC(sizeof(PktBuf));
     }
 
     return response;

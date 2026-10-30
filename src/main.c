@@ -155,6 +155,14 @@ static int _main_scan(XConf *xconf) {
     /*
      * Config params & Do global init for GenerateModule
      */
+    if (xconf->probe && strncmp(xconf->probe->name, "lua-", 4) == 0 &&
+        xconf->rx_handler_count != 1) {
+        LOG(LEVEL_WARN,
+            "Lua probe `%s` uses a single global Lua state; forcing "
+            "--rx-handler-count 1 (was %u)\n",
+            xconf->probe->name, xconf->rx_handler_count);
+        xconf->rx_handler_count = 1;
+    }
     if (xconf->generator_args && xconf->generator_args[0] &&
         xconf->generator->params) {
         if (conf_set_params_from_substr(NULL, xconf->generator->params,

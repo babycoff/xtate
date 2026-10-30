@@ -435,9 +435,11 @@ Scanner TcpSynScan = {
     .params              = tcpsyn_parameters,
     /* is syn-ack or rst in ipv4 & ipv6*/
     .bpf_filter          = "(ip && tcp && (tcp[tcpflags]==(tcp-syn|tcp-ack) || "
-                           "tcp[tcpflags]==tcp-rst)) "
+                           "tcp[tcpflags]==tcp-rst || "
+                           "tcp[tcpflags]==(tcp-rst|tcp-ack))) "
                            "|| (ip6 && tcp && (ip6[40+13]==(tcp-syn|tcp-ack) || "
-                           "ip6[40+13]==tcp-rst))",
+                           "ip6[40+13]==tcp-rst || "
+                           "ip6[40+13]==(tcp-rst|tcp-ack)))",
     .short_desc          = "TCP SYN scan to find open port.",
     .desc = "TcpSynScan sends a TCP SYN packet to target port. Expect a SYNACK "
             "response to believe the port is open or an RST for closed in TCP "

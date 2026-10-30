@@ -14,7 +14,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 `-scan` is mandatory; `-probe` is optional only for modules that declare "no probe". Module
 parameters go through `-scan-arg` and `-probe-arg`, one quoted string each (`--help-scan <module>`, `--help-probe <module>`).
 
-> Documented against Xtate v2.17.0. The CLI is authoritative: `--help`, `--help-scan`,
+> Documented against Xtate v2.18.0. The CLI is authoritative: `--help`, `--help-scan`,
 > `--help-probe`.
 
 ## Choosing a scan module

@@ -96,7 +96,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80 -scan zbanner -probe lua-tcp \
   -probe-arg "-script lua-probes/tcp-example.lua" -show info
 ```
 
-Lua 在运行期加载；如果没有可用的 Lua 共享库，这些探测仍会出现在列表里，但会在启动时因加载错误而失败（请安装 Lua 5.3 或 5.4）。`lua-probes/` 里的示例脚本在脚本头部声明 `ProbeName`、`ProbeType`、`MultiMode` 和 `MultiNum`。
+Lua 在运行期加载；如果没有可用的 Lua 共享库，这些探测仍会出现在列表里，但会在启动时因加载错误而失败（请安装 Lua 5.3 或 5.4）。Lua 探测共享一个进程级 Lua state，因此选中 `lua-tcp`/`lua-udp` 时会强制 `--rx-handler-count 1`。`lua-probes/` 里的示例脚本在脚本头部声明 `ProbeName`、`ProbeType`、`MultiMode` 和 `MultiNum`。
 
 ### 辅助（3）
 

@@ -39,6 +39,7 @@ struct ZBannerConf {
     unsigned record_data     : 1;
     unsigned record_ack      : 1;
     unsigned with_ack        : 1;
+    unsigned zero_win_probe  : 1;
     unsigned no_rst          : 1;
     unsigned no_dedup_banner : 1;
     unsigned no_dedup_synack : 1;
@@ -292,6 +293,16 @@ static ConfRes SET_with_ack(void *conf, const char *name, const char *value) {
     return Conf_OK;
 }
 
+static ConfRes SET_zero_win_probe(void *conf, const char *name,
+                                  const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+
+    zbanner_conf.zero_win_probe = conf_parse_bool(value);
+
+    return Conf_OK;
+}
+
 static ConfRes SET_record_mss(void *conf, const char *name, const char *value) {
     UNUSEDPARM(conf);
     UNUSEDPARM(name);
@@ -442,6 +453,14 @@ static ConfParam zbanner_parameters[] = {
      "scanning. But some servers(not very sure) may only accept this kind of "
      "connections. However, it's the early version of ZBanner and can also be "
      "used for research."},
+    {"probe-zerowin",
+     SET_zero_win_probe,
+     Type_FLAG,
+     {"zerowin-probe", "zero-win-probe", 0},
+     "Also send the probe payload after a zero-window SYN-ACK. Default is to "
+     "classify it as fake-open and send no payload. The result remains "
+     "fake-open/zerowin; this is a research switch for a real service whose "
+     "accept backlog temporarily reports a zero window."},
     {"no-rst",
      SET_no_rst,
      Type_FLAG,
@@ -747,12 +766,17 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
             dach_set_int(&item->scan_report, "ackno", seqno_me);
         }
 
-        if (win_them == 0) {
+        if (win_them == 0 && !zbanner_conf.zero_win_probe) {
             safe_strcpy(item->classification, OUT_CLS_SIZE, "fake-open");
             safe_strcpy(item->reason, OUT_RSN_SIZE, "zerowin");
         } else {
-            safe_strcpy(item->classification, OUT_CLS_SIZE, "open");
-            safe_strcpy(item->reason, OUT_RSN_SIZE, "syn-ack");
+            if (win_them == 0) {
+                safe_strcpy(item->classification, OUT_CLS_SIZE, "fake-open");
+                safe_strcpy(item->reason, OUT_RSN_SIZE, "zerowin");
+            } else {
+                safe_strcpy(item->classification, OUT_CLS_SIZE, "open");
+                safe_strcpy(item->reason, OUT_RSN_SIZE, "syn-ack");
+            }
 
             /*stack(send) ack with probe*/
             ProbeTarget ptarget = {
@@ -770,6 +794,15 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
             size_t        payload_len = 0;
 
             payload_len = ZBannerScan.probe->make_payload_cb(&ptarget, payload);
+
+            size_t declared_len =
+                ZBannerScan.probe->get_payload_length_cb(&ptarget);
+            if (payload_len != declared_len) {
+                LOG(LEVEL_WARN,
+                    "zbanner: probe payload length mismatch (make=%u, "
+                    "declared=%u); banner acknowledgement checks may fail\n",
+                    (unsigned)payload_len, (unsigned)declared_len);
+            }
 
             /**
              * Use a complete standard TCP 3-way handshake
@@ -868,6 +901,9 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
             dach_set_int(&item->scan_report, "repeats", valid_pkt->repeats);
         } else if (zbanner_conf.all_banner) {
             dach_set_int(&item->scan_report, "banner idx", valid_pkt->repeats);
+            /* Exact TCP sequence number of this segment; unlike banner idx it
+             * does not depend on the approximate dedup counter. */
+            dach_set_int(&item->scan_report, "banner seqno", seqno_them);
         }
 
         if (!zbanner_conf.no_rst &&
