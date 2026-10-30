@@ -1,0 +1,191 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 860" width="1200" height="860" data-generator="fireworks-tech-graph" data-schema-version="1" data-text-metrics="heuristic-v1" data-style-id="7" data-visual-theme="OpenAI" data-diagram-type="architecture" data-motion-scene="" data-semantic-profile="generic" data-semantic-valid="true" data-quality-profile="standard" data-max-bends-per-edge="12" data-max-total-bends="100" data-max-route-stretch="5.0" data-max-bridged-crossings="8" data-min-node-gap="0.0" data-min-container-gutter="0.0" data-min-label-clearance="2.0" data-min-segment-length="0.0">
+  <defs>
+    <marker id="arrowA" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#10a37f"/>
+    </marker>
+    <marker id="arrowB" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#0f766e"/>
+    </marker>
+    <marker id="arrowC" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#0891b2"/>
+    </marker>
+    <marker id="arrowE" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#f59e0b"/>
+    </marker>
+    <marker id="arrowF" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    <marker id="arrowG" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#475569"/>
+    </marker>
+    <marker id="arrowH" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
+    </marker>
+    <style>
+    text { font-family: 'Helvetica Neue', Helvetica, Arial, 'PingFang SC', 'Noto Sans CJK SC', 'Microsoft YaHei', 'Microsoft JhengHei', 'SimHei', sans-serif; }
+    .title { font-size: 24px; font-weight: 700; fill: #0f172a; }
+    .subtitle { font-size: 13px; font-weight: 500; fill: #64748b; }
+    .section { font-size: 13px; font-weight: 700; fill: #087f5b; letter-spacing: 1.4px; }
+    .section-sub { font-size: 12px; font-weight: 500; fill: #64748b; }
+    .node-title { font-weight: 700; fill: #0f172a; }
+    .node-sub { font-weight: 500; fill: #475569; }
+    .node-type { font-size: 11px; font-weight: 700; fill: #64748b; letter-spacing: 0.08em; }
+    .arrow-label { font-size: 12px; font-weight: 600; fill: #475569; }
+    .legend { font-size: 12px; font-weight: 500; fill: #475569; }
+    .footnote { font-size: 12px; font-weight: 500; fill: #64748b; }
+    .metric-label { font-size: 8.5px; font-weight: 700; fill: #64748b; text-transform: uppercase; }
+    .metric-value { font-size: 9.5px; font-weight: 700; fill: #0f172a; }
+    </style>
+  </defs>
+  <rect data-graph-role="background" width="1200.0" height="860.0" fill="#ffffff"/>
+  <text x="48.0" y="48" text-anchor="start" class="title">N tx · 1 rx · 1 dispatch · M handle</text>
+  <text x="48.0" y="72" text-anchor="start" class="subtitle">parallel thread pools around a single receive/dispatch pipeline</text>
+  <line x1="48" y1="100" x2="1152.0" y2="100" stroke="#e2e8f0" stroke-width="1"/>
+  <g id="tx_pool" data-graph-role="container" data-container-id="tx_pool" data-semantic-role="boundary" data-graph-bounds="40,120,700,320">
+  <rect data-graph-role="container" x="40.0" y="120.0" width="660.0" height="200.0" rx="16.0" fill="none" stroke="#e2e8f0" stroke-width="1.4" stroke-dasharray="5 4"/>
+  </g>
+  <g id="handle_pool" data-graph-role="container" data-container-id="handle_pool" data-semantic-role="boundary" data-graph-bounds="40,450,700,670">
+  <rect data-graph-role="container" x="40.0" y="450.0" width="660.0" height="220.0" rx="16.0" fill="none" stroke="#e2e8f0" stroke-width="1.4" stroke-dasharray="5 4"/>
+  </g>
+  <path id="a_tx_net" data-graph-role="edge" data-edge-id="a_tx_net" data-source="txn" data-target="net" data-edge-kind="flow" data-topic-id="" data-flow="data" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="2" data-route-stretch="1.0" data-bridges="" d="M 655,215 L 675.4,215 L 675.4,210 L 780,210" fill="none" stroke="#f59e0b" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowE)"/>
+  <path id="a_net_rx" data-graph-role="edge" data-edge-id="a_net_rx" data-source="net" data-target="rx" data-edge-kind="flow" data-topic-id="" data-flow="read" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 970,260 L 970,300" fill="none" stroke="#0891b2" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowC)"/>
+  <path id="a_rx_dispatch" data-graph-role="edge" data-edge-id="a_rx_dispatch" data-source="rx" data-target="dispatch" data-edge-kind="flow" data-topic-id="" data-flow="control" data-motion-role="" data-motion-stage="" data-motion-order="" data-protocol="" data-via="" data-critical-path-id="" data-critical-hop="" data-critical-hops="" data-critical="false" data-bends="0" data-route-stretch="1.0" data-bridges="" d="M 970,400 L 970,520" fill="none" stroke="#10a37f" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowA)"/>
+  <g id="node-tx0" data-graph-role="node" data-node-id="tx0" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="65,170,235,260">
+  <rect x="65.0" y="170.0" width="170.0" height="90.0" rx="14.0" fill="#fffdf5" stroke="#d4a72c" stroke-width="1.8"/>
+  <text x="150.0" y="188.0" text-anchor="middle" class="node-type">TX THREAD 0</text>
+  <text data-text-role="title" data-full-text="targets → packets" data-text-max-width="146.0" x="150.0" y="221.0" text-anchor="middle" class="node-title" font-size="14.35">targets → packets</text>
+  <text data-text-role="subtitle" data-full-text="rate · probe · raw" data-text-max-width="146.0" x="150.0" y="243.0" text-anchor="middle" class="node-sub" font-size="12">rate · probe · raw</text>
+  </g>
+  <g id="node-tx1" data-graph-role="node" data-node-id="tx1" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="275,170,445,260">
+  <rect x="275.0" y="170.0" width="170.0" height="90.0" rx="14.0" fill="#fffdf5" stroke="#d4a72c" stroke-width="1.8"/>
+  <text x="360.0" y="188.0" text-anchor="middle" class="node-type">TX THREAD 1</text>
+  <text data-text-role="title" data-full-text="targets → packets" data-text-max-width="146.0" x="360.0" y="221.0" text-anchor="middle" class="node-title" font-size="14.35">targets → packets</text>
+  <text data-text-role="subtitle" data-full-text="rate · probe · raw" data-text-max-width="146.0" x="360.0" y="243.0" text-anchor="middle" class="node-sub" font-size="12">rate · probe · raw</text>
+  </g>
+  <g id="node-txn" data-graph-role="node" data-node-id="txn" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="485,170,655,260">
+  <rect x="485.0" y="170.0" width="170.0" height="90.0" rx="14.0" fill="#fffdf5" stroke="#d4a72c" stroke-width="1.8"/>
+  <text x="570.0" y="188.0" text-anchor="middle" class="node-type">TX THREAD N-1</text>
+  <text data-text-role="title" data-full-text="targets → packets" data-text-max-width="146.0" x="570.0" y="221.0" text-anchor="middle" class="node-title" font-size="14.35">targets → packets</text>
+  <text data-text-role="subtitle" data-full-text="rate · probe · raw" data-text-max-width="146.0" x="570.0" y="243.0" text-anchor="middle" class="node-sub" font-size="12">rate · probe · raw</text>
+  </g>
+  <g id="node-queue" data-graph-role="node" data-node-id="queue" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="40,350,700,430">
+  <rect x="40.0" y="350.0" width="660.0" height="80.0" rx="14.0" fill="#faf5ff" stroke="#7c3aed" stroke-width="1.8"/>
+  <text x="370.0" y="368.0" text-anchor="middle" class="node-type">RING BUFFER</text>
+  <text data-text-role="title" data-full-text="transmit_queue" data-text-max-width="636.0" x="370.0" y="396.0" text-anchor="middle" class="node-title" font-size="18">transmit_queue</text>
+  <text data-text-role="subtitle" data-full-text="ack · rst · next probe" data-text-max-width="636.0" x="370.0" y="418.0" text-anchor="middle" class="node-sub" font-size="12">ack · rst · next probe</text>
+  </g>
+  <g id="node-h0" data-graph-role="node" data-node-id="h0" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="65,530,235,620">
+  <rect x="65.0" y="530.0" width="170.0" height="90.0" rx="14.0" fill="#f0fdff" stroke="#0891b2" stroke-width="1.8"/>
+  <text x="150.0" y="548.0" text-anchor="middle" class="node-type">HANDLE 0</text>
+  <text data-text-role="title" data-full-text="scan + probe" data-text-max-width="146.0" x="150.0" y="581.0" text-anchor="middle" class="node-title" font-size="18">scan + probe</text>
+  <text data-text-role="subtitle" data-full-text="own TCB table" data-text-max-width="146.0" x="150.0" y="603.0" text-anchor="middle" class="node-sub" font-size="12">own TCB table</text>
+  </g>
+  <g id="node-h1" data-graph-role="node" data-node-id="h1" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="275,530,445,620">
+  <rect x="275.0" y="530.0" width="170.0" height="90.0" rx="14.0" fill="#f0fdff" stroke="#0891b2" stroke-width="1.8"/>
+  <text x="360.0" y="548.0" text-anchor="middle" class="node-type">HANDLE 1</text>
+  <text data-text-role="title" data-full-text="scan + probe" data-text-max-width="146.0" x="360.0" y="581.0" text-anchor="middle" class="node-title" font-size="18">scan + probe</text>
+  <text data-text-role="subtitle" data-full-text="own TCB table" data-text-max-width="146.0" x="360.0" y="603.0" text-anchor="middle" class="node-sub" font-size="12">own TCB table</text>
+  </g>
+  <g id="node-hm" data-graph-role="node" data-node-id="hm" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="485,530,655,620">
+  <rect x="485.0" y="530.0" width="170.0" height="90.0" rx="14.0" fill="#f0fdff" stroke="#0891b2" stroke-width="1.8"/>
+  <text x="570.0" y="548.0" text-anchor="middle" class="node-type">HANDLE M-1</text>
+  <text data-text-role="title" data-full-text="scan + probe" data-text-max-width="146.0" x="570.0" y="581.0" text-anchor="middle" class="node-title" font-size="18">scan + probe</text>
+  <text data-text-role="subtitle" data-full-text="own TCB table" data-text-max-width="146.0" x="570.0" y="603.0" text-anchor="middle" class="node-sub" font-size="12">own TCB table</text>
+  </g>
+  <g id="node-output" data-graph-role="node" data-node-id="output" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="40,740,700,810">
+  <rect x="40.0" y="740.0" width="660.0" height="70.0" rx="14.0" fill="#faf5ff" stroke="#7c3aed" stroke-width="1.8"/>
+  <text x="370.0" y="758.0" text-anchor="middle" class="node-type">OUTPUT MODULE</text>
+  <text data-text-role="title" data-full-text="text · CSV · NDJSON · BSON" data-text-max-width="636.0" x="370.0" y="781.0" text-anchor="middle" class="node-title" font-size="18">text · CSV · NDJSON · BSON</text>
+  <text data-text-role="subtitle" data-full-text="shared sink · one lock" data-text-max-width="636.0" x="370.0" y="803.0" text-anchor="middle" class="node-sub" font-size="12">shared sink · one lock</text>
+  </g>
+  <g id="node-net" data-graph-role="node" data-node-id="net" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="780,160,1160,260">
+  <rect x="780.0" y="160.0" width="380.0" height="100.0" rx="14.0" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.8"/>
+  <text x="970.0" y="178.0" text-anchor="middle" class="node-type">WIRE</text>
+  <text data-text-role="title" data-full-text="network" data-text-max-width="356.0" x="970.0" y="216.0" text-anchor="middle" class="node-title" font-size="18">network</text>
+  <text data-text-role="subtitle" data-full-text="IPv4 · IPv6 · raw sockets" data-text-max-width="356.0" x="970.0" y="238.0" text-anchor="middle" class="node-sub" font-size="12">IPv4 · IPv6 · raw sockets</text>
+  </g>
+  <g id="node-rx" data-graph-role="node" data-node-id="rx" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="780,300,1160,400">
+  <rect x="780.0" y="300.0" width="380.0" height="100.0" rx="14.0" fill="#f0fdff" stroke="#0891b2" stroke-width="1.8"/>
+  <text x="970.0" y="318.0" text-anchor="middle" class="node-type">RX THREAD · 1</text>
+  <text data-text-role="title" data-full-text="preprocess · validate · dedup" data-text-max-width="356.0" x="970.0" y="356.0" text-anchor="middle" class="node-title" font-size="18">preprocess · validate · dedup</text>
+  <text data-text-role="subtitle" data-full-text="single receiver" data-text-max-width="356.0" x="970.0" y="378.0" text-anchor="middle" class="node-sub" font-size="12">single receiver</text>
+  </g>
+  <g id="node-dispatch" data-graph-role="node" data-node-id="dispatch" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="780,520,1160,620">
+  <rect x="780.0" y="520.0" width="380.0" height="100.0" rx="14.0" fill="#f0fdf4" stroke="#10a37f" stroke-width="1.8"/>
+  <text x="970.0" y="538.0" text-anchor="middle" class="node-type">DISPATCH · 1</text>
+  <text data-text-role="title" data-full-text="hash(src_ip)" data-text-max-width="356.0" x="970.0" y="576.0" text-anchor="middle" class="node-title" font-size="18">hash(src_ip)</text>
+  <text data-text-role="subtitle" data-full-text="handle_q[0..M-1]" data-text-max-width="356.0" x="970.0" y="598.0" text-anchor="middle" class="node-sub" font-size="12">handle_q[0..M-1]</text>
+  </g>
+  <g id="node-main" data-graph-role="node" data-node-id="main" data-semantic-role="rect" data-motion-role="" data-motion-stage="" data-motion-order="" data-parent="" data-deployment-id="" data-topic-id="" data-span-id="" data-station-order="" data-status="" data-start-ms="" data-duration-ms="" data-parent-span="" data-graph-bounds="780,740,1160,810">
+  <rect x="780.0" y="740.0" width="380.0" height="70.0" rx="14.0" fill="#fafafa" stroke="#cbd5e1" stroke-width="1.8"/>
+  <text x="970.0" y="758.0" text-anchor="middle" class="node-type">MAIN THREAD · 1</text>
+  <text data-text-role="title" data-full-text="config · status · shutdown" data-text-max-width="356.0" x="970.0" y="781.0" text-anchor="middle" class="node-title" font-size="18">config · status · shutdown</text>
+  <text data-text-role="subtitle" data-full-text="control plane · not on the packet path" data-text-max-width="356.0" x="970.0" y="803.0" text-anchor="middle" class="node-sub" font-size="12">control plane · not on the packet path</text>
+  </g>
+  <g id="a_tx_net-label" data-graph-role="label" data-owner="a_tx_net" data-graph-bounds="664.42,179,770.58,199">
+  <rect x="664.42" y="179.0" width="106.16000000000001" height="20" rx="6" fill="#ffffff" opacity="0.96"/>
+  <text x="717.5" y="193.0" text-anchor="middle" class="arrow-label">raw packets ×N</text>
+  </g>
+  <g id="a_net_rx-label" data-graph-role="label" data-owner="a_net_rx" data-graph-bounds="910.52,266,967,286">
+  <rect x="910.52" y="266.0" width="56.48" height="20" rx="6" fill="#ffffff" opacity="0.96"/>
+  <text x="938.76" y="280.0" text-anchor="middle" class="arrow-label">replies</text>
+  </g>
+  <g id="a_rx_dispatch-label" data-graph-role="label" data-owner="a_rx_dispatch" data-graph-bounds="886.52,446,967,466">
+  <rect x="886.52" y="446.0" width="80.48" height="20" rx="6" fill="#ffffff" opacity="0.96"/>
+  <text x="926.76" y="460.0" text-anchor="middle" class="arrow-label">dispatch_q</text>
+  </g>
+  <g id="footer" data-graph-role="reserved" data-graph-bounds="42,832,553,848">
+  <text x="42.0" y="844.0" class="footnote">solid: packet path · dashed: follow-up packets through the NetStack queue</text>
+  </g>
+
+<g id="pool-labels" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif">
+  <text transform="rotate(-90 24 220)" x="24" y="220" text-anchor="middle" font-size="11.5" font-weight="700" letter-spacing="1.2" fill="#0f766e">TX POOL · N THREADS</text>
+  <text transform="rotate(-90 24 560)" x="24" y="560" text-anchor="middle" font-size="11.5" font-weight="700" letter-spacing="1.2" fill="#0f766e">HANDLE POOL · M THREADS</text>
+</g>
+<g id="concurrency-buses" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="ovGreen" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#10a37f"/>
+    </marker>
+    <marker id="ovPurple" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0, 9 3.5, 0 7" fill="#7c3aed"/>
+    </marker>
+  </defs>
+
+  <!-- dispatch -> handle pool: one fan-out bus -->
+  <polyline points="780,570 720,570 720,505 570,505" fill="none" stroke="#10a37f" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="150" y1="505" x2="570" y2="505" stroke="#10a37f" stroke-width="1.7" stroke-linecap="round"/>
+  <line x1="150" y1="505" x2="150" y2="530" stroke="#10a37f" stroke-width="1.7" marker-end="url(#ovGreen)"/>
+  <line x1="360" y1="505" x2="360" y2="530" stroke="#10a37f" stroke-width="1.7" marker-end="url(#ovGreen)"/>
+  <line x1="570" y1="505" x2="570" y2="530" stroke="#10a37f" stroke-width="1.7" marker-end="url(#ovGreen)"/>
+  <circle cx="150" cy="505" r="2.6" fill="#10a37f"/><circle cx="360" cy="505" r="2.6" fill="#10a37f"/><circle cx="570" cy="505" r="2.6" fill="#10a37f"/>
+  <text x="645" y="496" text-anchor="middle" font-size="11" font-weight="600" fill="#10a37f">hash(src_ip)</text>
+
+  <!-- all handlers -> queue: one merge bus -->
+  <line x1="150" y1="530" x2="150" y2="440" stroke="#7c3aed" stroke-width="1.7" stroke-dasharray="5 4" stroke-linecap="round"/>
+  <line x1="360" y1="530" x2="360" y2="440" stroke="#7c3aed" stroke-width="1.7" stroke-dasharray="5 4" stroke-linecap="round"/>
+  <line x1="570" y1="530" x2="570" y2="440" stroke="#7c3aed" stroke-width="1.7" stroke-dasharray="5 4" stroke-linecap="round"/>
+  <line x1="150" y1="440" x2="570" y2="440" stroke="#7c3aed" stroke-width="1.7" stroke-dasharray="5 4" stroke-linecap="round"/>
+  <line x1="360" y1="440" x2="360" y2="430" stroke="#7c3aed" stroke-width="1.7" stroke-dasharray="5 4" marker-end="url(#ovPurple)"/>
+  <circle cx="150" cy="440" r="2.6" fill="#7c3aed"/><circle cx="360" cy="440" r="2.6" fill="#7c3aed"/><circle cx="570" cy="440" r="2.6" fill="#7c3aed"/>
+
+  <!-- queue -> every tx thread -->
+  <line x1="360" y1="350" x2="360" y2="300" stroke="#7c3aed" stroke-width="1.7" stroke-dasharray="5 4" stroke-linecap="round"/>
+  <line x1="150" y1="300" x2="570" y2="300" stroke="#7c3aed" stroke-width="1.7" stroke-dasharray="5 4" stroke-linecap="round"/>
+  <line x1="150" y1="300" x2="150" y2="260" stroke="#7c3aed" stroke-width="1.7" stroke-dasharray="5 4" marker-end="url(#ovPurple)"/>
+  <line x1="360" y1="300" x2="360" y2="260" stroke="#7c3aed" stroke-width="1.7" stroke-dasharray="5 4" marker-end="url(#ovPurple)"/>
+  <line x1="570" y1="300" x2="570" y2="260" stroke="#7c3aed" stroke-width="1.7" stroke-dasharray="5 4" marker-end="url(#ovPurple)"/>
+  <circle cx="150" cy="300" r="2.6" fill="#7c3aed"/><circle cx="360" cy="300" r="2.6" fill="#7c3aed"/><circle cx="570" cy="300" r="2.6" fill="#7c3aed"/>
+  <text x="590" y="308" text-anchor="start" font-size="10.5" fill="#7c3aed">follow-ups ×N</text>
+
+  <!-- every handler -> output -->
+  <line x1="150" y1="620" x2="150" y2="690" stroke="#7c3aed" stroke-width="1.7" stroke-linecap="round"/>
+  <line x1="360" y1="620" x2="360" y2="690" stroke="#7c3aed" stroke-width="1.7" stroke-linecap="round"/>
+  <line x1="570" y1="620" x2="570" y2="690" stroke="#7c3aed" stroke-width="1.7" stroke-linecap="round"/>
+  <line x1="150" y1="690" x2="570" y2="690" stroke="#7c3aed" stroke-width="1.7" stroke-linecap="round"/>
+  <line x1="360" y1="690" x2="360" y2="740" stroke="#7c3aed" stroke-width="1.7" marker-end="url(#ovPurple)"/>
+  <circle cx="150" cy="690" r="2.6" fill="#7c3aed"/><circle cx="360" cy="690" r="2.6" fill="#7c3aed"/><circle cx="570" cy="690" r="2.6" fill="#7c3aed"/>
+  <text x="590" y="698" text-anchor="start" font-size="10.5" fill="#7c3aed">OutItem ×M</text>
+</g>
+
+</svg>
