@@ -1,5 +1,7 @@
 # Troubleshooting
 
+**English** · [中文](zh-CN/troubleshooting.md)
+
 Most Xtate problems are one of five things: the wrong interface or source address, a packet filter eating the replies, the kernel resetting connections it does not know about, a rate that is too high for the path, or results that are being produced but not printed.
 
 Work through the sections in order; each one gives a command you can run to confirm or eliminate the cause.
@@ -103,7 +105,7 @@ IPv6 has its own traps: a link-local source address must be given explicitly (`-
 - **`zbanner` grabs only the first banner segment** by default and then sends RST. Long banners, multi-segment TLS ServerHellos or large HTTP headers need `-scan-arg "-all-banner"` (optionally bounded with `-all-banner-limit <n>` inside the same string).
 - **TLS probes appear to return nothing.** `tls-state` reports a failed handshake at `info` level, and it sends no SNI or ALPN, so virtual hosts/CDNs may answer with their default certificate/site. Add `-show info`, or promote failures to `failed` with `-probe-arg "-fail-handshake"`; treat stateful TLS evidence as the default virtual host, not as the requested hostname.
 
-These are design trade-offs in v2.13.1, not bugs; the full list with workarounds is in [Known limitations](./known-limitations.md).
+These are design trade-offs in v2.13.2, not bugs; the full list with workarounds is in [Known limitations](./known-limitations.md).
 
 ## Modules are missing or refuse to start
 

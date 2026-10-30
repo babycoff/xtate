@@ -1,5 +1,7 @@
 # Output
 
+**English** · [中文](zh-CN/output.md)
+
 By default Xtate prints results to **stdout**, one line per reply. An *OutputModule* can
 instead write text, CSV, NDJSON, BSON or a `list` file, or insert results into MongoDB. The
 status bar is separate: it is drawn on **stderr**, so redirecting stdout keeps the result
@@ -9,7 +11,7 @@ stream clean.
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80 -scan tcp-syn > results.txt
 ```
 
-> Documented against Xtate v2.13.1. `--help` and `--help-output <module>` are authoritative
+> Documented against Xtate v2.13.2. `--help` and `--help-output <module>` are authoritative
 > for the exact flags of your build.
 
 ## The result line

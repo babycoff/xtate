@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.13.1-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.13.2-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -39,6 +39,10 @@ It is not a crawler, and it does not pretend to be one. It is a packet engine wi
   <a href="docs/README.md">Docs</a> ·
   <a href="#papers-and-citation">Papers</a> ·
   <a href="#license-and-responsible-use">License</a>
+</p>
+
+<p align="center">
+  <b>English</b> · <a href="README.zh-CN.md">中文</a>
 </p>
 
 ## Why Xtate
@@ -185,6 +189,8 @@ The README is the landing page. The manual lives in [`docs/`](docs/README.md):
 - [Modules](docs/modules.md) — the four module types and what ships with Xtate
 - [Architecture](docs/architecture.md) · [ZBanner](docs/zbanner.md) · [HLTCP](docs/hltcp.md)
 - [Troubleshooting](docs/troubleshooting.md) · [Known limitations](docs/known-limitations.md)
+
+中文文档：[`docs/zh-CN/`](docs/zh-CN/README.md)
 
 ## Build
 

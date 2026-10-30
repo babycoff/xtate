@@ -1,10 +1,12 @@
 # Getting started
 
+**English** · [中文](zh-CN/getting-started.md)
+
 Xtate is a modular all-stack network scanner for large-scale active measurement. It sends raw IPv4/IPv6 packets, keeps as little per-target state as it can get away with, and turns replies into structured results — from a single SYN to a completed TLS handshake.
 
 This page takes you from a source checkout to your first scan on Linux or Windows. It assumes you are comfortable with a shell, `sudo`, and basic TCP/IP; it is not a tutorial on scanning itself.
 
-> Documented against Xtate v2.13.1. If your build behaves differently, `--help` and the module help are authoritative.
+> Documented against Xtate v2.13.2. If your build behaves differently, `--help` and the module help are authoritative.
 
 ## Requirements
 

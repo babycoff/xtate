@@ -1,5 +1,7 @@
 # Modules
 
+**English** · [中文](zh-CN/modules.md)
+
 Xtate is assembled from four kinds of module. Each is a C struct plus one line in a
 `NULL`-terminated registry; there is no runtime plugin loading. A full build registers
 **11 Scan + 60 Probe + 7 Output + 5 Generate** modules, and modules whose optional library

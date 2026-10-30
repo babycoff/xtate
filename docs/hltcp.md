@@ -1,5 +1,7 @@
 # HLTCP: hybrid-state TCP and TLS
 
+**English** · [中文](zh-CN/hltcp.md)
+
 ZBanner answers one question per target and reads the first answer. Some questions need a
 conversation: complete a TLS handshake, read the certificate chain, send an HTTP request
 inside the tunnel, read the response. That requires a real TCP state machine on our side,

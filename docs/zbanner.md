@@ -1,5 +1,7 @@
 # ZBanner: stateless TCP banners
 
+**English** · [中文](zh-CN/zbanner.md)
+
 ZBanner obtains real TCP responses from real services **without keeping per-target
 connection state**. The peer's TCP stack holds the connection; Xtate holds only a key and
 some arithmetic. When a reply arrives, the key is recomputed from the packet's own fields

@@ -1,5 +1,7 @@
 # Scanning modes
 
+**English** · [中文](zh-CN/scanning-modes.md)
+
 A scan in Xtate is a **pair**: a ScanModule chosen with `-scan` and, when needed, a
 ProbeModule chosen with `-probe`. The scan module owns the packet and the receive validation;
 the probe module owns the payload and its parser. The probe *type* must match exactly what the
@@ -12,7 +14,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 `-scan` is mandatory; `-probe` is optional only for modules that declare "no probe". Module
 parameters go through `-scan-arg` and `-probe-arg`, one quoted string each (`--help-scan <module>`, `--help-probe <module>`).
 
-> Documented against Xtate v2.13.1. The CLI is authoritative: `--help`, `--help-scan`,
+> Documented against Xtate v2.13.2. The CLI is authoritative: `--help`, `--help-scan`,
 > `--help-probe`.
 
 ## Choosing a scan module

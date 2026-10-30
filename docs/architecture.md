@@ -1,5 +1,7 @@
 # Architecture
 
+**English** · [中文](zh-CN/architecture.md)
+
 Xtate is a modular, all-stack network scanner for large-scale active measurement. It
 turns a scan into a pipeline of four pluggable module types — **Generate** (targets),
 **Scan** (L3/L4 packets), **Probe** (L5+ payloads and parsers) and **Output** (results) —
