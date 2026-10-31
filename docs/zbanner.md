@@ -181,8 +181,10 @@ On Windows the scanner uses Npcap. In a local test (Windows 11, Npcap loopback a
 WSL target) the Windows stack did not reset the raw-socket SYN-ACK/ACK combination, so no
 host-wide RST helper was needed. This does not remove the other Windows requirements:
 Npcap, administrator access for the capture driver, adapter selection, and no PF_RING /
-`sendmmsg` equivalent. Both ZBanner and [HLTCP](./hltcp.md) still need a platform where the
-capture/injection path works.
+`sendmmsg` equivalent. For `tcp-syn` on Windows, pass `-scan-arg "--send-rst"` so Xtate
+actively closes the half-open connection after a SYN-ACK; ZBanner already sends its own
+RST after the banner (unless `--no-rst`). Both ZBanner and [HLTCP](./hltcp.md) still need a
+platform where the capture/injection path works.
 
 ## Reading the results
 

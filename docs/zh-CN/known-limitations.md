@@ -25,7 +25,7 @@ Xtate v2.20.0 围绕一个刻意的取舍构建：极高的报文速率与低廉
 - **探测载荷受包缓冲大小限制。** 载荷必须和 IP/TCP 头一起塞进 2048 字节的包（实际约 2000 字节载荷）。超限时不会截断——整个包不会发出，并会记录警告。规避方式：把探测载荷控制在约 2000 字节以内。
 - **零窗口 SYN-ACK 默认被判成 `fake-open`**，并且不会收到探测载荷。SYN 队列已满的真实服务也可能看起来像 fake open。`-scan-arg "--probe-zerowin"` 是研究开关：保持 `fake-open` 分类，但继续发送探测载荷。
 - **banner 扫描在 Linux 上依赖主机全局防火墙规则。** ZBanner 依赖内核不去应答未知连接；随仓库提供的脚本在安装期间会丢弃本机*所有*出向 TCP RST。v2.20.0 的生产路径中没有进程内 RST 过滤。忘记执行 `./firewall/rm_rules.sh` 会让本机持续丢弃所有出向 RST，TCP 重置从此失效。
-- **v2.20.0 没有随附 Windows 的全局 RST 辅助。** Windows 使用 Npcap。本地测试（Windows 11、Npcap loopback + WSL 目标）中，Windows 协议栈没有对 raw socket 的 SYN-ACK/ACK 组合发 RST，因此 Linux 的 `iptables` 辅助可能并不是本机 RST 问题所必需的。Windows 仍需要 Npcap、管理员权限、正确的 adapter 选择，且没有 PF_RING/`sendmmsg` 等价路径。
+- **v2.20.0 没有随附 Windows 的全局 RST 辅助。** Windows 使用 Npcap。本地测试（Windows 11、Npcap loopback + WSL 目标）中，Windows 协议栈没有对 raw socket 的 SYN-ACK/ACK 组合发 RST，因此 Linux 的 `iptables` 辅助可能并不是本机 RST 问题所必需的。由于 Windows 不会对未知半开连接发 RST，`tcp-syn` 要用 `-scan-arg "--send-rst"` 主动关闭；`zbanner` 和 `tcp-state` 会自己发 RST。Windows 仍需要 Npcap、管理员权限、正确的 adapter 选择，且没有 PF_RING/`sendmmsg` 等价路径。
 - **输出是事件式的，不是按目标聚合的。** 一个目标可能产生一行 `open`、多行 `banner` 以及一行 `acknowledged`。下游使用方必须自己按目标/端口聚合。
 - **握手之后使用 1024 字节的窗口**（默认 `-tcp-win`），这限制了在途数据量，并促使对端拆成小段发送。规避方式：调大 `-tcp-win`（多段数据同时用 `--all-banner`）。
 - **cookie 强度是测量级的，不是认证级的。** 32 位 SipHash cookie 加上确定性的源端口（`-src-port` 起始值 + probe 序号）足以让回包相对于友好对端可验证，但对知道种子的路径外攻击者是可预测的。

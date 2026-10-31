@@ -59,7 +59,9 @@ UDP services, ICMP/ARP/NDP for host discovery, `tcp-state` for short lists of ho
 
 Open ports are `success` (`"open" because "syn-ack"`); closed ports are `failure`
 (`"closed" because "rst"`) and are hidden until you add `-show failed`. `--send-rst` answers
-the SYN-ACK with a RST instead of leaving the half-open connection to the target.
+the SYN-ACK with a RST instead of leaving the half-open connection to the target. On Windows,
+where the local stack does not RST unknown half-open connections, use
+`-scan-arg "--send-rst"` for `tcp-syn`; `zbanner` already sends its own RST.
 
 ```bash
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000 -show failed

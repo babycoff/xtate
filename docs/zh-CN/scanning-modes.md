@@ -42,7 +42,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 
 ### SYN 扫描——无探测模块、无需防火墙
 
-开放端口是 `success`（`"open" because "syn-ack"`）；关闭端口是 `failure`（`"closed" because "rst"`），默认隐藏，需要加 `-show failed` 才能看到。`--send-rst` 会用 RST 回复 SYN-ACK，而不是把半开连接留给目标。
+开放端口是 `success`（`"open" because "syn-ack"`）；关闭端口是 `failure`（`"closed" because "rst"`），默认隐藏，需要加 `-show failed` 才能看到。`--send-rst` 会用 RST 回复 SYN-ACK，而不是把半开连接留给目标。在 Windows 上，本机协议栈不会对未知半开连接发 RST，所以 `tcp-syn` 需要 `-scan-arg "--send-rst"`；`zbanner` 本来就会自己发 RST。
 
 ```bash
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000 -show failed

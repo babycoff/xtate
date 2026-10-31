@@ -275,7 +275,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http \
 - `add_rules.sh` 会追加 `OUTPUT` 链上的 DROP 规则，丢弃 TCP RST（IPv4 与 IPv6），以及 ICMP 端口不可达（ICMP 3/3、ICMPv6 1/4）。`rm_rules.sh` 负责删除；`check_rules.sh` 打印当前规则。
 - 这些规则是**主机全局**的：生效期间，本机发出的每一个 RST 都会被丢弃，包括无关的 SSH/浏览器会话。扫描前添加，扫描后立即删除——绝不要长期保留。
 - 模块专属参数通过 `-scan-arg` 和 `-probe-arg` 以带引号的字符串传入；例如 `-scan-arg "-banner -ttl"` 会把 `-banner` 和 `-ttl` 传给扫描模块。
-- Windows 上没有随仓库提供的等价脚本。SYN 扫描照常工作，但基于握手的 banner 扫描能否成功，取决于 Windows 协议栈是否会重置该连接。
+- Windows 上没有随仓库提供的等价脚本。Windows 协议栈不会对未知半开连接发 RST，所以 `tcp-syn` 需要加 `-scan-arg "--send-rst"`，在收到 SYN-ACK 后主动关闭半开连接。`zbanner` 默认在 banner 后自己发 RST（除非 `--no-rst`）；`tcp-state` 关闭时也会发 RST。Windows 仍需要 Npcap 和管理员权限。
 
 ## 下一步
 

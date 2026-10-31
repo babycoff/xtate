@@ -113,7 +113,7 @@ ZBanner 发出的报文描述的是本机内核一无所知的连接。当 SYN-A
 
 这些规则是全局的：安装期间，主机上**每一个**应用都会失去出向 RST，浏览器或 SSH 的异常连接无法被干净地复位。扫描结束时要移除规则。脚本只适用于 Linux。
 
-Windows 上扫描器使用 Npcap。本地测试（Windows 11、Npcap loopback + WSL 目标）中，Windows 协议栈没有对 raw socket 的 SYN-ACK/ACK 组合发 RST，因此不需要全局 RST 辅助。但这不改变 Windows 的其它要求：Npcap、capture driver 的管理员权限、正确的 adapter 选择，且没有 PF_RING/`sendmmsg` 等价路径。ZBanner 和 [HLTCP](./hltcp.md) 仍需要可用的 capture/injection 路径。
+Windows 上扫描器使用 Npcap。本地测试（Windows 11、Npcap loopback + WSL 目标）中，Windows 协议栈没有对 raw socket 的 SYN-ACK/ACK 组合发 RST，因此不需要全局 RST 辅助。但这不改变 Windows 的其它要求：Npcap、capture driver 的管理员权限、正确的 adapter 选择，且没有 PF_RING/`sendmmsg` 等价路径。Windows 上跑 `tcp-syn` 时加 `-scan-arg "--send-rst"`，主动关闭 SYN-ACK 留下的半开连接；ZBanner 默认在 banner 后自己发 RST（除非 `--no-rst`）。ZBanner 和 [HLTCP](./hltcp.md) 仍需要可用的 capture/injection 路径。
 
 ## 解读结果
 
