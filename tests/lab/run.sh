@@ -132,10 +132,17 @@ grep -q "\"closed\" because \"rst\"" /tmp/hltcp-http.log
 
 run_case hltcp-tls \
     -ip "$TLS_IP" -p "$TLS_PORT" -scan tcp-state -probe tls-state \
-    -probe-arg "-subprobe close-state -sni example.test -alpn h2,http/1.1 --dump-version --dump-cipher --dump-cert" \
+    -probe-arg "-subprobe close-state -sni example.test -alpn h2,http/1.1 --dump-version --dump-cipher --dump-cert --ssl-keylog --graceful-tls-close" \
     -rate 100 --wait 2 --no-status -show info -show failed
 grep -q "tls info" /tmp/hltcp-tls.log
 grep -q "TLSv1" /tmp/hltcp-tls.log
+grep -q "key_log" /tmp/hltcp-tls.log
+
+run_case hltcp-tls-http \
+    -ip "$TLS_IP" -p "$TLS_PORT" -scan tcp-state -probe tls-state \
+    -probe-arg "-subprobe http-state -subprobe-arg '--all-banner' -sni example.test -alpn http/1.1 --dump-version" \
+    -rate 100 --wait 2 --no-status -show info -show failed
+grep -q "tls info" /tmp/hltcp-tls-http.log
 
 bash firewall/rm_rules.sh >/dev/null 2>&1 || true
 

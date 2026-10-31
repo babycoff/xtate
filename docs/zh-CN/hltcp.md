@@ -90,11 +90,11 @@ tcp-state -> tls-state -> http-state / hello-state / recog-state / get-state / c
 --probe-arg "-subprobe http-state -subprobe-arg '--all-banner'"
 ```
 
-`tls-state` 拒绝非状态型的子探测，并把子探测的多探测模式与数量复制到自己身上，让多探测语义穿透这一层。生命周期回调同样嵌套：子探测的连接初始化在 TCB 创建时运行，它的关闭在 `SSL` 对象释放之前运行。
+`tls-state` 拒绝非状态型的子探测，并把子探测的多探测模式与数量复制到自己身上，让多探测语义穿透这一层。生命周期回调同样嵌套：子探测的连接初始化在 **TLS 握手成功后**、它的 `make_hello` 之前运行；只有初始化过，关闭回调才在 `SSL` 对象释放之前运行。
 
 层与层之间的粘合剂是 **DataPass**（`data`、`len`、`is_dynamic`、`is_close`）。`is_dynamic` 是所有权标志：静态数据（`0`）是发送方承诺在真正发出前不会改变的常量，下层不得释放；动态数据（`1`）已被复制到堆上，所有权随之向下传递，所以每一层都可以放心复用自己的 scratch 缓冲。`is_close` 要求 TCP 层在发完这份数据后关闭连接。由于每层读写的是同一个结构体，TLS 探测和 HTTP 探测可以彼此独立地编写。
 
-两处粗糙的边角：子探测的 `conn_init` 在 TCB 创建时就运行，早于 TLS 握手完成（源码自己标了 `FIXME`）；并且现有状态探测都没有把 `hello_wait` 设为非零，所以“等服务器先开口”这个应用状态实际上是闲置的。
+两处粗糙的边角：状态探测的 `hello_wait` 都没有设为非零，所以“等服务器先开口”这个应用状态实际上是闲置的；子探测初始化现在放在 TLS 握手之后，但 HTTP 等子探测仍需自行处理“握手完成前没有数据”的语义。
 
 ## 内存与并发
 
@@ -146,10 +146,17 @@ sudo ./bin/xtate -ip 10.0.0.0/24 -p 80 -scan tcp-state -probe http-state -show i
 - **重复/丢 ACK 修复是部分的。** 对端重传的 SYN-ACK 会重新被 ACK；重复的旧数据或未来段也会立即回一个“期望序号”的 ACK，让对端可以更快重传。但还没有针对任意丢 ACK 的完整修复状态机。
 - **不处理乱序。** 超出期望序号的数据直接丢弃、不缓存；立即回 ACK 只是告诉对端我们期望什么，大证书链和多段 TLS flight 仍然依赖对端重传。
 - **固定 1 秒 RTO，无退避。** 在高延迟链路上会重传得过于急切。
-- **没有优雅关闭。** FIN 得到 RST 应答，没有 `TIME_WAIT`，TLS 也不发 `close_notify`。目标会看到异常终止——对扫描可接受，对长期监测则很吵。
+- **默认没有优雅关闭。** FIN 得到 RST 应答，没有 `TIME_WAIT`，TLS 也不发 `close_notify`。目标会看到异常终止——对扫描可接受，对长期监测则很吵。`tls-state` 的研究开关 `-probe-arg "--graceful-tls-close"` 会在 RST 之前发送 TLS `close_notify`；它多花一个包/往返，不推荐用于普通扫描。
 - **关闭端口以 `info` 等级报告。** 匹配不到 TCB 的 RST 会输出 `"closed" because "rst"`；扫描器的去重表会抑制重复 RST。没有 `-show info` 时这些行默认隐藏。
 - **SNI/ALPN 是可选开启的。** 默认情况下虚拟主机和 CDN 目标返回默认证书；当目标 IP 属于一个已知主机名时，在 `tls-state` 上设置 `-sni`/`-alpn`。
 - **OpenSSL 内存。** 每条存活的 TLS 连接占几 KB 到几十 KB；决定内存上限的是它，而不是 TCP 栈。
+
+## 有意不做的事
+
+这些是设计决定，不是 TODO：
+
+- **SYN 重传、RTT 自适应 RTO、乱序缓冲。** TCB 只在收到 SYN-ACK 后才存在，所以 SYN 重传需要在 scan 层维护 pending SYN 表；RTT 需要给每个未确认段记录发送时间；乱序缓冲需要 per-connection 内存。三者都会把 HLTCP 推离 hybrid-state、低内存模型。扫描场景的恢复手段是重跑（`--repeat`，或再跑一遍），而不是每目标重试状态机。
+- **通用 ACK 修复状态机。** 重复 SYN-ACK、重复/未来数据会在能避免 30 秒卡死的地方回 ACK，但 Xtate 不会为每一个丢失的 ACK 主动发纯 ACK。额外的 ACK 流量几乎不改变扫描结果，却浪费带宽，因此有意不做。
 - **去重被关闭。** `tcp-state` 把去重交给状态机自己处理，因此重复报文行为比 ZBanner 弱。
 
 这些问题的细节与规避办法，连同 ZBanner 与平台方面的注意事项，都收录在 [known-limitations.md](./known-limitations.md)。要在两个引擎之间选择，见 [scanning-modes.md](./scanning-modes.md)。

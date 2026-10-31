@@ -23,6 +23,7 @@
 #include "../xconf.h"
 #include "../util-data/safe-string.h"
 #include "../util-data/fine-malloc.h"
+#include "../util-data/data-chain.h"
 #include "../output-modules/output-modules.h"
 #include "../util-out/logger.h"
 #include "../util-misc/ssl-help.h"
@@ -32,6 +33,7 @@
 #define TSP_DATA_INIT_SIZE 4096
 #define TSP_DATA_MAX_SIZE  (1024 * 1024)
 #define TSP_EXT_TGT_IDX    0
+#define TSP_EXT_TLS_IDX    1
 
 /**
  * TlsStateProbe's internal state.
@@ -70,15 +72,18 @@ static SSL_CTX       *_general_ssl_ctx;
 struct TlsState {
     OSSL_HANDSHAKE_STATE handshake_state;
     ProbeState           substate;
+    DataChain            diag;
     unsigned char       *data;
     size_t               data_size;
     SSL                 *ssl;
     BIO                 *rbio;
     BIO                 *wbio;
-    unsigned             have_dump_version : 1;
-    unsigned             have_dump_subject : 1;
-    unsigned             have_dump_cipher  : 1;
-    unsigned             have_dump_cert    : 1;
+    unsigned             have_dump_version   : 1;
+    unsigned             have_dump_subject   : 1;
+    unsigned             have_dump_cipher    : 1;
+    unsigned             have_dump_cert      : 1;
+    unsigned             substate_inited     : 1;
+    unsigned             graceful_close_sent : 1;
 };
 
 struct TlsStateConf {
@@ -93,6 +98,7 @@ struct TlsStateConf {
     unsigned ssl_keylog     : 1;
     unsigned dump_cert      : 1;
     unsigned fail_handshake : 1;
+    unsigned graceful_close : 1;
 };
 
 static struct TlsStateConf tlsstate_conf = {0};
@@ -240,6 +246,16 @@ static ConfRes SET_fail_handshake(void *conf, const char *name,
     return Conf_OK;
 }
 
+static ConfRes SET_graceful_close(void *conf, const char *name,
+                                  const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+
+    tlsstate_conf.graceful_close = conf_parse_bool(value);
+
+    return Conf_OK;
+}
+
 static ConfParam tlsstate_parameters[] = {
     {"subprobe",
      SET_subprobe,
@@ -298,51 +314,70 @@ static ConfParam tlsstate_parameters[] = {
      Type_FLAG,
      {"handshake-fail", 0},
      "Output TLS handshake failed as FAILED results. Default is INFO."},
+    {"graceful-tls-close",
+     SET_graceful_close,
+     Type_FLAG,
+     {"graceful-close", 0},
+     "Research switch: send a TLS `close_notify` before the TCP RST when the "
+     "subprobe asks to close. It adds a round trip/packet and is not suitable "
+     "for normal scanning; the default remains an immediate RST."},
 
     {0}};
 
 static void ssl_keylog_cb(const SSL *ssl, const char *line) {
-    ProbeTarget *tgt = SSL_get_ex_data(ssl, TSP_EXT_TGT_IDX);
-    if (!tgt)
+    struct TlsState *ts = SSL_get_ex_data(ssl, TSP_EXT_TLS_IDX);
+    if (!ts)
         return;
 
-    OutItem item = {
-        .target.ip_proto  = tgt->target.ip_proto,
-        .target.ip_them   = tgt->target.ip_them,
-        .target.port_them = tgt->target.port_them,
-        .target.ip_me     = tgt->target.ip_me,
-        .target.port_me   = tgt->target.port_me,
-        .level            = OUT_SUCCESS,
-    };
-
-    safe_strcpy(item.classification, OUT_CLS_SIZE, "tls info");
-    dach_append_str(&item.probe_report, "key_log", line, strlen(line));
-
-    output_result(_tls_out, &item);
+    /* OpenSSL callbacks must not write to the output sink directly. Collect
+     * diagnostics on the connection and emit one merged item from the normal
+     * parse/close path. */
+    dach_append_str(&ts->diag, "key_log", line, strlen(line));
 }
 
 static void ssl_info_cb(const SSL *ssl, int where, int ret) {
     if (where & SSL_CB_ALERT) {
-        ProbeTarget *tgt = SSL_get_ex_data(ssl, TSP_EXT_TGT_IDX);
-        if (!tgt)
+        struct TlsState *ts = SSL_get_ex_data(ssl, TSP_EXT_TLS_IDX);
+        if (!ts)
             return;
 
-        OutItem item = {
-            .target.ip_proto  = tgt->target.ip_proto,
-            .target.ip_them   = tgt->target.ip_them,
-            .target.port_them = tgt->target.port_them,
-            .target.ip_me     = tgt->target.ip_me,
-            .target.port_me   = tgt->target.port_me,
-            .level            = OUT_INFO,
-        };
-
-        safe_strcpy(item.classification, OUT_CLS_SIZE, "tls info");
-        dach_printf(&item.probe_report, "openssl alert", "0x%04x %s: %s", ret,
-                    SSL_alert_type_string_long(ret),
-                    SSL_alert_desc_string_long(ret));
-
-        output_result(_tls_out, &item);
+        char alert[256];
+        snprintf(alert, sizeof(alert), "0x%04x %s: %s", ret,
+                 SSL_alert_type_string_long(ret),
+                 SSL_alert_desc_string_long(ret));
+        dach_append_str(&ts->diag, "openssl alert", alert, strlen(alert));
     }
+}
+
+/* Emit collected callback diagnostics as one normal OutItem. Must run on the
+ * handler thread that owns this connection. */
+static void tlsstate_flush_diag(ProbeTarget *target, struct TlsState *ts) {
+    if (!ts || ts->diag.count == 0)
+        return;
+
+    OutItem item = {
+        .target.ip_proto  = target->target.ip_proto,
+        .target.ip_them   = target->target.ip_them,
+        .target.port_them = target->target.port_them,
+        .target.ip_me     = target->target.ip_me,
+        .target.port_me   = target->target.port_me,
+        .level            = OUT_INFO,
+    };
+    safe_strcpy(item.classification, OUT_CLS_SIZE, "tls info");
+
+    DataLink *link = ts->diag.link->next;
+    while (link) {
+        if (link->link_type == LinkType_String ||
+            link->link_type == LinkType_Binary) {
+            dach_append_str(&item.probe_report, link->name, link->value_data,
+                            link->data_len);
+        }
+        link = link->next;
+    }
+
+    output_result(_tls_out, &item);
+    dach_release(&ts->diag);
+    ts->diag.count = 0;
 }
 
 static bool output_subject_info(OutConf *out, ProbeTarget *target, SSL *ssl) {
@@ -894,6 +929,11 @@ static bool tlsstate_conn_init(ProbeState *state, ProbeTarget *target) {
         LOG(LEVEL_WARN, "(TSP Conn INIT) SSL_set_ex_data error\n");
         goto error4;
     }
+    res = SSL_set_ex_data(ssl, TSP_EXT_TLS_IDX, tls_state);
+    if (res != 1) {
+        LOG(LEVEL_WARN, "(TSP Conn INIT) SSL_set_ex_data(tls) error\n");
+        goto error4;
+    }
 
     /*set info cb to print status changing, alert and errors*/
     SSL_set_info_callback(ssl, ssl_info_cb);
@@ -908,12 +948,10 @@ static bool tlsstate_conn_init(ProbeState *state, ProbeTarget *target) {
 
     state->data = tls_state;
 
-    /**
-     * Do conn init for subprobe.
-     * FIXME:
-     * This shouldn't be happened here but after TLS handshaking.
-     * */
-    return tlsstate_conf.subprobe->conn_init_cb(&tls_state->substate, target);
+    /* The subprobe is initialized only after the TLS handshake succeeds. */
+    tls_state->substate_inited = 0;
+
+    return true;
 
     // SSL_set_ex_data(ssl, 1, NULL);
 // error7:
@@ -944,13 +982,21 @@ static void tlsstate_conn_close(ProbeState *state, ProbeTarget *target) {
     if (!tls_state)
         return;
 
-    /*do conn close for subprobe*/
-    tlsstate_conf.subprobe->conn_close_cb(&tls_state->substate, target);
+    /*do conn close for subprobe only if it was initialized post-handshake*/
+    if (tls_state->substate_inited)
+        tlsstate_conf.subprobe->conn_close_cb(&tls_state->substate, target);
+
+    tlsstate_flush_diag(target, tls_state);
+    dach_release(&tls_state->diag);
+    tls_state->diag.count = 0;
 
     if (tls_state->ssl) {
         /*cleanup ex data in SSL obj*/
         void *ex_data = SSL_get_ex_data(tls_state->ssl, TSP_EXT_TGT_IDX);
         FREE(ex_data);
+        /* Prevent callbacks during SSL_free from appending to a state that is
+         * about to be released. */
+        SSL_set_ex_data(tls_state->ssl, TSP_EXT_TLS_IDX, NULL);
         SSL_free(tls_state->ssl);
         tls_state->ssl  = NULL;
         tls_state->rbio = NULL;
@@ -1026,6 +1072,64 @@ error1:
     pass->len      = 0;
     pass->is_close = 1;
     return;
+}
+
+static bool tlsstate_init_subprobe(struct TlsState *tls_state,
+                                   ProbeTarget     *target) {
+    if (tls_state->substate_inited)
+        return true;
+
+    if (!tlsstate_conf.subprobe->conn_init_cb(&tls_state->substate, target)) {
+        LOG(LEVEL_WARN,
+            "(TSP Parse RESPONSE) subprobe conn_init failed after handshake\n");
+        return false;
+    }
+
+    tls_state->substate_inited = 1;
+    LOG(LEVEL_DETAIL, "(TSP) subprobe initialized after TLS handshake\n");
+    return true;
+}
+
+static void tlsstate_append_close_notify(DataPass *pass,
+                                         struct TlsState *tls_state) {
+    if (!tlsstate_conf.graceful_close || tls_state->graceful_close_sent ||
+        !tls_state->substate_inited || !tls_state->ssl)
+        return;
+
+    tls_state->graceful_close_sent = 1;
+
+    ERR_clear_error();
+    int res = SSL_shutdown(tls_state->ssl);
+    LOG(LEVEL_DETAIL, "(TSP graceful close) SSL_shutdown: %d\n", res);
+
+    unsigned char buf[1024];
+    size_t        off = 0;
+    while (off < sizeof(buf)) {
+        int n = BIO_read(tls_state->wbio, buf + off, (int)(sizeof(buf) - off));
+        if (n <= 0)
+            break;
+        off += (size_t)n;
+    }
+
+    if (off == 0)
+        return;
+
+    unsigned char *old_data = pass->data;
+    size_t         old_len  = pass->len;
+    int            old_dyn  = pass->is_dynamic;
+
+    unsigned char *new_data = MALLOC(old_len + off);
+    if (old_len)
+        memcpy(new_data, old_data, old_len);
+    memcpy(new_data + old_len, buf, off);
+
+    if (old_dyn)
+        FREE(old_data);
+
+    pass->data       = new_data;
+    pass->len        = old_len + off;
+    pass->is_dynamic = 1;
+    pass->is_close   = 1;
 }
 
 static unsigned tlsstate_parse_response(DataPass *pass, ProbeState *state,
@@ -1134,10 +1238,12 @@ static unsigned tlsstate_parse_response(DataPass *pass, ProbeState *state,
                 if (res == 1) {
                     // handshake successfully
                     if (tls_state->handshake_state == TLS_ST_OK) {
-                        /*We also can do conn init for subprobe here,
-                        but I must know exactly whether subprobe has been
-                        inited.*/
-                        state->state = TSP_STATE_SAY_HELLO;
+                        if (!tlsstate_init_subprobe(tls_state, target)) {
+                            state->state = TSP_STATE_NEED_CLOSE;
+                        } else {
+                            tlsstate_flush_diag(target, tls_state);
+                            state->state = TSP_STATE_SAY_HELLO;
+                        }
                     } else {
                         LOG(LEVEL_WARN,
                             "(TSP Parse RESPONSE) Unknown handshake state %d\n",
@@ -1420,6 +1526,11 @@ static unsigned tlsstate_parse_response(DataPass *pass, ProbeState *state,
                 break;
         }
     }
+
+    tlsstate_flush_diag(target, tls_state);
+
+    if (pass->is_close)
+        tlsstate_append_close_notify(pass, tls_state);
 
     return ret;
 }

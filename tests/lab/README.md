@@ -24,7 +24,11 @@ $env:XTATE_LAB_IMAGE = "xtate-builder:24.04"
 - ZBanner `--record-ack`: **closed port is still reported** (regression for the
   RST-vs-ACK ordering fix).
 - HLTCP `http-state`: local HTTP target receives a request and the scan succeeds.
-- HLTCP `tls-state`: local TLS 1.3 target, version/cipher/certificate output.
+- HLTCP `tls-state`: local TLS 1.3 target, version/cipher/certificate output, merged
+  `--ssl-keylog` diagnostics, and `--graceful-tls-close` (the scanner still exits cleanly;
+  `close_notify` delivery is additionally spot-checked manually).
+- HLTCP `tls-state -> http-state`: the sub-probe initializes after the TLS handshake and
+  completes an HTTP exchange inside the tunnel.
 - HLTCP SNI/ALPN: target uses `openssl s_server -tlsextdebug`; the lab asserts that the
   `server name` and `application layer protocol negotiation` extensions arrived
   (`-sni example.test -alpn h2,http/1.1`).
