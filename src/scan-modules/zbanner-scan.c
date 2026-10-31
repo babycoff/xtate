@@ -12,6 +12,7 @@
 #define ZBANNER_DEDUP_TYPE_PORT   0
 #define ZBANNER_DEDUP_TYPE_ACK    1
 #define ZBANNER_DEDUP_TYPE_BANNER 2
+#define ZBANNER_PAYLOAD_MAX       (PKT_BUF_SIZE - 64)
 
 extern Scanner ZBannerScan; /*for internal x-ref*/
 
@@ -585,6 +586,47 @@ static unsigned src_port_start;
 static bool zbanner_init(const XConf *xconf) {
     src_port_start = xconf->nic.src.port.first;
 
+    unsigned src_port_count = (xconf->nic.src.port.last >= src_port_start)
+                                  ? xconf->nic.src.port.last - src_port_start + 1
+                                  : 0;
+    if (src_port_count < ZBannerScan.probe->multi_num) {
+        LOG(LEVEL_ERROR,
+            "zbanner: source-port range has %u ports but probe needs %u "
+            "slots for multi-probe; increase --source-port range\n",
+            src_port_count, ZBannerScan.probe->multi_num);
+        return false;
+    }
+
+    if (zbanner_conf.all_banner) {
+        if (xconf->tcp_window < 4096) {
+            LOG(LEVEL_WARN,
+                "zbanner: --all-banner with a small TCP window (%u) may "
+                "truncate multi-segment banners; consider --tcp-win 65535\n",
+                xconf->tcp_window);
+        }
+        if (xconf->max_packet_len < 4096) {
+            LOG(LEVEL_WARN,
+                "zbanner: --all-banner with --max-packet-len %u may truncate "
+                "large segments; consider a larger value\n",
+                xconf->max_packet_len);
+        }
+        if (xconf->nic.snaplen < 4096) {
+            LOG(LEVEL_WARN,
+                "zbanner: --all-banner with snaplen %u may truncate captured "
+                "banner data; consider increasing snaplen\n",
+                xconf->nic.snaplen);
+        }
+        if (ZBannerScan.probe->multi_mode == Multi_AfterHandle ||
+            ZBannerScan.probe->multi_mode == Multi_DynamicNext) {
+            LOG(LEVEL_WARN,
+                "zbanner: --all-banner with %s multi-probe mode may emit "
+                "per-segment results; use a single-shot probe or tune limits\n",
+                ZBannerScan.probe->multi_mode == Multi_AfterHandle
+                    ? "Multi_AfterHandle"
+                    : "Multi_DynamicNext");
+        }
+    }
+
     return true;
 }
 
@@ -792,16 +834,30 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
 
             unsigned char payload[PM_PAYLOAD_SIZE];
             size_t        payload_len = 0;
-
-            payload_len = ZBannerScan.probe->make_payload_cb(&ptarget, payload);
-
-            size_t declared_len =
+            size_t        declared_len =
                 ZBannerScan.probe->get_payload_length_cb(&ptarget);
-            if (payload_len != declared_len) {
+
+            if (declared_len > ZBANNER_PAYLOAD_MAX) {
                 LOG(LEVEL_WARN,
-                    "zbanner: probe payload length mismatch (make=%u, "
-                    "declared=%u); banner acknowledgement checks may fail\n",
-                    (unsigned)payload_len, (unsigned)declared_len);
+                    "zbanner: probe payload is too large (%u > %u bytes); "
+                    "the ACK with payload is not sent\n",
+                    (unsigned)declared_len, (unsigned)ZBANNER_PAYLOAD_MAX);
+            } else {
+                payload_len =
+                    ZBannerScan.probe->make_payload_cb(&ptarget, payload);
+
+                if (payload_len > ZBANNER_PAYLOAD_MAX) {
+                    LOG(LEVEL_WARN,
+                        "zbanner: probe payload is too large (%u > %u bytes); "
+                        "the ACK with payload is not sent\n",
+                        (unsigned)payload_len, (unsigned)ZBANNER_PAYLOAD_MAX);
+                    payload_len = 0;
+                } else if (payload_len != declared_len) {
+                    LOG(LEVEL_WARN,
+                        "zbanner: probe payload length mismatch (make=%u, "
+                        "declared=%u); banner acknowledgement checks may fail\n",
+                        (unsigned)payload_len, (unsigned)declared_len);
+                }
             }
 
             /**
@@ -910,6 +966,9 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
             (!zbanner_conf.all_banner ||
              (zbanner_conf.all_banner && zbanner_conf.all_banner_limit &&
               valid_pkt->repeats >= zbanner_conf.all_banner_limit - 1))) {
+            if (zbanner_conf.all_banner && zbanner_conf.all_banner_limit)
+                dach_set_int(&item->scan_report, "truncated", 1);
+
             PktBuf *pkt_buffer = stack_get_pktbuf(stack);
 
             pkt_buffer->length = tcp_create_packet(

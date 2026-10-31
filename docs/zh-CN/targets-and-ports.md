@@ -8,7 +8,7 @@ Xtate 扫描的是一个**乘积空间**：每个目标地址都会与每个目�
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 ```
 
-> 本文档对应 Xtate v2.19.0。命令行才是最终依据：`--help`、`--help-scan <module>` 和 `--help-probe <module>` 会给出你所构建版本的准确参数。
+> 本文档对应 Xtate v2.20.0。命令行才是最终依据：`--help`、`--help-scan <module>` 和 `--help-probe <module>` 会给出你所构建版本的准确参数。
 
 ## 地址目标
 

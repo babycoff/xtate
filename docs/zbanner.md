@@ -12,6 +12,23 @@ banner grab allocates a TCB, a timer and a retransmission queue per target; ZBan
 allocates none of these. It sends two packets and reads two, then closes the connection
 with a RST.
 
+### Design philosophy: state on the peer, events on our side
+
+ZBanner is deliberately a **stateless event scanner**, not a per-target connection tracker:
+
+- There is no TCB, no per-target timer and no retransmission queue. A lost SYN, SYN-ACK or
+  banner segment produces no result for that target; recovery is a re-run (`--repeat` or
+  another pass), not an in-scanner retry state machine.
+- The deduplication table is an approximate, bounded cache used for duplicate suppression
+  and counters, not a reliability mechanism. Its repeat counter can be evicted under high
+  fan-out, so `banner idx` and the all-banner limit/floor are approximate; `banner seqno` is
+  the exact per-segment field.
+- Results are an **event stream** (open, closed, ack, banner segment, ...), not one row per
+  target. Per-target aggregation is left to downstream processing; adding an in-scanner
+  target map would reintroduce the memory cost this design avoids.
+- These are trade-offs, not missing features: the intended deployment keeps memory bounded
+  and delegates reliability/aggregation to the operator or a post-processor.
+
 ## The idea
 
 TCP needs three things to establish a connection: an initial sequence number from the
@@ -102,7 +119,17 @@ acknowledges each data segment (`ack = seqno_them + app_length`) and keeps readi
 from segments below a threshold. The `banner idx` field is still based on the dedup repeat
 counter and remains approximate; `banner seqno` reports the exact TCP sequence number of
 the segment and is the reliable field for ordering/deduplicating banner data. The limit and
-floor knobs still use the approximate index.
+floor knobs still use the approximate index; the segment that triggers the limit is marked
+`truncated: 1`.
+
+For multi-segment data, the defaults are too small. A practical preset is:
+
+```bash
+-scan-arg "--all-banner --all-banner-limit 8 --tcp-win 65535 --max-packet-len 65535 --snaplen 65535"
+```
+
+Startup warns when `--all-banner` is combined with a small window, packet length or snaplen,
+and when it is combined with `Multi_AfterHandle` / `Multi_DynamicNext`.
 
 ## Usage
 
@@ -148,9 +175,14 @@ cannot prevent this from inside the process; it must be prevented at the firewal
 
 The rules are global: while they are installed, **every** application on the host loses
 outgoing RST, so abnormal connections from browsers or SSH cannot be reset cleanly. Remove
-the rules when the scan ends. The scripts are Linux-only; on Windows there is no equivalent
-bundled helper, and you are on your own to arrange it. Both ZBanner and
-[HLTCP](./hltcp.md) need this.
+the rules when the scan ends. The scripts are Linux-only.
+
+On Windows the scanner uses Npcap. In a local test (Windows 11, Npcap loopback and a
+WSL target) the Windows stack did not reset the raw-socket SYN-ACK/ACK combination, so no
+host-wide RST helper was needed. This does not remove the other Windows requirements:
+Npcap, administrator access for the capture driver, adapter selection, and no PF_RING /
+`sendmmsg` equivalent. Both ZBanner and [HLTCP](./hltcp.md) still need a platform where the
+capture/injection path works.
 
 ## Reading the results
 
@@ -199,11 +231,16 @@ without a table.
 - **One banner segment by default.** The non-SYN template advertises a 1024-byte window
   and the connection is RST immediately after the first data segment, so large banners and
   multi-segment TLS handshakes are truncated. Use `--all-banner` and tune `--tcp-win`,
-  `--max-packet-len` and `--snaplen`.
+  `--max-packet-len` and `--snaplen`; startup warns when those are still too small.
 - **No out-of-order handling.** Segments are processed in arrival order; there is no
   reassembly queue and no re-sorting.
-- **Payload size is bounded by the packet buffer.** A probe payload that does not fit is
-  not sent; a warning is logged.
+- **Payload size is bounded by the packet buffer.** The effective payload ceiling is
+  `PKT_BUF_SIZE - 64` (1984 bytes). A probe whose declared/made payload is larger is not
+  sent; a warning is logged. There is no segmentation of oversized probe payloads.
+- **Multi-probe needs enough source ports.** The source-port range must provide at least
+  `multi_num` slots; startup refuses a too-small range. `--all-banner` with
+  `Multi_AfterHandle` or `Multi_DynamicNext` warns because those modes may emit per-segment
+  results.
 - **Single receiver.** Deduplication and validation run on the one receive thread, so
   receive-side processing is the throughput ceiling regardless of how many transmitters or
   handlers you configure.

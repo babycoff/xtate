@@ -6,6 +6,15 @@ ZBanner 能从真实服务拿到真实的 TCP 响应，**却不保留任何每�
 
 正是这个差别让大规模 banner 抓取变得可负担。常规的 banner 抓取要为每个目标分配 TCB、定时器和重传队列；ZBanner 一样都不分配。它发出两个包、读回两个包，然后用一个 RST 关闭连接。
 
+### 设计理念：状态在对端，事件在我们这边
+
+ZBanner 有意定位为**无状态事件扫描器**，不是每目标连接跟踪器：
+
+- 没有 TCB、没有每目标定时器、没有重传队列。SYN、SYN-ACK 或 banner 段丢失，该目标就没有结果；恢复方式是重跑（`--repeat` 或再扫一遍），而不是在扫描器内维护重试状态机。
+- 去重表是一张有界的近似缓存，用于抑制重复和计数，不是可靠性机制。高扇出时 entry 会被淘汰，因此 `banner idx` 和 all-banner 的 limit/floor 都是近似值；`banner seqno` 才是精确的段字段。
+- 结果是**事件流**（open、closed、ack、banner segment……），不是每目标一条记录。按目标聚合留给下游后处理；在扫描器里加 target map 会重新引入这个设计刻意避免的内存开销。
+- 这些是取舍，不是缺失功能：目标部署保持内存有界，把可靠性和聚合交给操作者或后处理器。
+
 ## 思路
 
 TCP 建立连接需要三样东西：客户端给出的初始序号、服务器对它的确认，以及客户端对服务器的确认。ZBanner 用由连接元组推出的 **SipHash cookie** 填第一个位置：
@@ -56,7 +65,15 @@ TCP 的 ACK 允许携带数据。把 `ACK + 载荷` 放进同一个报文，意�
 
 `--no-rst` 抑制 RST，让服务器一直握着这条连接直到超时。它是研究开关：适合观察目标在 banner 之后的行为，不适合做普查。
 
-`--all-banner` 是另一个方向：不在一个数据段后关闭，而是逐个确认到达的数据段（`ack = seqno_them + app_length`）并继续读。`--all-banner-limit` 限制段数，`--all-banner-floor` 抑制低于阈值的段的结果。`banner idx` 仍来自去重表的重复计数，只是近似值；`banner seqno` 是该段精确的 TCP 序号，是排序/去重 banner 数据的可靠字段。limit/floor 仍然使用近似 index。
+`--all-banner` 是另一个方向：不在一个数据段后关闭，而是逐个确认到达的数据段（`ack = seqno_them + app_length`）并继续读。`--all-banner-limit` 限制段数，`--all-banner-floor` 抑制低于阈值的段的结果。`banner idx` 仍来自去重表的重复计数，只是近似值；`banner seqno` 是该段精确的 TCP 序号，是排序/去重 banner 数据的可靠字段。limit/floor 仍然使用近似 index；触发 limit 的那一段会标记 `truncated: 1`。
+
+多段数据建议使用：
+
+```bash
+-scan-arg "--all-banner --all-banner-limit 8 --tcp-win 65535 --max-packet-len 65535 --snaplen 65535"
+```
+
+启动时如果 `--all-banner` 搭配过小的窗口、包长或 snaplen，或搭配 `Multi_AfterHandle` / `Multi_DynamicNext`，会给出警告。
 
 ## 用法
 
@@ -94,7 +111,9 @@ ZBanner 发出的报文描述的是本机内核一无所知的连接。当 SYN-A
 ./firewall/rm_rules.sh    # remove the rules afterwards
 ```
 
-这些规则是全局的：安装期间，主机上**每一个**应用都会失去出向 RST，浏览器或 SSH 的异常连接无法被干净地复位。扫描结束时要移除规则。脚本只适用于 Linux；Windows 上没有随附的等价工具，需要你自行安排。ZBanner 和 [HLTCP](./hltcp.md) 都需要这一步。
+这些规则是全局的：安装期间，主机上**每一个**应用都会失去出向 RST，浏览器或 SSH 的异常连接无法被干净地复位。扫描结束时要移除规则。脚本只适用于 Linux。
+
+Windows 上扫描器使用 Npcap。本地测试（Windows 11、Npcap loopback + WSL 目标）中，Windows 协议栈没有对 raw socket 的 SYN-ACK/ACK 组合发 RST，因此不需要全局 RST 辅助。但这不改变 Windows 的其它要求：Npcap、capture driver 的管理员权限、正确的 adapter 选择，且没有 PF_RING/`sendmmsg` 等价路径。ZBanner 和 [HLTCP](./hltcp.md) 仍需要可用的 capture/injection 路径。
 
 ## 解读结果
 
@@ -124,9 +143,10 @@ ZBanner 发出的报文描述的是本机内核一无所知的连接。当 SYN-A
 - **没有每目标超时，也没有重传。** 丢掉一个 SYN 就少一条结果；丢掉一个 banner 段就少一段 banner。`--repeat-synack`、`--repeat-banner`、`--repeat-ack` 和 `--repeat-rst` 只是把重复到达的结果重新输出，没有任何机制会重发从未到达的包。
 - **去重是近似的。** 它是一张按 `--dedup-win` 定容的四路桶表，采用随机淘汰。当某个地址段产生很高扇出时，表项会被挤掉，重复计数随之不可靠——`--all-banner` 的记账也会受牵连。
 - **零窗口默认报成 `fake-open`。** accept 队列已满的真实服务同样会通告零窗口；这类目标会被分类为 `fake-open`，不会请求 banner。`-scan-arg "--probe-zerowin"` 是研究开关：仍然分类为 `fake-open`，但会继续发送探测载荷。
-- **默认只读一个 banner 段。** 非 SYN 模板通告 1024 字节窗口，且首个数据段之后立即 RST，因此大 banner 和多段 TLS 握手会被截断。请使用 `--all-banner`，并调整 `--tcp-win`、`--max-packet-len` 和 `--snaplen`。
+- **默认只读一个 banner 段。** 非 SYN 模板通告 1024 字节窗口，且首个数据段之后立即 RST，因此大 banner 和多段 TLS 握手会被截断。请使用 `--all-banner`，并调整 `--tcp-win`、`--max-packet-len` 和 `--snaplen`；这些值仍太小时启动会警告。
 - **不处理乱序。** 数据段按到达顺序处理，没有重组队列，也没有重新排序。
-- **载荷大小受包缓冲限制。** 放不下的探测载荷不会发出，并会记录一条警告。
+- **载荷大小受包缓冲限制。** 有效上限是 `PKT_BUF_SIZE - 64`（1984 字节）。声明/实际载荷超过上限时不会发送，并记录警告；不支持把超大探测载荷分段。
+- **multi-probe 需要足够的源端口。** 源端口范围必须至少提供 `multi_num` 个槽位，启动时会拒绝过小的范围。`--all-banner` 搭配 `Multi_AfterHandle` 或 `Multi_DynamicNext` 时会警告，因为这些模式可能按段输出结果。
 - **只有一个接收线程。** 去重与校验都跑在那一个接收线程上，因此无论你配置多少发送或处理线程，接收侧处理都是吞吐上限。
 
 完整的清单（含传输层与平台方面的注意事项）见 [known-limitations.md](./known-limitations.md)。要在 ZBanner 与有状态引擎之间做选择，见 [scanning-modes.md](./scanning-modes.md) 与 [hltcp.md](./hltcp.md)。

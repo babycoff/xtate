@@ -2,21 +2,21 @@
 
 [English](../known-limitations.md) · **中文**
 
-Xtate v2.19.0 围绕一个刻意的取舍构建：极高的报文速率与低廉的逐目标成本，代价是可靠性和协议完整性。本页列出当前版本不做什么、这对你的结果意味着什么，以及如何规避。
+Xtate v2.20.0 围绕一个刻意的取舍构建：极高的报文速率与低廉的逐目标成本，代价是可靠性和协议完整性。本页列出当前版本不做什么、这对你的结果意味着什么，以及如何规避。
 
-这些限制背后的机制见 [ZBanner](./zbanner.md)、[HLTCP](./hltcp.md) 和[架构](./architecture.md)。以下内容均已对照 v2.19.0 源码核对。
+这些限制背后的机制见 [ZBanner](./zbanner.md)、[HLTCP](./hltcp.md) 和[架构](./architecture.md)。以下内容均已对照 v2.20.0 源码核对。
 
-| 领域 | v2.19.0 中的主要限制 | 规避方式 |
+| 领域 | v2.20.0 中的主要限制 | 规避方式 |
 |:---|:---|:---|
 | ZBanner | 没有逐目标超时，也不重传 | 重跑该范围并合并结果 |
 | `tcp-state` | closed 结果为 `info` 等级；无 SYN 重传 | 普查用 `tcp-syn`，取证用 `tcp-state` |
 | IPv6 | 分片与大多数扩展头会被丢弃 | 避免分片路径，按 /64 分段扫描 |
-| Windows | 无 PF_RING/`sendmmsg`，无法抑制 RST | 在 Linux 上做 banner 扫描 |
+| Windows | Npcap；无 PF_RING/`sendmmsg`；无全局 RST 辅助 | 用 Npcap + 管理员权限；本机 RST 行为已测试为不干扰 |
 | 输出 | 同一时刻只能用一个输出端；默认转义不是合法 JSON | 先写本地 text/NDJSON，再导入 |
 
 ## ZBanner（无状态 TCP）
 
-适用于 v2.19.0，覆盖整条 `zbanner` 扫描链路。
+适用于 v2.20.0，覆盖整条 `zbanner` 扫描链路。
 
 - **没有逐目标超时，也不重传。** SYN 或 banner 报文段一旦丢失，该目标就是没有结果；不会有任何重试，也不存在超时表。规避方式：重跑该范围（`--repeat 1`，或用不同的 `-seed` 再完整跑一遍）并合并结果。
 - **去重是近似的。** 去重表是固定大小的 4 路桶加随机老化（默认 `-dedup-win 1000000`，约 70 MB），且 IPv4 哈希只用到地址低位。高负载下条目会被挤出，`repeats` 计数随之失真。影响：重复结果抑制只能尽力而为，任何依赖 `repeats` 的功能（尤其是 `--all-banner` 的编号以及 `-all-banner-limit`/`-all-banner-floor`）在互联网规模下都不可靠。规避方式：调大 `-dedup-win`，并且不要把 `repeats` 当作精确计数。
@@ -24,8 +24,8 @@ Xtate v2.19.0 围绕一个刻意的取舍构建：极高的报文速率与低廉
 - **默认在第一个 banner 报文段之后就关闭连接。** 多段响应（大的 TLS ServerHello、证书链、很长的 HTTP 头）会被截断，除非你传入 `-scan-arg "-all-banner"`。
 - **探测载荷受包缓冲大小限制。** 载荷必须和 IP/TCP 头一起塞进 2048 字节的包（实际约 2000 字节载荷）。超限时不会截断——整个包不会发出，并会记录警告。规避方式：把探测载荷控制在约 2000 字节以内。
 - **零窗口 SYN-ACK 默认被判成 `fake-open`**，并且不会收到探测载荷。SYN 队列已满的真实服务也可能看起来像 fake open。`-scan-arg "--probe-zerowin"` 是研究开关：保持 `fake-open` 分类，但继续发送探测载荷。
-- **banner 扫描在 Linux 上依赖主机全局防火墙规则。** ZBanner 依赖内核不去应答未知连接；随仓库提供的脚本在安装期间会丢弃本机*所有*出向 TCP RST。v2.19.0 的生产路径中没有进程内 RST 过滤。忘记执行 `./firewall/rm_rules.sh` 会让本机持续丢弃所有出向 RST，TCP 重置从此失效。
-- **v2.19.0 没有随附这些规则的 Windows 等价物**，因此从 Windows 发起基于握手的 banner 扫描并不可靠。
+- **banner 扫描在 Linux 上依赖主机全局防火墙规则。** ZBanner 依赖内核不去应答未知连接；随仓库提供的脚本在安装期间会丢弃本机*所有*出向 TCP RST。v2.20.0 的生产路径中没有进程内 RST 过滤。忘记执行 `./firewall/rm_rules.sh` 会让本机持续丢弃所有出向 RST，TCP 重置从此失效。
+- **v2.20.0 没有随附 Windows 的全局 RST 辅助。** Windows 使用 Npcap。本地测试（Windows 11、Npcap loopback + WSL 目标）中，Windows 协议栈没有对 raw socket 的 SYN-ACK/ACK 组合发 RST，因此 Linux 的 `iptables` 辅助可能并不是本机 RST 问题所必需的。Windows 仍需要 Npcap、管理员权限、正确的 adapter 选择，且没有 PF_RING/`sendmmsg` 等价路径。
 - **输出是事件式的，不是按目标聚合的。** 一个目标可能产生一行 `open`、多行 `banner` 以及一行 `acknowledged`。下游使用方必须自己按目标/端口聚合。
 - **握手之后使用 1024 字节的窗口**（默认 `-tcp-win`），这限制了在途数据量，并促使对端拆成小段发送。规避方式：调大 `-tcp-win`（多段数据同时用 `--all-banner`）。
 - **cookie 强度是测量级的，不是认证级的。** 32 位 SipHash cookie 加上确定性的源端口（`-src-port` 起始值 + probe 序号）足以让回包相对于友好对端可验证，但对知道种子的路径外攻击者是可预测的。
@@ -33,7 +33,7 @@ Xtate v2.19.0 围绕一个刻意的取舍构建：极高的报文速率与低廉
 
 ## ZBanner 之外的无状态扫描模块
 
-适用于 v2.19.0，涉及 `tcp-syn`、`udp`、各 ICMP 扫描、`arp-req`、`ndp-ns`、`sctp-init` 以及 Yarrp 系列模块。
+适用于 v2.20.0，涉及 `tcp-syn`、`udp`、各 ICMP 扫描、`arp-req`、`ndp-ns`、`sctp-init` 以及 Yarrp 系列模块。
 
 - **UDP、ARP 和 NDP 没有 cookie 校验。** UDP 回包只靠目标集合包含性加探测模块自身的回调来验证；ARP/NDP 还需要默认的 `blackrock` 生成模块来反查目标集合。换成其他生成模块后，ARP/NDP 会退化成"任何回包都算数"，UDP 则失去关闭端口判定。
 - **ICMP 标识位太短。** `icmp-echo`/`icmp-time` 只在 ICMP id 里放了 8 位 cookie（sequence 字段里再放 8 位），因此误归属的概率远高于 TCP 的 32 位 cookie。
@@ -42,7 +42,7 @@ Xtate v2.19.0 围绕一个刻意的取舍构建：极高的报文速率与低廉
 
 ## HLTCP / `tcp-state`（混合状态 TCP）
 
-适用于 v2.19.0，涉及 `tcp-state` 扫描以及所有 `*-state` 探测模块。
+适用于 v2.20.0，涉及 `tcp-state` 扫描以及所有 `*-state` 探测模块。
 
 - **只有三个 TCP 状态**（SYN-SENT、SENDING、RECEIVING）。没有 LISTEN、FIN-WAIT、CLOSE-WAIT、TIME-WAIT，没有优雅关闭，对端 FIN 一律用 RST 回应。影响：部分服务器会记录异常终止日志，半关闭交互也无法建模。
 - **SYN 只发一次，不重传。** SYN 丢失意味着该目标没有任何输出。规避方式：降低速率、用 `--repeat` 重跑，或在大范围覆盖时优先用 `zbanner`。
@@ -58,7 +58,7 @@ Xtate v2.19.0 围绕一个刻意的取舍构建：极高的报文速率与低廉
 
 ## IPv6
 
-适用于 v2.19.0，涉及所有 IPv6 扫描。
+适用于 v2.20.0，涉及所有 IPv6 扫描。
 
 - **只理解逐跳（hop-by-hop）扩展头。** 目的选项头、路由头，以及最关键的——分片头，都会让报文在进入扫描逻辑之前被丢弃（`--no-bpf` 也没用）。规避方式：避开需要分片的 IPv6 路径；降低速率，谨慎使用对 MTU 敏感的探测。
 - **源地址池只覆盖 IPv6 地址区间的低 64 位**，且必须共享相同的高 64 位；链路本地源地址必须显式指定。规避方式：按 /64 分别扫描。
@@ -69,7 +69,7 @@ Xtate v2.19.0 围绕一个刻意的取舍构建：极高的报文速率与低廉
 
 ## Windows
 
-适用于 v2.19.0，涉及 Windows 构建。
+适用于 v2.20.0，涉及 Windows 构建。
 
 - **没有 PF_RING，也没有 `sendmmsg`/AF_PACKET 路径。** 发送只能走 Npcap 的 send-queue 或逐包发送；`--send-queue` 能显著提高速率但会增加延迟，所以对 `zbanner`/`tcp-state` 请保持关闭。
 - **接收是阻塞的**（`pcap_next_ex`）；Windows 上没有非阻塞网卡模式，因此慢速输出端或极高速率都会表现为丢回包。
@@ -79,7 +79,7 @@ Xtate v2.19.0 围绕一个刻意的取舍构建：极高的报文速率与低廉
 
 ## 输出与 I/O
 
-适用于 v2.19.0，涉及所有平台。
+适用于 v2.20.0，涉及所有平台。
 
 - **同一时刻只能启用一个输出模块（OutputModule）**，且写出发生在处理线程内、由一把全局互斥锁串行化。慢速输出端（走网络的 MongoDB、慢磁盘）会拖慢整次扫描。规避方式：先写本地 text/NDJSON，再导入。
 - **默认字符串转义不符合 JSON 规范。** 引号、反斜杠和控制字符会变成 `\xNN`；当下游是 JSON 解析器时请加 `--no-escape-char`。BSON/MongoDB 模块必须保持默认模式。
@@ -89,7 +89,7 @@ Xtate v2.19.0 围绕一个刻意的取舍构建：极高的报文速率与低廉
 
 ## 框架与规模
 
-适用于 v2.19.0，涉及所有平台。
+适用于 v2.20.0，涉及所有平台。
 
 - **模块在编译期注册。** 没有运行时插件加载：新增模块意味着改注册表并重新构建。可选依赖（OpenSSL、PCRE2、LibXml2、libbson、libmongoc）会在构建时把对应模块从二进制里去掉。
 - **Lua 探测模块在运行时加载**，因此缺少 `liblua` 的表现是 `lua-tcp`/`lua-udp` 启动失败，而不是模块缺失。规避方式：安装 Lua 5.3/5.4。Lua 探测共享进程级 Lua state，选中 Lua probe 时 Xtate 会强制 `--rx-handler-count 1`。
@@ -97,6 +97,6 @@ Xtate v2.19.0 围绕一个刻意的取舍构建：极高的报文速率与低廉
 - **超大规模 IPv4 普查需要显式确认。** 目标 IP 超过 1,000,000,000 且没有 `--exclude` 时会在启动阶段被拒绝；`--exclude 255.255.255.255` 是文档给出的确认方式。
 - **默认生成模块在整个扫描空间上随机化。** `--shard` 只对默认的 `blackrock` 生成模块有文档保证；`--resume`（重新载入已保存的配置）和 `--resume-index`（从绝对扫描索引开始）都假设目标可按索引寻址，这一点只对默认生成模块成立。
 
-## 用好 v2.19.0
+## 用好 v2.20.0
 
 用 `tcp-syn` 做覆盖与开放/关闭判定，用 `zbanner` 做大范围无状态 banner 抓取，用 `tcp-state` 处理少量高价值的 TLS/HTTP 目标。只在需要的扫描前后添加防火墙规则，保持载荷和速率克制；选探测模块之前，先读[扫描模式](./scanning-modes.md)里的模块级限制。
