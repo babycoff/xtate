@@ -6,7 +6,7 @@ Xtate 是一款面向大规模主动测量的模块化全栈网络扫描器。�
 
 本页带你在 Linux 或 Windows 上从源码检出走到第一次扫描。阅读前你应当熟悉 shell、`sudo` 和 TCP/IP 基础；本页不是扫描方法本身的教程。
 
-> 本文档针对 Xtate v2.20.2 编写。若你的构建行为与此不同，以 `--help` 和模块帮助为准。
+> 本文档针对 Xtate v2.20.3 编写。若你的构建行为与此不同，以 `--help` 和模块帮助为准。
 
 ## 环境要求
 
@@ -227,7 +227,7 @@ pwsh -File .\scripts\build-windows.ps1 -Toolchain msvc -Config Debug -Yes
 | `--version` 显示 `PCRE2 (null)` | 没找到 PCRE2 头文件/库。Debian/Ubuntu 安装 `libpcre2-dev` 和 `pkg-config`；Windows 用 vcpkg（Scoop 没有 PCRE2 开发包）。 |
 | `OpenSSL (null)`，probe 只剩 52 个 | OpenSSL 被跳过。Windows 用 MSVC/clang-cl + Scoop OpenSSL；Linux 安装 `libssl-dev`。 |
 | 缺少 `bson`/`mongodb` 输出模块 | 没找到 libbson/libmongoc；安装它们，或接受较少的 output 集合。 |
-| `--selftest` 报 `timing error` | 2.20.2 已修复 Windows 上过严的 1% 计时容差；旧版本请更新到当前代码。 |
+| `--selftest` 报 `timing error` | 2.20.3 已修复 Windows 上过严的 1% 计时容差；旧版本请更新到当前代码。 |
 | `--selftest` 返回非零 | 现在会把它当作真实失败；输出会打印 `Regression test: failed`，进程退出码非零。 |
 | 运行时提示 `wpcap.dll`/`Npcap` 错误 | 安装 Npcap 并启用 WinPcap 兼容模式；它是运行时依赖，不是编译依赖。 |
 | 找不到 `lua53.dll`/`lua54.dll` | 用 Scoop 安装 `lua54`，把 `%USERPROFILE%\scoop\apps\lua54\current` 加入 `PATH`，或把 `lua54.dll` 复制到 `xtate.exe` 旁边。 |
