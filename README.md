@@ -52,6 +52,7 @@ Most fast scanners stop at "port open"; most service scanners give up at Interne
 - ⚡ **ZBanner** — real TCP responses without a per-target connection table. The peer's TCP stack holds the state; a SipHash cookie proves the reply is yours.
 - 🧬 **HLTCP** — a hybrid-state user-space TCP stack, created only where needed. It completes TLS handshakes and speaks HTTP inside them.
 - 🧩 **Modules** — 11 scan / 60 probe / 7 output / 5 generate modules. Four interfaces, one pipeline, no runtime plugin magic.
+- 🌐 **Chinese help** — `--lang zh` or `XTATE_LANG=zh` localizes human-facing help, with UTF-8-aware wrapping and safe English fallback for untranslated strings.
 
 ## Quick start
 
@@ -188,6 +189,7 @@ The README is the landing page. The manual lives in [`docs/`](docs/README.md):
 - [Output](docs/output.md) — result levels, formats, MongoDB
 - [Modules](docs/modules.md) — the four module types and what ships with Xtate
 - [Architecture](docs/architecture.md) · [ZBanner](docs/zbanner.md) · [HLTCP](docs/hltcp.md)
+- [Chinese help and i18n](docs/help-i18n.md) — `--lang`, catalog fallback and UTF-8 layout
 - [Troubleshooting](docs/troubleshooting.md) · [Known limitations](docs/known-limitations.md)
 
 中文文档：[`docs/zh-CN/`](docs/zh-CN/README.md)
@@ -278,6 +280,7 @@ xtate --list-probe            # 60 probe modules
 xtate --list-out              # 7 output modules
 xtate --list-gen              # 5 generate modules
 xtate --help-scan zbanner     # module-specific parameters
+xtate --lang zh --help        # Chinese human help (English fallback for untranslated strings)
 xtate --interact              # interactive shell with tab completion
 ```
 

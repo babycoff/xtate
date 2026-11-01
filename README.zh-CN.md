@@ -50,6 +50,7 @@ Xtate 是一款面向大规模主动测量的网络扫描器。它把扫描栈�
 - ⚡ **ZBanner**——无需为每个目标维护连接表，也能拿到真实的 TCP 响应。状态由对端的 TCP 协议栈保存，一个 SipHash cookie 就能证明这条回应是给你的。
 - 🧬 **HLTCP**——按需创建的混合状态用户态 TCP 协议栈。它能完成 TLS 握手，并在握手之上直接讲 HTTP。
 - 🧩 **模块**——11 个扫描模块 / 60 个探测模块 / 7 个输出模块 / 5 个生成模块。四套接口，一条流水线，没有运行时的插件魔法。
+- 🌐 **中文帮助**——`--lang zh` 或 `XTATE_LANG=zh` 可切换人类可读帮助；支持 UTF-8 宽度换行，未翻译内容安全回退英文。
 
 ## 快速开始
 
@@ -186,6 +187,7 @@ README 是落地页，手册在 [`docs/`](docs/zh-CN/README.md) 目录下：
 - [输出](docs/zh-CN/output.md)——结果级别、格式、MongoDB
 - [模块](docs/zh-CN/modules.md)——四种模块类型以及 Xtate 自带的模块
 - [架构](docs/zh-CN/architecture.md) · [ZBanner](docs/zh-CN/zbanner.md) · [HLTCP](docs/zh-CN/hltcp.md)
+- [中文帮助与 i18n](docs/zh-CN/help-i18n.md)——`--lang`、catalog 回退与 UTF-8 排版
 - [故障排查](docs/zh-CN/troubleshooting.md) · [已知限制](docs/zh-CN/known-limitations.md)
 
 英文文档：[`docs/`](docs/README.md)
@@ -271,6 +273,7 @@ xtate --list-probe            # 60 probe modules
 xtate --list-out              # 7 output modules
 xtate --list-gen              # 5 generate modules
 xtate --help-scan zbanner     # module-specific parameters
+xtate --lang zh --help        # 中文人类帮助（未翻译内容回退英文）
 xtate --interact              # interactive shell with tab completion
 ```
 
