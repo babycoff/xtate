@@ -1,77 +1,161 @@
 # Local large-batch regression
 
-The live test exercises real scan and output paths with a large result volume
-while keeping **all traffic inside a dedicated Docker bridge network**. The
-replay test uses a local pcap fixture and `--network none`. Neither scans the
-Internet.
+Two complementary tests:
 
-Default workload:
+- `run.sh` — real local network/target regression on an isolated Docker bridge.
+- `replay.sh` — deterministic high-rate pcap replay through xtate's real receive,
+  validation and output paths, with **no network at all** (`--network none`).
 
-- 5 target containers x 100 address aliases = **500 target IPs**
-- ports `80,1-19` = **20 endpoints per target** (80 open)
-- **10,000 expected results** (500 open, 9,500 closed)
-- output modules: `ndjson`, `csv`, `bson`, `text`
-- receive handler counts: 1 and 4
+Neither test scans the Internet.
 
-## Requirements
+## Quick start
 
-- Docker
-- A Linux `xtate` binary (`XTATE_BIN`)
-- The builder image used by the other lab tests (`XTATE_LAB_IMAGE`, default
-  `xtate-builder:24.04`)
+```bash
+# live local targets (500 targets, 10,000 results)
+XTATE_BIN=/path/to/xtate-linux bash tests/large-batch/run.sh
 
-On Windows, run through Git Bash.
+# deterministic high-rate replay (1,000 targets x 1,000 ports = 1,000,000 results)
+XTATE_BIN=/path/to/xtate-linux bash tests/large-batch/replay.sh
+```
+
+On Windows, run through Git Bash:
 
 ```powershell
 $env:XTATE_BIN = "C:\path\to\xtate-linux"
 $env:XTATE_LAB_IMAGE = "xtate-builder:24.04"
-& "C:\Program Files\Git\bin\bash.exe" -lc "cd /c/path/to/xtate && bash tests/large-batch/run.sh"
+& "C:\Program Files\Git\bin\bash.exe" -lc "cd /c/path/to/xtate && bash tests/large-batch/replay.sh"
 ```
+
+## Live-network test: `run.sh`
+
+### Scale options
+
+| Option | Meaning | Default |
+|:---|:---|:---|
+| `--blocks N` | number of target containers | 5 |
+| `--aliases N` | address aliases per container | 100 |
+| `--ports LIST` | ports per target, e.g. `80,1-19` | `80,1-19` |
+| `--endpoints N` | endpoints per target; must match `--ports` | 20 |
+| `--rate N` | scan rate, packets/second | 500 |
+| `--out DIR` | output directory | `../reports/docker/out/large-batch` |
+| `--bin PATH` / `--image IMAGE` | binary / builder image | `XTATE_BIN` / `xtate-builder:24.04` |
+
+Targets are local Docker aliases. The default is:
+
+- 5 containers × 100 aliases = **500 target IPs**
+- 20 endpoints each = **10,000 results**
+- 500 open ports / 9,500 closed ports
+- output: ndjson, csv, bson, text
+- handler counts: 1 for ndjson/text/bson, 4 for csv
+
+Example, roughly 8x larger (make sure the Docker/ARP table can handle it):
+
+```bash
+XTATE_BIN=/path/to/xtate-linux bash tests/large-batch/run.sh \
+  --blocks 8 --aliases 100 --ports '80,1-99' --endpoints 100 --rate 1000
+```
+
+That is 800 targets × 100 endpoints = **80,000 results**.
+
+### Live-test limits
+
+The local Docker bridge and neighbor/ARP table are the limiting factors. On this
+host, about 1,000 address aliases in one live run starts to lose replies due to
+neighbor-table pressure. That is a test-environment limit, not an xtate result
+bug. For much larger deterministic workloads use `replay.sh` instead.
+
+## High-rate replay: `replay.sh`
+
+### Scale options
+
+| Option | Meaning | Default |
+|:---|:---|:---|
+| `--targets N` | generated target IPs | 1,000 |
+| `--ports RANGE` | inclusive port range, e.g. `1-1000` | `1-1000` |
+| `--pps N` | pcap replay pacing, packets/second | 20,000 |
+| `--handlers N` | receive handler count (power of 2) | 4 |
+| `--dispatch-buf N` | dispatch queue size | 65,536 |
+| `--seed N` | cookie/seed | 123 |
+| `--source-port N` | scanner source port | 40000 |
+| `--ip-me ADDR` | scanner source address in packets | `192.0.2.1` |
+| `--out DIR` | output directory | `../reports/docker/out/large-batch-replay` |
+| `--bin PATH` / `--image IMAGE` | binary / builder image | `XTATE_BIN` / `xtate-builder:24.04` |
+
+`make_pcap.py` computes the same SipHash cookie as xtate, builds valid
+Ethernet/IPv4/TCP SYN-ACK packets, and writes a pcap fixture. The pcap is replayed
+through `--adapter file:...`; the scanner container runs with `--network none`, so
+no packets leave the machine.
+
+The replay is paced from pcap timestamps. This prevents a burst from flooding the
+handler queues and makes exact counts deterministic.
+
+### Examples
+
+Small CI smoke test:
+
+```bash
+XTATE_BIN=/path/to/xtate-linux bash tests/large-batch/replay.sh \
+  --targets 20 --ports 1-100 --pps 5000 --handlers 2
+# 2,000 results
+```
+
+Default: 1,000 targets × 1,000 ports = **1,000,000 results** at 20,000 pps.
+
+Very large run on a strong host:
+
+```bash
+XTATE_BIN=/path/to/xtate-linux bash tests/large-batch/replay.sh \
+  --targets 5000 --ports 1-1000 --pps 100000 --handlers 8
+# 5,000,000 results
+```
+
+Approximate costs for replay (actual disk depends on output module):
+
+| Results | pcap size | ndjson/bson output (each) | Expected scan time at 20k pps |
+|---:|---:|---:|---:|
+| 100,000 | ~5 MB | ~15 / 19 MB | ~5 s |
+| 1,000,000 | ~54 MB | ~150 / 190 MB | ~50 s |
+| 5,000,000 | ~270 MB | ~750 / 950 MB | ~250 s |
+
+The test writes four output files. Keep at least **2–4 GB free disk** for the
+5M-result case.
+
+The generated target list uses `10.0.X.Y`; this supports up to 65,536 replay
+targets. Use a different generator scheme if you need more.
 
 ## What is verified
 
-- `ndjson`: exactly one JSON object per result; parses every line; open/closed
-  split matches the expected 500 / 9,500.
-- `csv`: one header plus one row per result.
-- `bson`: non-empty binary stream (full BSON parsing is left to the consumer).
-- `text`: one line per result.
-- Multi-handler path (`-rx-handler-count 4`) produces the same count.
-- Target address aliases and the isolated Docker subnet are created
-  dynamically, so the test does not collide with other local labs.
+### Live `run.sh`
 
-## Why is the live test not 1,000 targets by default?
+- ndjson: one JSON object per result, every line parses, open/closed split exact.
+- csv: header plus one row per result.
+- bson: non-empty binary stream.
+- text: one line per result.
+- multi-handler (`-rx-handler-count 4`) same count.
+- dynamic Docker subnet and aliases; cleanup on exit.
 
-The local Docker bridge starts dropping/evicting neighbor entries when a single
-run addresses roughly 1,000 aliases on this host; that is a test-environment
-ARP/neigh limit, not an xtate result bug. The default is kept at 500 targets /
-10,000 results so the assertion is deterministic. Increase `BATCH_BLOCKS` and
-`BATCH_ALIASES` when testing on a host with a larger neighbor table.
+### Replay `replay.sh`
 
-## Failure injection and memory
+- exact result count for 1,000,000 generated replies;
+- all four output modules;
+- receive, validation, dispatch and output paths;
+- pcap pacing and end-of-file handling (an invalid trailer avoids racing the
+  final valid replies);
+- no external network (`--network none`).
 
-The first version focuses on count/schema/flush correctness. Planned follow-ups:
+## Requirements
 
-- open output file descriptor / `/dev/full` write failures
-- Mongo disconnect
-- RSS high-water measurement
-- SIGINT during a large scan
+- Docker
+- a Linux `xtate` binary (`XTATE_BIN`)
+- `xtate-builder:24.04` or `XTATE_LAB_IMAGE`
+- Python 3 on the host for `replay.sh`
+- enough disk/RAM for the chosen scale
 
-## High-rate deterministic replay
+## Notes
 
-`replay.sh` avoids live-network packet loss and tests the receive/validation/
-output path at a much larger scale:
-
-- generates a pcap fixture of **1,000,000** valid tcp-syn replies
-  (`make_pcap.py`: 1,000 targets x 1,000 ports);
-- replay is paced from pcap timestamps at **50,000 pps**;
-- no Docker target network is used; the scanner container runs with
-  `--network none`;
-- verifies ndjson/csv/bson/text exact counts, including a small invalid pcap
-  trailer that keeps the end-of-file finish path from racing the final replies.
-
-```bash
-XTATE_BIN=/path/to/xtate-linux bash tests/large-batch/replay.sh
-```
-
-`make_pcap.py` uses the same SipHash cookie and packet layout as xtate; it is a
-deterministic fixture generator, not a packet sender.
+- The live test starts five target containers and needs `NET_ADMIN` for aliases;
+  the scanner needs `NET_RAW`/`NET_ADMIN`.
+- The replay test needs no target containers; only Docker to execute the binary.
+- Firewall RST suppression is not needed for `tcp-syn`; the tests use
+  `-scan-arg "--send-rst"` in live mode.
+- Output files are written outside the repository by default.

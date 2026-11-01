@@ -12,7 +12,7 @@
 #
 # Optional environment:
 #   XTATE_LAB_IMAGE   builder image (default xtate-builder:24.04)
-#   BATCH_BLOCKS      target containers (default 2)
+#   BATCH_BLOCKS      target containers (default 5)
 #   BATCH_ALIASES     aliases per container (default 100)
 #   BATCH_RATE        packets per second (default 500)
 #   BATCH_OUT         output directory (default ../reports/docker/out/large-batch)
@@ -32,6 +32,39 @@ OUT_DIR="${BATCH_OUT:-$ROOT/../reports/docker/out/large-batch}"
 PORTS="${BATCH_PORTS:-80,1-19}"
 ENDPOINTS="${BATCH_ENDPOINTS:-20}"
 
+usage() {
+    cat <<EOF
+Usage: $0 [options]
+
+  --bin PATH          Linux xtate binary (default XTATE_BIN)
+  --image IMAGE       Docker builder image (default $IMAGE)
+  --blocks N          target containers (default $BLOCKS)
+  --aliases N         address aliases per container (default $ALIASES)
+  --ports LIST        port list per target (default $PORTS)
+  --endpoints N       endpoints per target; must match --ports (default $ENDPOINTS)
+  --rate N            scan rate in packets/second (default $RATE)
+  --out DIR           output directory (default $OUT_DIR)
+  -h, --help          show this help
+
+All targets are local Docker aliases on an isolated bridge.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --bin) BIN="$2"; shift 2 ;;
+        --image) IMAGE="$2"; shift 2 ;;
+        --blocks) BLOCKS="$2"; shift 2 ;;
+        --aliases) ALIASES="$2"; shift 2 ;;
+        --ports) PORTS="$2"; shift 2 ;;
+        --endpoints) ENDPOINTS="$2"; shift 2 ;;
+        --rate) RATE="$2"; shift 2 ;;
+        --out) OUT_DIR="$2"; shift 2 ;;
+        -h|--help) usage; exit 0 ;;
+        *) echo "unknown option: $1" >&2; usage >&2; exit 2 ;;
+    esac
+done
+
 if ! command -v docker >/dev/null 2>&1; then
     echo "docker is required" >&2
     exit 1
@@ -40,6 +73,9 @@ fi
 if command -v cygpath >/dev/null 2>&1; then
     BIN="$(cygpath -w "$BIN")"
     OUT_DIR="$(cygpath -w "$OUT_DIR")"
+    HOST_OUT="$(cygpath -u "$OUT_DIR")"
+else
+    HOST_OUT="$OUT_DIR"
 fi
 
 # Windows checkouts do not carry the Unix execute bit; Docker will execute the
@@ -138,7 +174,7 @@ run_scan() {
     local module="$2"
     local handlers="$3"
     local out="/out/$name"
-    local host_out="$OUT_DIR/$name"
+    local host_out="$HOST_OUT/$name"
     echo "--- $name (output=$module, handlers=$handlers)"
     docker run --rm \
         --cap-add NET_RAW --cap-add NET_ADMIN \
@@ -163,26 +199,26 @@ run_scan large-bson bson 1
 run_scan large-text text 1
 
 # ndjson: exact record count and open/closed split.
-lines=$(wc -l < "$OUT_DIR/large-ndjson" | tr -d ' ')
-open=$(grep -c '"classification":"open"' "$OUT_DIR/large-ndjson" || true)
-closed=$(grep -c '"classification":"closed"' "$OUT_DIR/large-ndjson" || true)
+lines=$(wc -l < "$HOST_OUT/large-ndjson" | tr -d ' ')
+open=$(grep -c '"classification":"open"' "$HOST_OUT/large-ndjson" || true)
+closed=$(grep -c '"classification":"closed"' "$HOST_OUT/large-ndjson" || true)
 echo "ndjson: lines=$lines open=$open closed=$closed"
 [[ "$lines" -eq "$EXPECTED" ]]
 [[ "$open" -eq "$TARGET_COUNT" ]]
 [[ "$closed" -eq $((TARGET_COUNT * (ENDPOINTS - 1))) ]]
 
 # csv: one header plus one row per result.
-csv_lines=$(wc -l < "$OUT_DIR/large-csv" | tr -d ' ')
+csv_lines=$(wc -l < "$HOST_OUT/large-csv" | tr -d ' ')
 echo "csv: lines=$csv_lines"
 [[ "$csv_lines" -eq $((EXPECTED + 1)) ]]
 
 # bson: non-empty binary stream (no BSON parser required here).
-bson_bytes=$(wc -c < "$OUT_DIR/large-bson" | tr -d ' ')
+bson_bytes=$(wc -c < "$HOST_OUT/large-bson" | tr -d ' ')
 echo "bson: bytes=$bson_bytes"
 [[ "$bson_bytes" -gt 1000 ]]
 
 # text: one line per result.
-text_lines=$(wc -l < "$OUT_DIR/large-text" | tr -d ' ')
+text_lines=$(wc -l < "$HOST_OUT/large-text" | tr -d ' ')
 echo "text: lines=$text_lines"
 [[ "$text_lines" -eq "$EXPECTED" ]]
 
@@ -190,7 +226,7 @@ echo "text: lines=$text_lines"
 if command -v python3 >/dev/null 2>&1 || command -v python >/dev/null 2>&1; then
     PYTHON=python3
     command -v python3 >/dev/null 2>&1 || PYTHON=python
-    "$PYTHON" - "$OUT_DIR/large-ndjson" <<'PY'
+    "$PYTHON" - "$HOST_OUT/large-ndjson" <<'PY'
 import json, sys
 path = sys.argv[1]
 count = 0
