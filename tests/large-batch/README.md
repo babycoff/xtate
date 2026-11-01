@@ -180,8 +180,13 @@ The failure script uses `--network none` for every non-Mongo case. The Mongo
 section is skipped when the image is not already present, so it never pulls
 from a registry during a test run.
 
-Mongo disconnect currently verifies "no hang / no crash / diagnostic"; a
-reconnect-after-restart scenario is a later addition.
+Mongo tests cover: normal write (10,000 docs), scan-time disconnect (no hang/
+crash, diagnostic), restart + a fresh recovery scan (10,000 docs), and a
+same-scan stop/restart. The same-scan case currently exposes a known data-loss
+window: while Mongo is down the output callback logs "No suitable servers" and
+drops those results; after restart later results are written, but the dropped
+ones are not replayed. The test prints the recovered document count and keeps the
+log for review.
 
 For a larger RSS run:
 

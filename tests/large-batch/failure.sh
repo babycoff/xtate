@@ -297,6 +297,68 @@ if docker image inspect "$MONGO_IMAGE" >/dev/null 2>&1; then
         && pass "MongoDB disconnect produced a diagnostic" \
         || echo "WARN: no MongoDB diagnostic captured"
 
+    echo "==> MongoDB restart and recovery scan"
+    docker start xtate-mongo >/dev/null 2>&1 || true
+    for _ in $(seq 1 60); do
+        docker exec xtate-mongo mongosh --quiet --eval 'db.runCommand({ping:1})' >/dev/null 2>&1 && break
+        sleep 1
+    done
+    docker run --rm --network "$MONGO_NET" \
+        -v "$BIN:/xtate:ro" -v "$OUT_DIR:/out" "$IMAGE" bash -lc "
+            /xtate -iL /out/targets-small.txt -p '$PORTS' -scan tcp-syn \
+              --adapter file:/out/small.pcap --source-ip $IP_ME \
+              --source-mac 02-00-00-00-00-01 --router-mac 02-00-00-00-00-02 \
+              -source-port $SOURCE_PORT-$((SOURCE_PORT + 15)) -seed $SEED \
+              --wait 2 --no-status -output-module mongodb \
+              -output-file mongodb://xtate-mongo:27017 \
+              -output-arg '-database-name xtate -collection-name recovery -insert-bulk -bulk-size 500' \
+              --dispatch-buf-count 65536" > "$OUT_DIR/mongo-recovery.log" 2>&1 || true
+    rcount=$(docker exec xtate-mongo mongosh --quiet --eval \
+        'db.getSiblingDB("xtate").recovery.countDocuments({})' 2>/dev/null | tr -d '\r' || true)
+    if [[ "${rcount:-0}" -gt 0 ]]; then
+        pass "MongoDB recovery scan wrote $rcount documents"
+    else
+        fail "MongoDB recovery scan wrote no documents"
+    fi
+
+    echo "==> MongoDB same-scan stop/restart"
+    docker run -d --name xtate-mongo-scan2 --network "$MONGO_NET" \
+        -v "$BIN:/xtate:ro" -v "$OUT_DIR:/out" "$IMAGE" bash -lc "
+            /xtate -iL /out/targets-rss100.txt -p '$PORTS' -scan tcp-syn \
+              --adapter file:/out/rss100.pcap --source-ip $IP_ME \
+              --source-mac 02-00-00-00-00-01 --router-mac 02-00-00-00-00-02 \
+              -source-port $SOURCE_PORT-$((SOURCE_PORT + 15)) -seed $SEED \
+              --wait 2 --no-status -output-module mongodb \
+              -output-file mongodb://xtate-mongo:27017 \
+              -output-arg '-database-name xtate -collection-name reconnect -insert-bulk -bulk-size 500' \
+              --dispatch-buf-count 65536" >/dev/null
+    sleep 1
+    docker stop xtate-mongo >/dev/null 2>&1 || true
+    sleep 2
+    docker start xtate-mongo >/dev/null 2>&1 || true
+    for _ in $(seq 1 30); do
+        docker exec xtate-mongo mongosh --quiet --eval 'db.runCommand({ping:1})' >/dev/null 2>&1 && break
+        sleep 1
+    done
+    set +e
+    timeout 60 docker wait xtate-mongo-scan2 >/dev/null
+    r_rc=$?
+    set -e
+    docker logs xtate-mongo-scan2 > "$OUT_DIR/mongo-reconnect.log" 2>&1 || true
+    docker rm -f xtate-mongo-scan2 >/dev/null 2>&1 || true
+    if [[ $r_rc -eq 124 ]]; then
+        fail "MongoDB same-scan stop/restart hung"
+    else
+        pass "MongoDB same-scan stop/restart finished (exit $r_rc)"
+    fi
+    reconnect_count=$(docker exec xtate-mongo mongosh --quiet --eval \
+        'db.getSiblingDB("xtate").reconnect.countDocuments({})' 2>/dev/null | tr -d '\r' || true)
+    if [[ "${reconnect_count:-0}" -gt 0 ]]; then
+        pass "MongoDB same-scan reconnect wrote $reconnect_count documents"
+    else
+        fail "MongoDB same-scan reconnect wrote no documents"
+    fi
+
     docker rm -f xtate-mongo >/dev/null 2>&1 || true
     docker network rm "$MONGO_NET" >/dev/null 2>&1 || true
     trap - EXIT
