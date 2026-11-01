@@ -123,3 +123,22 @@ These are design trade-offs in v2.21.1, not bugs; the full list with workarounds
 ## What to collect for a bug report
 
 Command line (start from `--echo` output), `--version`, the log at `-d`/`-dd`, a `--pcap` capture of the received traffic, and the exact target/port that misbehaved. Do not include unrelated production captures.
+
+
+## PowerShell 7.6.7 crashes at startup with `totalWidth ('-17')`
+
+This is a PowerShell/Windows Terminal startup bug in the **update notification**,
+not an Xtate error. It happens before profiles are loaded, so a profile fix does
+not help. Set the user environment variable and reopen the terminal:
+
+```powershell
+setx POWERSHELL_UPDATECHECK Off
+# close every PowerShell/Windows Terminal window, then open a new one
+```
+
+If the environment was changed while Windows Terminal was already running, close
+the whole terminal application (not just the tab) or sign out/in so Explorer
+re-reads the user environment.
+
+Xtate's `--lang zh` also restores the console code page on exit (v2.21.1+), so it
+does not leave the caller's console in a modified state.

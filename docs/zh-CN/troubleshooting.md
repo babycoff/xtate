@@ -123,3 +123,20 @@ IPv6 有自己的坑：链路本地源地址必须显式给出（`-src-ip fe80::
 ## 报 bug 时需要提供什么
 
 命令行（从 `--echo` 的输出开始）、`--version`、`-d`/`-dd` 级别的日志、一份收到流量的 `--pcap` 抓包，以及出问题的确切目标/端口。请不要附上无关的生产环境抓包。
+
+
+## PowerShell 7.6.7 启动时崩溃，报 `totalWidth ('-17')`
+
+这是 PowerShell/Windows Terminal 的**更新提示**启动 bug，不是 Xtate 错误。它发生在
+profile 加载之前，所以改 profile 不能解决。设置用户环境变量后重新打开终端：
+
+```powershell
+setx POWERSHELL_UPDATECHECK Off
+# 关闭所有 PowerShell / Windows Terminal 窗口，再新开一个
+```
+
+如果是在 Windows Terminal 已经运行时修改环境变量，需要关闭整个终端应用（不是只关标签页）
+或注销/重新登录，让 Explorer 重新读取用户环境。
+
+Xtate 的 `--lang zh` 在退出时会恢复控制台代码页（v2.21.1+），不会把调用方的控制台留在
+被修改状态。
