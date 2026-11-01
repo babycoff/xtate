@@ -5,14 +5,14 @@
 #
 # Defaults:
 #   5 target containers x 100 address aliases = 500 targets
-#   20 endpoints per target (8080 open, 1..19 closed) = 10000 results
+#   20 endpoints per target (80 open, 1..19 closed) = 10000 results
 #
 # Usage:
 #   XTATE_BIN=/path/to/xtate-linux bash tests/large-batch/run.sh
 #
 # Optional environment:
 #   XTATE_LAB_IMAGE   builder image (default xtate-builder:24.04)
-#   BATCH_BLOCKS      target containers (default 5)
+#   BATCH_BLOCKS      target containers (default 2)
 #   BATCH_ALIASES     aliases per container (default 100)
 #   BATCH_RATE        packets per second (default 500)
 #   BATCH_OUT         output directory (default ../reports/docker/out/large-batch)
@@ -29,7 +29,7 @@ BLOCKS="${BATCH_BLOCKS:-5}"
 ALIASES="${BATCH_ALIASES:-100}"
 RATE="${BATCH_RATE:-500}"
 OUT_DIR="${BATCH_OUT:-$ROOT/../reports/docker/out/large-batch}"
-PORTS="${BATCH_PORTS:-8080,1-19}"
+PORTS="${BATCH_PORTS:-80,1-19}"
 ENDPOINTS="${BATCH_ENDPOINTS:-20}"
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -88,7 +88,7 @@ for ((b = 0; b < BLOCKS; b++)); do
         for i in \$(seq $start $end); do
             /sbin/ip addr add $NET_PREFIX.\$((i / 256)).\$((i % 256))/$PREFIX_LEN dev eth0 2>/dev/null || true
         done
-        python3 -u -m http.server 8080" >/dev/null
+        python3 -u -m http.server 80" >/dev/null
 done
 
 wait_tcp() {
@@ -104,7 +104,7 @@ wait_tcp() {
 }
 
 for name in "${TARGETS[@]}"; do
-    wait_tcp "$name" 8080 || {
+    wait_tcp "$name" 80 || {
         echo "target $name did not start" >&2
         docker logs "$name" >&2 || true
         exit 1

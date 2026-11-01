@@ -1,13 +1,14 @@
 # Local large-batch regression
 
-This test exercises real scan and output paths with a large result volume while
-keeping **all traffic inside a dedicated Docker bridge network**. It never scans
-the Internet.
+The live test exercises real scan and output paths with a large result volume
+while keeping **all traffic inside a dedicated Docker bridge network**. The
+replay test uses a local pcap fixture and `--network none`. Neither scans the
+Internet.
 
 Default workload:
 
 - 5 target containers x 100 address aliases = **500 target IPs**
-- ports `8080,1-19` = **20 endpoints per target**
+- ports `80,1-19` = **20 endpoints per target** (80 open)
 - **10,000 expected results** (500 open, 9,500 closed)
 - output modules: `ndjson`, `csv`, `bson`, `text`
 - receive handler counts: 1 and 4
@@ -38,7 +39,7 @@ $env:XTATE_LAB_IMAGE = "xtate-builder:24.04"
 - Target address aliases and the isolated Docker subnet are created
   dynamically, so the test does not collide with other local labs.
 
-## Why not 1,000 targets by default?
+## Why is the live test not 1,000 targets by default?
 
 The local Docker bridge starts dropping/evicting neighbor entries when a single
 run addresses roughly 1,000 aliases on this host; that is a test-environment
@@ -54,3 +55,23 @@ The first version focuses on count/schema/flush correctness. Planned follow-ups:
 - Mongo disconnect
 - RSS high-water measurement
 - SIGINT during a large scan
+
+## High-rate deterministic replay
+
+`replay.sh` avoids live-network packet loss and tests the receive/validation/
+output path at a much larger scale:
+
+- generates a pcap fixture of **1,000,000** valid tcp-syn replies
+  (`make_pcap.py`: 1,000 targets x 1,000 ports);
+- replay is paced from pcap timestamps at **50,000 pps**;
+- no Docker target network is used; the scanner container runs with
+  `--network none`;
+- verifies ndjson/csv/bson/text exact counts, including a small invalid pcap
+  trailer that keeps the end-of-file finish path from racing the final replies.
+
+```bash
+XTATE_BIN=/path/to/xtate-linux bash tests/large-batch/replay.sh
+```
+
+`make_pcap.py` uses the same SipHash cookie and packet layout as xtate; it is a
+deterministic fixture generator, not a packet sender.

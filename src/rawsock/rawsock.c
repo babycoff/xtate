@@ -25,7 +25,9 @@
 #include "../stack/stack-arpv4.h"
 #include "../stack/stack-ndpv6.h"
 
-static int is_pcap_file = 0;
+static int      is_pcap_file = 0;
+static uint64_t replay_start_wall = 0;
+static uint64_t replay_start_pcap = 0;
 
 #ifdef _WIN32
 #include <winsock.h>
@@ -243,6 +245,10 @@ int rawsock_send_packet(Adapter *adapter, AdapterCache *acache,
     if (adapter == 0)
         return 0;
 
+    /* A pcap savefile is a replay source, not a transmit device. */
+    if (is_pcap_file)
+        return 0;
+
     /* Print --packet-trace if debugging */
     if (adapter->is_packet_trace) {
         packet_trace(stdout, adapter->pt_start, packet, length, true);
@@ -385,6 +391,25 @@ int rawsock_recv_packet(Adapter *adapter, unsigned *length, unsigned *secs,
         *length = hdr->caplen;
         *secs   = (unsigned)hdr->ts.tv_sec;
         *usecs  = (unsigned)hdr->ts.tv_usec;
+
+        if (is_pcap_file) {
+            /* Replay at the timestamps in the savefile instead of reading the
+             * whole file as fast as possible. Without this pacing a large
+             * fixture can overrun the handler queues and make the test
+             * non-deterministic. */
+            uint64_t pcap_us = ((uint64_t)hdr->ts.tv_sec * 1000000ULL) +
+                               (uint64_t)hdr->ts.tv_usec;
+            uint64_t wall_us = pixie_gettime();
+            if (replay_start_wall == 0) {
+                replay_start_wall = wall_us;
+                replay_start_pcap = pcap_us;
+            } else if (pcap_us >= replay_start_pcap) {
+                uint64_t target_us =
+                    replay_start_wall + (pcap_us - replay_start_pcap);
+                if (target_us > wall_us)
+                    pixie_usleep((unsigned)(target_us - wall_us));
+            }
+        }
     }
 
     return 0;
@@ -646,9 +671,19 @@ Adapter *rawsock_init_adapter(const char *adapter_name, bool is_pfring,
      *----------------------------------------------------------------*/
     if (memcmp(adapter_name, "file:", 5) == 0) {
         LOG(LEVEL_DETAIL, "(pcap) file: %s\n", adapter_name + 5);
-        is_pcap_file       = 1;
-        adapter->pcap      = PCAP.open_offline(adapter_name + 5, errbuf);
+        is_pcap_file  = 1;
+        adapter->pcap = PCAP.open_offline(adapter_name + 5, errbuf);
+        if (adapter->pcap == NULL) {
+            LOG(LEVEL_ERROR, "(pcap) file: %s: %s\n", adapter_name + 5,
+                errbuf);
+            FREE(adapter);
+            return 0;
+        }
         adapter->link_type = PCAP.datalink(adapter->pcap);
+        /* A savefile is a receive-only source. Do not fall through to the
+         * live/libpcap path, which would try to activate "file:..." as a
+         * device. */
+        return adapter;
     }
     /*----------------------------------------------------------------
      * PORTABILITY: LIBPCAP
@@ -885,6 +920,10 @@ void rawsock_set_filter(Adapter *adapter, const char *scan_filter,
  * Nonblock mode means pcap will return immediatelly even if no packet recved.
  */
 void rawsock_set_nonblock(Adapter *adapter) {
+    /* Savefiles are always read synchronously; pcap_setnonblock rejects them. */
+    if (is_pcap_file)
+        return;
+
     if (adapter->pcap) {
         int  err;
         char errbuf[PCAP_ERRBUF_SIZE] = "pcap";
