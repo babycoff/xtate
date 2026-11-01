@@ -159,3 +159,34 @@ targets. Use a different generator scheme if you need more.
 - Firewall RST suppression is not needed for `tcp-syn`; the tests use
   `-scan-arg "--send-rst"` in live mode.
 - Output files are written outside the repository by default.
+
+## Failure injection and RSS: `failure.sh`
+
+```bash
+XTATE_BIN=/path/to/xtate-linux bash tests/large-batch/failure.sh
+```
+
+Checks:
+
+- output write failures (`/dev/full`, 1 MiB tmpfs);
+- SIGINT during replay (small 100k fixture; output is flushed);
+- SIGPIPE when a downstream consumer exits early (`exit 141` observed);
+- RSS high-water for 100k vs 1M results (currently about 117 MB peak for
+  both, which is the expected flat profile);
+- unreachable MongoDB (clean diagnostic, no hang);
+- optional MongoDB normal write if `XTATE_MONGO_IMAGE` is available locally.
+
+The failure script uses `--network none` for every non-Mongo case. The Mongo
+section is skipped when the image is not already present, so it never pulls
+from a registry during a test run.
+
+For a larger RSS run:
+
+```bash
+BATCH_RSS_TARGETS=5000 bash tests/large-batch/failure.sh
+# 5,000 x 1,000 = 5,000,000 results
+```
+
+RSS is sampled from `/proc/<pid>/status` (`VmRSS`) at ~50 ms intervals and the
+peak is reported. The guard fails only on a dramatic super-linear jump or a very
+large absolute peak; use the printed values for capacity planning.
