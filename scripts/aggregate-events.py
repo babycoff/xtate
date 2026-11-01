@@ -72,7 +72,7 @@ def _bump(counter, key):
     counter[key] = counter.get(key, 0) + 1
 
 
-def aggregate_lines(lines, group_fields, strict=False):
+def aggregate_lines(lines, group_fields, strict=False, max_groups=0):
     groups = {}
     events = 0
     bad = 0
@@ -99,6 +99,10 @@ def aggregate_lines(lines, group_fields, strict=False):
         key = tuple(event.get(name) for name in group_fields)
         group = groups.get(key)
         if group is None:
+            if max_groups and len(groups) >= max_groups:
+                raise SystemExit("group limit reached (%d); use a lower "
+                                 "cardinality --group-by or a spill-based tool"
+                                 % max_groups)
             group = _new_group(event, group_fields)
             groups[key] = group
 
@@ -188,6 +192,9 @@ def main():
                          "ip_proto,ip_them,port_them)")
     ap.add_argument("--strict", action="store_true",
                     help="abort on malformed JSON instead of skipping it")
+    ap.add_argument("--max-groups", type=int, default=0,
+                    help="abort after this many groups (0 = unlimited); useful "
+                         "as an OOM guard")
     ap.add_argument("--stats", action="store_true",
                     help="print input/output counts and timing to stderr")
     args = ap.parse_args()
@@ -205,7 +212,8 @@ def main():
         close_input = True
 
     try:
-        groups, events, bad = aggregate_lines(fh, group_fields, args.strict)
+        groups, events, bad = aggregate_lines(fh, group_fields, args.strict,
+                                              args.max_groups)
     finally:
         if close_input:
             fh.close()

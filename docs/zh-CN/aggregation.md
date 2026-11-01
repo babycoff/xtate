@@ -51,6 +51,7 @@ head -n 10000 scan.jsonl |
 | `--format` | `jsonl`（默认）、`json`、`csv` |
 | `--group-by` | 逗号分隔的分组字段（默认 `ip_proto,ip_them,port_them`） |
 | `--strict` | JSON 解析失败时中止（默认跳过并写 stderr） |
+| `--max-groups` | 超过 N 个分组就中止（默认不限制）；高基数 OOM 保护 |
 | `--stats` | 输入/输出计数、分组数、耗时，以及平台支持时的最大 RSS |
 
 每个分组输出：
@@ -104,16 +105,19 @@ classification, reason, scan_report, probe_report, output_report
 
 示例为每个分组保留一个 Python dict；它是**结束后工具**，不影响扫描器内存。
 
-本机 100 万事件基准（1,000,000 个唯一目标/端口分组，184 MB NDJSON 输入）：
+本机 100 万事件基准（1,000,000 个唯一目标/端口分组，184 MB NDJSON 输入，Linux 容器）：
 
 ```text
-input_events=1000000 groups=1000000 bad_json=0 elapsed≈25s
+input_events=1000000 groups=1000000 bad_json=0 elapsed≈50s maxrss_kb=1764064
 ```
 
-输出约 361 MB JSONL，因为每个分组都带自己的元数据。更大规模时：
+峰值约 **1.68 GiB**（完整 1M 分组 dict）；输出约 361 MB JSONL，因为每个分组都带自己的元数据。Windows 主机跑同样输入约 25 秒，但 Windows 的 `--stats` 不提供 `maxrss` 字段。
+
+这是最坏情况（每条事件一个独立分组）。更大规模时：
 
 - 只聚合需要的字段；
 - 用 `--group-by` 降低基数；
+- 用 `--max-groups` 作为 OOM 保护，在吃满内存前失败；
 - 10M+ 分组用 SQLite/外部排序，或按 IP 前缀分区；
 - 不要在内存里构建完整 10M dict。
 

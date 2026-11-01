@@ -56,6 +56,7 @@ Options:
 | `--format` | `jsonl` (default), `json`, `csv` |
 | `--group-by` | comma-separated grouping fields (default `ip_proto,ip_them,port_them`) |
 | `--strict` | abort on malformed JSON (default: skip + stderr note) |
+| `--max-groups` | abort after N groups (default unlimited); OOM guard for high-cardinality runs |
 | `--stats` | input/output count, groups, elapsed time, and max RSS where supported |
 
 For each group it emits:
@@ -117,17 +118,22 @@ The default example keeps one Python dict per group. It is a **post-run** tool,
 so the scanner's memory is unaffected.
 
 A local 1M-event benchmark on this tree (1,000,000 unique target/port groups,
-184 MB NDJSON input):
+184 MB NDJSON input, Linux container):
 
 ```text
-input_events=1000000 groups=1000000 bad_json=0 elapsed≈25s
+input_events=1000000 groups=1000000 bad_json=0 elapsed≈50s maxrss_kb=1764064
 ```
 
-Output is about 361 MB of JSONL because every group carries its own metadata.
-For very large runs:
+That peak is about **1.68 GiB** for the full 1M-group dict; output is about
+361 MB of JSONL because every group carries its own metadata. A Windows host
+took about 25 seconds for the same input, but Windows does not expose the
+`maxrss` field through `--stats`.
+
+This is the worst case (every event a distinct group). For very large runs:
 
 - aggregate only the fields you need;
 - use `--group-by` to reduce cardinality;
+- use `--max-groups` as an OOM guard and fail before consuming all RAM;
 - for 10M+ groups, use SQLite/external sort or partition by IP prefix;
 - do not try to build a full 10M dict in memory.
 
