@@ -308,6 +308,12 @@ Xtate 的两个引擎源自我们的研究：
 
 如果 Xtate 对你的研究有帮助，一次引用比一个 star 更让我们高兴。
 
+## 参与贡献
+
+欢迎贡献。构建/测试矩阵、C 与模块规范、PR 检查项见
+[CONTRIBUTING.md](CONTRIBUTING.md)。安全漏洞请按 [SECURITY.md](SECURITY.md)
+私密报告，不要开公开 issue。
+
 ## 许可证与负责任使用
 
 AGPL-3.0。见 [LICENSE](LICENSE)。如果你把修改过的 Xtate 作为网络服务运行，AGPL 的网络使用条款就会生效。

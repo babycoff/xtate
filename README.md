@@ -315,6 +315,13 @@ Xtate's two engines come from our research:
 
 If Xtate helps your research, a citation is appreciated more than a star.
 
+## Contributing
+
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the build
+and test matrix, C/module guidelines and pull-request checklist. Report security
+issues privately as described in [SECURITY.md](SECURITY.md); do not open a public
+issue for a vulnerability.
+
 ## License and responsible use
 
 AGPL-3.0. See [LICENSE](LICENSE). If you run a modified Xtate as a network service, the AGPL's network-use clause applies.

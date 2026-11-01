@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/babycoff/xtate/tree/xtate/docs
+    about: Build, scan modes, output, aggregation, architecture and known limitations.
+  - name: 中文文档
+    url: https://github.com/babycoff/xtate/tree/xtate/docs/zh-CN
+    about: 中文用户手册、输出与聚合说明。
+  - name: Security vulnerability
+    url: https://github.com/babycoff/xtate/security/advisories/new
+    about: Report vulnerabilities privately; do not open a public issue.

@@ -1,0 +1,117 @@
+name: Bug report
+description: Report a reproducible bug in Xtate itself.
+title: "[bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug.
+
+        **中文提交也可以。** Please use the English or Chinese fields below.
+
+        Do **not** use this form for security vulnerabilities. Report those
+        privately via [SECURITY.md](https://github.com/babycoff/xtate/blob/xtate/SECURITY.md).
+        Do not include third-party scan data, credentials or private keys.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues and pull requests.
+          required: true
+        - label: This is not a security vulnerability (I will use SECURITY.md for that).
+          required: true
+        - label: I tested only on systems I own or am authorized to test.
+          required: true
+        - label: I reproduced this on the latest release or `xtate` branch.
+          required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Xtate version
+      description: Paste the output of `xtate --version` (including build libraries/compiler).
+      placeholder: |
+        Xtate version 2.20.3 in Release
+        Compiler: gcc 13.3.0
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Linux
+        - Windows
+        - Other / cross-compiled
+    validations:
+      required: true
+
+  - type: input
+    id: build
+    attributes:
+      label: Build configuration
+      description: Compiler, CMake build type, optional dependencies (OpenSSL/PCRE2/BSON/mongoc), Docker vs native.
+      placeholder: MSVC 2022 Release; Npcap; no libbson/mongoc
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Scan module (tcp-syn, zbanner, udp, tcp-state, ...)
+        - Probe module (TLS/HTTP/Lua/...)
+        - Output module (text/NDJSON/CSV/BSON/MongoDB)
+        - Raw socket / pcap / pcap replay adapter
+        - Target or generator
+        - Build system / packaging
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: A concise description of the observed behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Exact command, flags and environment. Prefer a loopback/VM/Docker/pcap replay.
+      placeholder: |
+        xtate -ip 127.0.0.1 -p 8080 -scan tcp-syn --no-status
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / output
+      description: stderr, status output, sanitizer report, or relevant packet capture. Redact addresses and secrets.
+      render: text
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant configuration
+      description: Non-default flags, `-scan-arg`/`-probe-arg`/`-output-arg`, config files, resume state.
+      render: text
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Anything else that helps, including whether it is reproducible on Linux, Windows, or replay.

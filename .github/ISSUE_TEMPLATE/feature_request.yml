@@ -1,0 +1,81 @@
+name: Feature request
+description: Propose a change or a new module/behavior for Xtate.
+title: "[feature] "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the proposal.
+
+        **中文提交也可以。** Please describe the problem before the solution.
+
+        For security vulnerabilities use [SECURITY.md](https://github.com/babycoff/xtate/blob/xtate/SECURITY.md), not a public issue.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight
+      options:
+        - label: I searched existing issues and pull requests.
+          required: true
+        - label: This is a feature/design proposal, not a security vulnerability report.
+          required: true
+        - label: I understand that modules are registered at compile time and that new mandatory dependencies are unlikely to be accepted.
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem are you trying to solve? Who benefits?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Desired behavior, CLI shape, module interface, output format or API.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing flags, external tools or simpler approaches that could work.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Scan module
+        - Probe module
+        - Output module
+        - Generate / target input
+        - Raw socket, pcap or replay
+        - Performance / scale
+        - Build, packaging or docs
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility and risks
+      description: Does it change existing behavior or output? Any dependency, Windows/Linux or C99 portability concerns?
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: How would this be verified?
+      description: Local lab test, replay fixture, benchmark, docs, sanitizer/selftest expectations.
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
