@@ -12,7 +12,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 |---|---|
 | New to Xtate | [Getting started](./getting-started.md) |
 | Planning a scan | [Targets and ports](./targets-and-ports.md) → [Scanning modes](./scanning-modes.md) |
-| Wiring results into a pipeline | [Output](./output.md) |
+| Wiring results into a pipeline | [Output](./output.md) → [Aggregation](./aggregation.md) |
 | Choosing a module | [Modules](./modules.md) |
 | Curious how it works | [Architecture](./architecture.md) → [ZBanner](./zbanner.md) / [HLTCP](./hltcp.md) |
 | Stuck | [Troubleshooting](./troubleshooting.md) → [Known limitations](./known-limitations.md) |
@@ -25,6 +25,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 - [Targets and ports](./targets-and-ports.md) — IPv4/IPv6 input, files, ASN, excludes, sharding
 - [Scanning modes](./scanning-modes.md) — stateless vs stateful, scan/probe pairings, recipes
 - [Output](./output.md) — result levels, text/CSV/NDJSON/BSON/MongoDB, escaping
+- [Aggregation](./aggregation.md) — post-run NDJSON aggregation, schema and scale
 - [Modules](./modules.md) — the four module types and the modules that ship with Xtate
 
 ### How it works

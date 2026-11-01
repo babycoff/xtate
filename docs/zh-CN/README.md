@@ -12,7 +12,7 @@
 |---|---|
 | 刚接触 Xtate | [快速上手](./getting-started.md) |
 | 正在规划一次扫描 | [目标与端口](./targets-and-ports.md) → [扫描模式](./scanning-modes.md) |
-| 要把结果接入流水线 | [输出](./output.md) |
+| 要把结果接入流水线 | [输出](./output.md) → [聚合](./aggregation.md) |
 | 在挑选模块 | [模块](./modules.md) |
 | 想了解内部原理 | [架构](./architecture.md) → [ZBanner](./zbanner.md) / [HLTCP](./hltcp.md) |
 | 卡住了 | [故障排查](./troubleshooting.md) → [已知限制](./known-limitations.md) |
@@ -25,6 +25,7 @@
 - [目标与端口](./targets-and-ports.md)——IPv4/IPv6 输入、文件、ASN、排除、分片
 - [扫描模式](./scanning-modes.md)——无状态与有状态、扫描/探测配对、常用配方
 - [输出](./output.md)——结果级别、text/CSV/NDJSON/BSON/MongoDB、转义
+- [聚合](./aggregation.md)——结束后 NDJSON 聚合、schema 与规模
 - [模块](./modules.md)——四种模块类型以及 Xtate 自带的模块
 
 ### 工作原理
