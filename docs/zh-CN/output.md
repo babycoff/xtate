@@ -99,7 +99,9 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 443 -scan zbanner -probe tls-hello -show 
   -output-arg "-database-name xtate -collection-name scan1"
 ```
 
-它的子参数有 `--database-name`（默认 `xtate`）、`--collection-name`（默认：时间戳）、`--application-name`、`--insert-bulk` / `--bulk-size`（默认 200）和 `--compact-mode`。插入发生在结果路径中；配合 `--bulk-size` 时文档会先缓冲、再分批刷写。两个模块都会自行转义字符串，所以绝不要把它们和 `--no-escape-char` 一起使用。两种格式都可以配合 `--store-bson` / `--store-json` 加 `--mongodb-uri`、`--mongodb-db-name` 和 `--mongodb-col-name` 离线导入；`--store-json` 要求每行都是合法 JSON。
+它的子参数有 `--database-name`（默认 `xtate`）、`--collection-name`（默认：时间戳）、`--application-name`、`--insert-bulk` / `--bulk-size`（默认 200）、`--retry-count`（默认 3）、`--retry-delay`（毫秒，默认 1000）和 `--compact-mode`。插入发生在结果路径中；配合 `--bulk-size` 时文档会先缓冲、再分批刷写。
+
+MongoDB 写入失败最多重试 `--retry-count` 次，间隔为 `--retry-delay`。重试期间只持有当前文档/当前 bulk，不会积累无界的结果队列。重试全部失败时，xtate 会记录“输出不完整”，把输出标记为致命错误，停止扫描并以非零码退出，而不是静默丢弃后续结果。MongoDB 客户端的 server-selection/connect/socket 超时都设了上界，避免被 libmongoc 默认的 30 秒卡住。两个模块都会自行转义字符串，所以绝不要把它们和 `--no-escape-char` 一起使用。两种格式都可以配合 `--store-bson` / `--store-json` 加 `--mongodb-uri`、`--mongodb-db-name` 和 `--mongodb-col-name` 离线导入；`--store-json` 要求每行都是合法 JSON。
 
 ### list 与 null
 

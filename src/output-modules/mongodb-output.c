@@ -13,6 +13,7 @@
 #include "../util-data/safe-string.h"
 #include "../util-data/fine-malloc.h"
 #include "../util-misc/misc.h"
+#include "../pixie/pixie-timer.h"
 
 #define DFT_BULK_SIZE 200;
 
@@ -33,6 +34,10 @@ struct MongodbConf {
     bson_t                  *bulk_insert_opts;
     unsigned                 bulk_idx;
     unsigned                 bulk_size;
+    unsigned                 retry_count;
+    unsigned                 retry_delay_ms;
+    unsigned                 retry_count_set : 1;
+    unsigned                 retry_delay_set : 1;
     unsigned                 is_bulk    : 1;
     unsigned                 is_compact : 1;
 };
@@ -97,6 +102,26 @@ static ConfRes SET_compact(void *conf, const char *name, const char *value) {
     return Conf_OK;
 }
 
+static ConfRes SET_retry_count(void *conf, const char *name,
+                                const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+
+    mongodb_conf.retry_count     = conf_parse_int(value);
+    mongodb_conf.retry_count_set = 1;
+    return Conf_OK;
+}
+
+static ConfRes SET_retry_delay(void *conf, const char *name,
+                                const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+
+    mongodb_conf.retry_delay_ms  = conf_parse_int(value);
+    mongodb_conf.retry_delay_set = 1;
+    return Conf_OK;
+}
+
 static ConfParam mongodb_parameters[] = {
     {"database-name",
      SET_db_name,
@@ -137,6 +162,17 @@ static ConfParam mongodb_parameters[] = {
      " int64 number. Level field will save to an int32 as 'information' for 0, "
      "'failure' for 1 and 'success' for 2. Time and IP proto will save as an "
      "int32 number,."},
+    {"retry-count",
+     SET_retry_count,
+     Type_ARG,
+     {"retry", 0},
+     "Number of retries after a MongoDB write fails (default 3). A value of 0 "
+     "disables retries."},
+    {"retry-delay",
+     SET_retry_delay,
+     Type_ARG,
+     {"retry-delay-ms", 0},
+     "Delay in milliseconds between MongoDB write retries (default 1000)."},
     {0}};
 
 static bool _init_and_test_db(const char *uri_name, const char *db_name,
@@ -167,6 +203,23 @@ static bool _init_and_test_db(const char *uri_name, const char *db_name,
             error.message);
         return false;
     }
+
+    /* Keep an outage bounded: without these, libmongoc can block for its
+     * default 30s server-selection window, which is longer than the scan's
+     * retry policy and makes failure handling unpredictable. */
+    mongoc_uri_set_option_as_int32(mongodb_conf.uri,
+                                   MONGOC_URI_SERVERSELECTIONTIMEOUTMS, 1000);
+    mongoc_uri_set_option_as_int32(mongodb_conf.uri,
+                                   MONGOC_URI_CONNECTTIMEOUTMS, 1000);
+    mongoc_uri_set_option_as_int32(mongodb_conf.uri,
+                                   MONGOC_URI_SOCKETTIMEOUTMS, 2000);
+    mongoc_uri_set_option_as_bool(mongodb_conf.uri, MONGOC_URI_RETRYWRITES,
+                                  false);
+    mongoc_uri_set_option_as_bool(mongodb_conf.uri, MONGOC_URI_RETRYREADS,
+                                  false);
+    mongoc_uri_set_option_as_bool(mongodb_conf.uri,
+                                  MONGOC_URI_SERVERSELECTIONTRYONCE, true);
+
 
     /*
      * Create a new client instance
@@ -319,6 +372,10 @@ static void _close_and_clean_db() {
 }
 
 static bool mongodbout_init(const XConf *xconf, const OutConf *out) {
+    if (!mongodb_conf.retry_count_set)
+        mongodb_conf.retry_count = 3;
+    if (!mongodb_conf.retry_delay_set)
+        mongodb_conf.retry_delay_ms = 1000;
 
     if (!_init_and_test_db(out->output_filename, mongodb_conf.db_name,
                            mongodb_conf.col_name, mongodb_conf.app_name)) {
@@ -329,7 +386,58 @@ static bool mongodbout_init(const XConf *xconf, const OutConf *out) {
     return true;
 }
 
+static void _mongo_retry_sleep(unsigned delay_ms) {
+    if (delay_ms)
+        pixie_usleep(delay_ms * 1000U);
+}
+
+static bool _mongo_bulk_execute_with_retry(void) {
+    bson_error_t error;
+    unsigned     attempts = mongodb_conf.retry_count + 1;
+
+    for (unsigned attempt = 0; attempt < attempts; attempt++) {
+        if (mongoc_bulk_operation_execute(mongodb_conf.bulk, NULL, &error))
+            return true;
+
+        LOG(LEVEL_ERROR, "(MongodbOut execute) attempt %u/%u: %s\n",
+            attempt + 1, attempts, error.message);
+        if (attempt + 1 < attempts)
+            _mongo_retry_sleep(mongodb_conf.retry_delay_ms);
+    }
+
+    LOG(LEVEL_ERROR,
+        "(MongodbOut execute) retries exhausted; output is incomplete\n");
+    output_mark_fatal();
+    return false;
+}
+
+static bool _mongo_insert_one_with_retry(const bson_t *doc) {
+    bson_error_t error;
+    unsigned     attempts = mongodb_conf.retry_count + 1;
+
+    for (unsigned attempt = 0; attempt < attempts; attempt++) {
+        if (mongoc_collection_insert_one(mongodb_conf.collection, doc, NULL,
+                                         NULL, &error))
+            return true;
+
+        LOG(LEVEL_ERROR, "(MongodbOut insert) attempt %u/%u: %s: %u\n",
+            attempt + 1, attempts, error.message, error.code);
+        if (attempt + 1 < attempts)
+            _mongo_retry_sleep(mongodb_conf.retry_delay_ms);
+    }
+
+    LOG(LEVEL_ERROR,
+        "(MongodbOut insert) retries exhausted; output is incomplete\n");
+    output_mark_fatal();
+    return false;
+}
+
 static void mongodbout_result(OutItem *item) {
+    /* Once the sink is marked fatal, do not spend another retry window on each
+     * queued result while the scan is shutting down. */
+    if (output_has_fatal_error())
+        return;
+
     DataLink    *pre;
     bool         ret;
     bson_error_t error;
@@ -480,11 +588,7 @@ static void mongodbout_result(OutItem *item) {
     if (mongodb_conf.is_bulk) {
         /*flush if bulk is full*/
         if (mongodb_conf.bulk_idx >= mongodb_conf.bulk_size) {
-            ret =
-                mongoc_bulk_operation_execute(mongodb_conf.bulk, NULL, &error);
-            if (!ret) {
-                LOG(LEVEL_ERROR, "(MongodbOut execute) %s\n", error.message);
-            }
+            _mongo_bulk_execute_with_retry();
             mongoc_bulk_operation_destroy(mongodb_conf.bulk);
             mongodb_conf.bulk =
                 mongoc_collection_create_bulk_operation_with_opts(
@@ -500,11 +604,7 @@ static void mongodbout_result(OutItem *item) {
             mongodb_conf.bulk_idx++;
         }
     } else {
-        if (!mongoc_collection_insert_one(mongodb_conf.collection, res_doc,
-                                          NULL, NULL, &error)) {
-            LOG(LEVEL_ERROR, "(MongodbOut insert) %s: %u\n", error.message,
-                error.code);
-        }
+        _mongo_insert_one_with_retry(res_doc);
     }
 
     bson_destroy(res_doc);

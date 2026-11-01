@@ -724,6 +724,16 @@ static int _main_scan(XConf *xconf) {
         if (!xconf->is_no_status)
             xtatus_print(&status, &status_item);
 
+        /* An output sink exhausted its retries. Stop scanning and report a
+         * non-zero exit instead of silently losing more results. */
+        if (output_has_fatal_error()) {
+            LOG(LEVEL_ERROR,
+                "output sink failed after retries; stopping scan\n");
+            pixie_locked_cas_u32(&time_to_finish_tx, 1, 0);
+            pixie_locked_cas_u32(&time_to_finish_rx, 1, 0);
+            break;
+        }
+
         /*no more waiting or too many <ctrl-c>*/
         if (time(0) - now >= xconf->wait ||
             pixie_locked_fetch_u32(&time_to_finish_rx)) {
@@ -823,7 +833,7 @@ static int _main_scan(XConf *xconf) {
 
     LOG(LEVEL_INFO, "all threads exited...\n");
 
-    return 0;
+    return output_has_fatal_error() ? 1 : 0;
 }
 
 /***************************************************************************
@@ -978,7 +988,7 @@ int main(int argc, char *argv[]) {
             break;
 
         case Op_Scan:
-            _main_scan(xconf);
+            exit_code = _main_scan(xconf);
             break;
 
         case Op_Echo:
@@ -1099,6 +1109,9 @@ int main(int argc, char *argv[]) {
             break;
 #endif
     }
+
+    if (output_has_fatal_error())
+        exit_code = 1;
 
     /*close logger*/
     LOG_close();

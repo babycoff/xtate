@@ -10,6 +10,8 @@
 #include "../util-out/xprint.h"
 #include "../util-misc/misc.h"
 
+static volatile int _output_fatal_error = 0;
+
 // clang-format off
 extern Output TextOutput;
 extern Output NdjsonOutput;
@@ -189,6 +191,10 @@ bool output_init(const XConf *xconf, OutConf *out_conf) {
 
 /*Some special processes should be done when output to stdout for avoiding
  * mess*/
+void output_mark_fatal(void) { _output_fatal_error = 1; }
+
+bool output_has_fatal_error(void) { return _output_fatal_error != 0; }
+
 static void output_result_to_stdout(OutItem *item) {
     // ipaddress_formatted_t ip_me_fmt = ipaddress_fmt(item->target.ip_me);
     ipaddress_formatted_t ip_them_fmt = ipaddress_fmt(item->target.ip_them);

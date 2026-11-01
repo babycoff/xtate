@@ -182,11 +182,10 @@ from a registry during a test run.
 
 Mongo tests cover: normal write (10,000 docs), scan-time disconnect (no hang/
 crash, diagnostic), restart + a fresh recovery scan (10,000 docs), and a
-same-scan stop/restart. The same-scan case currently exposes a known data-loss
-window: while Mongo is down the output callback logs "No suitable servers" and
-drops those results; after restart later results are written, but the dropped
-ones are not replayed. The test prints the recovered document count and keeps the
-log for review.
+same-scan stop/restart. The same-scan case intentionally checks the bounded
+failure path: after `--retry-count` retries the output sink is marked fatal, the
+scan stops and the process exits non-zero. No unbounded result queue is created;
+only the current document/bulk (bounded by `--bulk-size`) is held while retrying.
 
 For a larger RSS run:
 

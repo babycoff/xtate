@@ -133,9 +133,17 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 443 -scan zbanner -probe tls-hello -show 
 ```
 
 Its sub-parameters are `--database-name` (default `xtate`), `--collection-name` (default: a
-timestamp), `--application-name`, `--insert-bulk` / `--bulk-size` (default 200) and
+timestamp), `--application-name`, `--insert-bulk` / `--bulk-size` (default 200),
+`--retry-count` (default 3), `--retry-delay` in milliseconds (default 1000) and
 `--compact-mode`. Inserts happen in the result path; with `--bulk-size` documents are buffered
-and flushed in batches. Both modules escape strings themselves, so never combine them with
+and flushed in batches.
+
+A failed MongoDB write is retried at most `--retry-count` times with the configured delay.
+Only the current document/bulk is held during retries; there is no unbounded result queue.
+If all retries fail, xtate logs that the output is incomplete, marks the sink fatal, stops the
+scan and exits non-zero instead of silently dropping an unbounded stream of results.
+The MongoDB client uses bounded server-selection/connect/socket timeouts so an outage cannot
+hold the process for libmongoc's 30-second default. Both modules escape strings themselves, so never combine them with
 `--no-escape-char`. Either format can be imported offline with
 `--store-bson` / `--store-json` plus `--mongodb-uri`, `--mongodb-db-name` and
 `--mongodb-col-name`; `--store-json` insists on valid JSON per line.

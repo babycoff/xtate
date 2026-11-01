@@ -117,6 +117,13 @@ void output_result(const OutConf *out, OutItem *item);
 /*destroy resources of output*/
 void output_close(OutConf *out);
 
+/**
+ * Mark the output sink as failed after retries. The scan loop stops and exits
+ * non-zero instead of silently losing more results.
+ */
+void output_mark_fatal(void);
+bool output_has_fatal_error(void);
+
 Output *get_output_module_by_name(const char *name);
 
 /*list fuzzy matched modules*/
