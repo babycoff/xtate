@@ -44,7 +44,8 @@ so a typo cannot masquerade as a successful English run. The default is `en`.
   common closing punctuation such as `。`, `，`, `）` and `！`.
 - **Windows console.** On Windows the `zh-CN` path switches the console output
   code page to UTF-8; MSVC/clang-cl builds use `/utf-8` for source and execution
-  charsets.
+  charsets. Xtate saves the previous code page and restores it on exit so it
+  does not leave the caller's console in a modified state.
 
 The catalog is deliberately partial. Untranslated parameter/module
 descriptions remain English and are still usable; this is a framework for

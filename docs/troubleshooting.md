@@ -105,7 +105,7 @@ IPv6 has its own traps: a link-local source address must be given explicitly (`-
 - **`zbanner` grabs only the first banner segment** by default and then sends RST. Long banners, multi-segment TLS ServerHellos or large HTTP headers need `-scan-arg "-all-banner"` (optionally bounded with `-all-banner-limit <n>` inside the same string).
 - **TLS probes appear to return nothing.** `tls-state` reports a failed handshake at `info` level, and it sends no SNI or ALPN by default, so virtual hosts/CDNs may answer with their default certificate/site. Add `-show info`, use `-probe-arg "-sni <hostname> -alpn h2,http/1.1"` when the target IPs belong to one known vhost, or promote failures to `failed` with `-probe-arg "-fail-handshake"`; without an explicit SNI, treat stateful TLS evidence as the default virtual host, not as the requested hostname.
 
-These are design trade-offs in v2.21.0, not bugs; the full list with workarounds is in [Known limitations](./known-limitations.md).
+These are design trade-offs in v2.21.1, not bugs; the full list with workarounds is in [Known limitations](./known-limitations.md).
 
 ## Modules are missing or refuse to start
 

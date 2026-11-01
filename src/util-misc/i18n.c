@@ -125,6 +125,18 @@ static const I18nEntry i18n_catalog[] = {
 
 static I18nLanguage i18n_language = I18N_EN;
 
+#if defined(_WIN32)
+static UINT i18n_saved_output_cp = 0;
+static bool i18n_output_cp_saved = false;
+
+static void i18n_restore_console(void) {
+    if (i18n_output_cp_saved && i18n_saved_output_cp) {
+        SetConsoleOutputCP(i18n_saved_output_cp);
+        i18n_output_cp_saved = false;
+    }
+}
+#endif
+
 static char *i18n_lower_trim(const char *src, char *buf, size_t size) {
     size_t n = 0;
     while (src && *src && n + 1 < size) {
@@ -153,6 +165,9 @@ bool i18n_set_language(const char *code) {
 
     if (strcmp(buf, "en") == 0 || strcmp(buf, "english") == 0) {
         i18n_language = I18N_EN;
+#if defined(_WIN32)
+        i18n_restore_console();
+#endif
         return true;
     }
 
@@ -160,9 +175,17 @@ bool i18n_set_language(const char *code) {
         strcmp(buf, "cn") == 0 || strcmp(buf, "chinese") == 0) {
         i18n_language = I18N_ZH_CN;
 #if defined(_WIN32)
-        /* Narrow literals are UTF-8; make the Windows console agree. */
+        /* Narrow literals are UTF-8; make the Windows console agree, but
+         * restore the caller's code page when this process exits. Changing the
+         * console code page is process-global state, not local to Xtate. */
+        if (!i18n_output_cp_saved) {
+            i18n_saved_output_cp = GetConsoleOutputCP();
+            if (i18n_saved_output_cp) {
+                i18n_output_cp_saved = true;
+                atexit(i18n_restore_console);
+            }
+        }
         SetConsoleOutputCP(CP_UTF8);
-        SetConsoleCP(CP_UTF8);
 #endif
         return true;
     }
