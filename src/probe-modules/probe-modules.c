@@ -1,4 +1,5 @@
 #include "probe-modules.h"
+#include "../util-misc/i18n.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -245,9 +246,9 @@ void list_all_probe_modules() {
 
     for (int i = 0; i < len; i++) {
         printf("  %d.%s\n", i + 1, probe_modules_list[i]->name);
-        printf("    %s\n", probe_modules_list[i]->short_desc
-                               ? probe_modules_list[i]->short_desc
-                               : probe_modules_list[i]->desc);
+        printf("    %s\n", i18n_tr(probe_modules_list[i]->short_desc
+                                       ? probe_modules_list[i]->short_desc
+                                       : probe_modules_list[i]->desc));
         printf("\n");
     }
 }
@@ -259,15 +260,17 @@ void help_probe_module(Probe *module) {
     }
 
     printf("\n");
-    printf("  ProbeModule Name: %s\n", module->name);
-    printf("  ProbeModule Type: %s\n", get_probe_type_name(module->type));
-    printf("  Multi-probe mode: %s\n", get_multi_mode_name(module->multi_mode));
-    printf("  Multi-probe count: %u\n", module->multi_num);
-    printf("  Hello wait second: %u (for stateful probe)\n",
+    printf("  %s%s\n", i18n_tr("ProbeModule Name: "), module->name);
+    printf("  %s%s\n", i18n_tr("ProbeModule Type: "),
+           get_probe_type_name(module->type));
+    printf("  %s%s\n", i18n_tr("Multi-probe mode: "),
+           get_multi_mode_name(module->multi_mode));
+    printf("  %s%u\n", i18n_tr("Multi-probe count: "), module->multi_num);
+    printf("  %s%u (for stateful probe)\n", i18n_tr("Hello wait second: "),
            module->hello_wait);
     printf("\n");
-    printf("  Description:\n");
-    xprint(module->desc, 6, 80);
+    printf("  %s", i18n_tr("Description:\n"));
+    xprint(i18n_tr(module->desc), 6, 80);
     printf("\n");
     printf("\n");
     if (module->params) {
@@ -280,7 +283,7 @@ void help_probe_module(Probe *module) {
                 printf(", %s", module->params[j].alt_names[k]);
             }
             printf("\n");
-            xprint(module->params[j].help_text, 6, 80);
+            xprint(i18n_tr(module->params[j].help_text), 6, 80);
             printf("\n\n");
         }
     }

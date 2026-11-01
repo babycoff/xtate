@@ -24,6 +24,7 @@
 #include "pixie/pixie-backtrace.h"
 
 #include "util-out/logger.h"
+#include "util-misc/i18n.h"
 #include "util-out/xtatus.h"
 #include "util-scan/init-nic.h"
 #include "util-data/fine-malloc.h"
@@ -844,6 +845,7 @@ int main(int argc, char *argv[]) {
 
     /*init logger at first*/
     LOG_init();
+    i18n_init();
 
     XConf xconf[1];
     memset(xconf, 0, sizeof(XConf));

@@ -32,6 +32,13 @@ option(WITH_MONGOC         "Build with libmongoc library"                 ON)
 #
 # This is more efficient to got an all-zero var than memset and could got
 # a partial-zero var conveniently.
+# Help text contains UTF-8 Chinese literals. MSVC and clang-cl default to the
+# system code page for narrow literals; force both source and execution charset
+# to UTF-8. The Windows console code page is switched at runtime for zh-CN.
+if (MSVC OR CMAKE_C_SIMULATE_ID STREQUAL "MSVC")
+    add_compile_options(/utf-8)
+endif()
+
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED True)
 

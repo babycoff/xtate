@@ -1,4 +1,5 @@
 #include "scan-modules.h"
+#include "../util-misc/i18n.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -76,9 +77,9 @@ void list_all_scan_modules() {
 
     for (int i = 0; i < len; i++) {
         printf("  %d.%s\n", i + 1, scan_modules_list[i]->name);
-        printf("    %s\n", scan_modules_list[i]->short_desc
-                               ? scan_modules_list[i]->short_desc
-                               : scan_modules_list[i]->desc);
+        printf("    %s\n", i18n_tr(scan_modules_list[i]->short_desc
+                                       ? scan_modules_list[i]->short_desc
+                                       : scan_modules_list[i]->desc));
         printf("\n");
     }
 }
@@ -90,15 +91,15 @@ void help_scan_module(Scanner *module) {
     }
 
     printf("\n");
-    printf("  Name of ScanModule:  %s\n", module->name);
-    printf("  Probe Type Required: %s\n",
+    printf("  %s%s\n", i18n_tr("Name of ScanModule:  "), module->name);
+    printf("  %s%s\n", i18n_tr("Probe Type Required: "),
            get_probe_type_name(module->required_probe_type));
-    printf("  Default BPF Filter:\n");
+    printf("  %s", i18n_tr("Default BPF Filter:\n"));
     xprint(module->bpf_filter ? module->bpf_filter : "null", 6, 80);
     printf("\n");
     printf("\n");
-    printf("  Description:\n");
-    xprint(module->desc, 6, 80);
+    printf("  %s", i18n_tr("Description:\n"));
+    xprint(i18n_tr(module->desc), 6, 80);
     printf("\n");
     printf("\n");
     if (module->params) {
@@ -111,7 +112,7 @@ void help_scan_module(Scanner *module) {
                 printf(", %s", module->params[j].alt_names[k]);
             }
             printf("\n");
-            xprint(module->params[j].help_text, 6, 80);
+            xprint(i18n_tr(module->params[j].help_text), 6, 80);
             printf("\n\n");
         }
     }

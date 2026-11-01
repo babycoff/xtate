@@ -289,3 +289,5 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http \
 | 查看特性列表与论文 | [README](../../README.zh-CN.md) |
 
 CLI 本身也能说明用法：`--usage`、`--help`、`--intro`、`--list-scan`、`--list-probe`、`--list-out`、`--list-gen`，以及按模块查看参数的 `--help-scan <module>` / `--help-probe <module>`。
+
+人类可读帮助可以用 `--lang zh`（或 `XTATE_LANG=zh`）切换中文：`xtate --lang zh --help`。参数名、模块名和结果值保持英文；catalog 与回退规则见 [帮助 i18n](./help-i18n.md)。

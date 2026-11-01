@@ -16,6 +16,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 | Choosing a module | [Modules](./modules.md) |
 | Curious how it works | [Architecture](./architecture.md) → [ZBanner](./zbanner.md) / [HLTCP](./hltcp.md) |
 | Stuck | [Troubleshooting](./troubleshooting.md) → [Known limitations](./known-limitations.md) |
+| Chinese help / localization | [Help i18n](./help-i18n.md) |
 
 ## Contents
 
@@ -27,6 +28,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 - [Output](./output.md) — result levels, text/CSV/NDJSON/BSON/MongoDB, escaping
 - [Aggregation](./aggregation.md) — post-run NDJSON aggregation, schema and scale
 - [Modules](./modules.md) — the four module types and the modules that ship with Xtate
+- [Chinese help and i18n](./help-i18n.md) — `--lang`, catalog fallback and UTF-8 help layout
 
 ### How it works
 

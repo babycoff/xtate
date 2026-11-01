@@ -1,4 +1,5 @@
 #include "output-modules.h"
+#include "../util-misc/i18n.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -94,9 +95,9 @@ void list_all_output_modules() {
 
     for (int i = 0; i < len; i++) {
         printf("  %d.%s\n", i + 1, output_modules_list[i]->name);
-        printf("    %s\n", output_modules_list[i]->short_desc
-                               ? output_modules_list[i]->short_desc
-                               : output_modules_list[i]->desc);
+        printf("    %s\n", i18n_tr(output_modules_list[i]->short_desc
+                                       ? output_modules_list[i]->short_desc
+                                       : output_modules_list[i]->desc));
         printf("\n");
     }
 }
@@ -108,12 +109,12 @@ void help_output_module(Output *module) {
     }
 
     printf("\n");
-    printf("  Name of OutputModule: %s\n", module->name);
-    printf("  Need to Specify file: %s\n",
+    printf("  %s%s\n", i18n_tr("Name of OutputModule: "), module->name);
+    printf("  %s%s\n", i18n_tr("Need to Specify file: "),
            module->need_file ? "true" : "false");
     printf("\n");
-    printf("  Description:\n");
-    xprint(module->desc, 6, 80);
+    printf("  %s", i18n_tr("Description:\n"));
+    xprint(i18n_tr(module->desc), 6, 80);
     printf("\n");
     printf("\n");
     if (module->params) {
@@ -126,7 +127,7 @@ void help_output_module(Output *module) {
                 printf(", %s", module->params[j].alt_names[k]);
             }
             printf("\n");
-            xprint(module->params[j].help_text, 6, 80);
+            xprint(i18n_tr(module->params[j].help_text), 6, 80);
             printf("\n\n");
         }
     }

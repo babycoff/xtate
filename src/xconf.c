@@ -52,6 +52,7 @@
 #include "util-out/xprint.h"
 #include "util-out/logger.h"
 #include "util-misc/misc.h"
+#include "util-misc/i18n.h"
 #include "util-misc/checksum.h"
 #include "util-misc/configer.h"
 
@@ -2378,6 +2379,19 @@ static ConfRes SET_nothing(void *conf, const char *name, const char *value) {
     return Conf_OK;
 }
 
+static ConfRes SET_lang(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+
+    if (!i18n_set_language(value)) {
+        LOG(LEVEL_ERROR, "invalid language \"%s\"; expected en or zh-CN.\n",
+            value);
+        return Conf_ERR;
+    }
+
+    return Conf_OK;
+}
+
 static ConfRes SET_version(void *conf, const char *name, const char *value) {
     XConf *xconf = (XConf *)conf;
     UNUSEDPARM(name);
@@ -2892,6 +2906,13 @@ ConfParam config_parameters[] = {
      "NOTE3: " XTATE_NAME_TITLE_CASE " will automatically reboot with conf "
      "after finishing one scanning task while using interactive mode on Linux.",
      "Start " XTATE_NAME_TITLE_CASE " in an interactive mode."},
+    {"lang",
+     SET_lang,
+     Type_ARG,
+     {"language", 0},
+     "Set the language of human-facing help text: en or zh-CN. Untranslated "
+     "strings fall back to English.",
+     "Set help language."},
     {"version",
      SET_version,
      Type_FLAG,
@@ -3930,24 +3951,25 @@ bool xconf_contains(const char *x, int argc, char **argv) {
 
 void xconf_print_intro() {
     printf("\n");
-    printf("Welcome to " XTATE_NAME_TITLE_CASE "!");
+    printf("%s", i18n_tr("Welcome to " XTATE_NAME_TITLE_CASE "!"));
     printf("\n");
-    xprint(XTATE_DESCRIPTION, 2, 80);
-    printf("\n");
-    printf("\n");
-    printf("  Author : " XTATE_AUTHOR "\n");
-    printf("  Github : " XTATE_GITHUB_URL "\n");
-    printf("  Contact: " XTATE_CONTACT "\n");
+    xprint(i18n_tr(XTATE_DESCRIPTION), 2, 80);
     printf("\n");
     printf("\n");
+    printf("  %s" XTATE_AUTHOR "\n", i18n_tr("Author : "));
+    printf("  %s" XTATE_GITHUB_URL "\n", i18n_tr("Github : "));
+    printf("  %s" XTATE_CONTACT "\n", i18n_tr("Contact: "));
     printf("\n");
-    printf("This is how " XTATE_NAME_TITLE_CASE " working internally:\n");
+    printf("\n");
+    printf("\n");
+    printf("%s", i18n_tr("This is how " XTATE_NAME_TITLE_CASE
+                         " working internally:\n"));
     printf("\n");
     printf(work_flow);
     printf("\n");
     printf("\n");
     printf("\n");
-    printf("This is what ScanModules and ProbeModules mean:\n");
+    printf("%s", i18n_tr("This is what ScanModules and ProbeModules mean:\n"));
     printf("\n");
     printf(scan_probe_module_rela);
     printf("\n");
@@ -3960,105 +3982,116 @@ void xconf_print_banner() {
     printf("\n                             " XTATE_BANNER "\n");
 
     printf("\n");
-    printf("Welcome to " XTATE_NAME_TITLE_CASE "!");
+    printf("%s", i18n_tr("Welcome to " XTATE_NAME_TITLE_CASE "!"));
     printf("\n");
-    xprint(XTATE_DESCRIPTION, 2, 80);
+    xprint(i18n_tr(XTATE_DESCRIPTION), 2, 80);
     printf("\n");
     printf("\n");
-    printf("  Author : " XTATE_AUTHOR "\n");
-    printf("  Github : " XTATE_GITHUB_URL "\n");
-    printf("  Contact: " XTATE_CONTACT "\n");
+    printf("  %s" XTATE_AUTHOR "\n", i18n_tr("Author : "));
+    printf("  %s" XTATE_GITHUB_URL "\n", i18n_tr("Github : "));
+    printf("  %s" XTATE_CONTACT "\n", i18n_tr("Contact: "));
     printf("\n");
-    printf("typical format for scanning with specified module:\n");
+    printf("%s",
+           i18n_tr("typical format for scanning with specified module:\n"));
     printf("  " XTATE_NAME " [options] -ip IPs [-p PORTs] -scan SCANMODULE "
            "[-probe PROBEMODULE]\n");
     printf("\n");
-    printf("enter interactive mode:");
+    printf("%s", i18n_tr("enter interactive mode:"));
     printf("  `" XTATE_NAME " -interactive`\n");
     printf("\n");
-    printf("check basic usage examples:");
+    printf("%s", i18n_tr("check basic usage examples:"));
     printf("  `" XTATE_NAME " -usage`\n");
     printf("\n");
-    printf("detailed help of global params:");
+    printf("%s", i18n_tr("detailed help of global params:"));
     printf("  `" XTATE_NAME " -help`\n");
     printf("\n");
 }
 
 void xconf_print_usage() {
     printf("\n");
-    printf("Welcome to " XTATE_NAME_TITLE_CASE "!");
+    printf("%s", i18n_tr("Welcome to " XTATE_NAME_TITLE_CASE "!"));
     printf("\n");
-    xprint(XTATE_DESCRIPTION, 2, 80);
+    xprint(i18n_tr(XTATE_DESCRIPTION), 2, 80);
     printf("\n");
     printf("\n");
-    printf("  Author : " XTATE_AUTHOR "\n");
-    printf("  Github : " XTATE_GITHUB_URL "\n");
-    printf("  Contact: " XTATE_CONTACT "\n");
+    printf("  %s" XTATE_AUTHOR "\n", i18n_tr("Author : "));
+    printf("  %s" XTATE_GITHUB_URL "\n", i18n_tr("Github : "));
+    printf("  %s" XTATE_CONTACT "\n", i18n_tr("Contact: "));
     printf("\n");
-    printf("typical format for scanning with specified module:\n");
+    printf("%s",
+           i18n_tr("typical format for scanning with specified module:\n"));
     printf("  " XTATE_NAME " [options] -ip IPs [-p PORTs] -scan SCANMODULE "
            "[-probe PROBEMODULE]\n");
     printf("\n");
-    printf("basic use examples of " XTATE_NAME ":\n");
+    printf("%s", i18n_tr("basic use examples of " XTATE_NAME ":\n"));
     printf("\n");
     printf("  " XTATE_NAME
            " -p 80,8000-8100 -ip 10.0.0.0/8 -scan tcp-syn -rate 10000\n");
-    xprint("use TcpSyn ScanModule to scan web ports on 10.x.x.x at 10kpps.\n",
-           6, 80);
+    xprint(
+        i18n_tr(
+            "use TcpSyn ScanModule to scan web ports on 10.x.x.x at 10kpps.\n"),
+        6, 80);
     printf("\n");
     printf("  " XTATE_NAME
            " -p u:80 -ip 10.0.0.0/8 -scan udp -probe echo -show info\n");
-    xprint("use UdpProbe ScanModule to scan UDP 80 port with echo ProbeModule "
-           "and also show info results.\n",
+    xprint(i18n_tr("use UdpProbe ScanModule to scan UDP 80 port with echo "
+                   "ProbeModule and also show info results.\n"),
            6, 80);
     printf("\n");
     printf("  " XTATE_NAME
            " -ip 10.0.0.0/8 -scan icmp-echo -scan-arg \"-ttl\"\n");
-    xprint("use IcmpEcho ScanModule to do ping scan and record TTL.\n", 6, 80);
+    xprint(i18n_tr("use IcmpEcho ScanModule to do ping scan and record TTL.\n"),
+           6, 80);
     printf("\n");
     printf("  " XTATE_NAME " -p 80 -ip 10.0.0.0/8 -scan zbanner -probe http "
            "-scan-arg \"-banner\"\n");
-    xprint("use ZBanner ScanModule to grab http banners with http ProbeModule "
-           "and ScanModule-specific param.\n",
+    xprint(i18n_tr("use ZBanner ScanModule to grab http banners with http "
+                   "ProbeModule and ScanModule-specific param.\n"),
            6, 80);
     printf("\n");
     printf("  " XTATE_NAME
            " -p s:38412 -ip 10.0.0.0/8 -scan sctp-init -show fail\n");
-    xprint("use SctpInit ScanModule to scan SCTP 38412(36412) port and show "
-           "fail results.\n",
+    xprint(i18n_tr("use SctpInit ScanModule to scan SCTP 38412(36412) port "
+                   "and show fail results.\n"),
            6, 80);
     printf("\n");
     printf("  " XTATE_NAME " -ip 192.168.0.1/24 -scan arp-req -lan\n");
-    xprint("do ARP scan with LAN mode in local network.\n", 6, 80);
+    xprint(i18n_tr("do ARP scan with LAN mode in local network.\n"), 6, 80);
     printf("\n");
     printf("  " XTATE_NAME
            " -ip fe80::1/120 -scan ndp-ns -src-ip fe80::2 -fake-router-mac\n");
-    xprint("do NDP NS scan with a link-local source IP in local network.\n", 6,
-           80);
+    xprint(
+        i18n_tr(
+            "do NDP NS scan with a link-local source IP in local network.\n"),
+        6, 80);
     printf("\n");
     printf("  " XTATE_NAME " -list-scan\n");
-    xprint("list all ScanModules and other types of module are the same.\n", 6,
-           80);
+    xprint(
+        i18n_tr(
+            "list all ScanModules and other types of module are the same.\n"),
+        6, 80);
     printf("\n");
     printf("  " XTATE_NAME " -help-scan tcp-syn\n");
-    xprint("see help of TcpSyn ScanModule in detail.\n", 6, 80);
+    xprint(i18n_tr("see help of TcpSyn ScanModule in detail.\n"), 6, 80);
     printf("\n");
     printf("  " XTATE_NAME " -interactive\n");
-    xprint("set params and do scanning in an user-friendly interactive mode.\n",
+    xprint(i18n_tr("set params and do scanning in an user-friendly interactive "
+                   "mode.\n"),
            6, 80);
     printf("\n");
     printf("  " XTATE_NAME " -version\n");
-    xprint("print version and compilation info.\n", 6, 80);
+    xprint(i18n_tr("print version and compilation info.\n"), 6, 80);
     printf("\n");
     printf("  " XTATE_NAME " -intro\n");
-    xprint("show the design and architecture of " XTATE_NAME_TITLE_CASE ".\n",
+    xprint(i18n_tr("show the design and architecture of " XTATE_NAME_TITLE_CASE
+                   ".\n"),
            6, 80);
     printf("\n");
     printf("  " XTATE_NAME " -usage\n");
-    xprint("display this usage text of using examples.\n", 6, 80);
+    xprint(i18n_tr("display this usage text of using examples.\n"), 6, 80);
     printf("\n");
     printf("  " XTATE_NAME " -help\n");
-    xprint("display detailed help text of all parameters.\n", 6, 80);
+    xprint(i18n_tr("display detailed help text of all parameters.\n"), 6, 80);
     printf("\n");
 }
 
@@ -4075,9 +4108,9 @@ void xconf_print_version() {
     printf(" in Debug\n");
 #endif
     printf("\n");
-    printf("  Author : " XTATE_AUTHOR "\n");
-    printf("  Github : " XTATE_GITHUB_URL "\n");
-    printf("  Contact: " XTATE_CONTACT "\n");
+    printf("  %s" XTATE_AUTHOR "\n", i18n_tr("Author : "));
+    printf("  %s" XTATE_GITHUB_URL "\n", i18n_tr("Github : "));
+    printf("  %s" XTATE_CONTACT "\n", i18n_tr("Contact: "));
     printf("\n");
     printf("  Compiled on: %s %s\n", __DATE__, __TIME__);
 
@@ -4282,19 +4315,18 @@ void xconf_print_help() {
     xprint_with_head(ascii_xtate1, 15, 80);
     printf("\n                               " XTATE_BANNER "\n\n");
     printf("\n");
-    xprint("Welcome to " XTATE_NAME_TITLE_CASE "!", 2, 80);
+    xprint(i18n_tr("Welcome to " XTATE_NAME_TITLE_CASE "!"), 2, 80);
     printf("\n");
-    xprint(XTATE_DESCRIPTION, 4, 80);
+    xprint(i18n_tr(XTATE_DESCRIPTION), 4, 80);
     printf("\n");
     printf("\n");
-    printf("  Author : " XTATE_AUTHOR "\n");
-    printf("  Github : " XTATE_GITHUB_URL "\n");
-    printf("  Contact: " XTATE_CONTACT "\n");
+    printf("  %s" XTATE_AUTHOR "\n", i18n_tr("Author : "));
+    printf("  %s" XTATE_GITHUB_URL "\n", i18n_tr("Github : "));
+    printf("  %s" XTATE_CONTACT "\n", i18n_tr("Contact: "));
     printf("\n");
-    xprint("Here are detailed help text of all parameters "
-           "of " XTATE_NAME_TITLE_CASE
-           ". I hope these will help you a lot. If any "
-           "problem or advice, please contact me.\n",
+    xprint(i18n_tr("Here are detailed help text of all parameters of "
+                   "Xtate. I hope these will help you a lot. If any problem "
+                   "or advice, please contact me.\n"),
            2, 80);
     printf("\n");
     printf("\n");
@@ -4306,7 +4338,7 @@ void xconf_print_help() {
             if (config_parameters[i].setter == &SET_nothing) {
                 /*This is a paragraph name*/
                 printf(XPRINT_EQUAL_LINE "\n");
-                printf("  %s\n", config_parameters[i].name);
+                printf("  %s\n", i18n_tr(config_parameters[i].name));
                 printf(XPRINT_EQUAL_LINE "\n\n");
             }
             continue;
@@ -4319,7 +4351,7 @@ void xconf_print_help() {
         }
 
         printf("\n\n");
-        xprint(config_parameters[i].help_text, 6, 80);
+        xprint(i18n_tr(config_parameters[i].help_text), 6, 80);
         printf("\n\n\n");
 
         count++;
@@ -4372,7 +4404,7 @@ void xconf_help_param(const char *param) {
         }
 
         printf("\n\n");
-        xprint(config_parameters[i].help_text, 6, 80);
+        xprint(i18n_tr(config_parameters[i].help_text), 6, 80);
         printf("\n\n");
 
         return;
@@ -4425,9 +4457,9 @@ void xconf_search_param(const char *param) {
             printf(", %s", config_parameters[i].alt_names[j]);
         }
 
-        printf("\n    %s", config_parameters[i].short_hint
-                               ? config_parameters[i].short_hint
-                               : config_parameters[i].help_text);
+        printf("\n    %s", i18n_tr(config_parameters[i].short_hint
+                                       ? config_parameters[i].short_hint
+                                       : config_parameters[i].help_text));
         printf("\n\n");
     }
 }
@@ -4438,13 +4470,13 @@ void xconf_search_module(const char *module) {
         return;
     }
 
-    printf("SCAN MODULES:\n");
+    printf("%s", i18n_tr("SCAN MODULES:\n"));
     list_searched_scan_modules(module);
-    printf("PROBE MODULES:\n");
+    printf("%s", i18n_tr("PROBE MODULES:\n"));
     list_searched_probe_modules(module);
-    printf("OUTPUT MODULES:\n");
+    printf("%s", i18n_tr("OUTPUT MODULES:\n"));
     list_searched_output_modules(module);
-    printf("GENERATE MODULES:\n");
+    printf("%s", i18n_tr("GENERATE MODULES:\n"));
     list_searched_generate_modules(module);
 }
 

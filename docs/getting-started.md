@@ -327,3 +327,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http \
 | See the feature list and papers | [README](../README.md) |
 
 The CLI can also explain itself: `--usage`, `--help`, `--intro`, `--list-scan`, `--list-probe`, `--list-out`, `--list-gen`, and `--help-scan <module>` / `--help-probe <module>` for per-module parameters.
+
+Human-facing help can be switched to Chinese with `--lang zh` (or `XTATE_LANG=zh`):
+`xtate --lang zh --help`. Parameter names, module names and result values stay
+English; see [Help i18n](./help-i18n.md) for the catalog and fallback rules.

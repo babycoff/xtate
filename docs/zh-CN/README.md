@@ -16,6 +16,7 @@
 | 在挑选模块 | [模块](./modules.md) |
 | 想了解内部原理 | [架构](./architecture.md) → [ZBanner](./zbanner.md) / [HLTCP](./hltcp.md) |
 | 卡住了 | [故障排查](./troubleshooting.md) → [已知限制](./known-limitations.md) |
+| 中文帮助 / 本地化 | [帮助 i18n](./help-i18n.md) |
 
 ## 目录
 
@@ -27,6 +28,7 @@
 - [输出](./output.md)——结果级别、text/CSV/NDJSON/BSON/MongoDB、转义
 - [聚合](./aggregation.md)——结束后 NDJSON 聚合、schema 与规模
 - [模块](./modules.md)——四种模块类型以及 Xtate 自带的模块
+- [中文帮助与 i18n](./help-i18n.md)——`--lang`、catalog 回退与 UTF-8 帮助排版
 
 ### 工作原理
 
