@@ -11,7 +11,7 @@ order in which the resulting `(address, port)` pairs are visited. The default ge
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 ```
 
-> Documented against Xtate v2.20.1. The CLI is authoritative: `--help`,
+> Documented against Xtate v2.20.2. The CLI is authoritative: `--help`,
 > `--help-scan <module>` and `--help-probe <module>` show the exact flags of your build.
 
 ## Address targets

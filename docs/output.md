@@ -11,7 +11,7 @@ stream clean.
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80 -scan tcp-syn > results.txt
 ```
 
-> Documented against Xtate v2.20.1. `--help` and `--help-output <module>` are authoritative
+> Documented against Xtate v2.20.2. `--help` and `--help-output <module>` are authoritative
 > for the exact flags of your build.
 
 ## The result line
