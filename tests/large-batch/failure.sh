@@ -259,7 +259,8 @@ if docker image inspect "$MONGO_IMAGE" >/dev/null 2>&1; then
               -source-port $SOURCE_PORT-$((SOURCE_PORT + 15)) -seed $SEED \
               --wait 2 --no-status -show info \
               -output-module mongodb -output-file mongodb://xtate-mongo:27017 \
-              -output-arg '-database-name xtate -collection-name failure'" > "$OUT_DIR/mongo.log" 2>&1 || true
+              -output-arg '-database-name xtate -collection-name failure -insert-bulk -bulk-size 500' \
+              --dispatch-buf-count 65536" > "$OUT_DIR/mongo.log" 2>&1 || true
     count=$(docker exec xtate-mongo mongosh --quiet --eval \
         'db.getSiblingDB("xtate").failure.countDocuments({})' 2>/dev/null | tr -d '\r' || true)
     if [[ "${count:-0}" -gt 0 ]]; then
@@ -267,6 +268,35 @@ if docker image inspect "$MONGO_IMAGE" >/dev/null 2>&1; then
     else
         echo "WARN: MongoDB check not conclusive (image/tooling); see $OUT_DIR/mongo.log"
     fi
+
+    echo "==> MongoDB disconnect during scan"
+    docker run -d --name xtate-mongo-scan --network "$MONGO_NET" \
+        -v "$BIN:/xtate:ro" -v "$OUT_DIR:/out" "$IMAGE" bash -lc "
+            /xtate -iL /out/targets-rss100.txt -p '$PORTS' -scan tcp-syn \
+              --adapter file:/out/rss100.pcap --source-ip $IP_ME \
+              --source-mac 02-00-00-00-00-01 --router-mac 02-00-00-00-00-02 \
+              -source-port $SOURCE_PORT-$((SOURCE_PORT + 15)) -seed $SEED \
+              --wait 2 --no-status -output-module mongodb \
+              -output-file mongodb://xtate-mongo:27017 \
+              -output-arg '-database-name xtate -collection-name disconnect -insert-bulk -bulk-size 500' \
+              --dispatch-buf-count 65536" >/dev/null
+    sleep 1
+    docker stop xtate-mongo >/dev/null 2>&1 || true
+    set +e
+    timeout 30 docker wait xtate-mongo-scan >/dev/null
+    d_rc=$?
+    set -e
+    docker logs xtate-mongo-scan > "$OUT_DIR/mongo-disconnect.log" 2>&1 || true
+    docker rm -f xtate-mongo-scan >/dev/null 2>&1 || true
+    if [[ $d_rc -eq 124 ]]; then
+        fail "MongoDB disconnect hung the scanner"
+    else
+        pass "MongoDB disconnect finished without hanging (exit $d_rc)"
+    fi
+    grep -qi "mongo" "$OUT_DIR/mongo-disconnect.log" \
+        && pass "MongoDB disconnect produced a diagnostic" \
+        || echo "WARN: no MongoDB diagnostic captured"
+
     docker rm -f xtate-mongo >/dev/null 2>&1 || true
     docker network rm "$MONGO_NET" >/dev/null 2>&1 || true
     trap - EXIT

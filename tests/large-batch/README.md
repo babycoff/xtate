@@ -174,11 +174,14 @@ Checks:
 - RSS high-water for 100k vs 1M results (currently about 117 MB peak for
   both, which is the expected flat profile);
 - unreachable MongoDB (clean diagnostic, no hang);
-- optional MongoDB normal write if `XTATE_MONGO_IMAGE` is available locally.
+- MongoDB normal write, plus stopping MongoDB during a scan (bulk insert path), if a local MongoDB image is available.
 
 The failure script uses `--network none` for every non-Mongo case. The Mongo
 section is skipped when the image is not already present, so it never pulls
 from a registry during a test run.
+
+Mongo disconnect currently verifies "no hang / no crash / diagnostic"; a
+reconnect-after-restart scenario is a later addition.
 
 For a larger RSS run:
 
