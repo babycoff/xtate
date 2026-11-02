@@ -6,7 +6,7 @@ Xtate 是一款面向大规模主动测量的模块化全栈网络扫描器。�
 
 本页带你在 Linux 或 Windows 上从源码检出走到第一次扫描。阅读前你应当熟悉 shell、`sudo` 和 TCP/IP 基础；本页不是扫描方法本身的教程。
 
-> 本文档针对 Xtate v2.21.2 编写。若你的构建行为与此不同，以 `--help` 和模块帮助为准。
+> 本文档针对 Xtate v2.21.3 编写。若你的构建行为与此不同，以 `--help` 和模块帮助为准。
 
 ## 环境要求
 
@@ -194,7 +194,7 @@ pwsh -File .\scripts\build-windows.ps1 -Toolchain msvc -Config Debug -Yes
 3. 复制时排除 `.git`、`build`、`bin` 和 `results`。
 4. 在 `%LOCALAPPDATA%\xtate-build\build-*` 下构建请求的工具链。
 5. 逐个运行 `--version` 和 `--selftest`，任一失败则脚本失败。
-6. 把可执行文件复制到 `%LOCALAPPDATA%\xtate-build\artifacts`。
+6. 主二进制写入 `bin\xtate.exe`，各工具链副本写入 `bin\xtate-<toolchain>-<config>.exe`（同时在 `%LOCALAPPDATA%\xtate-build\artifacts` 保留一份便于排查）。
 7. 删除中转的源码和构建目录；**产物目录保留**。
 
 可用参数：
@@ -227,7 +227,7 @@ pwsh -File .\scripts\build-windows.ps1 -Toolchain msvc -Config Debug -Yes
 | `--version` 显示 `PCRE2 (null)` | 没找到 PCRE2 头文件/库。Debian/Ubuntu 安装 `libpcre2-dev` 和 `pkg-config`；Windows 用 vcpkg（Scoop 没有 PCRE2 开发包）。 |
 | `OpenSSL (null)`，probe 只剩 52 个 | OpenSSL 被跳过。Windows 用 MSVC/clang-cl + Scoop OpenSSL；Linux 安装 `libssl-dev`。 |
 | 缺少 `bson`/`mongodb` 输出模块 | 没找到 libbson/libmongoc；安装它们，或接受较少的 output 集合。 |
-| `--selftest` 报 `timing error` | 2.21.2 已修复 Windows 上过严的 1% 计时容差；旧版本请更新到当前代码。 |
+| `--selftest` 报 `timing error` | 2.21.3 已修复 Windows 上过严的 1% 计时容差；旧版本请更新到当前代码。 |
 | `--selftest` 返回非零 | 现在会把它当作真实失败；输出会打印 `Regression test: failed`，进程退出码非零。 |
 | 运行时提示 `wpcap.dll`/`Npcap` 错误 | 安装 Npcap 并启用 WinPcap 兼容模式；它是运行时依赖，不是编译依赖。 |
 | 找不到 `lua53.dll`/`lua54.dll` | 用 Scoop 安装 `lua54`，把 `%USERPROFILE%\scoop\apps\lua54\current` 加入 `PATH`，或把 `lua54.dll` 复制到 `xtate.exe` 旁边。 |

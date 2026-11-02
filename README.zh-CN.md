@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.21.2-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.21.3-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -238,7 +238,7 @@ cmake -S . -B build-mingw -G "MinGW Makefiles" `
 cmake --build build-mingw -j 8
 ```
 
-也可以用 `scripts\build-windows.ps1` 一次构建整套矩阵；脚本会在复制源码到 ASCII 中转目录前询问，并在构建后清理中转目录。
+也可以用 `scripts\build-windows.ps1` 一次构建整套矩阵；脚本会在复制源码到 ASCII 中转目录前询问，并在构建后清理中转目录。主二进制写入 `bin\xtate.exe`，各工具链副本写入 `bin\xtate-<toolchain>-<config>.exe`（对应 Linux `build.sh` 的 `bin/xtate` 约定）。
 
 Npcap 是报文收发的必需项；`wpcap.dll` 在运行时加载。
 </details>
@@ -256,7 +256,7 @@ Npcap 是报文收发的必需项；`wpcap.dll` 在运行时加载。
 | PF_RING | Linux 上的零拷贝数据包 I/O（运行时） | 可选 |
 | Lua 5.3/5.4 | `lua-tcp`、`lua-udp`（运行时） | 可选 |
 
-缺少可选库只会在编译时移除相应模块——核心扫描器仍可正常构建。
+缺少可选库只会在编译时移除相应模块——核心扫描器仍可正常构建。Windows 上 CMake 可能提示 Conda 里的 PCRE2 找到但配置不完整，或提示 LibXml2/libbson/libmongoc 未安装；这些依赖都是可选的。需要对应模块时，请安装匹配的 vcpkg triplet（例如 `vcpkg install pcre2 libxml2 mongo-c-driver --triplet x64-windows`）。
 </details>
 
 > [!NOTE]

@@ -33,7 +33,6 @@ struct TCP_ConSet {
 
 static struct TCP_ConSet tcpcon_set;
 
-static uint64_t *tcb_count;
 /**
  *For calc the conn index.
  * NOTE: We use a trick of src-port to differenciate multi-probes to avoid
@@ -303,7 +302,6 @@ static bool tcpstate_init(const XConf *xconf) {
             xconf->seed);
     }
 
-    tcb_count      = &((XConf *)xconf)->tcb_count;
     src_port_start = xconf->nic.src.port.first;
     tcpstate_conf.record_any_all =
         tcpstate_conf.record_all_ackno | tcpstate_conf.record_all_ipid |

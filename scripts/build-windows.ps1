@@ -23,6 +23,7 @@ if (-not $StageRoot) {
 }
 $stageSrc  = Join-Path $StageRoot "src"
 $artifacts = Join-Path $StageRoot "artifacts"
+$binDir    = Join-Path $repo "bin"
 $jobs      = [Math]::Max(1, [Math]::Min(8, [Environment]::ProcessorCount))
 
 Write-Host ""
@@ -30,11 +31,12 @@ Write-Host "Xtate Windows build"
 Write-Host "  Source     : $repo"
 Write-Host "  Stage copy : $stageSrc"
 Write-Host "  Artifacts  : $artifacts"
+Write-Host "  Project bin: $binDir"
 Write-Host "  Toolchains : $Toolchain ($Config)"
 Write-Host ""
 Write-Host "The source is copied to the stage path above (without .git, build, bin or results),"
 Write-Host "built there, and the staged source/build tree is removed after the build."
-Write-Host "The compiled executables stay in the artifacts directory."
+Write-Host "The primary binary is written to bin\; per-toolchain copies stay in bin\ and artifacts\."
 Write-Host ""
 Write-Host "Why stage at all? The MinGW Makefiles generator can fail when the source path"
 Write-Host "contains non-ASCII characters. Staging gives every toolchain an ASCII path."
@@ -100,6 +102,15 @@ function Invoke-Checked([string]$Name, [scriptblock]$Block) {
     }
 }
 
+function Publish-Exe([string]$Toolchain, [string]$Exe) {
+    # Keep artifacts for compatibility, but the project-local bin/ directory is
+    # the primary deliverable, mirroring Linux build.sh -> bin/xtate.
+    New-Item -ItemType Directory -Force -Path $artifacts, $binDir | Out-Null
+    $leaf = "xtate-$Toolchain-$($Config.ToLower()).exe"
+    Copy-Item $Exe (Join-Path $artifacts $leaf) -Force
+    Copy-Item $Exe (Join-Path $binDir $leaf) -Force
+}
+
 function Build-Msvc {
     if (-not $vsRoot -or -not $vsGenerator) {
         throw "Visual Studio with the C++ workload was not found (vswhere)."
@@ -113,7 +124,7 @@ function Build-Msvc {
         cmake --build $build --config $Config -j $jobs
     }
     $exe = Join-Path $build "$Config\xtate.exe"
-    Copy-Item $exe (Join-Path $artifacts "xtate-msvc-$($Config.ToLower()).exe") -Force
+    Publish-Exe "msvc" $exe
     return $exe
 }
 
@@ -129,7 +140,7 @@ function Build-Mingw {
         cmake --build $build -j $jobs
     }
     $exe = Join-Path $build "xtate.exe"
-    Copy-Item $exe (Join-Path $artifacts "xtate-mingw-$($Config.ToLower()).exe") -Force
+    Publish-Exe "mingw" $exe
     return $exe
 }
 
@@ -160,7 +171,7 @@ function Build-ClangCl {
         cmd /c $cmd
     }
     $exe = Join-Path $build "xtate.exe"
-    Copy-Item $exe (Join-Path $artifacts "xtate-clangcl-$($Config.ToLower()).exe") -Force
+    Publish-Exe "clangcl" $exe
     return $exe
 }
 
@@ -196,8 +207,20 @@ try {
         Test-Binary $name $binaries[$name]
     }
 
+    # Canonical Windows alias, like Linux build.sh -> bin/xtate.
+    if ($binaries.Count -gt 0) {
+        $primaryKey = if ($binaries.Contains("MSVC")) { "MSVC" } else { $binaries.Keys | Select-Object -First 1 }
+        $alias = if ($Config -eq "Debug") { "xtate_debug.exe" } else { "xtate.exe" }
+        Copy-Item $binaries[$primaryKey] (Join-Path $binDir $alias) -Force
+        Write-Host "Project binaries: $binDir"
+    }
+
     Write-Host ""
     Write-Host "Build matrix succeeded."
+    Write-Host "Project binaries ($binDir):"
+    Get-ChildItem $binDir -Filter "xtate*.exe" | Sort-Object Name |
+        Select-Object Name, Length, LastWriteTime | Format-Table -AutoSize
+    Write-Host "Artifact copies ($artifacts):"
     Get-ChildItem $artifacts -Filter "xtate-*.exe" | Sort-Object Name |
         Select-Object Name, Length, LastWriteTime | Format-Table -AutoSize
 }
@@ -211,8 +234,11 @@ finally {
         Get-ChildItem $StageRoot -Directory -ErrorAction SilentlyContinue |
             Where-Object { $_.Name -like "build-*" } |
             ForEach-Object { Remove-Item -Recurse -Force $_.FullName }
-        Write-Host "Staged source/build tree removed. Artifacts kept in: $artifacts"
+        Write-Host "Staged source/build tree removed."
+        Write-Host "Project binaries: $binDir"
+        Write-Host "Artifact copies: $artifacts"
     } else {
         Write-Host "Staging kept for debugging: $stageSrc"
+    Write-Host "Project binaries: $binDir"
     }
 }

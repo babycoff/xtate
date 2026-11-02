@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.21.2-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.21.3-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -245,7 +245,9 @@ cmake --build build-mingw -j 8
 
 Or build the whole matrix with `scripts\build-windows.ps1`; it asks before
 copying the source to an ASCII staging directory and cleans the staging tree
-afterwards.
+afterwards. The primary binary is placed in `bin\xtate.exe`; per-toolchain
+copies are also written to `bin\xtate-<toolchain>-<config>.exe` (the Linux
+`build.sh` convention is `bin/xtate`).
 
 Npcap must be installed for packet I/O; `wpcap.dll` is loaded at runtime.
 </details>
@@ -263,7 +265,7 @@ Npcap must be installed for packet I/O; `wpcap.dll` is loaded at runtime.
 | PF_RING | zero-copy packet I/O on Linux (runtime) | optional |
 | Lua 5.3/5.4 | `lua-tcp`, `lua-udp` (runtime) | optional |
 
-Missing optional libraries simply remove the corresponding modules at compile time — the core scanner still builds.
+Missing optional libraries simply remove the corresponding modules at compile time — the core scanner still builds. On Windows, CMake may warn about a found-but-incomplete PCRE2 from Conda, or about LibXml2/libbson/libmongoc not being installed; those are optional. Install a matching vcpkg triplet (for example `vcpkg install pcre2 libxml2 mongo-c-driver --triplet x64-windows`) if you need those modules.
 </details>
 
 > [!NOTE]

@@ -6,7 +6,7 @@ Xtate is a modular all-stack network scanner for large-scale active measurement.
 
 This page takes you from a source checkout to your first scan on Linux or Windows. It assumes you are comfortable with a shell, `sudo`, and basic TCP/IP; it is not a tutorial on scanning itself.
 
-> Documented against Xtate v2.21.2. If your build behaves differently, `--help` and the module help are authoritative.
+> Documented against Xtate v2.21.3. If your build behaves differently, `--help` and the module help are authoritative.
 
 ## Requirements
 
@@ -227,7 +227,7 @@ What it does:
 3. Copies the tree there, excluding `.git`, `build`, `bin` and `results`.
 4. Builds each requested toolchain under `%LOCALAPPDATA%\xtate-build\build-*`.
 5. Runs `--version` and `--selftest` and fails the script if either fails.
-6. Copies the binaries to `%LOCALAPPDATA%\xtate-build\artifacts`.
+6. Copies the primary binary to `bin\xtate.exe` and per-toolchain copies to `bin\xtate-<toolchain>-<config>.exe` (a copy is also kept under `%LOCALAPPDATA%\xtate-build\artifacts` for debugging).
 7. Removes the staged source and build directories. Artifacts are kept.
 
 Useful switches:
@@ -264,7 +264,7 @@ shell with Npcap installed.
 | `PCRE2 (null)` in `--version` | PCRE2 headers/library were not found. On Debian/Ubuntu install `libpcre2-dev` and `pkg-config`; on Windows use vcpkg (Scoop has no PCRE2 dev package). |
 | `OpenSSL (null)`, 52 probes | OpenSSL was skipped. On Windows use MSVC/clang-cl with Scoop OpenSSL; on Linux install `libssl-dev`. |
 | `bson`/`mongodb` output modules missing | libbson/libmongoc were not found; install them or accept the reduced output set. |
-| `--selftest` fails with `timing error` | Fixed in 2.21.2 on Windows; with older builds the 1% timing bound is too strict for the Windows scheduler. Update to the current tree. |
+| `--selftest` fails with `timing error` | Fixed in 2.21.3 on Windows; with older builds the 1% timing bound is too strict for the Windows scheduler. Update to the current tree. |
 | `--selftest` exits non-zero | Treat it as a real failure now; the summary prints `Regression test: failed` and the process exit code is non-zero. |
 | `wpcap.dll` / `Npcap` error at run time | Install Npcap in WinPcap-compatible mode; it is a runtime dependency, not a build dependency. |
 | `lua53.dll` / `lua54.dll` not found | Install `lua54` via Scoop and add `%USERPROFILE%\scoop\apps\lua54\current` to `PATH`, or copy `lua54.dll` next to `xtate.exe`. |

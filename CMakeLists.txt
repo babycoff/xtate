@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 project(
     xtate
     LANGUAGES               C
-    VERSION                 2.21.2
+    VERSION                 2.21.3
     DESCRIPTION             "A modular all-stack network scanner for next-generation internet surveys."
     HOMEPAGE_URL            "https://github.com/babycoff/xtate"
     )
@@ -93,10 +93,19 @@ if (NOT CMAKE_BUILD_TYPE)
 endif ()
 
 # Use Clang or GCC
-if (CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "GNU")
-
+#
+# clang-cl follows the MSVC driver: -Wall is interpreted as /Wall (too noisy),
+# and -O3 is unused. Keep its flags in MSVC form; GCC/Clang keep the usual
+# -Wall/-O3 pair.
+if (CMAKE_C_COMPILER_ID STREQUAL "Clang" AND CMAKE_C_SIMULATE_ID STREQUAL "MSVC")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Od /W4")
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /O2 /W4 /DNDEBUG")
+elseif (CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "GNU")
     set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall -O0 -ggdb -fno-pie")
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -Wall -DNDEBUG")
+endif()
+
+if (CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "GNU")
 
     ######################################################################
     # Suggest to use sanitizers to find bugs with Clang in Debug on Linux.
@@ -120,6 +129,12 @@ if (CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "GNU")
         add_compile_options(-Wno-pointer-sign)
         add_compile_options(-Wno-microsoft-enum-forward-reference)
         add_compile_options(-Wno-incompatible-function-pointer-types)
+        # clang-cl /W4 is much noisier than the MSVC /W3 baseline for this
+        # legacy C codebase. Keep real warnings, silence structural categories.
+        add_compile_options(-Wno-unused-parameter)
+        add_compile_options(-Wno-missing-field-initializers)
+        add_compile_options(-Wno-sign-compare)
+        add_compile_options(-Wno-ignored-qualifiers)
     endif ()
 
     # set debug option

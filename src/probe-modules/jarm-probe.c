@@ -145,8 +145,9 @@ static size_t jarm_make_payload(ProbeTarget   *target,
     else
         jc = jc_list[target->index];
 
-    jc.servername = ipaddress_fmt(target->target.ip_them).string;
-    jc.dst_port   = target->target.port_them;
+    ipaddress_formatted_t ip_them_fmt = ipaddress_fmt(target->target.ip_them);
+    jc.servername                     = ip_them_fmt.string;
+    jc.dst_port                       = target->target.port_them;
 
     return jarm_create_ch(&jc, payload_buf, PM_PAYLOAD_SIZE);
 }
@@ -162,8 +163,9 @@ static size_t jarm_get_payload_length(ProbeTarget *target) {
     else
         jc = jc_list[target->index];
 
-    jc.servername = ipaddress_fmt(target->target.ip_them).string;
-    jc.dst_port   = target->target.port_them;
+    ipaddress_formatted_t ip_them_fmt = ipaddress_fmt(target->target.ip_them);
+    jc.servername                     = ip_them_fmt.string;
+    jc.dst_port                       = target->target.port_them;
     unsigned char buf[TLS_CLIENTHELLO_MAX_LEN];
 
     return jarm_create_ch(&jc, buf, TLS_CLIENTHELLO_MAX_LEN);
