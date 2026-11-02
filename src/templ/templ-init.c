@@ -5,6 +5,10 @@
 #include <stdlib.h>
 
 #include "templ-tcp.h"
+#include "templ-udp.h"
+#include "templ-sctp.h"
+#include "templ-arp.h"
+#include "templ-ndp.h"
 #include "templ-opts.h"
 #include "templ-icmp.h"
 
@@ -710,6 +714,129 @@ void template_packet_set_vlan(TmplPkt *tmpl_pkt, unsigned vlan) {
 
 /***************************************************************************
  ***************************************************************************/
+static int _packet_builder_selftest(TmplSet *tmplset) {
+    unsigned char pkt[2048];
+    const unsigned char payload[4] = {1, 2, 3, 4};
+    PreInfo info;
+    size_t n;
+    int failures = 0;
+
+    ipaddress ip4_me = {.version = 4, .ipv4 = 0x0A000001};
+    ipaddress ip4_them = {.version = 4, .ipv4 = 0x0A000002};
+    ipaddress ip6_me = {.version = 6, .ipv6 = {0x20010db800000001ULL, 1}};
+    ipaddress ip6_them = {.version = 6, .ipv6 = {0x20010db800000002ULL, 2}};
+    macaddress_t mac = macaddress_from_bytes("\x00\x11\x22\x33\x44\x55");
+
+#define CHECK_PKT(cond)                                                        \
+    do {                                                                       \
+        if (!(cond)) {                                                         \
+            LOG(LEVEL_ERROR, "(builder) selftest failed at %s:%u\n", __FILE__, \
+                __LINE__);                                                     \
+            failures++;                                                        \
+        }                                                                      \
+    } while (0)
+
+    /* TCP, IPv4 and IPv6. */
+    n = tcp_create_by_template(&tmplset->pkts[TmplType_TCP], ip4_them, 80,
+                               ip4_me, 12345, 1, 2, TCP_FLAG_SYN, 64, 1000,
+                               payload, sizeof(payload), pkt, sizeof(pkt));
+    CHECK_PKT(n != 0);
+    CHECK_PKT(preprocess_frame(pkt, (unsigned)n, PCAP_DLT_ETHERNET, &info) &&
+              info.found == FOUND_TCP && info.ip_version == 4 &&
+              info.port_dst == 80 && info.port_src == 12345);
+
+    n = tcp_create_by_template(&tmplset->pkts[TmplType_TCP], ip6_them, 443,
+                               ip6_me, 54321, 3, 4, TCP_FLAG_SYN, 64, 1000,
+                               payload, sizeof(payload), pkt, sizeof(pkt));
+    CHECK_PKT(n != 0);
+    CHECK_PKT(preprocess_frame(pkt, (unsigned)n, PCAP_DLT_ETHERNET, &info) &&
+              info.found == FOUND_TCP && info.ip_version == 6 &&
+              info.port_dst == 443 && info.port_src == 54321);
+
+    /* TCP SYN template with options. */
+    n = tcp_create_by_template(&tmplset->pkts[TmplType_TCP_SYN], ip4_them, 22,
+                               ip4_me, 40000, 5, 6, TCP_FLAG_SYN, 64, 1000,
+                               payload, sizeof(payload), pkt, sizeof(pkt));
+    CHECK_PKT(n != 0);
+    CHECK_PKT(preprocess_frame(pkt, (unsigned)n, PCAP_DLT_ETHERNET, &info) &&
+              info.found == FOUND_TCP && info.ip_version == 4 &&
+              info.port_dst == 22 && info.port_src == 40000);
+
+    /* UDP, IPv4 and IPv6. */
+    n = udp_create_by_template(&tmplset->pkts[TmplType_UDP], ip4_them, 53,
+                               ip4_me, 5353, 64, (unsigned char *)payload,
+                               sizeof(payload), pkt, sizeof(pkt));
+    CHECK_PKT(n != 0);
+    CHECK_PKT(preprocess_frame(pkt, (unsigned)n, PCAP_DLT_ETHERNET, &info) &&
+              info.found == FOUND_UDP && info.ip_version == 4 &&
+              info.port_dst == 53 && info.port_src == 5353);
+
+    n = udp_create_by_template(&tmplset->pkts[TmplType_UDP], ip6_them, 53,
+                               ip6_me, 5353, 64, (unsigned char *)payload,
+                               sizeof(payload), pkt, sizeof(pkt));
+    CHECK_PKT(n != 0);
+    CHECK_PKT(preprocess_frame(pkt, (unsigned)n, PCAP_DLT_ETHERNET, &info) &&
+              info.found == FOUND_UDP && info.ip_version == 6 &&
+              info.port_dst == 53 && info.port_src == 5353);
+
+    /* ICMP echo, IPv4 and IPv6. */
+    n = icmp_echo_create_by_template(&tmplset->pkts[TmplType_ICMP_ECHO],
+                                     ip4_them, ip4_me, 0x1234, 0x5678, 0, 64,
+                                     (unsigned char *)payload, sizeof(payload),
+                                     pkt, sizeof(pkt));
+    CHECK_PKT(n != 0);
+    CHECK_PKT(preprocess_frame(pkt, (unsigned)n, PCAP_DLT_ETHERNET, &info) &&
+              info.found == FOUND_ICMP && info.ip_version == 4);
+
+    n = icmp_echo_create_by_template(&tmplset->pkts[TmplType_ICMP_ECHO],
+                                     ip6_them, ip6_me, 0x1234, 0x5678, 0, 64,
+                                     (unsigned char *)payload, sizeof(payload),
+                                     pkt, sizeof(pkt));
+    CHECK_PKT(n != 0);
+    CHECK_PKT(preprocess_frame(pkt, (unsigned)n, PCAP_DLT_ETHERNET, &info) &&
+              info.found == FOUND_ICMP && info.ip_version == 6);
+
+    /* ICMP timestamp (IPv4 only). */
+    n = icmp_timestamp_create_by_template(
+        &tmplset->pkts[TmplType_ICMP_TS], ip4_them, ip4_me, 0x1111, 0x2222, 0,
+        64, 1, 2, 3, pkt, sizeof(pkt));
+    CHECK_PKT(n != 0);
+    CHECK_PKT(preprocess_frame(pkt, (unsigned)n, PCAP_DLT_ETHERNET, &info) &&
+              info.found == FOUND_ICMP && info.ip_version == 4);
+
+    /* SCTP, IPv4 and IPv6. */
+    n = sctp_create_by_template(&tmplset->pkts[TmplType_SCTP], ip4_them, 3868,
+                                ip4_me, 3869, 0x11223344, 64, pkt,
+                                sizeof(pkt));
+    CHECK_PKT(n != 0);
+    CHECK_PKT(preprocess_frame(pkt, (unsigned)n, PCAP_DLT_ETHERNET, &info) &&
+              info.found == FOUND_SCTP && info.ip_version == 4);
+
+    n = sctp_create_by_template(&tmplset->pkts[TmplType_SCTP], ip6_them, 3868,
+                                ip6_me, 3869, 0x11223344, 64, pkt,
+                                sizeof(pkt));
+    CHECK_PKT(n != 0);
+    CHECK_PKT(preprocess_frame(pkt, (unsigned)n, PCAP_DLT_ETHERNET, &info) &&
+              info.found == FOUND_SCTP && info.ip_version == 6);
+
+    /* ARP and NDP. */
+    n = arp_create_by_template(&tmplset->pkts[TmplType_ARP], ip4_them, ip4_me,
+                               pkt, sizeof(pkt));
+    CHECK_PKT(n != 0);
+    CHECK_PKT(preprocess_frame(pkt, (unsigned)n, PCAP_DLT_ETHERNET, &info) &&
+              info.found == FOUND_ARP);
+
+    n = ndp_create_ns_by_template_ipv6(&tmplset->pkts[TmplType_NDP_NS],
+                                       ip6_them.ipv6, ip6_me.ipv6, mac, pkt,
+                                       sizeof(pkt));
+    CHECK_PKT(n != 0);
+    CHECK_PKT(preprocess_frame(pkt, (unsigned)n, PCAP_DLT_ETHERNET, &info) &&
+              info.found == FOUND_NDPv6 && info.ip_version == 6);
+
+#undef CHECK_PKT
+    return failures;
+}
+
 int template_selftest() {
     TmplSet tmplset[1] = {{0}};
     TmplOpt templ_opts = {{0}};
@@ -736,6 +863,8 @@ int template_selftest() {
     failures += tmplset->pkts[TmplType_ICMP_TS].tmpl_type != TmplType_ICMP_TS;
     failures += tmplset->pkts[TmplType_ARP].tmpl_type != TmplType_ARP;
     failures += tmplset->pkts[TmplType_NDP_NS].tmpl_type != TmplType_NDP_NS;
+
+    failures += _packet_builder_selftest(tmplset);
 
     if (failures)
         LOG(LEVEL_ERROR, "(template) selftest failed\n");

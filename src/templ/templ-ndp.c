@@ -388,7 +388,7 @@ Recursive DNS Server Option
 
 */
 
-static size_t
+size_t
 ndp_create_ns_by_template_ipv6(const TmplPkt *tmpl, ipv6address ip_them,
                                ipv6address ip_me, macaddress_t src_mac,
                                unsigned char *px, size_t sizeof_px) {

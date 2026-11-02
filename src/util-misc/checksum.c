@@ -341,7 +341,8 @@ unsigned checksum_sctp(const void *offset_sctp, size_t sctp_length) {
     byte2 = (result >> 16) & 0xff;
     byte3 = (result >> 24) & 0xff;
 
-    crc32 = ((byte0 << 24) | (byte1 << 16) | (byte2 << 8) | byte3);
+    crc32 = ((unsigned)byte0 << 24) | ((unsigned)byte1 << 16) |
+            ((unsigned)byte2 << 8) | byte3;
     return (crc32);
 }
 
