@@ -20,7 +20,7 @@ when reproducing a build.
 | `bin/xtate-clang-release` | Exact Clang Release build |
 | `bin/xtate-clang-debug` | Exact Clang Debug build |
 
-Build trees are isolated as `build-<compiler>-<config>/`.
+Build trees are isolated as `build-<compiler>-<config>-<generator>/`.
 
 ## Windows
 

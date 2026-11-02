@@ -58,7 +58,7 @@ cd xtate
 
 Outputs: `bin/xtate` / `bin/xtate_debug` aliases plus per-toolchain files
 `bin/xtate-<compiler>-<config>`. Build trees are isolated as
-`build-<compiler>-<config>`; `./clean.sh` removes them and `bin/xtate*` while
+`build-<compiler>-<config>-<generator>`; `./clean.sh` removes them and `bin/xtate*` while
 preserving `bin/.gitignore`. The legacy forms `./build.sh debug clang` still
 work. See [Build artifacts](./build-artifacts.md) for alias vs per-toolchain names.
 

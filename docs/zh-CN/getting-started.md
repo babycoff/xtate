@@ -55,7 +55,7 @@ cd xtate
 
 输出：`bin/xtate` / `bin/xtate_debug` 别名，以及
 `bin/xtate-<compiler>-<config>` 按工具链命名的文件。构建目录为
-`build-<compiler>-<config>`；`./clean.sh` 清理它们和 `bin/xtate*`，保留
+`build-<compiler>-<config>-<generator>`；`./clean.sh` 清理它们和 `bin/xtate*`，保留
 `bin/.gitignore`。旧的 `./build.sh debug clang` 形式仍兼容。别名与按工具链命名的区别见[构建产物](./build-artifacts.md)。
 
 ### 手动 CMake 构建

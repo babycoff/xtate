@@ -6,7 +6,7 @@
 
   <p>
     <b>无状态 TCP banner。</b> <b>混合状态 TCP/TLS。</b> <b>83 个已注册模块。</b><br>
-    <sub>C99 · Linux &amp; Windows · IPv4 &amp; IPv6 · 数据包优先，从不做爬虫</sub>
+    <sub>C99 · Linux glibc/musl &amp; Windows · GCC/Clang/MSVC/MinGW · Make/Ninja · IPv4 &amp; IPv6</sub>
   </p>
 
   <p>
@@ -14,7 +14,7 @@
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/CMake-3.20%2B-064F8C?style=flat-square&amp;logo=cmake" alt="CMake"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/CMake-3.13%2B-064F8C?style=flat-square&amp;logo=cmake" alt="CMake"></a>
     <a href="https://github.com/knownsec/404StarLink"><img src="https://img.shields.io/badge/404Starlink-member-orange?style=flat-square" alt="404Starlink"></a>
     <a href="https://arxiv.org/abs/2405.07409"><img src="https://img.shields.io/badge/arXiv-2405.07409-B31B1B?style=flat-square&amp;logo=arxiv" alt="arXiv"></a>
   </p>
@@ -52,13 +52,44 @@ Xtate 是一款面向大规模主动测量的网络扫描器。它把扫描栈�
 - 🧩 **模块**——11 个扫描模块 / 60 个探测模块 / 7 个输出模块 / 5 个生成模块。四套接口，一条流水线，没有运行时的插件魔法。
 - 🌐 **中文帮助**——`--lang zh` 或 `XTATE_LANG=zh` 可切换人类可读帮助；支持 UTF-8 宽度换行，未翻译内容安全回退英文。
 
+## 工具链、平台与交互式模式
+
+Xtate 用 C99 编写，除 libpcap/Npcap 外没有硬依赖；构建工具链和交互式 shell
+都是一等公民，而不是附加功能。
+
+### 工具链与环境
+
+| 范围 | 支持 |
+|:---|:---|
+| 构建系统 | **CMake 3.13+**，Unix Makefiles 或 **Ninja** |
+| Linux glibc | **GCC / Clang**，Release/Debug；Debian 10 级别 CMake 3.13 基线 |
+| Linux musl | **Alpine/musl**，动态构建和基础 `--static --minimal` 静态构建 |
+| Windows | **MSVC / ClangCL / MinGW**，Release/Debug，Npcap + 可选 vcpkg DLL |
+| 产物布局 | 项目内 `bin/`，别名 + 精确的按工具链命名文件 |
+
+详见[平台支持](docs/zh-CN/platform-support.md)和[构建产物](docs/zh-CN/build-artifacts.md)。
+
+### 交互式模式
+
+`xtate -interactive` 是自带实现，不依赖 ncurses、readline 包或额外运行时。
+
+- 分组 `help` / `help <command>`，支持中文帮助（`--lang zh`）；
+- `<TAB>` 补全命令、参数名、模块名、常见值和文件路径；
+- 选择 scan/probe/output/generate 模块后补全该模块的 `--选项`；
+- 命令历史、`set`、`show diff`、`show all`、`list-param <过滤词>`；
+- 真实 TTY 模式 + 确定性的非 TTY 脚本模式，退出时恢复终端；
+- Linux 和 Windows 同一个二进制，不需要 Python/Go 启动器。
+
+详见[交互式模式](docs/zh-CN/interactive-mode.md)。
+
 ## 快速开始
 
 ```bash
 # Linux: build from source (dependencies are covered under Build)
 git clone https://github.com/babycoff/xtate.git
 cd xtate
-./build.sh
+./build.sh                 # 交互选择编译器和 Release/Debug
+./bin/xtate -interactive   # 可选：带补全的交互式 shell
 
 # A classic SYN scan — no firewall tricks needed
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
@@ -188,6 +219,10 @@ README 是落地页，手册在 [`docs/`](docs/zh-CN/README.md) 目录下：
 - [模块](docs/zh-CN/modules.md)——四种模块类型以及 Xtate 自带的模块
 - [架构](docs/zh-CN/architecture.md) · [ZBanner](docs/zh-CN/zbanner.md) · [HLTCP](docs/zh-CN/hltcp.md)
 - [中文帮助与 i18n](docs/zh-CN/help-i18n.md)——`--lang`、catalog 回退与 UTF-8 排版
+- [交互式模式](docs/zh-CN/interactive-mode.md)——TTY/脚本模式、补全、历史与中文帮助
+- [平台支持](docs/zh-CN/platform-support.md)——CMake 3.13、旧发行版、Ninja 与 musl 构建
+- [构建产物](docs/zh-CN/build-artifacts.md)——别名、按工具链命名、Debug/DLL 布局
+- [测试规范](docs/zh-CN/testing.md)——改动后的 Tier 0/1/2 检查
 - [故障排查](docs/zh-CN/troubleshooting.md) · [已知限制](docs/zh-CN/known-limitations.md)
 
 英文文档：[`docs/`](docs/README.md)
@@ -211,7 +246,7 @@ sudo apt install build-essential cmake pkg-config libpcap-dev \
 输出：`bin/xtate`（Release 别名）、`bin/xtate_debug`（Debug 别名），以及
 `bin/xtate-<compiler>-<config>` 按工具链命名的文件。`--generator ninja|make`
 选择 CMake 生成器；见[平台支持](docs/zh-CN/platform-support.md)。别名规则见[构建产物](docs/zh-CN/build-artifacts.md)。构建目录为
-`build-<compiler>-<config>`；`./clean.sh` 清理它们和 `bin/xtate*`，保留
+`build-<compiler>-<config>-<generator>`；`./clean.sh` 清理它们和 `bin/xtate*`，保留
 `bin/.gitignore`。
 
 Ubuntu 22.04/24.04 是参考环境。在 Fedora/Arch 上，请安装对应的开发包（`libpcap`、`openssl`、`pcre2`、`libxml2`、`libbson`、`mongo-c-driver`）。

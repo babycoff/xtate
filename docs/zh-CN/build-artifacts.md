@@ -19,7 +19,7 @@ CI 或复现构建应使用它们。
 | `bin/xtate-clang-release` | 精确的 Clang Release 产物 |
 | `bin/xtate-clang-debug` | 精确的 Clang Debug 产物 |
 
-构建目录按 `build-<compiler>-<config>/` 隔离。
+构建目录按 `build-<compiler>-<config>-<generator>/` 隔离。
 
 ## Windows
 

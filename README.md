@@ -6,7 +6,7 @@
 
   <p>
     <b>Stateless TCP banners.</b> <b>Hybrid-state TCP/TLS.</b> <b>83 registered modules.</b><br>
-    <sub>C99 · Linux &amp; Windows · IPv4 &amp; IPv6 · packets first, crawlers never</sub>
+    <sub>C99 · Linux glibc/musl &amp; Windows · GCC/Clang/MSVC/MinGW · Make/Ninja · IPv4 &amp; IPv6</sub>
   </p>
 
   <p>
@@ -14,7 +14,7 @@
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/CMake-3.20%2B-064F8C?style=flat-square&amp;logo=cmake" alt="CMake"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/CMake-3.13%2B-064F8C?style=flat-square&amp;logo=cmake" alt="CMake"></a>
     <a href="https://github.com/knownsec/404StarLink"><img src="https://img.shields.io/badge/404Starlink-member-orange?style=flat-square" alt="404Starlink"></a>
     <a href="https://arxiv.org/abs/2405.07409"><img src="https://img.shields.io/badge/arXiv-2405.07409-B31B1B?style=flat-square&amp;logo=arxiv" alt="arXiv"></a>
   </p>
@@ -54,13 +54,48 @@ Most fast scanners stop at "port open"; most service scanners give up at Interne
 - 🧩 **Modules** — 11 scan / 60 probe / 7 output / 5 generate modules. Four interfaces, one pipeline, no runtime plugin magic.
 - 🌐 **Chinese help** — `--lang zh` or `XTATE_LANG=zh` localizes human-facing help, with UTF-8-aware wrapping and safe English fallback for untranslated strings.
 
+## Toolchains, platforms and interactive mode
+
+The scanner is C99 and has no hard dependency beyond libpcap/Npcap. Both build
+families and the interactive shell are first-class, not afterthoughts.
+
+### Toolchains and environments
+
+| Area | Supported |
+|:---|:---|
+| Build system | **CMake 3.13+**, Unix Makefiles or **Ninja** |
+| Linux glibc | **GCC / Clang**, Release/Debug; Debian 10-class CMake 3.13 baseline |
+| Linux musl | **Alpine/musl**, dynamic build and basic `--static --minimal` build |
+| Windows | **MSVC / ClangCL / MinGW**, Release/Debug, Npcap + optional vcpkg DLLs |
+| Binary layout | project-local `bin/`, aliases plus exact per-toolchain names |
+
+See [Platform support](docs/platform-support.md) and
+[Build artifacts](docs/build-artifacts.md).
+
+### Interactive mode
+
+`xtate -interactive` is a self-contained shell: no ncurses, no readline package,
+no extra runtime dependency.
+
+- Grouped `help` / `help <command>` and Chinese help (`--lang zh`);
+- `<TAB>` completion for commands, parameter names, module names, common values
+  and file paths;
+- module-argument completion after selecting a scan/probe/output/generate module;
+- command history, `set`, `show diff`, `show all`, `list-param <filter>`;
+- real TTY mode and deterministic non-TTY script mode, including clean terminal
+  restoration;
+- one binary on Linux and Windows; no Python/Go launcher required.
+
+See [Interactive mode](docs/interactive-mode.md).
+
 ## Quick start
 
 ```bash
 # Linux: build from source (dependencies are covered under Build)
 git clone https://github.com/babycoff/xtate.git
 cd xtate
-./build.sh
+./build.sh                 # interactive: compiler + Release/Debug
+./bin/xtate -interactive   # optional: tab-completion shell
 
 # A classic SYN scan — no firewall tricks needed
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
@@ -190,6 +225,10 @@ The README is the landing page. The manual lives in [`docs/`](docs/README.md):
 - [Modules](docs/modules.md) — the four module types and what ships with Xtate
 - [Architecture](docs/architecture.md) · [ZBanner](docs/zbanner.md) · [HLTCP](docs/hltcp.md)
 - [Chinese help and i18n](docs/help-i18n.md) — `--lang`, catalog fallback and UTF-8 layout
+- [Interactive mode](docs/interactive-mode.md) — TTY/script mode, completion, history and Chinese help
+- [Platform support](docs/platform-support.md) — CMake 3.13, old distros, Ninja and musl builds
+- [Build artifacts](docs/build-artifacts.md) — aliases, exact toolchain names, Debug/DLL layout
+- [Testing policy](docs/testing.md) — required Tier 0/1/2 checks after a change
 - [Troubleshooting](docs/troubleshooting.md) · [Known limitations](docs/known-limitations.md)
 
 中文文档：[`docs/zh-CN/`](docs/zh-CN/README.md)
@@ -214,7 +253,7 @@ Outputs: `bin/xtate` (release alias), `bin/xtate_debug` (debug alias), and
 `bin/xtate-<compiler>-<config>` per-toolchain files. `--generator ninja|make`
 selects the CMake generator; see [Platform support](docs/platform-support.md). See
 [Build artifacts](docs/build-artifacts.md) for the alias rules. Build trees are
-`build-<compiler>-<config>`; `./clean.sh` removes them and `bin/xtate*` while
+`build-<compiler>-<config>-<generator>`; `./clean.sh` removes them and `bin/xtate*` while
 preserving `bin/.gitignore`.
 
 Ubuntu 22.04/24.04 are the reference environments. On Fedora/Arch, install the equivalent development packages (`libpcap`, `openssl`, `pcre2`, `libxml2`, `libbson`, `mongo-c-driver`).
