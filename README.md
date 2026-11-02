@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.23.1-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.23.2-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -207,7 +207,8 @@ sudo apt install build-essential cmake pkg-config libpcap-dev \
 ```
 
 Outputs: `bin/xtate` (release alias), `bin/xtate_debug` (debug alias), and
-`bin/xtate-<compiler>-<config>` per-toolchain files. Build trees are
+`bin/xtate-<compiler>-<config>` per-toolchain files. See
+[Build artifacts](docs/build-artifacts.md) for the alias rules. Build trees are
 `build-<compiler>-<config>`; `./clean.sh` removes them and `bin/xtate*` while
 preserving `bin/.gitignore`.
 

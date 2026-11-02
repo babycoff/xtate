@@ -2,7 +2,7 @@
 
 **English** · [中文](zh-CN/README.md)
 
-This directory is the user manual for **Xtate v2.23.1** — a modular all-stack network scanner for Internet-scale surveys.
+This directory is the user manual for **Xtate v2.23.2** — a modular all-stack network scanner for Internet-scale surveys.
 
 The [README](../README.md) is the landing page. Start here if you want to use Xtate rather than skim its feature list.
 
@@ -18,6 +18,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 | Stuck | [Troubleshooting](./troubleshooting.md) → [Known limitations](./known-limitations.md) |
 | Chinese help / localization | [Help i18n](./help-i18n.md) |
 | Windows optional dependencies | [Windows dependencies](./windows-dependencies.md) |
+| Build artifact names | [Build artifacts](./build-artifacts.md) |
 
 ## Contents
 
@@ -31,6 +32,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 - [Modules](./modules.md) — the four module types and the modules that ship with Xtate
 - [Chinese help and i18n](./help-i18n.md) — `--lang`, catalog fallback and UTF-8 help layout
 - [Windows optional dependencies](./windows-dependencies.md) — vcpkg/MSYS2 setup for PCRE2, LibXml2, bson/mongoc and MinGW caveats
+- [Build artifacts](./build-artifacts.md) — aliases vs per-toolchain binaries, Debug names and DLLs
 
 ### How it works
 
@@ -53,7 +55,7 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-The docs are written against the v2.23.1 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
+The docs are written against the v2.23.2 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
 
 ## Planned
 

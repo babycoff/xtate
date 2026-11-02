@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.23.1-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.23.2-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -205,7 +205,7 @@ sudo apt install build-essential cmake pkg-config libpcap-dev \
 ```
 
 输出：`bin/xtate`（Release 别名）、`bin/xtate_debug`（Debug 别名），以及
-`bin/xtate-<compiler>-<config>` 按工具链命名的文件。构建目录为
+`bin/xtate-<compiler>-<config>` 按工具链命名的文件。别名规则见[构建产物](docs/zh-CN/build-artifacts.md)。构建目录为
 `build-<compiler>-<config>`；`./clean.sh` 清理它们和 `bin/xtate*`，保留
 `bin/.gitignore`。
 

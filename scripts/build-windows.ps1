@@ -34,7 +34,7 @@ function Read-BuildChoice([string]$Title, [string[]]$Labels,
         Write-Host ("  [{0}] {1}" -f ($i + 1), $Labels[$i])
     }
     while ($true) {
-        $answer = Read-Host ("Select [1-{0}] (default {1})" -f $Labels.Count, $DefaultIndex + 1)
+        $answer = Read-Host ("Select [1-{0}] (default {1})" -f $Labels.Count, ($DefaultIndex + 1))
         if (-not $answer) { return $Values[$DefaultIndex] }
         $n = 0
         if ([int]::TryParse($answer, [ref]$n) -and $n -ge 1 -and $n -le $Values.Count) {
@@ -259,6 +259,18 @@ function Test-Binary([string]$Name, [string]$Exe) {
     if ($LASTEXITCODE -ne 0) { throw "$Name --selftest failed" }
 }
 
+# MSBuild/.NET on Windows emits UTF-8 bytes, while a legacy console may still
+# report the system code page. Decode native output as UTF-8 so localized MSBuild
+# messages are not displayed as mojibake.
+$oldConsoleOutputEncoding = [Console]::OutputEncoding
+$oldOutputEncoding = $OutputEncoding
+try {
+    [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+    $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+} catch {
+    Write-Host "Could not switch native output decoding to UTF-8; continuing."
+}
+
 try {
     New-Item -ItemType Directory -Force -Path $artifacts | Out-Null
     Write-Host "Copying source to the stage path..."
@@ -314,6 +326,13 @@ finally {
         Write-Host "Artifact copies: $artifacts"
     } else {
         Write-Host "Staging kept for debugging: $stageSrc"
-    Write-Host "Project binaries: $binDir"
+        Write-Host "Project binaries: $binDir"
+    }
+
+    try {
+        [Console]::OutputEncoding = $oldConsoleOutputEncoding
+        $OutputEncoding = $oldOutputEncoding
+    } catch {
+        # Best-effort restoration; the process is exiting anyway.
     }
 }
