@@ -4353,7 +4353,9 @@ void xconf_print_help() {
         }
 
         printf("\n\n");
-        xprint(i18n_tr(config_parameters[i].help_text), 6, 80);
+        xprint(i18n_tr_global_param(config_parameters[i].name,
+                                      config_parameters[i].help_text),
+               6, 80);
         printf("\n\n\n");
 
         count++;
@@ -4406,7 +4408,9 @@ void xconf_help_param(const char *param) {
         }
 
         printf("\n\n");
-        xprint(i18n_tr(config_parameters[i].help_text), 6, 80);
+        xprint(i18n_tr_global_param(config_parameters[i].name,
+                                      config_parameters[i].help_text),
+               6, 80);
         printf("\n\n");
 
         return;
@@ -4459,9 +4463,11 @@ void xconf_search_param(const char *param) {
             printf(", %s", config_parameters[i].alt_names[j]);
         }
 
-        printf("\n    %s", i18n_tr(config_parameters[i].short_hint
-                                       ? config_parameters[i].short_hint
-                                       : config_parameters[i].help_text));
+        printf("\n    %s", i18n_tr_global_param(
+                                  config_parameters[i].name,
+                                  config_parameters[i].short_hint
+                                      ? config_parameters[i].short_hint
+                                      : config_parameters[i].help_text));
         printf("\n\n");
     }
 }

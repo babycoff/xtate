@@ -28,6 +28,15 @@ const char  *i18n_language_name(void);
 const char *i18n_tr(const char *src);
 
 /**
+ * Translate a global parameter's help by its stable parameter name. Module
+ * parameters use i18n_tr_module_param() (module name + parameter name), so
+ * descriptions can be added without copying long English sentences as keys.
+ */
+const char *i18n_tr_global_param(const char *name, const char *english);
+const char *i18n_tr_module_param(const char *module, const char *name,
+                                  const char *english);
+
+/**
  * Help output helpers.
  *
  * On Windows, Chinese help is written with WriteConsoleW so the console code

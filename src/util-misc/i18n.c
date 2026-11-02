@@ -242,3 +242,150 @@ void i18n_printf(const char *fmt, ...) {
     vfprintf(stdout, fmt, ap);
     va_end(ap);
 }
+
+typedef struct I18nParamEntry {
+    const char *name;
+    const char *zh_cn;
+} I18nParamEntry;
+
+static const I18nParamEntry i18n_global_help[] = {
+    {"seed", "设置目标/端口随机化以及 cookie 生成的全局随机种子。"},
+    {"rate", "设置所有发送线程共享的总发包速率（每秒包数）。"},
+    {"wait", "发送结束后等待接收回包的秒数，默认 10 秒。"},
+    {"forever", "把 --wait 设为很大的值，用于持续接收。"},
+    {"shard", "按 x/y 把扫描空间分给多个实例，x 是当前实例编号。"},
+    {"tx-thread-count", "设置发送线程数量。"},
+    {"rx-handler-count", "设置接收处理线程数量；必须是 2 的幂。"},
+    {"d", "用 -d/-dd/-ddd 提高日志级别。"},
+    {"interactive-mode", "进入交互式配置和扫描模式。"},
+    {"lang", "设置人类可读帮助文本的语言：en 或 zh-CN。"},
+    {"version", "打印版本和编译信息。"},
+    {"usage", "显示基础用法和示例。"},
+    {"help", "显示全部参数的详细帮助。"},
+    {"introduction", "显示 Xtate 的设计和工作流程介绍。"},
+    {"target-ip", "指定静态 IPv4/IPv6 目标、范围或 CIDR。"},
+    {"port", "指定要扫描的 TCP/UDP/SCTP 端口或端口范围。"},
+    {"top-port", "从内置常用 TCP 端口列表中加入若干端口。"},
+    {"udp-top-port", "从内置常用 UDP 端口列表中加入若干端口。"},
+    {"include-file", "从文件读取目标范围列表。"},
+    {"exclude", "排除指定的 IP 地址、范围或 CIDR。"},
+    {"exclude-port", "排除指定端口或端口范围。"},
+    {"exclude-file", "从文件读取要排除的目标范围。"},
+    {"target-asn-v4", "按 IPv4 ASN 添加目标。"},
+    {"target-asn-v6", "按 IPv6 ASN 添加目标。"},
+    {"exclude-asn-v4", "按 IPv4 ASN 排除目标。"},
+    {"exclude-asn-v6", "按 IPv6 ASN 排除目标。"},
+    {"adapter", "指定用于收发的网卡接口。"},
+    {"source-ip", "指定发送报文使用的源 IP。"},
+    {"source-port", "指定发送报文使用的源端口或端口范围。"},
+    {"source-mac", "指定发送报文使用的源 MAC 地址。"},
+    {"router-ip", "指定 IPv4 网关地址。"},
+    {"router-mac", "指定网关 MAC 地址。"},
+    {"adapter-vlan", "设置发送报文的 VLAN 标签。"},
+    {"adapter-snaplen", "设置抓包/接收的 snapshot 长度。"},
+    {"lan-mode", "启用局域网模式（ARP/NDP 等链路层扫描）。"},
+    {"fake-router-mac", "使用无效的假网关 MAC，跳过 ARP 解析。"},
+    {"bypass-os", "绕过本机协议栈，直接收发原始报文。"},
+    {"init-ipv4-adapter", "显式初始化 IPv4 原始套接字。"},
+    {"init-ipv6-adapter", "显式初始化 IPv6 原始套接字。"},
+    {"echo", "把解析后的配置回显到文件或 stdout。"},
+    {"debug-if", "打印网卡调试信息。"},
+    {"benchmark", "运行目标生成/扫描性能基准。"},
+    {"selftest", "运行内置回归自检。"},
+    {"list-cidr", "列出 CIDR 形式的扫描目标。"},
+    {"list-range", "列出范围形式的目标。"},
+    {"list-target", "列出最终解析的目标和端口。"},
+    {"list-if", "列出可用的原始网卡接口。"},
+    {"help-parameter", "按名称显示单个全局参数的帮助。"},
+    {"search-parameter", "模糊搜索全局参数。"},
+    {"search-module", "模糊搜索模块。"},
+    {"list-nmap-probes", "列出内置的 nmap 探针。"},
+    {"parse-bson-file", "把 BSON 结果文件解析成 JSON。"},
+    {"store-json-file", "把 NDJSON 结果导入 MongoDB。"},
+    {"store-bson-file", "把 BSON 结果导入 MongoDB。"},
+    {"mongodb-uri", "设置 MongoDB 连接 URI。"},
+    {"mongodb-db-name", "设置 MongoDB 数据库名。"},
+    {"mongodb-col-name", "设置 MongoDB 集合名。"},
+    {"mongodb-app-name", "设置 MongoDB 应用名。"},
+    {"scan-module", "选择扫描模块。"},
+    {"list-scan-modules", "列出全部扫描模块。"},
+    {"help-scan-module", "显示指定扫描模块的帮助。"},
+    {"scan-module-args", "向扫描模块传递参数。"},
+    {"probe-module", "选择探测模块。"},
+    {"list-probe-modules", "列出全部探测模块。"},
+    {"help-probe-module", "显示指定探测模块的帮助。"},
+    {"probe-module-args", "向探测模块传递参数。"},
+    {"output-module", "选择输出模块。"},
+    {"list-output-modules", "列出全部输出模块。"},
+    {"help-output-module", "显示指定输出模块的帮助。"},
+    {"output-module-args", "向输出模块传递参数。"},
+    {"output-file", "设置输出文件名（MongoDB 时为 URI）。"},
+    {"append-output", "以追加方式打开输出文件。"},
+    {"output-screen", "把成功结果输出到屏幕。"},
+    {"show-output", "选择要显示的结果级别。"},
+    {"no-show-output", "关闭结果打印。"},
+    {"no-escape-char", "关闭输出字符串转义（JSON/CSV 用）。"},
+    {"output-as-info", "把成功结果标记为 info 级别。"},
+    {"generate-module", "选择目标生成模块。"},
+    {"list-generate-modules", "列出全部生成模块。"},
+    {"help-generate-module", "显示指定生成模块的帮助。"},
+    {"generate-module-args", "向生成模块传递参数。"},
+    {"print-status", "启用实时状态栏。"},
+    {"ndjson-status", "用 NDJSON 输出状态。"},
+    {"no-status", "关闭实时状态栏。"},
+    {"packet-ttl", "设置发送报文的 IP TTL。"},
+    {"tcp-init-window", "设置初始 TCP 窗口大小。"},
+    {"tcp-window", "设置 TCP 接收窗口大小。"},
+    {"tcp-wscale", "设置 TCP 窗口缩放因子。"},
+    {"tcp-mss", "设置 TCP MSS 值。"},
+    {"tcp-sackok", "启用/关闭 TCP SACK 选项。"},
+    {"tcp-tsecho", "设置 TCP 时间戳回显选项。"},
+    {"packet-trace", "打印每个发送/接收报文的调试信息。"},
+    {"bpf-filter", "设置自定义 BPF 过滤器。"},
+    {"no-bpf-filter", "关闭模块默认 BPF 过滤器。"},
+    {"max-packet-len", "设置接收报文的最大长度。"},
+    {"raw-socket", "使用原始套接字发送。"},
+    {"sendmmsg", "使用 sendmmsg 批量发送。"},
+    {"sendmmsg-batch", "设置 sendmmsg 每批发送数量。"},
+    {"sendmmsg-retries", "设置 sendmmsg 重试次数。"},
+    {"send-queue", "使用发送队列模式。"},
+    {"send-queue-size", "设置发送队列大小。"},
+    {"pfring", "使用 PF_RING 高速抓包/发送（Linux）。"},
+    {"offline", "离线模式，不实际发送报文。"},
+    {"config-file", "从配置文件加载参数。"},
+    {"resume-index", "从指定扫描索引恢复。"},
+    {"no-resume-file", "不写 resume.conf。"},
+    {"meta-filename", "设置扫描元信息输出文件。"},
+    {"pcap-filename", "把收到的报文保存为 pcap。"},
+    {"no-ansi-control", "关闭 ANSI 控制字符。"},
+    {"no-dedup", "关闭接收去重。"},
+    {"dedup-win", "设置去重窗口大小。"},
+    {"stack-buf-count", "设置协议栈缓冲区数量。"},
+    {"dispatch-buf-count", "设置接收分发队列大小。"},
+    {"infinite", "无限重复扫描。"},
+    {"repeat", "重复扫描次数。"},
+    {"static-seed", "使用固定种子（调试用）。"},
+    {"no-cpu-bind", "不把线程绑定到 CPU。"},
+    {"ip2asn-v4-file", "指定 IPv4 ASN 数据库文件。"},
+    {"ip2asn-v6-file", "指定 IPv6 ASN 数据库文件。"},
+    {"no-back-trace", "关闭崩溃时的调用栈。"},
+};
+
+const char *i18n_tr_global_param(const char *name, const char *english) {
+    if (i18n_language != I18N_ZH_CN || !name)
+        return i18n_tr(english);
+    for (unsigned i = 0;
+         i < sizeof(i18n_global_help) / sizeof(i18n_global_help[0]); i++) {
+        if (strcmp(name, i18n_global_help[i].name) == 0)
+            return i18n_global_help[i].zh_cn;
+    }
+    return i18n_tr(english);
+}
+
+const char *i18n_tr_module_param(const char *module, const char *name,
+                                  const char *english) {
+    (void)module;
+    (void)name;
+    /* Module parameter translations are added in the next catalog batch. */
+    return i18n_tr(english);
+}
