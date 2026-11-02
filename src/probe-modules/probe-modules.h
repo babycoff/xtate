@@ -7,6 +7,7 @@
 #include "../util-misc/configer.h"
 #include "../proto/proto-datapass.h"
 #include "../output-modules/output-types.h"
+#include "probe-types.h"
 
 struct XtateConf;
 
@@ -204,14 +205,6 @@ typedef void (*probe_modules_conn_close)(ProbeState  *state,
  * !Must be implemented.
  */
 typedef void (*probe_modules_close)();
-
-/*a probe belongs to one type*/
-typedef enum Probe_TYPE {
-    ProbeType_NULL  = 0,
-    ProbeType_TCP   = 1,
-    ProbeType_UDP   = 2,
-    ProbeType_STATE = 3,
-} ProbeType;
 
 typedef enum MultiProbeMode {
     Multi_Null        = 0,

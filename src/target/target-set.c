@@ -1,4 +1,5 @@
 #include "target-set.h"
+#include "../as/as-query.h"
 
 #include <string.h>
 #include <ctype.h>

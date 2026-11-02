@@ -16,9 +16,10 @@
 #include "../target/target.h"
 #include "../target/target-ipaddress.h"
 #include "../proto/proto-preprocess.h"
-#include "../probe-modules/probe-modules.h"
+#include "../probe-modules/probe-types.h"
 
 struct XtateConf;
+struct ProbeModule;
 
 #define SM_DFT_DEDUP_TYPE 0
 
@@ -206,7 +207,7 @@ typedef struct ScanModule {
      * user mode.*/
     const char     *bpf_filter;
     ConfParam      *params;
-    Probe          *probe;
+    struct ProbeModule *probe;
     const char     *short_desc; /*an optional short description*/
     const char     *desc;
 

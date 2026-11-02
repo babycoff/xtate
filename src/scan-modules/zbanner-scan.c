@@ -1,4 +1,5 @@
 #include "scan-modules.h"
+#include "../probe-modules/probe-modules.h"
 
 #include <stdlib.h>
 

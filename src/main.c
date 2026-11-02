@@ -6,6 +6,7 @@
 #include <time.h>
 
 #include "xconf.h"
+#include "as/as-query.h"
 #include "xcmd.h"
 #include "globals.h"
 #include "receive.h"

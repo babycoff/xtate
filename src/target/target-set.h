@@ -9,7 +9,7 @@
 
 #include "target-rangev4.h"
 #include "target-rangev6.h"
-#include "../as/as-query.h"
+struct AS_Query;
 
 typedef struct TargetRangeSet {
     struct RangeList  ipv4;

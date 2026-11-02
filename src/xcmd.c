@@ -12,6 +12,7 @@
 #include "crossline/crossline.h"
 #include "target/target-cookie.h"
 #include "scan-modules/scan-modules.h"
+#include "probe-modules/probe-modules.h"
 #include "generate-modules/generate-modules.h"
 
 #include "util-out/logger.h"

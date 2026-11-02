@@ -1,4 +1,5 @@
 #include "output-modules.h"
+#include "../as/as-query.h"
 
 #include <inttypes.h>
 #include "../util-misc/i18n.h"
