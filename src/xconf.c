@@ -2949,15 +2949,14 @@ ConfParam config_parameters[] = {
      SET_target_ip,
      Type_ARG,
      {"range", "ranges", "dst-ip", "ip", 0},
-     "Specifies IP addresses or ranges as static targets. "
-     "There are three valid formats. The first is a single IP address like "
-     "192.168.0.1 or 2001:db8::1. The second is a range like "
-     "10.0.0.1-10.0.0.100."
-     " The third is a CIDR address, like 0.0.0.0/0 or 2001:db8::/90. At least"
-     " one target must be specified. Multiple targets can be specified. This "
-     "can be specified as multiple options separated by a comma as a single "
-     "option, such as 10.0.0.0/8,192.168.0.1,2001:db8::1.",
-     "Specifies IP addresses or ranges as static targets."},
+     "Specifies IP addresses or ranges as static targets. Valid forms are "
+     "a single IP (192.168.0.1), an explicit range (10.0.0.1-10.0.0.100), "
+     "a CIDR block (0.0.0.0/0), and sparse component ranges such as "
+     "132.80-88.90.15 or 2001:db8:1-5::1. Up to four component ranges in one "
+     "token form a Cartesian product, capped at 1,048,576 addresses. "
+     "At least one target must be specified; separate targets with commas, "
+     "for example 10.0.0.0/8,192.168.0.1,2001:db8::1.",
+     "IP address, range or component pattern."},
     {"port",
      SET_port_them,
      Type_ARG,

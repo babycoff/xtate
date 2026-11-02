@@ -53,6 +53,7 @@ Most fast scanners stop at "port open"; most service scanners give up at Interne
 - 🧬 **HLTCP** — a hybrid-state user-space TCP stack, created only where needed. It completes TLS handshakes and speaks HTTP inside them.
 - 🧩 **Modules** — 11 scan / 60 probe / 7 output / 5 generate modules. Four interfaces, one pipeline, no runtime plugin magic.
 - 🌐 **Chinese help** — `--lang zh` or `XTATE_LANG=zh` localizes human-facing help, with UTF-8-aware wrapping and safe English fallback for untranslated strings.
+- 🎯 **Sparse target patterns** — component ranges such as `132.80-88.90.15` or `2001:db8:1-5::1`; up to four ranges form a Cartesian product (1,048,576-address cap per token) while large continuous spaces still use CIDR/ranges.
 
 ## Toolchains, platforms and interactive mode
 

@@ -68,11 +68,30 @@ check "component range exclude" \
 check "excluded component absent" \
       "! printf '%s' \"\$out\" | grep -q '132.81.90.15'"
 
-# More than one variable component is deliberately rejected.
-if "$BIN" -ip "1-2.3-4.5.6" -p 80 -list-range >/dev/null 2>&1; then
-    check "multiple component ranges rejected" "false"
+# Cartesian products: up to four variable components.
+"$BIN" -ip "1-2.3-4.5.6" -p 80 -list-target >product2.txt 2>&1 || true
+check "two component ranges product count" \
+      "[[ \$(grep -c '^[0-9]' product2.txt) == 4 ]]"
+
+"$BIN" -ip "1-2.3-4.5-6.7" -p 80 -list-target >product3.txt 2>&1 || true
+check "three component ranges product count" \
+      "[[ \$(grep -c '^[0-9]' product3.txt) == 8 ]]"
+
+"$BIN" -ip "1-2.3-4.5-6.7-8" -p 80 -list-target >product4.txt 2>&1 || true
+check "four component ranges product count" \
+      "[[ \$(grep -c '^[0-9]' product4.txt) == 16 ]]"
+check "four component ranges endpoint" "grep -q '2.4.6.8' product4.txt"
+
+"$BIN" -ip "2001:db8:1-2:3-4:5-6:7-8::1" -p 80 -list-target \
+      >product6.txt 2>&1 || true
+check "IPv6 four component ranges product count" \
+      "[[ \$(grep -c '^[0-9]' product6.txt) == 16 ]]"
+
+if "$BIN" -ip "0-255.0-255.0-255.0-255" -p 80 -list-target \
+        >/dev/null 2>&1; then
+    check "oversized product rejected" "false"
 else
-    check "multiple component ranges rejected" "true"
+    check "oversized product rejected" "true"
 fi
 
 if ((fail != 0)); then

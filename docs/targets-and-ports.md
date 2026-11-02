@@ -28,8 +28,8 @@ accepted, and they can be mixed in one comma-separated value:
 | List | `10.0.0.0/24,192.168.1.5,2001:db8::1` |
 
 IPv6 uses the same forms; explicit ranges take a full IPv6 address on both
-sides. A component range varies exactly one octet (IPv4) or one hextet (IPv6)
-while keeping the other components fixed:
+sides. A component range varies one octet (IPv4) or one hextet (IPv6) while
+keeping the other components fixed:
 
 ```text
 # 132.80.90.15, 132.81.90.15, ... 132.88.90.15
@@ -40,8 +40,18 @@ while keeping the other components fixed:
 ```
 
 Component ranges are **sparse**: they do not mean every address between the
-lower and upper endpoint. Only one component range per address is accepted.
-A single token may expand to at most 65,536 addresses; larger ranges are
+lower and upper endpoint. A token may contain up to **four** component ranges;
+the result is their Cartesian product:
+
+```text
+# 2 * 2 * 2 * 2 = 16 addresses
+-ip 1-2.3-4.5-6.7-8
+
+# IPv6: 2 * 2 * 2 * 2 = 16 addresses
+-ip 2001:db8:1-2:3-4:5-6:7-8::1
+```
+
+One token may expand to at most 1,048,576 addresses; larger products are
 rejected with an error. This limit is per component-range token, not a limit
 on the scan size: use a CIDR block or an explicit range for a large
 continuous space (for example `-ip 0.0.0.0/0` is stored as one range).

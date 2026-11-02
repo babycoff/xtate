@@ -72,7 +72,8 @@ bool targetset_has_any_ports(const TargetSet *targetset) {
     return targetset->ports.list_len != 0;
 }
 
-#define TARGET_COMPONENT_RANGE_MAX 65536
+#define TARGET_COMPONENT_PRODUCT_MAX 1048576ULL
+#define TARGET_COMPONENT_RANGES_MAX 4
 
 static int _component_parse_dec(const char *text, unsigned max, unsigned *out) {
     unsigned value = 0;
@@ -121,13 +122,44 @@ static int _component_parse_hex(const char *text, unsigned *out) {
     return 0;
 }
 
+static int _component_product_count(const unsigned *counts, unsigned count,
+                                    uint64_t *out) {
+    uint64_t product = 1;
+
+    for (unsigned i = 0; i < count; i++) {
+        uint64_t values = counts[i];
+        if (values == 0 || values > TARGET_COMPONENT_PRODUCT_MAX ||
+            product > TARGET_COMPONENT_PRODUCT_MAX / values)
+            return 1;
+        product *= values;
+    }
+    *out = product;
+    return 0;
+}
+
+static void _emit_ipv4_product(TargetSet *targetset, const unsigned lo[4],
+                               const unsigned hi[4], unsigned index,
+                               uint32_t address) {
+    if (index == 4) {
+        rangelist_add_range(&targetset->ipv4, address, address);
+        return;
+    }
+
+    for (unsigned value = lo[index]; value <= hi[index]; value++) {
+        uint32_t next = address | (value << (8u * (3u - index)));
+        _emit_ipv4_product(targetset, lo, hi, index + 1, next);
+    }
+}
+
 static int _expand_ipv4_component(TargetSet *targetset, const char *token) {
     char     tmp[64];
     char    *parts[4];
-    unsigned octet[4] = {0};
-    unsigned lo = 0, hi = 0;
-    int      range_index = -1;
-    size_t   length      = strlen(token);
+    unsigned lo[4] = {0};
+    unsigned hi[4] = {0};
+    unsigned counts[4];
+    unsigned ranges = 0;
+    uint64_t product;
+    size_t   length = strlen(token);
 
     if (length == 0 || length >= sizeof(tmp))
         return 0;
@@ -136,8 +168,9 @@ static int _expand_ipv4_component(TargetSet *targetset, const char *token) {
     {
         char *p = tmp;
         for (unsigned i = 0; i < 4; i++) {
+            char *dot;
             parts[i] = p;
-            char *dot = strchr(p, '.');
+            dot      = strchr(p, '.');
             if (i == 3) {
                 if (dot != NULL)
                     return 0;
@@ -155,34 +188,29 @@ static int _expand_ipv4_component(TargetSet *targetset, const char *token) {
     for (unsigned i = 0; i < 4; i++) {
         char *dash = strchr(parts[i], '-');
         if (dash != NULL) {
-            if (range_index >= 0)
-                return 0; /* only one variable component */
             *dash = '\0';
-            if (_component_parse_dec(parts[i], 255, &lo) ||
-                _component_parse_dec(dash + 1, 255, &hi) || lo > hi)
+            if (_component_parse_dec(parts[i], 255, &lo[i]) ||
+                _component_parse_dec(dash + 1, 255, &hi[i]) || lo[i] > hi[i])
                 return 0;
-            range_index = (int)i;
-        } else if (_component_parse_dec(parts[i], 255, &octet[i])) {
-            return 0;
+            ranges++;
+        } else {
+            if (_component_parse_dec(parts[i], 255, &lo[i]))
+                return 0;
+            hi[i] = lo[i];
         }
     }
 
-    if (range_index < 0 || (uint64_t)hi - lo + 1 > TARGET_COMPONENT_RANGE_MAX)
+    if (ranges == 0)
         return 0;
+    if (ranges > TARGET_COMPONENT_RANGES_MAX)
+        return 3;
+    for (unsigned i = 0; i < 4; i++)
+        counts[i] = hi[i] - lo[i] + 1;
+    if (_component_product_count(counts, 4, &product))
+        return 2;
+    (void)product;
 
-    {
-        unsigned shift = 8u * (3u - (unsigned)range_index);
-        uint32_t base  = 0;
-
-        for (unsigned i = 0; i < 4; i++)
-            base |= (uint32_t)octet[i] << (8u * (3u - i));
-        base &= ~(0xFFu << shift);
-
-        for (unsigned value = lo; value <= hi; value++) {
-            uint32_t address = base | ((uint32_t)value << shift);
-            rangelist_add_range(&targetset->ipv4, address, address);
-        }
-    }
+    _emit_ipv4_product(targetset, lo, hi, 0, 0);
     return 1;
 }
 
@@ -207,15 +235,39 @@ static int _split_hex_groups(char *text, char **groups, int max_groups) {
     return count;
 }
 
+static void _emit_ipv6_product(TargetSet *targetset, const unsigned short lo[8],
+                               const unsigned short hi[8], unsigned index,
+                               unsigned short groups[8]) {
+    if (index == 8) {
+        ipv6address address;
+        address.hi = (uint64_t)groups[0] << 48 | (uint64_t)groups[1] << 32 |
+                     (uint64_t)groups[2] << 16 | (uint64_t)groups[3];
+        address.lo = (uint64_t)groups[4] << 48 | (uint64_t)groups[5] << 32 |
+                     (uint64_t)groups[6] << 16 | (uint64_t)groups[7];
+        range6list_add_range(&targetset->ipv6, address, address);
+        return;
+    }
+
+    for (unsigned value = lo[index]; value <= hi[index]; value++) {
+        groups[index] = (unsigned short)value;
+        _emit_ipv6_product(targetset, lo, hi, index + 1, groups);
+    }
+}
+
 static int _expand_ipv6_component(TargetSet *targetset, const char *token) {
-    char      tmp[128];
-    char     *left;
-    char     *right = NULL;
-    char     *left_groups[8];
-    char     *right_groups[8];
-    int       left_count  = 0;
-    int       right_count = 0;
-    size_t    length      = strlen(token);
+    char           tmp[128];
+    char          *left;
+    char          *right = NULL;
+    char          *left_groups[8];
+    char          *right_groups[8];
+    int            left_count  = 0;
+    int            right_count = 0;
+    unsigned short lo[8]       = {0};
+    unsigned short hi[8]       = {0};
+    unsigned       counts[8];
+    unsigned       ranges      = 0;
+    uint64_t       product;
+    size_t         length = strlen(token);
 
     if (length >= sizeof(tmp))
         return 0;
@@ -252,62 +304,57 @@ static int _expand_ipv6_component(TargetSet *targetset, const char *token) {
         return 0;
     }
 
+    for (int i = 0; i < left_count; i++) {
+        char *dash = strchr(left_groups[i], '-');
+        unsigned value;
+        if (dash != NULL) {
+            unsigned range_hi;
+            *dash = '\0';
+            if (_component_parse_hex(left_groups[i], &value) ||
+                _component_parse_hex(dash + 1, &range_hi) || value > range_hi)
+                return 0;
+            lo[i] = (unsigned short)value;
+            hi[i] = (unsigned short)range_hi;
+            ranges++;
+        } else {
+            if (_component_parse_hex(left_groups[i], &value))
+                return 0;
+            lo[i] = hi[i] = (unsigned short)value;
+        }
+    }
+    for (int i = 0; i < right_count; i++) {
+        char *dash = strchr(right_groups[i], '-');
+        int   dst  = 8 - right_count + i;
+        unsigned value;
+        if (dash != NULL) {
+            unsigned range_hi;
+            *dash = '\0';
+            if (_component_parse_hex(right_groups[i], &value) ||
+                _component_parse_hex(dash + 1, &range_hi) || value > range_hi)
+                return 0;
+            lo[dst] = (unsigned short)value;
+            hi[dst] = (unsigned short)range_hi;
+            ranges++;
+        } else {
+            if (_component_parse_hex(right_groups[i], &value))
+                return 0;
+            lo[dst] = hi[dst] = (unsigned short)value;
+        }
+    }
+
+    if (ranges == 0)
+        return 0;
+    if (ranges > TARGET_COMPONENT_RANGES_MAX)
+        return 3;
+    for (unsigned i = 0; i < 8; i++)
+        counts[i] = (unsigned)hi[i] - lo[i] + 1;
+    if (_component_product_count(counts, 8, &product))
+        return 2;
+    (void)product;
+
     {
-        unsigned short base[8] = {0};
-        unsigned       range_lo = 0, range_hi = 0;
-        int            range_index = -1;
-        int            total       = left_count + right_count;
-
-        for (int i = 0; i < left_count; i++) {
-            char *dash = strchr(left_groups[i], '-');
-            if (dash != NULL) {
-                if (range_index >= 0)
-                    return 0;
-                *dash = '\0';
-                if (_component_parse_hex(left_groups[i], &range_lo) ||
-                    _component_parse_hex(dash + 1, &range_hi) ||
-                    range_lo > range_hi)
-                    return 0;
-                range_index = i;
-            } else {
-                unsigned value;
-                if (_component_parse_hex(left_groups[i], &value))
-                    return 0;
-                base[i] = (unsigned short)value;
-            }
-        }
-        for (int i = 0; i < right_count; i++) {
-            char *dash = strchr(right_groups[i], '-');
-            int   dst  = 8 - right_count + i;
-            if (dash != NULL) {
-                if (range_index >= 0)
-                    return 0;
-                *dash = '\0';
-                if (_component_parse_hex(right_groups[i], &range_lo) ||
-                    _component_parse_hex(dash + 1, &range_hi) ||
-                    range_lo > range_hi)
-                    return 0;
-                range_index = dst;
-            } else {
-                unsigned value;
-                if (_component_parse_hex(right_groups[i], &value))
-                    return 0;
-                base[dst] = (unsigned short)value;
-            }
-        }
-        if (range_index < 0 || total > 8 ||
-            (uint64_t)range_hi - range_lo + 1 > TARGET_COMPONENT_RANGE_MAX)
-            return 0;
-
-        for (unsigned value = range_lo; value <= range_hi; value++) {
-            ipv6address address;
-            base[range_index] = (unsigned short)value;
-            address.hi = (uint64_t)base[0] << 48 | (uint64_t)base[1] << 32 |
-                         (uint64_t)base[2] << 16 | (uint64_t)base[3];
-            address.lo = (uint64_t)base[4] << 48 | (uint64_t)base[5] << 32 |
-                         (uint64_t)base[6] << 16 | (uint64_t)base[7];
-            range6list_add_range(&targetset->ipv6, address, address);
-        }
+        unsigned short groups[8] = {0};
+        _emit_ipv6_product(targetset, lo, hi, 0, groups);
     }
     return 1;
 }
@@ -327,9 +374,19 @@ static int _targetset_add_ip_token(TargetSet *targetset, const char *token) {
         return 0;
     }
 
-    if (_expand_ipv4_component(targetset, token) ||
-        _expand_ipv6_component(targetset, token))
-        return 0;
+    {
+        int expanded = _expand_ipv4_component(targetset, token);
+        if (expanded == 0)
+            expanded = _expand_ipv6_component(targetset, token);
+        if (expanded == 1)
+            return 0;
+        if (expanded == 2) {
+            LOG(LEVEL_ERROR,
+                "component range product exceeds %llu addresses: %s\n",
+                (unsigned long long)TARGET_COMPONENT_PRODUCT_MAX, token);
+            return 1;
+        }
+    }
 
     LOG(LEVEL_ERROR, "invalid target address: %s\n", token);
     return 1;
@@ -545,6 +602,36 @@ int targetset_selftest() {
             !targetset_has_ip(&component, first6) ||
             !targetset_has_ip(&component, last6))
             goto fail;
+
+        /* Cartesian products of up to four component ranges. */
+        {
+            TargetSet product = {0};
+            ipaddress last4 = {.version = 4, .ipv4 = 0x02040608};
+            ipaddress last6 = {.version = 6,
+                               .ipv6 = {0x20010db800020004ULL,
+                                        0x0006000800000001ULL}};
+
+            line = __LINE__;
+            if (targetset_add_ip_str(&product, "1-2.3-4.5.6"))
+                goto fail;
+            if (rangelist_count(&product.ipv4) != 4)
+                goto fail;
+
+            line = __LINE__;
+            if (targetset_add_ip_str(&product, "1-2.3-4.5-6.7-8"))
+                goto fail;
+            if (rangelist_count(&product.ipv4) != 20 ||
+                !targetset_has_ip(&product, last4))
+                goto fail;
+
+            line = __LINE__;
+            if (targetset_add_ip_str(&product,
+                                     "2001:db8:1-2:3-4:5-6:7-8::1"))
+                goto fail;
+            if (range6list_count(&product.ipv6).lo != 16 ||
+                !targetset_has_ip(&product, last6))
+                goto fail;
+        }
 
     }
 
