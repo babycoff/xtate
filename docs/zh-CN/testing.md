@@ -33,6 +33,7 @@ XTATE_BIN=./bin/xtate bash tests/interactive/test.sh
 - 改帮助/i18n：必须跑 `tests/i18n/test.sh`；
 - 改交互式模式：必须跑 `tests/interactive/test.sh`；
 - 改 Linux TTY/终端：额外跑 `tests/interactive/tty.sh`；
+- 头文件改动：运行 `tests/include/check_headers.sh`。
 - 改报文解析/内存所有权：跑 sanitizer selftest（见 CONTRIBUTING）；
 - 改大批量/输出：运行对应 `tests/large-batch/` 用例，并报告规模和磁盘占用。
 
@@ -108,6 +109,7 @@ interactive + PTY: 通过
 
 | 套件 | 命令 | 范围 |
 |:---|:---|:---|
+| 头文件自包含 | `tests/include/check_headers.sh` | 每个头文件可单独编译 |
 | selftest | `xtate --selftest` | 内置回归 |
 | i18n | `tests/i18n/test.sh` | 中文帮助覆盖率 |
 | interactive | `tests/interactive/test.sh` | 非 TTY 命令/帮助/状态 |

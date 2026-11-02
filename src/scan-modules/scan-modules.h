@@ -11,7 +11,7 @@
 #include <stdlib.h>
 
 #include "../util-misc/configer.h"
-#include "../output-modules/output-modules.h"
+#include "../output-modules/output-types.h"
 #include "../stack/stack-queue.h"
 #include "../target/target.h"
 #include "../target/target-ipaddress.h"

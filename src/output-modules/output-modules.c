@@ -1,4 +1,6 @@
 #include "output-modules.h"
+
+#include <inttypes.h>
 #include "../util-misc/i18n.h"
 
 #include <stdio.h>

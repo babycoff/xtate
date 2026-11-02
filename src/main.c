@@ -25,6 +25,10 @@
 
 #include "util-out/logger.h"
 #include "util-misc/i18n.h"
+#include "output-modules/output-modules.h"
+#include "scan-modules/scan-modules.h"
+#include "probe-modules/probe-modules.h"
+#include "generate-modules/generate-modules.h"
 #include "util-out/xtatus.h"
 #include "util-scan/init-nic.h"
 #include "util-data/fine-malloc.h"

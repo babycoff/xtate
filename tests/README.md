@@ -5,6 +5,7 @@ The project-wide policy and matrix live in
 
 | Suite | Command | Notes |
 |:---|:---|:---|
+| header self-containment | `bash tests/include/check_headers.sh` | every header compiles alone |
 | built-in | `xtate --selftest` | every build |
 | i18n | `XTATE_BIN=./bin/xtate bash tests/i18n/test.sh` | help coverage |
 | interactive | `XTATE_BIN=./bin/xtate bash tests/interactive/test.sh` | non-TTY script mode |

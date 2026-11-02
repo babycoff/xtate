@@ -35,6 +35,7 @@ XTATE_BIN=./bin/xtate bash tests/interactive/test.sh
 - Help/i18n change: `tests/i18n/test.sh` must pass.
 - Interactive-mode change: `tests/interactive/test.sh` must pass.
 - Linux TTY/terminal change: additionally `tests/interactive/tty.sh`.
+- Header change: run `tests/include/check_headers.sh`.
 - Packet parsing/memory ownership change: run the sanitizer selftest
   (see CONTRIBUTING).
 - Large-result/output change: run the relevant `tests/large-batch/` case and
@@ -116,6 +117,7 @@ interactive + PTY: pass
 
 | Suite | Command | Scope |
 |:---|:---|:---|
+| header self-containment | `tests/include/check_headers.sh` | every header compiles on its own |
 | selftest | `xtate --selftest` | built-in regression |
 | i18n | `tests/i18n/test.sh` | Chinese help coverage |
 | interactive | `tests/interactive/test.sh` | non-TTY commands/help/state |

@@ -1,4 +1,5 @@
 #ifndef NOT_FOUND_PCRE2
+#include "../output-modules/output-modules.h"
 
 #include "probe-modules.h"
 

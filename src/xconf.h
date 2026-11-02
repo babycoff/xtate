@@ -6,20 +6,18 @@
 
 #include "target/target-ipaddress.h"
 #include "target/target-set.h"
-
 #include "stack/stack-src.h"
-#include "stack/stack-queue.h"
 
-#include "generate-modules/generate-modules.h"
-#include "output-modules/output-modules.h"
-#include "probe-modules/probe-modules.h"
-#include "scan-modules/scan-modules.h"
+#include "output-modules/output-types.h"
 
-#include "templ/templ-opts.h"
-#include "templ/templ-pkt.h"
-
-#include "as/as-query.h"
-#include "rawsock/rawsock.h"
+struct ScanModule;
+struct ProbeModule;
+struct GenerateModule;
+struct NetworkAdapter;
+struct NetworkStack;
+struct TemplateSet;
+struct TemplateOptions;
+struct AS_Query;
 
 /**
  * some default config
@@ -109,7 +107,7 @@ typedef struct XtateConf {
      */
     struct {
         char          ifname[256];
-        Adapter      *adapter;
+        struct NetworkAdapter *adapter;
         StackSrc      src;
         macaddress_t  source_mac;
         macaddress_t  router_mac_ipv4;
@@ -154,7 +152,7 @@ typedef struct XtateConf {
     /**
      * info of the abstract whole network tx/rx stack
      * */
-    NetStack        *stack;
+    struct NetworkStack *stack;
     unsigned         stack_buf_count;
     /**
      * PCAP info
@@ -168,22 +166,22 @@ typedef struct XtateConf {
     /**
      * template for packet making quickly.
      */
-    TmplSet         *tmplset;
-    TmplOpt         *templ_opts;
+    struct TemplateSet     *tmplset;
+    struct TemplateOptions *templ_opts;
     /**
      * probe module
      * */
-    Probe           *probe;
-    char            *probe_args;
+    struct ProbeModule    *probe;
+    char                  *probe_args;
     /**
      * scan module
      * */
-    Scanner         *scanner;
-    char            *scanner_args;
+    struct ScanModule     *scanner;
+    char                  *scanner_args;
     /**
      * generate module
      * */
-    Generator       *generator;
+    struct GenerateModule *generator;
     char            *generator_args;
     /**
      * output module

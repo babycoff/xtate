@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "xconf.h"
+#include "output-modules/output-modules.h"
 #include "util-misc/i18n.h"
 #include "version.h"
 #include "crossline/crossline.h"

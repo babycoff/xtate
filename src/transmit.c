@@ -1,4 +1,6 @@
 #include "transmit.h"
+#include "generate-modules/generate-modules.h"
+#include "scan-modules/scan-modules.h"
 
 #include <stdint.h>
 #include <stdlib.h>

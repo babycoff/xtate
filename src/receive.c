@@ -31,6 +31,7 @@
 #include "util-scan/ptrace.h"
 
 #include "output-modules/output-modules.h"
+#include "scan-modules/scan-modules.h"
 
 static uint8_t _dispatch_hash(ipaddress addr) {
     uint64_t ret = 0;

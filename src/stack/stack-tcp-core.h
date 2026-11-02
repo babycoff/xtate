@@ -10,7 +10,7 @@
 #include "../templ/templ-pkt.h"
 #include "../target/target-ipaddress.h"
 #include "../probe-modules/probe-modules.h"
-#include "../output-modules/output-modules.h"
+#include "../output-modules/output-types.h"
 
 typedef enum TCP_What {
     TCP_WHAT_TIMEOUT, /*The connection time is expired*/

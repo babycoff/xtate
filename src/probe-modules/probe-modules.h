@@ -6,7 +6,7 @@
 #include "../target/target.h"
 #include "../util-misc/configer.h"
 #include "../proto/proto-datapass.h"
-#include "../output-modules/output-modules.h"
+#include "../output-modules/output-types.h"
 
 struct XtateConf;
 

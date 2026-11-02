@@ -1,4 +1,6 @@
 #include "xconf.h"
+#include "generate-modules/generate-modules.h"
+#include "output-modules/output-modules.h"
 #include "scan-modules/scan-modules.h"
 
 #include <ctype.h>
