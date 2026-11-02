@@ -46,6 +46,7 @@ XTATE_BIN=./bin/xtate bash tests/interactive/test.sh
 | 旧发行版/CMake | Debian 10 风格 CMake 3.13 + GCC 8 构建 |
 | musl/libc | Alpine musl 构建 |
 | 静态链接 | Alpine `--static --minimal`，`file` + selftest |
+| Linux 完整矩阵 | `bash tests/platform/matrix.sh`（仅大陆网络加 `XTATE_CN_MIRROR=1`） |
 
 常用命令：
 

@@ -49,6 +49,7 @@ In addition to Tier 0, verify the affected dimension:
 | old distro / CMake | Debian 10-style CMake 3.13 + GCC 8 build |
 | musl/libc | Alpine musl build |
 | static linking | Alpine `--static --minimal`, then `file` and `--selftest` |
+| full Linux matrix | `bash tests/platform/matrix.sh` (add `XTATE_CN_MIRROR=1` only in mainland China) |
 
 Useful commands:
 

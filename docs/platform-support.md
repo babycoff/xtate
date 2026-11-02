@@ -5,6 +5,16 @@
 Xtate is a 64-bit little-endian C99 project. Optional libraries can be disabled;
 the basic scanner needs libpcap and a supported compiler.
 
+## Repeatable matrix
+
+`tests/platform/matrix.sh` runs the Debian 10 and Alpine/musl builds in Docker.
+By default it uses upstream images/archives. For a mainland network, opt in
+explicitly (never the default):
+
+```bash
+XTATE_CN_MIRROR=1 bash tests/platform/matrix.sh
+```
+
 ## Verified baseline
 
 | Environment | Compiler | CMake | Generator | Result |

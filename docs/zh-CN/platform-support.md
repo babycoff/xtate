@@ -4,6 +4,15 @@
 
 Xtate 是 64 位小端 C99 项目，可选依赖可以关闭；基础扫描需要 libpcap 和受支持的编译器。
 
+## 可重复矩阵
+
+`tests/platform/matrix.sh` 用 Docker 跑 Debian 10 和 Alpine/musl 构建。
+默认使用上游镜像/归档；大陆网络需显式 opt-in，不能作为默认：
+
+```bash
+XTATE_CN_MIRROR=1 bash tests/platform/matrix.sh
+```
+
 ## 已验证基线
 
 | 环境 | 编译器 | CMake | 生成器 | 结果 |
