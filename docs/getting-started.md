@@ -51,14 +51,16 @@ cd xtate
 ### Quick build with build.sh
 
 ```bash
-./build.sh                 # Release, GCC   -> ./bin/xtate
-./build.sh clang           # Release, Clang -> ./bin/xtate
-./build.sh debug           # Debug, GCC     -> ./bin/xtate_debug
-./build.sh debug clang     # Debug, Clang   -> ./bin/xtate_debug
+./build.sh                                  # interactive: compiler + config
+./build.sh --compiler gcc --config release
+./build.sh --compiler clang --config debug
 ```
 
-`build.sh` wipes `build/`, configures CMake and copies the resulting binary into
-`bin/`. The two-argument form takes `debug` and/or a compiler name.
+Outputs: `bin/xtate` / `bin/xtate_debug` aliases plus per-toolchain files
+`bin/xtate-<compiler>-<config>`. Build trees are isolated as
+`build-<compiler>-<config>`; `./clean.sh` removes them and `bin/xtate*` while
+preserving `bin/.gitignore`. The legacy forms `./build.sh debug clang` still
+work.
 
 ### Manual CMake build
 

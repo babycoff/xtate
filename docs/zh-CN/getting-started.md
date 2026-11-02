@@ -48,13 +48,15 @@ cd xtate
 ### 使用 build.sh 快速构建
 
 ```bash
-./build.sh                 # Release，GCC   -> ./bin/xtate
-./build.sh clang           # Release，Clang -> ./bin/xtate
-./build.sh debug           # Debug，GCC     -> ./bin/xtate_debug
-./build.sh debug clang     # Debug，Clang   -> ./bin/xtate_debug
+./build.sh                                  # 交互：选择编译器和配置
+./build.sh --compiler gcc --config release
+./build.sh --compiler clang --config debug
 ```
 
-`build.sh` 会清空 `build/`、配置 CMake，并把产物复制到 `bin/`。双参数形式分别接受 `debug` 和/或编译器名。
+输出：`bin/xtate` / `bin/xtate_debug` 别名，以及
+`bin/xtate-<compiler>-<config>` 按工具链命名的文件。构建目录为
+`build-<compiler>-<config>`；`./clean.sh` 清理它们和 `bin/xtate*`，保留
+`bin/.gitignore`。旧的 `./build.sh debug clang` 形式仍兼容。
 
 ### 手动 CMake 构建
 

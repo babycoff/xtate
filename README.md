@@ -201,9 +201,15 @@ The README is the landing page. The manual lives in [`docs/`](docs/README.md):
 ```bash
 sudo apt install build-essential cmake pkg-config libpcap-dev \
   libssl-dev libpcre2-dev libxml2-dev libbson-dev libmongoc-dev
-./build.sh                 # release build → bin/xtate
-./build.sh debug clang     # debug build with Clang
+./build.sh                                  # interactive: compiler + config
+./build.sh --compiler gcc --config release  # explicit
+./build.sh --compiler clang --config debug  # explicit debug
 ```
+
+Outputs: `bin/xtate` (release alias), `bin/xtate_debug` (debug alias), and
+`bin/xtate-<compiler>-<config>` per-toolchain files. Build trees are
+`build-<compiler>-<config>`; `./clean.sh` removes them and `bin/xtate*` while
+preserving `bin/.gitignore`.
 
 Ubuntu 22.04/24.04 are the reference environments. On Fedora/Arch, install the equivalent development packages (`libpcap`, `openssl`, `pcre2`, `libxml2`, `libbson`, `mongo-c-driver`).
 

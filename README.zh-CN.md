@@ -199,9 +199,15 @@ README 是落地页，手册在 [`docs/`](docs/zh-CN/README.md) 目录下：
 ```bash
 sudo apt install build-essential cmake pkg-config libpcap-dev \
   libssl-dev libpcre2-dev libxml2-dev libbson-dev libmongoc-dev
-./build.sh                 # release build → bin/xtate
-./build.sh debug clang     # debug build with Clang
+./build.sh                                  # 交互：选择编译器和配置
+./build.sh --compiler gcc --config release  # 显式指定
+./build.sh --compiler clang --config debug  # 显式 Debug
 ```
+
+输出：`bin/xtate`（Release 别名）、`bin/xtate_debug`（Debug 别名），以及
+`bin/xtate-<compiler>-<config>` 按工具链命名的文件。构建目录为
+`build-<compiler>-<config>`；`./clean.sh` 清理它们和 `bin/xtate*`，保留
+`bin/.gitignore`。
 
 Ubuntu 22.04/24.04 是参考环境。在 Fedora/Arch 上，请安装对应的开发包（`libpcap`、`openssl`、`pcre2`、`libxml2`、`libbson`、`mongo-c-driver`）。
 
