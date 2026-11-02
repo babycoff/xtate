@@ -298,4 +298,8 @@ void probe_conn_close_nothing(ProbeState *state, ProbeTarget *target);
 bool probe_all_response_valid(ProbeTarget *target, const unsigned char *px,
                               unsigned sizeof_px);
 
+#ifndef NOT_FOUND_OPENSSL
+int tlsstate_scratch_selftest(void);
+#endif
+
 #endif

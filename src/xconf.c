@@ -3,6 +3,7 @@
 #include "generate-modules/generate-modules.h"
 #include "output-modules/output-modules.h"
 #include "scan-modules/scan-modules.h"
+#include "probe-modules/probe-modules.h"
 
 #include <ctype.h>
 #include <limits.h>
@@ -4685,6 +4686,9 @@ int xconf_selftest(void) {
         x += ndp_selftest();
         x += preprocess_selftest();
         x += tcp_seg_ack_selftest();
+#ifndef NOT_FOUND_OPENSSL
+        x += tlsstate_scratch_selftest();
+#endif
     }
 
     if (x != 0)

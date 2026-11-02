@@ -715,19 +715,31 @@ static bool output_tls_version(OutConf *out, ProbeTarget *target, SSL *ssl) {
     return true;
 }
 
-static void _extend_buffer(unsigned char **buf, size_t *buf_len) {
+static bool _extend_buffer(unsigned char **buf, size_t *buf_len) {
+    size_t new_len;
+
+    if (buf == NULL || buf_len == NULL || *buf == NULL)
+        return false;
+
     if (*buf_len >= TSP_DATA_MAX_SIZE) {
         LOG(LEVEL_WARN,
             "(TSP BUFFER) maximum scratch size reached (%u bytes)\n",
             (unsigned)*buf_len);
-        return;
+        return false;
     }
 
+    if (*buf_len > TSP_DATA_MAX_SIZE / 2)
+        new_len = TSP_DATA_MAX_SIZE;
+    else
+        new_len = *buf_len * 2;
+    if (new_len <= *buf_len)
+        return false;
+
     LOG(LEVEL_DETAIL, "(TSP BUFFER extending...) >>>\n");
-    unsigned char *tmp_ptr;
-    tmp_ptr  = REALLOC(*buf, *buf_len * 2);
-    *buf     = tmp_ptr;
-    *buf_len = *buf_len * 2;
+    unsigned char *tmp_ptr = REALLOC(*buf, new_len);
+    *buf                   = tmp_ptr;
+    *buf_len               = new_len;
+    return true;
 }
 
 /*init public SSL_CTX*/
@@ -1033,8 +1045,9 @@ static void tlsstate_make_hello(DataPass *pass, ProbeState *state,
         offset = 0;
         while (true) {
             /*extend if buffer is not enough*/
-            if (tls_state->data_size - offset <= 0) {
-                _extend_buffer(&tls_state->data, &tls_state->data_size);
+            if (offset >= tls_state->data_size &&
+                !_extend_buffer(&tls_state->data, &tls_state->data_size)) {
+                goto error1;
             }
 
             /*get ClientHello here*/
@@ -1256,9 +1269,11 @@ static unsigned tlsstate_parse_response(DataPass *pass, ProbeState *state,
                     size_t offset = 0;
 
                     while (true) {
-                        if (tls_state->data_size - offset <= 0) {
-                            _extend_buffer(&tls_state->data,
-                                           &tls_state->data_size);
+                        if (offset >= tls_state->data_size &&
+                            !_extend_buffer(&tls_state->data,
+                                            &tls_state->data_size)) {
+                            state->state = TSP_STATE_NEED_CLOSE;
+                            break;
                         }
 
                         res = BIO_read(
@@ -1351,9 +1366,11 @@ static unsigned tlsstate_parse_response(DataPass *pass, ProbeState *state,
                         _tsp_state_to_string(state->state), res);
                     size_t offset = 0;
                     while (true) {
-                        if (tls_state->data_size - offset <= 0) {
-                            _extend_buffer(&tls_state->data,
-                                           &tls_state->data_size);
+                        if (offset >= tls_state->data_size &&
+                            !_extend_buffer(&tls_state->data,
+                                            &tls_state->data_size)) {
+                            state->state = TSP_STATE_NEED_CLOSE;
+                            break;
                         }
 
                         res = BIO_read(
@@ -1396,8 +1413,11 @@ static unsigned tlsstate_parse_response(DataPass *pass, ProbeState *state,
                  * buffer.*/
                 size_t offset = 0;
                 while (true) {
-                    if (tls_state->data_size - offset <= 0) {
-                        _extend_buffer(&tls_state->data, &tls_state->data_size);
+                    if (offset >= tls_state->data_size &&
+                        !_extend_buffer(&tls_state->data,
+                                        &tls_state->data_size)) {
+                        state->state = TSP_STATE_NEED_CLOSE;
+                        break;
                     }
 
                     ERR_clear_error();
@@ -1410,6 +1430,9 @@ static unsigned tlsstate_parse_response(DataPass *pass, ProbeState *state,
                         break;
                     }
                 }
+
+                if (state->state == TSP_STATE_NEED_CLOSE)
+                    break;
 
                 /*have got decoded data from SSL record*/
                 if (offset > 0) {
@@ -1453,9 +1476,11 @@ static unsigned tlsstate_parse_response(DataPass *pass, ProbeState *state,
                             _tsp_state_to_string(state->state), sub_res);
                         size_t sub_offset = 0;
                         while (true) {
-                            if (tls_state->data_size - sub_offset <= 0) {
-                                _extend_buffer(&tls_state->data,
-                                               &tls_state->data_size);
+                            if (sub_offset >= tls_state->data_size &&
+                                !_extend_buffer(&tls_state->data,
+                                                &tls_state->data_size)) {
+                                state->state = TSP_STATE_NEED_CLOSE;
+                                break;
                             }
 
                             sub_res = BIO_read(
@@ -1570,5 +1595,29 @@ Probe TlsStateProbe = {
     .conn_close_cb     = &tlsstate_conn_close,
     .close_cb          = &tlsstate_close,
 };
+
+
+int tlsstate_scratch_selftest(void) {
+    unsigned char *buf = MALLOC(TSP_DATA_INIT_SIZE);
+    size_t         len = TSP_DATA_INIT_SIZE;
+    int            x   = 0;
+
+    if (buf == NULL)
+        return 1;
+
+    while (len < TSP_DATA_MAX_SIZE) {
+        if (!_extend_buffer(&buf, &len) || len > TSP_DATA_MAX_SIZE) {
+            x++;
+            break;
+        }
+    }
+    if (len != TSP_DATA_MAX_SIZE)
+        x++;
+    if (_extend_buffer(&buf, &len))
+        x++;
+
+    FREE(buf);
+    return x;
+}
 
 #endif

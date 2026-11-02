@@ -173,8 +173,9 @@ The last row dominates: pure TCP state is cheap, a TLS connection is not, and mo
 of the per-connection cost is OpenSSL. This engine is for targeted evidence on interesting
 hosts, not for a TLS census of the Internet.
 
-The per-connection TLS scratch buffer doubles on demand but is capped at **1 MiB**; at the
-cap it stops growing and logs a warning instead of allowing unbounded memory growth.
+The per-connection TLS scratch buffer doubles on demand but is capped at **1 MiB**; if a
+flight would need more, the connection is closed and a warning is logged instead of allowing
+unbounded memory growth.
 
 Table sizing is a guess, not a budget: roughly `rate / 5 / handlers` buckets, rounded up to a
 power of two, floored at ten and clamped between 2^10 and 2^24. A full table does not reject
