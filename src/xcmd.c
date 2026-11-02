@@ -2,9 +2,11 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "xconf.h"
+#include "util-misc/i18n.h"
 #include "version.h"
 #include "crossline/crossline.h"
 #include "target/target-cookie.h"
@@ -18,11 +20,16 @@
 
 #ifndef _WIN32
 #include <unistd.h>
+#else
+#include <io.h>
 #endif
 
 #define READLINE_SIZE 65535
 
 static bool _should_recover = false;
+static bool _interactive_tty = false;
+static bool _interactive_save_on_exit = true;
+static bool _interactive_wants_scan = false;
 static char _exe_path[256];
 
 extern ConfParam  config_parameters[];
@@ -54,12 +61,19 @@ static ActRes ACT_run(void *conf) {
 
     /*Just do scanning while running in interactive mode*/
     xconf->op = Op_Scan;
+    _interactive_wants_scan = true;
 
     return ActRes_Finish;
 }
 
 static ActRes ACT_exit(void *conf) {
     char line[128];
+    (void)conf;
+
+    if (!_interactive_tty) {
+        _interactive_save_on_exit = false;
+        return ActRes_Finish;
+    }
 
     printf("Are you sure to exit " XTATE_NAME " without saving conf? [y/N]: ");
 
@@ -69,8 +83,8 @@ static ActRes ACT_exit(void *conf) {
     }
 
     if ((line[0] == 'y' || line[0] == 'Y') && line[1] == '\n') {
-        LOG(LEVEL_HINT, "see you next time, bye~\n");
-        exit(0);
+        _interactive_save_on_exit = false;
+        return ActRes_Finish;
     }
 
     return ActRes_Next;
@@ -91,8 +105,13 @@ static ActRes ACT_conf_recover(void *conf) {
 }
 
 static ActRes ACT_quit(void *conf) {
-    char   line[128];
-    XConf *xconf = conf;
+    char line[128];
+    (void)conf;
+
+    if (!_interactive_tty) {
+        _interactive_save_on_exit = true;
+        return ActRes_Finish;
+    }
 
     printf("Are you sure to save conf and quit " XTATE_NAME "? [y/N]: ");
 
@@ -102,16 +121,8 @@ static ActRes ACT_quit(void *conf) {
     }
 
     if ((line[0] == 'y' || line[0] == 'Y') && line[1] == '\n') {
-        int err = xconf_save_conf(xconf, XCONF_DFT_RECOVER_FILENAME);
-        if (err) {
-            LOG(LEVEL_ERROR, "failed to save configuration to %s.\n",
-                XCONF_DFT_RECOVER_FILENAME);
-        } else {
-            LOG(LEVEL_HINT, "configuration was saved to %s.\n",
-                XCONF_DFT_RECOVER_FILENAME);
-        }
-        LOG(LEVEL_HINT, "see you next time, bye~\n");
-        exit(0);
+        _interactive_save_on_exit = true;
+        return ActRes_Finish;
     }
 
     return ActRes_Next;
@@ -120,6 +131,11 @@ static ActRes ACT_quit(void *conf) {
 static ActRes ACT_clear(void *conf) {
     XConf *xconf = conf;
     char   line[128];
+
+    if (!_interactive_tty) {
+        xconf_global_refresh(xconf);
+        return ActRes_Next;
+    }
 
     printf("Are you sure to clear configuration of " XTATE_NAME "? [y/N]: ");
 
@@ -154,22 +170,6 @@ static ActRes ACT_echo_all(void *conf) {
     return ActRes_Next;
 }
 
-static ActRes ACT_help(void *conf) {
-    xprint(XTATE_NAME_TITLE_CASE
-           "'s interactive mode allows users to set params and do scan research"
-           " in a more comfortable way.\n"
-           "We can set params in key-value way one by one and adjust them "
-           "conveniently. Also, we can watch help text of all modules and "
-           "global params by `help-xxx` commands.\n"
-           "More important, interactive mode supports auto completion by <TAB> "
-           "for commands. This could be used to check concise help, too.\n"
-           "NOTE: " XTATE_NAME_TITLE_CASE
-           " would automatically save conf to `" XCONF_DFT_RECOVER_FILENAME
-           "` in every running of interactive mode, except exiting directly. So"
-           " we can recover our param settings easily.\n",
-           4, 80);
-    return ActRes_Next;
-}
 
 static ActRes ACT_update_seed(void *conf) {
     XConf *xconf = conf;
@@ -261,6 +261,8 @@ static ActRes ACT_prefix(void *conf) { return ActRes_Prefix; }
 #define PRE_CONF_READ     "conf-read"
 #define PRE_CONF_RECOVER  "conf-recover"
 
+static ActRes ACT_help(void *conf);
+
 static const XCmd config_cmd[] = {
     {"run", "Do scanning with configured parmas.", ACT_run},
     {PRE_SET_PARAM, "Set a global param of like `set key = value`.",
@@ -270,6 +272,7 @@ static const XCmd config_cmd[] = {
     {PRE_SET_OUT, "Choose an output module.", ACT_prefix},
     {PRE_SET_GEN, "Choose a generate module.", ACT_prefix},
     {"echo", "Print current configuration.", ACT_echo},
+    {"show", "Print current configuration (alias of echo).", ACT_echo},
     {"echo-all", "Print all configuration includes default settings.",
      ACT_echo_all},
     {"clear", "Refresh configuration to default except `seed`.", ACT_clear},
@@ -317,6 +320,20 @@ static const XCmd config_cmd[] = {
     {"exit", "Exit " XTATE_NAME_TITLE_CASE " directly.", ACT_exit},
 
     {0}};
+
+static ActRes ACT_help(void *conf) {
+    (void)conf;
+
+    xprint(i18n_interactive_help(), 4, 80);
+    printf("\n%s\n", i18n_tr("Commands:\n"));
+    for (unsigned i = 0; config_cmd[i].cmd; i++) {
+        printf("  %-16s %s\n", config_cmd[i].cmd,
+               i18n_tr_interactive_cmd(config_cmd[i].cmd, config_cmd[i].hint));
+    }
+    printf("\n");
+    return ActRes_Next;
+}
+
 
 /**
  * Handle subcommand for prefix command
@@ -488,9 +505,11 @@ static void CPL_scan_module(const char              *cmd,
         if (!strncasecmp(scan_modules_list[i]->name, cmd, strlen(cmd))) {
             crossline_completion_add_color(
                 p_completion, scan_modules_list[i]->name, cmd_color,
-                scan_modules_list[i]->short_desc
-                    ? scan_modules_list[i]->short_desc
-                    : scan_modules_list[i]->desc,
+                i18n_tr_module_desc(
+                    scan_modules_list[i]->name,
+                    scan_modules_list[i]->short_desc
+                        ? scan_modules_list[i]->short_desc
+                        : scan_modules_list[i]->desc),
                 help_color);
         }
     }
@@ -506,9 +525,11 @@ static void CPL_probe_module(const char              *cmd,
         if (!strncasecmp(probe_modules_list[i]->name, cmd, strlen(cmd))) {
             crossline_completion_add_color(
                 p_completion, probe_modules_list[i]->name, cmd_color,
-                probe_modules_list[i]->short_desc
-                    ? probe_modules_list[i]->short_desc
-                    : probe_modules_list[i]->desc,
+                i18n_tr_module_desc(
+                    probe_modules_list[i]->name,
+                    probe_modules_list[i]->short_desc
+                        ? probe_modules_list[i]->short_desc
+                        : probe_modules_list[i]->desc),
                 help_color);
         }
     }
@@ -524,9 +545,11 @@ static void CPL_output_module(const char              *cmd,
         if (!strncasecmp(output_modules_list[i]->name, cmd, strlen(cmd))) {
             crossline_completion_add_color(
                 p_completion, output_modules_list[i]->name, cmd_color,
-                output_modules_list[i]->short_desc
-                    ? output_modules_list[i]->short_desc
-                    : output_modules_list[i]->desc,
+                i18n_tr_module_desc(
+                    output_modules_list[i]->name,
+                    output_modules_list[i]->short_desc
+                        ? output_modules_list[i]->short_desc
+                        : output_modules_list[i]->desc),
                 help_color);
         }
     }
@@ -542,9 +565,11 @@ static void CPL_generate_module(const char              *cmd,
         if (!strncasecmp(generate_modules_list[i]->name, cmd, strlen(cmd))) {
             crossline_completion_add_color(
                 p_completion, generate_modules_list[i]->name, cmd_color,
-                generate_modules_list[i]->short_desc
-                    ? generate_modules_list[i]->short_desc
-                    : generate_modules_list[i]->desc,
+                i18n_tr_module_desc(
+                    generate_modules_list[i]->name,
+                    generate_modules_list[i]->short_desc
+                        ? generate_modules_list[i]->short_desc
+                        : generate_modules_list[i]->desc),
                 help_color);
         }
     }
@@ -613,9 +638,11 @@ static void CPL_global_conf(const char              *cmd,
             //     count += snprintf(&alias_buf[count], alias_max - count, ".");
             // }
             snprintf(&help_buf[count], help_mas - count, "\n    %s\n",
-                     config_parameters[i].short_hint
-                         ? config_parameters[i].short_hint
-                         : config_parameters[i].help_text);
+                     i18n_tr_global_param(
+                         config_parameters[i].name,
+                         config_parameters[i].short_hint
+                             ? config_parameters[i].short_hint
+                             : config_parameters[i].help_text));
 
             /**
              * print alias info as help text
@@ -633,7 +660,21 @@ static void CPL_global_conf(const char              *cmd,
     }
 }
 
+static void HDL_help_cmd(void *conf, char *subcmd) {
+    (void)conf;
+    for (unsigned i = 0; config_cmd[i].cmd; i++) {
+        if (strcasecmp(config_cmd[i].cmd, subcmd) == 0) {
+            printf("  %-16s %s\n", config_cmd[i].cmd,
+                   i18n_tr_interactive_cmd(config_cmd[i].cmd,
+                                           config_cmd[i].hint));
+            return;
+        }
+    }
+    LOG(LEVEL_ERROR, "no such interactive command: %s\n", subcmd);
+}
+
 static const XPrefix config_prefix[] = {
+    {"help", HDL_help_cmd, NULL},
     {PRE_SET_PARAM, HDL_set, CPL_global_conf},
     {PRE_SET_SCAN, HDL_set_scan, CPL_scan_module},
     {PRE_SET_PROBE, HDL_set_probe, CPL_probe_module},
@@ -677,9 +718,10 @@ static void _completion_hook(const char              *cmd,
         cmd_len = strlen(cmd);
         if (!strncasecmp(config_cmd[i].cmd, cmd, cmd_len)) {
             cmd_matched = true;
-            crossline_completion_add_color(p_completion, config_cmd[i].cmd,
-                                           cmd_color, config_cmd[i].hint,
-                                           help_color);
+            crossline_completion_add_color(
+                p_completion, config_cmd[i].cmd, cmd_color,
+                i18n_tr_interactive_cmd(config_cmd[i].cmd, config_cmd[i].hint),
+                help_color);
         }
     }
 
@@ -713,16 +755,102 @@ static const char ascii_banner[] =
     ".8P  Y8.    88    88   88    88    88.     \n"
     "YP    YP    YP    YP   YP    YP    Y88888P \n";
 
+static bool xcmd_handle_line(XConf *xconf, char *line) {
+    unsigned i;
+    unsigned prefix_idx;
+    size_t   prefix_len;
+    size_t   line_len;
+    bool     cmd_matched;
+    bool     prefix_matched;
+    ActRes   act_res;
+
+    safe_trim(line, READLINE_SIZE);
+    if (line[0] == 0)
+        return true;
+
+    line_len = strlen(line);
+
+    cmd_matched = false;
+    for (i = 0; config_cmd[i].cmd; i++) {
+        if (!strcasecmp(config_cmd[i].cmd, line)) {
+            cmd_matched = true;
+            break;
+        }
+    }
+
+    if (cmd_matched) {
+        act_res = config_cmd[i].action(xconf);
+        if (act_res == ActRes_Finish)
+            return false;
+        if (act_res == ActRes_Next)
+            return true;
+        /* ActRes_Prefix: fall through to prefix command handling. */
+    }
+
+    prefix_idx     = 0;
+    prefix_len     = 0;
+    cmd_matched    = false;
+    prefix_matched = false;
+
+    for (i = 0; config_prefix[i].prefix; i++) {
+        size_t len = strlen(config_prefix[i].prefix);
+        if (!strncasecmp(config_prefix[i].prefix, line, len)) {
+            prefix_matched = true;
+            if (len > prefix_len) {
+                prefix_len = len;
+                prefix_idx = i;
+            }
+        }
+    }
+
+    if (prefix_matched) {
+        if (line_len > prefix_len + 1 && line[prefix_len] == ' ') {
+            config_prefix[prefix_idx].handle(xconf, line + prefix_len + 1);
+        } else if (line_len == prefix_len) {
+            LOG(LEVEL_ERROR,
+                "(" XTATE_NAME
+                ") need to specify a param for the command.\n");
+        }
+        return true;
+    }
+
+    LOG(LEVEL_ERROR, "(" XTATE_NAME
+                     ") unknown input, use <TAB> to get valid commands.\n");
+    return true;
+}
+
+static void xcmd_history_path(char *buf, size_t size) {
+#ifdef _WIN32
+    const char *appdata = getenv("APPDATA");
+    if (appdata && appdata[0]) {
+        snprintf(buf, size, "%s\\xtate_history", appdata);
+        return;
+    }
+    snprintf(buf, size, ".xtate_history");
+#else
+    const char *home = getenv("HOME");
+    if (home && home[0]) {
+        snprintf(buf, size, "%s/.xtate_history", home);
+        return;
+    }
+    snprintf(buf, size, ".xtate_history");
+#endif
+}
+
 void xcmd_interactive_readline(XConf *xconf, const char *exe_path) {
-    _should_recover = true;
+    _interactive_tty = false;
+#ifdef _WIN32
+    _interactive_tty = _isatty(_fileno(stdin)) != 0;
+#else
+    _interactive_tty = isatty(fileno(stdin)) != 0;
+#endif
+    _should_recover        = _interactive_tty;
+    _interactive_save_on_exit = _interactive_tty;
     safe_strcpy(_exe_path, 256, exe_path);
 
-    /**
-     * Print Banner
-     */
-    if (xconf->have_read_conf) {
+    if (_interactive_tty && xconf->have_read_conf) {
         LOG(LEVEL_HINT, "configuration has been recovered.\n");
-    } else {
+    } else if (_interactive_tty) {
         printf("\n");
         xprint_with_head(ascii_banner, 8, 80);
         printf("\n");
@@ -732,102 +860,52 @@ void xcmd_interactive_readline(XConf *xconf, const char *exe_path) {
                80);
         printf("\n");
         xprint("Use <TAB> to see all commands and do auto completions.", 4, 80);
-        printf("\n");
-        printf("\n");
+        printf("\n\n");
     }
 
-    int      err;
-    unsigned i;
-    unsigned prefix_idx;
-    size_t   prefix_len;
-    size_t   line_len;
-    bool     cmd_matched;
-    bool     prefix_matched;
-    ActRes   act_res;
-    char    *line = MALLOC(READLINE_SIZE * sizeof(char));
+    char *line = MALLOC(READLINE_SIZE * sizeof(char));
+    char  history_path[512];
 
-    crossline_completion_register(_completion_hook);
-    crossline_prompt_color_set(CROSSLINE_FGCOLOR_BRIGHT |
-                               CROSSLINE_FGCOLOR_CYAN |
-                               CROSSLINE_BGCOLOR_DEFAULT);
-
-    while (NULL !=
-           crossline_readline(XTATE_NAME_ALL_CAPS "> ", line, READLINE_SIZE)) {
-        prefix_idx     = 0;
-        prefix_len     = 0;
-        cmd_matched    = false;
-        prefix_matched = false;
-
-        /**
-         * NOTE: the line is trimed.
-         */
-        safe_trim(line, READLINE_SIZE);
-        if (line[0] == 0)
-            continue;
-
-        line_len = strlen(line);
-
-        /**
-         * Command
-         */
-        for (i = 0; config_cmd[i].cmd; i++) {
-            if (!strcasecmp(config_cmd[i].cmd, line)) {
-                cmd_matched = true;
-                break;
-            }
-        }
-
-        if (cmd_matched) {
-            act_res = config_cmd[i].action(xconf);
-            if (act_res == ActRes_Next)
-                continue;
-            else if (act_res == ActRes_Finish)
+    if (_interactive_tty) {
+        xcmd_history_path(history_path, sizeof(history_path));
+        crossline_completion_register(_completion_hook);
+        crossline_prompt_color_set(CROSSLINE_FGCOLOR_BRIGHT |
+                                   CROSSLINE_FGCOLOR_CYAN |
+                                   CROSSLINE_BGCOLOR_DEFAULT);
+        crossline_history_load(history_path);
+        while (NULL != crossline_readline(XTATE_NAME_ALL_CAPS "> ", line,
+                                          READLINE_SIZE)) {
+            if (!xcmd_handle_line(xconf, line))
                 break;
         }
-
-        /**
-         * Prefix Command: matched the longest
-         */
-        for (i = 0; config_prefix[i].prefix; i++) {
-            size_t len = strlen(config_prefix[i].prefix);
-            /*like `prefix-cmd subcmd`*/
-            if (!strncasecmp(config_prefix[i].prefix, line, len)) {
-                prefix_matched = true;
-                if (len > prefix_len) {
-                    prefix_len = len;
-                    prefix_idx = i;
-                }
-            }
-        }
-
-        if (prefix_matched) {
-            /*has valid subcmd*/
-            if (line_len > prefix_len + 1 && line[prefix_len] == ' ') {
-                config_prefix[prefix_idx].handle(xconf, line + prefix_len + 1);
-                continue;
-            } else if (line_len == prefix_len) {
-                LOG(LEVEL_ERROR,
-                    "(" XTATE_NAME
-                    ") need to specify a param for the command.\n");
-                continue;
-            }
-        }
-
-        /*cannot match cmds and prefixes*/
-        LOG(LEVEL_ERROR, "(" XTATE_NAME
-                         ") unknown input, use <TAB> to get valid commands.\n");
-    }
-
-    err = xconf_save_conf(xconf, XCONF_DFT_RECOVER_FILENAME);
-    if (err) {
-        LOG(LEVEL_ERROR, "failed to save configuration to %s.\n",
-            XCONF_DFT_RECOVER_FILENAME);
+        crossline_history_save(history_path);
     } else {
-        LOG(LEVEL_HINT, "configuration was saved to %s.\n",
-            XCONF_DFT_RECOVER_FILENAME);
+        /* Deterministic script mode: no banner, no ANSI, no line editor,
+         * no history and no automatic restart after the commands finish. */
+        while (fgets(line, READLINE_SIZE, stdin)) {
+            if (!xcmd_handle_line(xconf, line))
+                break;
+        }
+    }
+
+    if (_interactive_save_on_exit) {
+        int err = xconf_save_conf(xconf, XCONF_DFT_RECOVER_FILENAME);
+        if (err) {
+            LOG(LEVEL_ERROR, "failed to save configuration to %s.\n",
+                XCONF_DFT_RECOVER_FILENAME);
+        } else {
+            LOG(LEVEL_HINT, "configuration was saved to %s.\n",
+                XCONF_DFT_RECOVER_FILENAME);
+        }
     }
 
     FREE(line);
+
+    /* `quit`/`exit`/EOF must leave the program; only `run` falls through to
+     * the normal scan path. Without this, non-TTY scripts print the normal
+     * startup banner after quitting interactive mode. */
+    if (!_interactive_wants_scan)
+        exit(0);
 }
 
 int xcmd_reboot_for_interact(const char *path, const char *conf) {

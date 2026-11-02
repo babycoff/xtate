@@ -124,6 +124,7 @@ static const I18nEntry i18n_catalog[] = {
      "strings fall back to English.",
      "设置人类可读帮助文本的语言：en 或 zh-CN。未翻译的字符串回退到英文。"},
     {"Set help language.", "设置帮助语言。"},
+    {"Commands:\n", "命令：\n"},
 };
 
 static I18nLanguage i18n_language = I18N_EN;
@@ -627,4 +628,81 @@ const char *i18n_tr_module_desc(const char *module, const char *english) {
             return i18n_module_desc_help[i].zh_cn;
     }
     return i18n_tr(english);
+}
+
+typedef struct I18nInteractiveCmdEntry {
+    const char *name;
+    const char *zh_cn;
+} I18nInteractiveCmdEntry;
+
+static const I18nInteractiveCmdEntry i18n_interactive_cmds[] = {
+    {"run", "使用当前配置执行扫描。"},
+    {"set", "设置全局参数，例如 `set key = value`。"},
+    {"set-scan", "选择扫描模块。"},
+    {"set-probe", "选择探测模块。"},
+    {"set-out", "选择输出模块。"},
+    {"set-gen", "选择生成模块。"},
+    {"echo", "打印当前配置。"},
+    {"echo-all", "打印包含默认值的全部配置。"},
+    {"show", "打印当前配置（echo 的别名）。"},
+    {"clear", "恢复默认配置，保留 seed。"},
+    {"update-seed", "更新全局随机种子。"},
+    {"unset-scan", "取消当前扫描模块及其参数。"},
+    {"unset-probe", "取消当前探测模块及其参数。"},
+    {"unset-out", "取消当前输出模块及其参数。"},
+    {"unset-gen", "取消当前生成模块及其参数。"},
+    {"list-param", "列出全部全局参数及帮助。"},
+    {"list-scan", "列出全部扫描模块。"},
+    {"list-probe", "列出全部探测模块。"},
+    {"list-out", "列出全部输出模块。"},
+    {"list-gen", "列出全部生成模块。"},
+    {"help-param", "显示指定全局参数的详细帮助。"},
+    {"help-scan", "显示指定扫描模块的帮助。"},
+    {"help-probe", "显示指定探测模块的帮助。"},
+    {"help-out", "显示指定输出模块的帮助。"},
+    {"help-gen", "显示指定生成模块的帮助。"},
+    {"search-param", "模糊搜索全局参数。"},
+    {"search-module", "模糊搜索模块。"},
+    {"conf-save", "保存当前配置到指定文件。"},
+    {"conf-read", "从指定文件读取配置。"},
+    {"conf-recover", "从 recover.conf 读取配置。"},
+    {"version", "显示版本信息。"},
+    {"help", "显示交互式命令帮助。"},
+    {"quit", "保存配置并退出。"},
+    {"exit", "不保存配置直接退出。"},
+};
+
+const char *i18n_tr_interactive_cmd(const char *cmd, const char *english) {
+    if (i18n_language != I18N_ZH_CN || !cmd)
+        return english;
+    for (unsigned i = 0;
+         i < sizeof(i18n_interactive_cmds) / sizeof(i18n_interactive_cmds[0]);
+         i++) {
+        if (strcmp(cmd, i18n_interactive_cmds[i].name) == 0)
+            return i18n_interactive_cmds[i].zh_cn;
+    }
+    return english;
+}
+
+const char *i18n_interactive_help(void) {
+    if (i18n_language == I18N_ZH_CN) {
+        return "Xtate 交互模式可以逐项设置参数并执行扫描。\n"
+               "使用 `set key = value` 设置全局参数，`set-scan`/`set-probe` 等"
+               "选择模块。\n"
+               "按 <TAB> 查看命令、参数和模块补全；`help-param`/`help-scan` "
+               "等查看详细帮助。\n"
+               "`run` 执行扫描，`quit` 保存并退出，`exit` 不保存直接退出。\n"
+               "配置会自动保存到 `recover.conf`，交互历史会保存在用户目录。\n";
+    }
+    return "Xtate"
+           "'s interactive mode lets you set parameters one by one and run "
+           "scans.\n"
+           "Use `set key = value` for global params and "
+           "`set-scan`/`set-probe`/... for modules.\n"
+           "Press <TAB> for commands, params and modules; use "
+           "`help-param`/`help-scan`/... for details.\n"
+           "`run` starts scanning, `quit` saves and exits, `exit` exits "
+           "without saving.\n"
+           "Configuration is saved to `recover.conf`; history is kept in your "
+           "home directory.\n";
 }

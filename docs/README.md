@@ -19,6 +19,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 | Chinese help / localization | [Help i18n](./help-i18n.md) |
 | Windows optional dependencies | [Windows dependencies](./windows-dependencies.md) |
 | Build artifact names | [Build artifacts](./build-artifacts.md) |
+| Interactive mode | [Interactive mode](./interactive-mode.md) |
 
 ## Contents
 
@@ -33,6 +34,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 - [Chinese help and i18n](./help-i18n.md) — `--lang`, catalog fallback and UTF-8 help layout
 - [Windows optional dependencies](./windows-dependencies.md) — vcpkg/MSYS2 setup for PCRE2, LibXml2, bson/mongoc and MinGW caveats
 - [Build artifacts](./build-artifacts.md) — aliases vs per-toolchain binaries, Debug names and DLLs
+- [Interactive mode](./interactive-mode.md) — commands, TTY/script mode, history and completion
 
 ### How it works
 

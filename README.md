@@ -303,7 +303,7 @@ xtate --list-out              # 7 output modules
 xtate --list-gen              # 5 generate modules
 xtate --help-scan zbanner     # module-specific parameters
 xtate --lang zh --help        # Chinese human help (English fallback for untranslated strings)
-xtate --interact              # interactive shell with tab completion
+xtate --interact              # interactive shell (TTY: completion/history; pipe: scripts)
 ```
 
 ## Papers and citation

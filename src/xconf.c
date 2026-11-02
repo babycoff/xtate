@@ -2383,6 +2383,10 @@ static ConfRes SET_lang(void *conf, const char *name, const char *value) {
     UNUSEDPARM(conf);
     UNUSEDPARM(name);
 
+    /* xconf_echo() calls setters with a NULL value to print the current value. */
+    if (!value)
+        return Conf_OK;
+
     if (!i18n_set_language(value)) {
         LOG(LEVEL_ERROR, "invalid language \"%s\"; expected en or zh-CN.\n",
             value);

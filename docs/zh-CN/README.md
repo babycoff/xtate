@@ -19,6 +19,7 @@
 | 中文帮助 / 本地化 | [帮助 i18n](./help-i18n.md) |
 | Windows 可选依赖 | [Windows 依赖](./windows-dependencies.md) |
 | 构建产物命名 | [构建产物](./build-artifacts.md) |
+| 交互式模式 | [交互式模式](./interactive-mode.md) |
 
 ## 目录
 
