@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #define XTS_RATE_CACHE 8 /*must be power of 2*/
-#define XTS_ADD_SIZE   30
+#define XTS_ADD_SIZE   96
 
 typedef struct XtatusPrintItem {
     uint64_t cur_count;

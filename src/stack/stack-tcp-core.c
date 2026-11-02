@@ -67,6 +67,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -93,6 +94,11 @@
 #define TCP_CORE_DEFAULT_EXPIRE 30 /* half a minute before destroying tcb */
 #define TCP_CORE_DEFAULT_MSS    1460
 #define TCP_CORE_RTO_SECS       1
+/* Per-table memory budget for live TCBs. A stateful scan must not turn a very
+ * high packet rate into unbounded heap growth; excess connections are dropped
+ * rather than queued. */
+#define TCP_CORE_TCB_MEMORY_LIMIT (16u * 1024u * 1024u)
+#define TCP_CORE_TCB_MIN_ACTIVE   1024u
 
 static bool _is_tcp_debug = false;
 
@@ -183,6 +189,8 @@ struct TCP_ConnectionTable {
     unsigned expire;
 
     uint64_t active_count;
+    uint64_t tcb_limit;
+    uint64_t tcb_dropped;
     uint64_t entropy;
 };
 
@@ -208,6 +216,10 @@ enum DestroyReason {
 };
 
 uint64_t tcpcon_active_count(TCP_Table *tcpcon) { return tcpcon->active_count; }
+
+uint64_t tcpcon_tcb_limit(TCP_Table *tcpcon) { return tcpcon->tcb_limit; }
+
+uint64_t tcpcon_tcb_dropped(TCP_Table *tcpcon) { return tcpcon->tcb_dropped; }
 
 bool tcb_is_active(TCB *tcb) { return tcb->is_active == 1; }
 
@@ -310,6 +322,16 @@ void tcpcon_timeouts(TCP_Table *tcpcon, unsigned secs, unsigned usecs) {
 
 /***************************************************************************
  ***************************************************************************/
+static uint64_t _tcp_tcb_limit_for_buckets(size_t entry_count) {
+    uint64_t by_memory = TCP_CORE_TCB_MEMORY_LIMIT / sizeof(TCB);
+    uint64_t by_bucket = (uint64_t)entry_count * 2;
+    uint64_t limit     = by_bucket < by_memory ? by_bucket : by_memory;
+
+    if (limit < TCP_CORE_TCB_MIN_ACTIVE)
+        limit = TCP_CORE_TCB_MIN_ACTIVE;
+    return limit;
+}
+
 TCP_Table *tcpcon_create_table(size_t entry_count, NetStack *stack,
                                TmplPkt *tcp_template, TmplPkt *syn_template,
                                TmplPkt *rst_template, OutConf *out,
@@ -338,6 +360,8 @@ TCP_Table *tcpcon_create_table(size_t entry_count, NetStack *stack,
     /* Create the table. */
     tcpcon->entries = MALLOC(entry_count * sizeof(TCB *));
     memset(tcpcon->entries, 0, entry_count * sizeof(TCB *));
+
+    tcpcon->tcb_limit = _tcp_tcb_limit_for_buckets(entry_count);
 
     tcpcon->expire = expire;
     if (tcpcon->expire == 0)
@@ -543,6 +567,18 @@ TCB *tcpcon_create_tcb(TCP_Table *tcpcon, ipaddress ip_me, ipaddress ip_them,
     if (tcb != NULL) {
         /* If it already exists, just return the existing one */
         return tcb;
+    }
+
+    if (tcpcon->active_count >= tcpcon->tcb_limit) {
+        tcpcon->tcb_dropped++;
+        if (tcpcon->tcb_limit > 0 &&
+            (tcpcon->tcb_dropped == 1 || tcpcon->tcb_dropped % 10000 == 0)) {
+            LOG(LEVEL_WARN,
+                "TCP table reached its active-TCB budget (%" PRIu64
+                "), dropping new stateful connection (dropped=%" PRIu64 ")\n",
+                tcpcon->tcb_limit, tcpcon->tcb_dropped);
+        }
+        return NULL;
     }
 
     /* Allocate a new TCB, using a pool */
@@ -1601,6 +1637,30 @@ int tcp_seg_ack_selftest(void) {
 
     TCP_SELFTEST_CHECK(tcpapi_set_timeout(NULL, 1, 0) == SOCKERR_EBADF, 8);
     TCP_SELFTEST_CHECK(tcpapi_close(NULL) == SOCKERR_EBADF, 9);
+
+    TCP_SELFTEST_CHECK(_tcp_tcb_limit_for_buckets(0) ==
+                           TCP_CORE_TCB_MIN_ACTIVE,
+                       10);
+    TCP_SELFTEST_CHECK(_tcp_tcb_limit_for_buckets(1u << 24) <=
+                           TCP_CORE_TCB_MEMORY_LIMIT / sizeof(TCB),
+                       11);
+
+    {
+        TCB       *entries[1] = {0};
+        TCP_Table  table;
+        ipaddress  ip_me   = {.version = 4, .ipv4 = 0x0a000001};
+        ipaddress  ip_them = {.version = 4, .ipv4 = 0x0a000002};
+
+        memset(&table, 0, sizeof(table));
+        table.entries   = entries;
+        table.mask      = 0;
+        table.tcb_limit = 0;
+
+        TCP_SELFTEST_CHECK(tcpcon_create_tcb(&table, ip_me, ip_them, 1234, 80, 1,
+                                             1, 64, 0, NULL, 0, 0) == NULL,
+                           12);
+        TCP_SELFTEST_CHECK(table.tcb_dropped == 1, 13);
+    }
 
     return 0;
 #undef TCP_SELFTEST_CHECK

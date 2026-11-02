@@ -479,6 +479,11 @@ static void tcpstate_handle(unsigned th_idx, uint64_t entropy,
                 tcpcon, ip_me, ip_them, port_me, port_them, seqno_me,
                 seqno_them + 1, recved->parsed.ip_ttl, mss_them,
                 TcpStateScan.probe, recved->secs, recved->usecs);
+            if (tcb == NULL) {
+                /* The active-TCB budget is full. The open result is already
+                 * recorded above; do not run the probe without a TCB. */
+                return;
+            }
         }
         stack_incoming_tcp(tcpcon, tcb, TCP_WHAT_SYNACK, 0, 0, recved->secs,
                            recved->usecs, seqno_them + 1, seqno_me);
@@ -575,15 +580,20 @@ static void tcpstate_close() {
 }
 
 static void tcpstate_status(char *status) {
-    uint64_t tcb_count = 0;
+    uint64_t tcb_count   = 0;
+    uint64_t tcb_limit   = 0;
+    uint64_t tcb_dropped = 0;
 
     if (tcpcon_set.tcpcons) {
         for (unsigned i = 0; i < tcpcon_set.count; i++) {
             tcb_count += tcpcon_active_count(tcpcon_set.tcpcons[i]);
+            tcb_limit += tcpcon_tcb_limit(tcpcon_set.tcpcons[i]);
+            tcb_dropped += tcpcon_tcb_dropped(tcpcon_set.tcpcons[i]);
         }
     }
 
-    snprintf(status, XTS_ADD_SIZE, "tcb=%" PRIu64, tcb_count);
+    snprintf(status, XTS_ADD_SIZE, "tcb=%" PRIu64 "/%" PRIu64 " drop=%" PRIu64,
+             tcb_count, tcb_limit, tcb_dropped);
 }
 
 Scanner TcpStateScan = {

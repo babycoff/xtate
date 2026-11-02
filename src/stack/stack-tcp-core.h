@@ -71,6 +71,10 @@ TCB *tcpcon_create_tcb(TCP_Table *tcpcon, ipaddress ip_src, ipaddress ip_dst,
  */
 uint64_t tcpcon_active_count(TCP_Table *tcpcon);
 
+uint64_t tcpcon_tcb_limit(TCP_Table *tcpcon);
+
+uint64_t tcpcon_tcb_dropped(TCP_Table *tcpcon);
+
 bool tcb_is_active(TCB *tcb);
 
 SockRes tcpapi_set_timeout(TCP_Stack *socket, unsigned secs, unsigned usecs);

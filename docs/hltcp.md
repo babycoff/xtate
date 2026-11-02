@@ -178,8 +178,11 @@ flight would need more, the connection is closed and a warning is logged instead
 unbounded memory growth.
 
 Table sizing is a guess, not a budget: roughly `rate / 5 / handlers` buckets, rounded up to a
-power of two, floored at ten and clamped between 2^10 and 2^24. A full table does not reject
-new connections, it just grows longer chains, and pooled TCBs keep peak usage resident.
+power of two, floored at ten and clamped between 2^10 and 2^24. In addition, each table has an
+active-TCB budget of `min(2 x buckets, 16 MiB / sizeof(TCB))` with a floor of 1024. When it is
+exhausted, a new SYN-ACK is still reported as open, but no probe state is created for it; the
+connection is dropped and counted. Status prints `tcb=<active>/<limit> drop=<dropped>`.
+Pooled TCBs keep peak memory resident, but cannot exceed the budget.
 
 ## Capacity and timeouts
 
