@@ -125,6 +125,10 @@ static const I18nEntry i18n_catalog[] = {
      "设置人类可读帮助文本的语言：en 或 zh-CN。未翻译的字符串回退到英文。"},
     {"Set help language.", "设置帮助语言。"},
     {"Commands:\n", "命令：\n"},
+    {"Type `help` for commands, <TAB> for completion.\n",
+     "输入 `help` 查看命令，<TAB> 补全。\n"},
+    {"Use `set` to configure, `run` to scan, `quit` to exit.\n",
+     "用 `set` 配置，`run` 扫描，`quit` 退出。\n"},
 };
 
 static I18nLanguage i18n_language = I18N_EN;

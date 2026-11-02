@@ -4378,6 +4378,50 @@ void xconf_print_help() {
     printf("\n\n\n");
 }
 
+static bool conf_name_has_token(const char *name, const char *token) {
+    size_t token_len = strlen(token);
+    const char *p    = name;
+    while ((p = safe_stristr(p, token)) != NULL) {
+        bool left  = p == name || p[-1] == '-' || p[-1] == ' ';
+        char right = p[token_len];
+        bool right_ok = right == 0 || right == '-' || right == ' ';
+        if (left && right_ok)
+            return true;
+        p++;
+    }
+    return false;
+}
+
+void xconf_print_help_filter(const char *filter) {
+    unsigned count = 0;
+
+    printf("\n");
+    for (unsigned i = 0; config_parameters[i].name; i++) {
+        if (!config_parameters[i].help_text)
+            continue;
+        bool matched = !filter || !filter[0] ||
+                       conf_name_has_token(config_parameters[i].name, filter);
+        for (unsigned j = 0; !matched && config_parameters[i].alt_names[j]; j++) {
+            if (conf_name_has_token(config_parameters[i].alt_names[j], filter))
+                matched = true;
+        }
+        if (!matched)
+            continue;
+
+        printf("  --%s", config_parameters[i].name);
+        for (unsigned j = 0; config_parameters[i].alt_names[j]; j++)
+            printf(", %s", config_parameters[i].alt_names[j]);
+        printf("\n\n");
+        xprint(i18n_tr_global_param(config_parameters[i].name,
+                                     config_parameters[i].help_text),
+               6, 80);
+        printf("\n\n");
+        count++;
+    }
+    printf("  (%u matching global parameter%s)\n\n", count,
+           count == 1 ? "" : "s");
+}
+
 void xconf_help_param(const char *param) {
     if (!param || !param[0]) {
         LOG(LEVEL_ERROR, "(help param) invalid param.\n");

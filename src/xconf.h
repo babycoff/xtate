@@ -338,6 +338,7 @@ void xconf_print_banner();
 void xconf_print_usage();
 
 void xconf_print_help();
+void xconf_print_help_filter(const char *filter);
 
 void xconf_print_version();
 

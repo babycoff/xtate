@@ -19,9 +19,13 @@
 #include "util-data/fine-malloc.h"
 
 #ifndef _WIN32
+#include <dirent.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #else
 #include <io.h>
+#include <windows.h>
 #endif
 
 #define READLINE_SIZE 65535
@@ -31,6 +35,25 @@ static bool _interactive_tty = false;
 static bool _interactive_save_on_exit = true;
 static bool _interactive_wants_scan = false;
 static char _exe_path[256];
+
+static unsigned xcmd_terminal_width(void) {
+    unsigned width = 80;
+#ifdef _WIN32
+    CONSOLE_SCREEN_BUFFER_INFO info;
+    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &info)) {
+        width = (unsigned)(info.srWindow.Right - info.srWindow.Left + 1);
+    }
+#else
+    struct winsize ws;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0)
+        width = ws.ws_col;
+#endif
+    if (width < 40)
+        width = 40;
+    if (width > 120)
+        width = 120;
+    return width;
+}
 
 extern ConfParam  config_parameters[];
 extern Scanner   *scan_modules_list[];
@@ -324,7 +347,7 @@ static const XCmd config_cmd[] = {
 static ActRes ACT_help(void *conf) {
     (void)conf;
 
-    xprint(i18n_interactive_help(), 4, 80);
+    xprint(i18n_interactive_help(), 4, xcmd_terminal_width());
     printf("\n%s\n", i18n_tr("Commands:\n"));
     for (unsigned i = 0; config_cmd[i].cmd; i++) {
         printf("  %-16s %s\n", config_cmd[i].cmd,
@@ -575,6 +598,189 @@ static void CPL_generate_module(const char              *cmd,
     }
 }
 
+static void CPL_add(const char *word, const char *help,
+                     crossline_completions_t *p_completion) {
+    crossline_completion_add_color(
+        p_completion, word,
+        CROSSLINE_FGCOLOR_GREEN | CROSSLINE_FGCOLOR_BRIGHT |
+            CROSSLINE_BGCOLOR_DEFAULT,
+        help ? help : "", CROSSLINE_COLOR_DEFAULT);
+}
+
+static void CPL_path(const char *cmd, crossline_completions_t *p_completion) {
+    char token[1024];
+    char dir[512];
+    const char *base;
+
+    snprintf(token, sizeof(token), "%s", cmd ? cmd : "");
+    safe_trim(token, sizeof(token));
+
+    const char *slash = strrchr(token, '/');
+    if (!slash)
+        slash = strrchr(token, '\\');
+    if (slash) {
+        size_t n = (size_t)(slash - token) + 1;
+        if (n >= sizeof(dir))
+            n = sizeof(dir) - 1;
+        memcpy(dir, token, n);
+        dir[n] = 0;
+        base   = token + n;
+    } else {
+        dir[0] = 0;
+        base   = token;
+    }
+
+#ifdef _WIN32
+    char pattern[1024];
+    if (dir[0])
+        snprintf(pattern, sizeof(pattern), "%s*", dir);
+    else
+        snprintf(pattern, sizeof(pattern), "*");
+
+    WIN32_FIND_DATAA fd;
+    HANDLE           h = FindFirstFileA(pattern, &fd);
+    if (h != INVALID_HANDLE_VALUE) {
+        do {
+            if (strcmp(fd.cFileName, ".") == 0 ||
+                strcmp(fd.cFileName, "..") == 0)
+                continue;
+            if (base[0] && strncasecmp(fd.cFileName, base, strlen(base)) != 0)
+                continue;
+            char full[1024];
+            const char *sep = (dir[0] && dir[strlen(dir) - 1] != '\\') ? "\\" : "";
+            snprintf(full, sizeof(full), "%s%s%s", dir, sep, fd.cFileName);
+            if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                size_t used = strlen(full);
+                if (used + 2 < sizeof(full)) {
+                    full[used]     = '\\';
+                    full[used + 1] = 0;
+                }
+            }
+            CPL_add(full, "", p_completion);
+        } while (FindNextFileA(h, &fd));
+        FindClose(h);
+    }
+#else
+    const char *open_dir = dir[0] ? dir : ".";
+    DIR        *d        = opendir(open_dir);
+    if (d) {
+        struct dirent *e;
+        while ((e = readdir(d)) != NULL) {
+            if (strcmp(e->d_name, ".") == 0 || strcmp(e->d_name, "..") == 0)
+                continue;
+            if (base[0] && strncasecmp(e->d_name, base, strlen(base)) != 0)
+                continue;
+            char full[2048];
+            snprintf(full, sizeof(full), "%s%s", dir, e->d_name);
+            struct stat st;
+            if (stat(full, &st) == 0 && S_ISDIR(st.st_mode)) {
+                size_t used = strlen(full);
+                if (used + 2 < sizeof(full)) {
+                    full[used]     = '/';
+                    full[used + 1] = 0;
+                }
+            }
+            CPL_add(full, "", p_completion);
+        }
+        closedir(d);
+    }
+#endif
+}
+
+static void CPL_value_add(const char *prefix, const char *word,
+                          crossline_completions_t *p_completion) {
+    if (!prefix[0] || strncasecmp(word, prefix, strlen(prefix)) == 0)
+        CPL_add(word, "", p_completion);
+}
+
+static void CPL_value(const char *cmd, crossline_completions_t *p_completion) {
+    const char *eq = strchr(cmd, '=');
+    if (!eq)
+        return;
+
+    char name[128];
+    char value[512];
+    size_t name_len = (size_t)(eq - cmd);
+    if (name_len >= sizeof(name))
+        name_len = sizeof(name) - 1;
+    memcpy(name, cmd, name_len);
+    name[name_len] = 0;
+    safe_trim(name, sizeof(name));
+    snprintf(value, sizeof(value), "%s", eq + 1);
+    safe_trim(value, sizeof(value));
+
+    static const struct {
+        const char *name;
+        const char *values;
+    } table[] = {
+        {"lang", "en zh-CN"},
+        {"show-output", "failed info success"},
+        {"no-show-output", "failed info success"},
+        {"scan-module", NULL},
+        {"probe-module", NULL},
+        {"output-module", NULL},
+        {"generate-module", NULL},
+        {NULL, NULL}};
+
+    for (unsigned i = 0; table[i].name; i++) {
+        if (strcasecmp(name, table[i].name) != 0)
+            continue;
+        if (!table[i].values) {
+            const char *names[128];
+            unsigned   count = 0;
+            if (strcasecmp(name, "scan-module") == 0) {
+                for (unsigned j = 0; scan_modules_list[j] && count < 128; j++)
+                    names[count++] = scan_modules_list[j]->name;
+            } else if (strcasecmp(name, "probe-module") == 0) {
+                for (unsigned j = 0; probe_modules_list[j] && count < 128; j++)
+                    names[count++] = probe_modules_list[j]->name;
+            } else if (strcasecmp(name, "output-module") == 0) {
+                for (unsigned j = 0; output_modules_list[j] && count < 128; j++)
+                    names[count++] = output_modules_list[j]->name;
+            } else {
+                for (unsigned j = 0; generate_modules_list[j] && count < 128; j++)
+                    names[count++] = generate_modules_list[j]->name;
+            }
+            for (unsigned j = 0; j < count; j++)
+                CPL_value_add(value, names[j], p_completion);
+            return;
+        }
+        const char *p = table[i].values;
+        while (*p) {
+            char word[64];
+            size_t n = 0;
+            while (*p && *p != ' ' && n + 1 < sizeof(word))
+                word[n++] = *p++;
+            word[n] = 0;
+            while (*p == ' ')
+                p++;
+            CPL_value_add(value, word, p_completion);
+        }
+        return;
+    }
+
+    if (strstr(name, "file") || strcmp(name, "output-file") == 0 ||
+        strcmp(name, "include-file") == 0 ||
+        strcmp(name, "config-file") == 0 ||
+        strcmp(name, "meta-filename") == 0 ||
+        strcmp(name, "pcap-filename") == 0 ||
+        strcmp(name, "ip2asn-v4-file") == 0 ||
+        strcmp(name, "ip2asn-v6-file") == 0) {
+        CPL_path(value, p_completion);
+        return;
+    }
+
+    for (unsigned i = 0; config_parameters[i].name; i++) {
+        if (strcasecmp(name, config_parameters[i].name) == 0) {
+            if (config_parameters[i].type == Type_FLAG) {
+                CPL_value_add(value, "true", p_completion);
+                CPL_value_add(value, "false", p_completion);
+            }
+            return;
+        }
+    }
+}
+
 static void CPL_global_conf(const char              *cmd,
                             crossline_completions_t *p_completion) {
     char              help_buf[2048];
@@ -583,6 +789,11 @@ static void CPL_global_conf(const char              *cmd,
                                   CROSSLINE_FGCOLOR_BRIGHT |
                                   CROSSLINE_BGCOLOR_DEFAULT;
     crossline_color_e help_color = CROSSLINE_COLOR_DEFAULT;
+
+    if (strchr(cmd, '=')) {
+        CPL_value(cmd, p_completion);
+        return;
+    }
 
     for (unsigned i = 0; config_parameters[i].name; i++) {
         bool     matched      = false;
@@ -673,8 +884,14 @@ static void HDL_help_cmd(void *conf, char *subcmd) {
     LOG(LEVEL_ERROR, "no such interactive command: %s\n", subcmd);
 }
 
+static void HDL_list_param_filter(void *conf, char *subcmd) {
+    (void)conf;
+    xconf_print_help_filter(subcmd);
+}
+
 static const XPrefix config_prefix[] = {
     {"help", HDL_help_cmd, NULL},
+    {"list-param", HDL_list_param_filter, NULL},
     {PRE_SET_PARAM, HDL_set, CPL_global_conf},
     {PRE_SET_SCAN, HDL_set_scan, CPL_scan_module},
     {PRE_SET_PROBE, HDL_set_probe, CPL_probe_module},
@@ -687,8 +904,8 @@ static const XPrefix config_prefix[] = {
     {PRE_HELP_GEN, HDL_help_gen, CPL_generate_module},
     {PRE_SEARCH_PARAM, HDL_search_param, NULL},
     {PRE_SEARCH_MODULE, HDL_search_module, NULL},
-    {PRE_CONF_SAVE, HDL_conf_save, NULL},
-    {PRE_CONF_READ, HDL_conf_read, NULL},
+    {PRE_CONF_SAVE, HDL_conf_save, CPL_path},
+    {PRE_CONF_READ, HDL_conf_read, CPL_path},
 
     {0}};
 
@@ -747,13 +964,27 @@ static void _completion_hook(const char              *cmd,
     }
 }
 
-static const char ascii_banner[] =
-    "db    db d888888b  .d8b.  d888888b d88888b \n"
-    "`8b  d8' `~~88~~' d8' `8b `~~88~~' 88'     \n"
-    " `8bd8'     88    88ooo88    88    88ooooo \n"
-    " .dPYb.     88    88~~~88    88    88~~~~~ \n"
-    ".8P  Y8.    88    88   88    88    88.     \n"
-    "YP    YP    YP    YP   YP    YP    Y88888P \n";
+static void xcmd_suggest(const char *line) {
+    const char *best      = NULL;
+    int         best_dist = 3;
+
+    for (unsigned i = 0; config_cmd[i].cmd; i++) {
+        int d = conf_fuzzy_distance(config_cmd[i].cmd, line);
+        if (d >= 0 && d < best_dist) {
+            best_dist = d;
+            best      = config_cmd[i].cmd;
+        }
+    }
+    for (unsigned i = 0; config_prefix[i].prefix; i++) {
+        int d = conf_fuzzy_distance(config_prefix[i].prefix, line);
+        if (d >= 0 && d < best_dist) {
+            best_dist = d;
+            best      = config_prefix[i].prefix;
+        }
+    }
+    if (best)
+        LOG(LEVEL_HINT, "did you mean `%s`?\n", best);
+}
 
 static bool xcmd_handle_line(XConf *xconf, char *line) {
     unsigned i;
@@ -816,6 +1047,7 @@ static bool xcmd_handle_line(XConf *xconf, char *line) {
 
     LOG(LEVEL_ERROR, "(" XTATE_NAME
                      ") unknown input, use <TAB> to get valid commands.\n");
+    xcmd_suggest(line);
     return true;
 }
 
@@ -851,16 +1083,14 @@ void xcmd_interactive_readline(XConf *xconf, const char *exe_path) {
     if (_interactive_tty && xconf->have_read_conf) {
         LOG(LEVEL_HINT, "configuration has been recovered.\n");
     } else if (_interactive_tty) {
+        printf("\n  %s %s interactive\n", XTATE_NAME_TITLE_CASE,
+               XTATE_VERSION);
+        xprint(i18n_tr("Type `help` for commands, <TAB> for completion.\n"), 2,
+               xcmd_terminal_width());
+        xprint(i18n_tr("Use `set` to configure, `run` to scan, `quit` to "
+                       "exit.\n"),
+               2, xcmd_terminal_width());
         printf("\n");
-        xprint_with_head(ascii_banner, 8, 80);
-        printf("\n");
-        xprint("Welcome to interactive-mode " XTATE_NAME_TITLE_CASE ":", 2, 80);
-        printf("\n");
-        xprint("Configure params by `set` and `run` " XTATE_NAME " to scan.", 4,
-               80);
-        printf("\n");
-        xprint("Use <TAB> to see all commands and do auto completions.", 4, 80);
-        printf("\n\n");
     }
 
     char *line = MALLOC(READLINE_SIZE * sizeof(char));

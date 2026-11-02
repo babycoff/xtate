@@ -36,7 +36,7 @@ set-scan <module>    choose a scan module
 set-probe <module>   choose a probe module
 set-out <module>     choose an output module
 set-gen <module>     choose a generate module
-list-param           list global parameters
+list-param [filter]  list global parameters, optionally by name token
 list-scan/probe/out/gen  list modules
 echo / show          print current configuration
 help <command>       help for one interactive command
@@ -48,7 +48,9 @@ exit                 exit without saving
 ```
 
 Use `<TAB>` to complete commands, parameter names and module names; the
-completion menu also shows concise help.
+completion menu also shows concise help. For `set <param> = ...` it completes
+known values (`lang`, output levels, flags), module names and file paths
+(including `conf-save`/`conf-read`).
 
 ## History
 
@@ -75,7 +77,8 @@ descriptions and hints are translated.
 - `run` is foreground: the prompt returns after the scan stops.
 - Windows TTY restart-after-scan is not implemented; start interactive mode
   again manually if needed. Linux re-executes with `recover.conf`.
-- Completion covers command/module/parameter names; value/path completion is
-  planned.
+- Completion covers command/module/parameter names, common values and file
+  paths; module-argument value completion is still limited.
+- `list-param <filter>` matches whole name tokens, not arbitrary substrings.
 - In non-TTY mode a scan still needs a real target, privileges and libpcap/Npcap;
   script mode only removes the terminal UI, not the scan requirements.

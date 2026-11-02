@@ -46,6 +46,14 @@ check "help <command>" "printf '%s' \"\$out\" | grep -q '设置全局参数'"
 check "show prints configuration" "printf '%s' \"\$out\" | grep -q 'rate = 100'"
 
 rm -f recover.conf
+out="$(printf 'list-param rate\nquit\n' | "$BIN" --lang zh -interactive 2>&1 || true)"
+check "list-param filter matches rate" "printf '%s' \"\$out\" | grep -q -- '--rate'"
+check "list-param filter excludes generate"       "! printf '%s' \"\$out\" | grep -q -- '--generate-module'"
+
+out="$(printf 'hep\nquit\n' | "$BIN" -interactive 2>&1 || true)"
+check "unknown command suggests help" "printf '%s' \"\$out\" | grep -q 'did you mean'"
+
+rm -f recover.conf
 out="$(printf 'set rate = 123\nquit\n' | "$BIN" -interactive 2>&1 || true)"
 check "set accepts spaces" "printf '%s' \"\$out\" | grep -q 'set param successfully'"
 check "set value persisted" "grep -q 'rate = 123' recover.conf"

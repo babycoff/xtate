@@ -35,7 +35,7 @@ set-scan <module>    选择扫描模块
 set-probe <module>   选择探测模块
 set-out <module>     选择输出模块
 set-gen <module>     选择生成模块
-list-param           列出全局参数
+list-param [过滤词]  列出全局参数，可按名称 token 过滤
 list-scan/probe/out/gen  列出模块
 echo / show          打印当前配置
 help <command>       查看单条交互命令帮助
@@ -47,6 +47,8 @@ exit                 不保存直接退出
 ```
 
 `<TAB>` 可补全命令、参数名和模块名；补全菜单同时显示简短说明。
+`set <参数> = ...` 会补全已知值（`lang`、输出级别、布尔值）、模块名和文件路径
+（包括 `conf-save`/`conf-read`）。
 
 ## 历史
 
@@ -72,6 +74,7 @@ xtate --lang zh -interactive
 - `run` 为前台执行：扫描停止后回到提示符。
 - Windows TTY 扫描结束后不会自动重启；需要手动再次启动。Linux 会用
   `recover.conf` 重新执行。
-- 补全目前覆盖命令/模块/参数名；值和路径补全仍在计划中。
+- 补全覆盖命令/模块/参数名、常见值和文件路径；模块参数值的补全仍有限。
+- `list-param <过滤词>` 按完整名称 token 匹配，不做任意子串匹配。
 - 非 TTY 模式只去掉终端 UI，不改变扫描本身对目标、权限和
   libpcap/Npcap 的要求。
