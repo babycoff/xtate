@@ -912,26 +912,16 @@ fail:
 /***************************************************************************
  ***************************************************************************/
 int targetset_parse_file(TargetSet *targetset, const char *filename) {
-    struct RangeList       *targets_ipv4 = &targetset->ipv4;
-    struct Range6List      *targets_ipv6 = &targetset->ipv6;
-    struct targetset_parser p[1];
-    char                    buf[65536];
-    FILE                   *fp         = NULL;
-    bool                    is_error   = false;
-    unsigned                addr_count = 0;
-    unsigned long long      line_number, char_number;
+    FILE              *fp = NULL;
+    char               line[65536];
+    unsigned long long line_number = 0;
+    bool               is_error    = false;
 
-    /* Kludge: should never happen, should fix this when reading in
-     * config, not this deep in the code. */
     if (filename == 0 || filename[0] == '\0') {
         LOG(LEVEL_ERROR, "missing filename for ranges\n");
         return -1;
     }
 
-    /*
-     * Open the file containing IP addresses, which can potentially be
-     * many megabytes in size
-     */
     if (strcmp(filename, "-") == 0) {
         fp = stdin;
     } else {
@@ -944,107 +934,29 @@ int targetset_parse_file(TargetSet *targetset, const char *filename) {
     }
 
     /*
-     * Create a parser for reading in the IP addresses using a state
-     * machine parser
+     * Process complete lines through the same tokenizer used by command-line
+     * input. This keeps component-range expansion and comments consistent for
+     * both input paths. Per-line buffering is sufficient for target files;
+     * each parsed address is still added to the sorted RangeList directly.
      */
-    _parser_init(p);
-
-    /*
-     * Read in the data a block at a time, parsing according to the state
-     * machine.
-     */
-    while (!is_error) {
-        size_t count;
-        size_t offset;
-
-        count = fread(buf, 1, sizeof(buf), fp);
-        if (count <= 0)
-            break;
-
-        offset = 0;
-        while (offset < count) {
-            unsigned begin = 0;
-            unsigned end   = 0;
-            int      err   = _parser_next(p, buf, &offset, count, &begin, &end);
-
-            switch (err) {
-                case Still_Working:
-                    if (offset < count) {
-                        /* We reached this somehow in the middle of the buffer,
-                         * but this return is only possible at the end of the
-                         * buffer */
-                        LOG(LEVEL_ERROR,
-                            "rangeparse_next(): unknown coding failure\n");
-                    }
-                    break;
-                case Found_Error:
-                default:
-                    _parser_err(p, &line_number, &char_number);
-                    LOG(LEVEL_ERROR,
-                        "%s:%llu:%llu: invalid IP address on line #%llu\n",
-                        filename, line_number, char_number, line_number);
-                    is_error = true;
-                    count    = offset;
-                    break;
-                case Found_IPv4:
-                    rangelist_add_range(targets_ipv4, begin, end);
-                    addr_count++;
-                    break;
-                case Found_IPv6: {
-                    ipv6address found_begin, found_end;
-                    _parser_get_ipv6(p, &found_begin, &found_end);
-                    range6list_add_range(targets_ipv6, found_begin, found_end);
-                    addr_count++;
-                } break;
-            }
+    while (!is_error && fgets(line, sizeof(line), fp) != NULL) {
+        line_number++;
+        if (targetset_add_ip_str(targetset, line)) {
+            LOG(LEVEL_ERROR,
+                "%s:%llu: invalid IP address or range on this line\n",
+                filename, line_number);
+            is_error = true;
         }
     }
 
-    /* Close the file, unless we are reading from <stdin> */
     if (fp != stdin && fp != NULL)
         fclose(fp);
 
-    /* In case the file doesn't end with a newline '\n', then artificially
-     * add one to the end. This is just a repeat of the code above */
-    if (!is_error) {
-        size_t   offset = 0;
-        unsigned begin, end;
-        int      err;
-        err = _parser_next(p, "\n", &offset, 1, &begin, &end);
-        switch (err) {
-            case Still_Working:
-                break;
-            case Found_Error:
-            default:
-                _parser_err(p, &line_number, &char_number);
-                LOG(LEVEL_ERROR,
-                    "%s:%llu:%llu: invalid IP address on line #%llu\n",
-                    filename, line_number, char_number, line_number);
-                is_error = true;
-                break;
-            case Found_IPv4:
-                rangelist_add_range(targets_ipv4, begin, end);
-                addr_count++;
-                break;
-            case Found_IPv6: {
-                ipv6address found_begin, found_end;
-                _parser_get_ipv6(p, &found_begin, &found_end);
-                range6list_add_range(targets_ipv6, found_begin, found_end);
-                addr_count++;
-            } break;
-        }
-    }
-
-    LOG(LEVEL_DEBUG, "%s: %u addresses read\n", filename, addr_count);
-
-    /* Target list must be sorted every time it's been changed,
-     * before it can be used */
-    rangelist_sort(targets_ipv4);
+    rangelist_sort(&targetset->ipv4);
 
     if (is_error)
-        return -1; /* fail */
-    else
-        return 0; /* success*/
+        return -1;
+    return 0;
 }
 
 ipv6address target_parse_ipv6(const char *line) {

@@ -16,17 +16,33 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 
 ## Address targets
 
-`-ip` is the short form of `--target-ip` (aliases: `--range`, `--dst-ip`). Four forms are
+`-ip` is the short form of `--target-ip` (aliases: `--range`, `--dst-ip`). Five forms are
 accepted, and they can be mixed in one comma-separated value:
 
 | Form | Example |
 |:---|:---|
 | Single address | `192.168.1.10` |
 | Inclusive range | `10.0.0.1-10.0.0.100` |
+| Component range | `132.80-88.90.15` |
 | CIDR block | `10.0.0.0/24` |
 | List | `10.0.0.0/24,192.168.1.5,2001:db8::1` |
 
-IPv6 uses the same forms; ranges take a full IPv6 address on both sides.
+IPv6 uses the same forms; explicit ranges take a full IPv6 address on both
+sides. A component range varies exactly one octet (IPv4) or one hextet (IPv6)
+while keeping the other components fixed:
+
+```text
+# 132.80.90.15, 132.81.90.15, ... 132.88.90.15
+-ip 132.80-88.90.15
+
+# 2001:db8:1::1, 2001:db8:2::1, ... 2001:db8:5::1
+-ip 2001:db8:1-5::1
+```
+
+Component ranges are **sparse**: they do not mean every address between the
+lower and upper endpoint. Only one component range per address is accepted.
+A single token may expand to at most 65,536 addresses; larger ranges are
+rejected with an error.
 
 ```bash
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn

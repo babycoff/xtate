@@ -72,34 +72,297 @@ bool targetset_has_any_ports(const TargetSet *targetset) {
     return targetset->ports.list_len != 0;
 }
 
+#define TARGET_COMPONENT_RANGE_MAX 65536
+
+static int _component_parse_dec(const char *text, unsigned max, unsigned *out) {
+    unsigned value = 0;
+
+    if (*text == '\0')
+        return 1;
+    while (*text) {
+        if (*text < '0' || *text > '9')
+            return 1;
+        value = value * 10 + (unsigned)(*text - '0');
+        if (value > max)
+            return 1;
+        text++;
+    }
+    *out = value;
+    return 0;
+}
+
+static int _component_parse_hex(const char *text, unsigned *out) {
+    unsigned value = 0;
+    unsigned digits = 0;
+
+    if (*text == '\0')
+        return 1;
+    while (*text) {
+        unsigned char c = (unsigned char)*text++;
+        unsigned      nibble;
+
+        if (c >= '0' && c <= '9')
+            nibble = c - '0';
+        else if (c >= 'a' && c <= 'f')
+            nibble = c - 'a' + 10;
+        else if (c >= 'A' && c <= 'F')
+            nibble = c - 'A' + 10;
+        else
+            return 1;
+
+        if (++digits > 4)
+            return 1;
+        value = value * 16 + nibble;
+    }
+    *out = value;
+    return 0;
+}
+
+static int _expand_ipv4_component(TargetSet *targetset, const char *token) {
+    char     tmp[64];
+    char    *parts[4];
+    unsigned octet[4] = {0};
+    unsigned lo = 0, hi = 0;
+    int      range_index = -1;
+    size_t   length      = strlen(token);
+
+    if (length == 0 || length >= sizeof(tmp))
+        return 0;
+    memcpy(tmp, token, length + 1);
+
+    {
+        char *p = tmp;
+        for (unsigned i = 0; i < 4; i++) {
+            parts[i] = p;
+            char *dot = strchr(p, '.');
+            if (i == 3) {
+                if (dot != NULL)
+                    return 0;
+                break;
+            }
+            if (dot == NULL)
+                return 0;
+            *dot = '\0';
+            p    = dot + 1;
+            if (*p == '\0')
+                return 0;
+        }
+    }
+
+    for (unsigned i = 0; i < 4; i++) {
+        char *dash = strchr(parts[i], '-');
+        if (dash != NULL) {
+            if (range_index >= 0)
+                return 0; /* only one variable component */
+            *dash = '\0';
+            if (_component_parse_dec(parts[i], 255, &lo) ||
+                _component_parse_dec(dash + 1, 255, &hi) || lo > hi)
+                return 0;
+            range_index = (int)i;
+        } else if (_component_parse_dec(parts[i], 255, &octet[i])) {
+            return 0;
+        }
+    }
+
+    if (range_index < 0 || (uint64_t)hi - lo + 1 > TARGET_COMPONENT_RANGE_MAX)
+        return 0;
+
+    {
+        unsigned shift = 8u * (3u - (unsigned)range_index);
+        uint32_t base  = 0;
+
+        for (unsigned i = 0; i < 4; i++)
+            base |= (uint32_t)octet[i] << (8u * (3u - i));
+        base &= ~(0xFFu << shift);
+
+        for (unsigned value = lo; value <= hi; value++) {
+            uint32_t address = base | ((uint32_t)value << shift);
+            rangelist_add_range(&targetset->ipv4, address, address);
+        }
+    }
+    return 1;
+}
+
+static int _split_hex_groups(char *text, char **groups, int max_groups) {
+    int count = 0;
+
+    if (*text == '\0')
+        return 0;
+    for (;;) {
+        char *colon;
+        if (count >= max_groups)
+            return -1;
+        groups[count++] = text;
+        colon           = strchr(text, ':');
+        if (colon == NULL)
+            break;
+        *colon = '\0';
+        text   = colon + 1;
+        if (*text == '\0')
+            return -1;
+    }
+    return count;
+}
+
+static int _expand_ipv6_component(TargetSet *targetset, const char *token) {
+    char      tmp[128];
+    char     *left;
+    char     *right = NULL;
+    char     *left_groups[8];
+    char     *right_groups[8];
+    int       left_count  = 0;
+    int       right_count = 0;
+    size_t    length      = strlen(token);
+
+    if (length >= sizeof(tmp))
+        return 0;
+    memcpy(tmp, token, length + 1);
+
+    if (tmp[0] == '[') {
+        if (length < 3 || tmp[length - 1] != ']')
+            return 0;
+        tmp[length - 1] = '\0';
+        memmove(tmp, tmp + 1, length - 1);
+    }
+
+    left = tmp;
+    {
+        char *ellipsis = strstr(tmp, "::");
+        if (ellipsis != NULL) {
+            if (strstr(ellipsis + 2, "::") != NULL)
+                return 0;
+            *ellipsis = '\0';
+            right     = ellipsis + 2;
+        }
+    }
+
+    left_count = _split_hex_groups(left, left_groups, 8);
+    if (left_count < 0)
+        return 0;
+    if (right != NULL) {
+        right_count = _split_hex_groups(right, right_groups, 8);
+        if (right_count < 0)
+            return 0;
+        if (left_count + right_count >= 8)
+            return 0; /* '::' must fill at least one group */
+    } else if (left_count != 8) {
+        return 0;
+    }
+
+    {
+        unsigned short base[8] = {0};
+        unsigned       range_lo = 0, range_hi = 0;
+        int            range_index = -1;
+        int            total       = left_count + right_count;
+
+        for (int i = 0; i < left_count; i++) {
+            char *dash = strchr(left_groups[i], '-');
+            if (dash != NULL) {
+                if (range_index >= 0)
+                    return 0;
+                *dash = '\0';
+                if (_component_parse_hex(left_groups[i], &range_lo) ||
+                    _component_parse_hex(dash + 1, &range_hi) ||
+                    range_lo > range_hi)
+                    return 0;
+                range_index = i;
+            } else {
+                unsigned value;
+                if (_component_parse_hex(left_groups[i], &value))
+                    return 0;
+                base[i] = (unsigned short)value;
+            }
+        }
+        for (int i = 0; i < right_count; i++) {
+            char *dash = strchr(right_groups[i], '-');
+            int   dst  = 8 - right_count + i;
+            if (dash != NULL) {
+                if (range_index >= 0)
+                    return 0;
+                *dash = '\0';
+                if (_component_parse_hex(right_groups[i], &range_lo) ||
+                    _component_parse_hex(dash + 1, &range_hi) ||
+                    range_lo > range_hi)
+                    return 0;
+                range_index = dst;
+            } else {
+                unsigned value;
+                if (_component_parse_hex(right_groups[i], &value))
+                    return 0;
+                base[dst] = (unsigned short)value;
+            }
+        }
+        if (range_index < 0 || total > 8 ||
+            (uint64_t)range_hi - range_lo + 1 > TARGET_COMPONENT_RANGE_MAX)
+            return 0;
+
+        for (unsigned value = range_lo; value <= range_hi; value++) {
+            ipv6address address;
+            base[range_index] = (unsigned short)value;
+            address.hi = (uint64_t)base[0] << 48 | (uint64_t)base[1] << 32 |
+                         (uint64_t)base[2] << 16 | (uint64_t)base[3];
+            address.lo = (uint64_t)base[4] << 48 | (uint64_t)base[5] << 32 |
+                         (uint64_t)base[6] << 16 | (uint64_t)base[7];
+            range6list_add_range(&targetset->ipv6, address, address);
+        }
+    }
+    return 1;
+}
+
+static int _targetset_add_ip_token(TargetSet *targetset, const char *token) {
+    struct Range  range4;
+    struct Range6 range6;
+    int           err;
+
+    err = target_parse_range(token, NULL, 0, &range4, &range6);
+    if (err == Ipv4_Address) {
+        rangelist_add_range(&targetset->ipv4, range4.begin, range4.end);
+        return 0;
+    }
+    if (err == Ipv6_Address) {
+        range6list_add_range(&targetset->ipv6, range6.begin, range6.end);
+        return 0;
+    }
+
+    if (_expand_ipv4_component(targetset, token) ||
+        _expand_ipv6_component(targetset, token))
+        return 0;
+
+    LOG(LEVEL_ERROR, "invalid target address: %s\n", token);
+    return 1;
+}
+
 int targetset_add_ip_str(TargetSet *targetset, const char *string) {
-    const char *ranges     = string;
-    size_t      offset     = 0;
-    size_t      max_offset = strlen(ranges);
+    const char *p = string;
 
-    while (offset < max_offset) {
-        struct Range  range;
-        struct Range6 range6;
-        int           err;
+    while (*p) {
+        while (*p && (isspace((unsigned char)*p) || *p == ','))
+            p++;
+        if (*p == '\0')
+            break;
 
-        /* Grab the next IPv4 or IPv6 range */
-        err = target_parse_range(ranges, &offset, max_offset, &range, &range6);
-        switch (err) {
-            case Ipv4_Address:
-                rangelist_add_range(&targetset->ipv4, range.begin, range.end);
-                break;
-            case Ipv6_Address:
-                range6list_add_range(&targetset->ipv6, range6.begin,
-                                     range6.end);
-                break;
-            default:
-                offset = max_offset; /* An error means skipping the rest of the
-                                        string */
+        if (*p == '#' || *p == ';' || *p == '/' || *p == '-') {
+            while (*p && *p != '\n')
+                p++;
+            continue;
+        }
+
+        {
+            char   token[128];
+            size_t length = 0;
+
+            while (*p && !isspace((unsigned char)*p) && *p != ',' &&
+                   *p != '#' && *p != ';') {
+                if (length + 1 >= sizeof(token)) {
+                    LOG(LEVEL_ERROR, "target token too long\n");
+                    return 1;
+                }
+                token[length++] = *p++;
+            }
+            token[length] = '\0';
+            if (length != 0 && _targetset_add_ip_token(targetset, token))
                 return 1;
         }
-        while (offset < max_offset &&
-               (isspace(ranges[offset] & 0xFF) || ranges[offset] == ','))
-            offset++;
     }
     return 0;
 }
@@ -252,6 +515,35 @@ int targetset_selftest() {
     count = targetset_count(&targets);
     if (count.hi != 0 || count.lo != 12)
         goto fail;
+
+    /* Component ranges: one variable octet/hextet, other parts fixed. */
+    {
+        TargetSet component = {0};
+        ipaddress first4 = {.version = 4, .ipv4 = 0x84505a0f};
+        ipaddress last4  = {.version = 4, .ipv4 = 0x84585a0f};
+        ipaddress mid4   = {.version = 4, .ipv4 = 0x84515a0f};
+        ipaddress first6 = {.version = 6,
+                            .ipv6 = {0x20010db800010000ULL, 1}};
+        ipaddress last6  = {.version = 6,
+                            .ipv6 = {0x20010db800030000ULL, 1}};
+        line = __LINE__;
+        if (targetset_add_ip_str(&component, "132.80-88.90.15"))
+            goto fail;
+        if (rangelist_count(&component.ipv4) != 9 ||
+            !targetset_has_ip(&component, first4) ||
+            !targetset_has_ip(&component, last4) ||
+            !targetset_has_ip(&component, mid4))
+            goto fail;
+
+        line = __LINE__;
+        if (targetset_add_ip_str(&component, "2001:db8:1-3::1"))
+            goto fail;
+        if (range6list_count(&component.ipv6).lo != 3 ||
+            !targetset_has_ip(&component, first6) ||
+            !targetset_has_ip(&component, last6))
+            goto fail;
+
+    }
 
     return 0;
 fail:

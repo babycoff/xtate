@@ -152,14 +152,22 @@ parse_tcp: {
 }
 
 parse_udp: {
+    unsigned udp_length;
+
     VERIFY_REMAINING(8, FOUND_UDP);
 
     info->port_src = BE_TO_U16(px + offset + 0);
     info->port_dst = BE_TO_U16(px + offset + 2);
+    udp_length     = BE_TO_U16(px + offset + 4);
+
+    /* UDP length includes the 8-byte header and must fit in the IP payload.
+     * IPv6 jumbograms (length 0) are not supported. */
+    if (udp_length < 8 || udp_length > length - offset)
+        return false;
 
     offset += 8;
     info->app_offset = offset;
-    info->app_length = length - info->app_offset;
+    info->app_length = udp_length - 8;
 
     return true;
 }
@@ -639,6 +647,7 @@ int preprocess_selftest(void) {
         buf[71] = 0x34;
         buf[72] = 0x56;
         buf[73] = 0x78;
+        U16_TO_BE(buf + 74, 8); /* UDP length */
         if (!preprocess_frame(buf, sizeof(buf), PCAP_DLT_ETHERNET, &info) ||
             info.found != FOUND_UDP || info.app_offset != 78 ||
             info.port_src != 0x1234 || info.port_dst != 0x5678)

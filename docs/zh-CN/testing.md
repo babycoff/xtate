@@ -112,7 +112,7 @@ interactive + PTY: 通过
 - GCC 和 Clang；
 - Release 和 Debug；
 - 头文件自包含；
-- i18n 和交互测试；
+- 目标语法、i18n 和交互测试；
 - GCC/Release 的 PTY 终端测试。
 
 Windows 构建仍需维护者/手动验证，直到配置带 Npcap/Visual Studio 的托管 runner。

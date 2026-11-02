@@ -120,7 +120,7 @@ interactive + PTY: pass
 - GCC and Clang;
 - Release and Debug;
 - header self-containment;
-- i18n and interactive suites;
+- target syntax, i18n and interactive suites;
 - PTY terminal test on GCC/Release.
 
 Windows builds remain a maintainer/manual check until a hosted Npcap/Visual
@@ -133,6 +133,7 @@ Studio runner is set up.
 | header self-containment | `tests/include/check_headers.sh` | every header compiles on its own |
 | selftest | `xtate --selftest` | built-in regression |
 | i18n | `tests/i18n/test.sh` | Chinese help coverage |
+| target syntax | `tests/target/test.sh` | address/CIDR/explicit/component ranges |
 | interactive | `tests/interactive/test.sh` | non-TTY commands/help/state |
 | PTY | `tests/interactive/tty.sh` | terminal restore + completion |
 | large batch | `tests/large-batch/` | replay/RSS/output failure |

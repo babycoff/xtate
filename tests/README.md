@@ -7,6 +7,7 @@ The project-wide policy and matrix live in
 |:---|:---|:---|
 | header self-containment | `bash tests/include/check_headers.sh` | every header compiles alone |
 | built-in | `xtate --selftest` | every build |
+| target syntax | `XTATE_BIN=./bin/xtate bash tests/target/test.sh` | CIDR/explicit/component ranges |
 | i18n | `XTATE_BIN=./bin/xtate bash tests/i18n/test.sh` | help coverage |
 | interactive | `XTATE_BIN=./bin/xtate bash tests/interactive/test.sh` | non-TTY script mode |
 | PTY | `XTATE_BIN=./bin/xtate bash tests/interactive/tty.sh` | Linux; needs `script` |

@@ -44,6 +44,15 @@ jobs:
             ./bin/xtate --selftest
           fi
 
+      - name: Target syntax tests
+        run: |
+          if [[ "${{ matrix.config }}" == "debug" ]]; then
+            BIN=./bin/xtate_debug
+          else
+            BIN=./bin/xtate
+          fi
+          XTATE_BIN="$BIN" bash tests/target/test.sh
+
       - name: i18n and interactive tests
         run: |
           if [[ "${{ matrix.config }}" == "debug" ]]; then
