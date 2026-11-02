@@ -59,19 +59,22 @@ Translated so far:
 - welcome/description/author/GitHub/contact chrome;
 - usage headings and the common example explanations;
 - global help section headings;
-- **all 120 global parameter descriptions** (concise Chinese summaries);
+- **all 120 global parameter descriptions**;
+- **all module parameter descriptions** (keyed by parameter name, shared across
+  modules where the meaning is the same);
 - module help labels (`Name`, `Probe Type`, `Description`, …);
 - list/search headings;
 - the `--lang` parameter itself.
 
 Falling back to English:
 
-- module parameter descriptions and module defaults/value descriptions;
-- module descriptions and short descriptions;
+- module descriptions and short descriptions (the prose paragraph above the
+  parameter list);
 - error messages and log text.
 
-The next catalog batch is module parameters, keyed by `(module, parameter name)`
-so the same parameter name can have different meanings in different modules.
+`tests/i18n/check_coverage.py` walks every global parameter and every module
+parameter and fails when a description has no Chinese text. It runs as part of
+`tests/i18n/test.sh` when Python 3 is available.
 
 ## Adding a translation
 

@@ -48,6 +48,17 @@ bad_rc=$?
 set -e
 check "invalid language fails" test "$bad_rc" -ne 0
 
+# Full help coverage is a separate Python check (stdlib only). Skip when no
+# Python 3 is available, e.g. in a minimal build container.
+if command -v python3 >/dev/null 2>&1; then
+    if XTATE_BIN="$BIN" python3 "$ROOT/tests/i18n/check_coverage.py"; then
+        echo "PASS: help coverage"
+    else
+        echo "FAIL: help coverage" >&2
+        fail=$((fail + 1))
+    fi
+fi
+
 if [[ "$fail" -ne 0 ]]; then
     echo "$fail i18n check(s) failed" >&2
     exit 1

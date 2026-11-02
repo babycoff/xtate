@@ -114,7 +114,9 @@ void help_scan_module(Scanner *module) {
                 printf(", %s", module->params[j].alt_names[k]);
             }
             printf("\n");
-            xprint(i18n_tr(module->params[j].help_text), 6, 80);
+            xprint(i18n_tr_module_param(module->name, module->params[j].name,
+                                     module->params[j].help_text),
+               6, 80);
             printf("\n\n");
         }
     }
