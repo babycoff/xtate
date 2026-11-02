@@ -17,6 +17,7 @@
 #include "../target/target-ipaddress.h"
 #include "../proto/proto-preprocess.h"
 #include "../probe-modules/probe-types.h"
+#include "scan-types.h"
 
 struct XtateConf;
 struct ProbeModule;
@@ -43,15 +44,6 @@ typedef bool (*scan_modules_init)(const struct XtateConf *xconf);
  ****************************************************************************/
 
 /**
- * modifiable in scan module internal to change target.
- */
-typedef struct ScanModuleTarget {
-    Target   target;
-    /*use in tx thread for multi packets per target*/
-    unsigned index;
-} ScanTarget;
-
-/**
  * !Only step for transmitting. Happens in Tx Thread.
  * Do the first packet transmitting for every target.
  *
@@ -70,50 +62,6 @@ typedef bool (*scan_modules_transmit)(uint64_t entropy, ScanTarget *target,
 /***************************************************************************
  * * callback functions for Receive
  ****************************************************************************/
-
-/**
- * Received packet info after preprocessed.
- * This helps us to do initial validation.
- */
-typedef struct PacketReceived {
-    PreInfo        parsed;
-    unsigned char *packet;
-    unsigned       length;
-    unsigned       secs;
-    unsigned       usecs;
-    unsigned       is_myip   : 1;
-    unsigned       is_myport : 1;
-} Recved;
-
-typedef struct PacketValidated {
-    Recved   recved;
-    unsigned repeats;
-} ValidPacket;
-
-/**
- * How we do prehandling for a packet.
- * The processes of prehandling has following step:
- * 1.record packet to pcap file (optional)
- * 2.do deduplication to the packet (optional)
- * */
-typedef struct PacketPreHandle {
-    /*proceed to record or stop*/
-    unsigned  go_record : 1;
-    /*go on with(out) record*/
-    unsigned  no_record : 1;
-    /*proceed to dedup or stop*/
-    unsigned  go_dedup  : 1;
-    /*go on with(out) deduping*/
-    unsigned  no_dedup  : 1;
-    /**
-     * Info for deduplication
-     */
-    ipaddress dedup_ip_them;
-    unsigned  dedup_port_them;
-    ipaddress dedup_ip_me;
-    unsigned  dedup_port_me;
-    unsigned  dedup_type;
-} PreHandle;
 
 /**
  * !First Step for recving. Happens in Rx Thread.

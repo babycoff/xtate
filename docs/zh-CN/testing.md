@@ -105,6 +105,18 @@ interactive + PTY: 通过
   不作为可复现目标。
 - **记录命令、版本和结果。** 填 PR 模板里的验证区。
 
+## CI
+
+`.github/workflows/ci.yml` 在 GitHub Actions 上跑 Linux 侧 Tier 0：
+
+- GCC 和 Clang；
+- Release 和 Debug；
+- 头文件自包含；
+- i18n 和交互测试；
+- GCC/Release 的 PTY 终端测试。
+
+Windows 构建仍需维护者/手动验证，直到配置带 Npcap/Visual Studio 的托管 runner。
+
 ## 现有测试套件
 
 | 套件 | 命令 | 范围 |

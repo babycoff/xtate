@@ -1,0 +1,62 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    name: Linux ${{ matrix.compiler }} ${{ matrix.config }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+        config: [Release, Debug]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake ninja-build pkg-config \
+            libpcap-dev libssl-dev libpcre2-dev libxml2-dev \
+            libbson-dev libmongoc-dev clang
+
+      - name: Header self-containment
+        run: |
+          bash tests/include/check_headers.sh
+
+      - name: Build
+        run: |
+          ./build.sh \
+            --compiler "${{ matrix.compiler }}" \
+            --config "${{ matrix.config }}" \
+            --generator ninja
+
+      - name: Selftest
+        run: |
+          if [[ "${{ matrix.config }}" == "Debug" ]]; then
+            ./bin/xtate_debug --selftest
+          else
+            ./bin/xtate --selftest
+          fi
+
+      - name: i18n and interactive tests
+        run: |
+          if [[ "${{ matrix.config }}" == "Debug" ]]; then
+            BIN=./bin/xtate_debug
+          else
+            BIN=./bin/xtate
+          fi
+          XTATE_BIN="$BIN" bash tests/i18n/test.sh
+          XTATE_BIN="$BIN" bash tests/interactive/test.sh
+
+      - name: PTY terminal test
+        if: matrix.compiler == 'gcc' && matrix.config == 'Release'
+        env:
+          XTATE_BIN: ./bin/xtate
+        run: |
+          bash tests/interactive/tty.sh

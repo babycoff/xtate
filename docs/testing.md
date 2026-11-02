@@ -113,6 +113,19 @@ interactive + PTY: pass
   convenience copies, not reproducibility targets.
 - **Record commands, versions and results** in the pull request template.
 
+## CI
+
+`.github/workflows/ci.yml` runs the Linux half of Tier 0 on GitHub Actions:
+
+- GCC and Clang;
+- Release and Debug;
+- header self-containment;
+- i18n and interactive suites;
+- PTY terminal test on GCC/Release.
+
+Windows builds remain a maintainer/manual check until a hosted Npcap/Visual
+Studio runner is set up.
+
 ## Current test suites
 
 | Suite | Command | Scope |
