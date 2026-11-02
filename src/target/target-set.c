@@ -82,9 +82,12 @@ static int _component_parse_dec(const char *text, unsigned max, unsigned *out) {
     while (*text) {
         if (*text < '0' || *text > '9')
             return 1;
-        value = value * 10 + (unsigned)(*text - '0');
-        if (value > max)
-            return 1;
+        {
+            unsigned digit = (unsigned)(*text - '0');
+            if (value > (max - digit) / 10)
+                return 1;
+            value = value * 10 + digit;
+        }
         text++;
     }
     *out = value;
