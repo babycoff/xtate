@@ -2,7 +2,7 @@
 
 **English** · [中文](zh-CN/README.md)
 
-This directory is the user manual for **Xtate v2.26.1** — a modular all-stack network scanner for Internet-scale surveys.
+This directory is the user manual for **Xtate v2.27.0** — a modular all-stack network scanner for Internet-scale surveys.
 
 The [README](../README.md) is the landing page. Start here if you want to use Xtate rather than skim its feature list.
 
@@ -20,6 +20,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 | Windows optional dependencies | [Windows dependencies](./windows-dependencies.md) |
 | Build artifact names | [Build artifacts](./build-artifacts.md) |
 | Interactive mode | [Interactive mode](./interactive-mode.md) |
+| Platform / build compatibility | [Platform support](./platform-support.md) |
 
 ## Contents
 
@@ -35,6 +36,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 - [Windows optional dependencies](./windows-dependencies.md) — vcpkg/MSYS2 setup for PCRE2, LibXml2, bson/mongoc and MinGW caveats
 - [Build artifacts](./build-artifacts.md) — aliases vs per-toolchain binaries, Debug names and DLLs
 - [Interactive mode](./interactive-mode.md) — commands, TTY/script mode, history and completion
+- [Platform support](./platform-support.md) — old CMake/distro baseline, Ninja and musl builds
 
 ### How it works
 
@@ -57,7 +59,7 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-The docs are written against the v2.26.1 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
+The docs are written against the v2.27.0 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
 
 ## Planned
 

@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.13)
 project(
     xtate
     LANGUAGES               C
-    VERSION                 2.26.1
+    VERSION                 2.27.0
     DESCRIPTION             "A modular all-stack network scanner for next-generation internet surveys."
     HOMEPAGE_URL            "https://github.com/babycoff/xtate"
     )
@@ -80,8 +80,17 @@ endif()
 # endif()
 
 # Some calculations need big-endian
-if(NOT CMAKE_C_BYTE_ORDER STREQUAL "LITTLE_ENDIAN")
-    message(FATAL_ERROR "This project requires a little-endian byte order.")
+if(DEFINED CMAKE_C_BYTE_ORDER)
+    if(NOT CMAKE_C_BYTE_ORDER STREQUAL "LITTLE_ENDIAN")
+        message(FATAL_ERROR "This project requires a little-endian byte order.")
+    endif()
+else()
+    # CMAKE_C_BYTE_ORDER is newer than our minimum CMake version.
+    include(TestBigEndian)
+    test_big_endian(XTATE_IS_BIG_ENDIAN)
+    if(XTATE_IS_BIG_ENDIAN)
+        message(FATAL_ERROR "This project requires a little-endian byte order.")
+    endif()
 endif()
 
 

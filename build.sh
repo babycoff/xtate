@@ -15,6 +15,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPILER=""
 CONFIG=""
+GENERATOR=""
+STATIC=0
+MINIMAL=0
 
 usage() {
     cat <<'EOF'
@@ -23,6 +26,9 @@ Usage: ./build.sh [options] [legacy: debug|release] [legacy: gcc|clang]
 Options:
   -c, --compiler gcc|clang   Compiler to use (default: gcc)
   -C, --config release|debug Build configuration (default: release)
+  -G, --generator make|ninja Build generator (default: auto-detect)
+      --static               Link with -static (basic/static libs required)
+      --minimal              Disable optional libraries
       --debug                Shorthand for --config debug
       --release              Shorthand for --config release
   -h, --help                 Show this help
@@ -70,6 +76,19 @@ while (($# > 0)); do
             CONFIG="$2"
             shift 2
             ;;
+        -G|--generator)
+            [[ $# -ge 2 ]] || { echo "missing value for $1" >&2; exit 2; }
+            GENERATOR="$2"
+            shift 2
+            ;;
+        --static)
+            STATIC=1
+            shift
+            ;;
+        --minimal|--no-optional)
+            MINIMAL=1
+            shift
+            ;;
         -h|--help)
             usage
             exit 0
@@ -116,6 +135,19 @@ if [[ -z "$CONFIG" ]]; then
     fi
 fi
 
+if [[ -z "$GENERATOR" ]]; then
+    if command -v ninja >/dev/null 2>&1; then
+        GENERATOR="ninja"
+    else
+        GENERATOR="make"
+    fi
+fi
+case "$GENERATOR" in
+    ninja) CMAKE_GENERATOR="Ninja" ;;
+    make)  CMAKE_GENERATOR="Unix Makefiles" ;;
+    *) echo "unsupported generator: $GENERATOR (use make or ninja)" >&2; exit 2 ;;
+esac
+
 case "$COMPILER" in
     gcc) CC_BIN="${CC:-gcc}" ;;
     clang) CC_BIN="${CC:-clang}" ;;
@@ -132,7 +164,10 @@ case "$CONFIG" in
     *) echo "unsupported configuration: $CONFIG (use release or debug)" >&2; exit 2 ;;
 esac
 
-BUILD_DIR="$ROOT/build-$COMPILER-$CONFIG"
+BUILD_DIR="$ROOT/build-$COMPILER-$CONFIG-$GENERATOR"
+if ((STATIC)); then
+    BUILD_DIR="$BUILD_DIR-static"
+fi
 BIN_DIR="$ROOT/bin"
 JOBS="${JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)}"
 
@@ -140,15 +175,26 @@ echo "=====Xtate Linux build"
 echo "  Source      : $ROOT"
 echo "  Compiler    : $COMPILER ($CC_BIN)"
 echo "  Configuration: $BUILD_TYPE"
+echo "  Generator   : $GENERATOR"
+echo "  Static      : $STATIC"
+echo "  Minimal     : $MINIMAL"
 echo "  Build dir   : $BUILD_DIR"
 echo "  Project bin : $BIN_DIR"
 
 rm -rf "$BUILD_DIR"
 mkdir -p "$BIN_DIR"
-cmake -S "$ROOT" -B "$BUILD_DIR" \
+CMAKE_FLAGS=()
+if ((STATIC)); then
+    CMAKE_FLAGS+=("-DCMAKE_EXE_LINKER_FLAGS=-static")
+fi
+if ((MINIMAL)); then
+    CMAKE_FLAGS+=("-DWITH_OPENSSL=OFF" "-DWITH_PCRE2=OFF" "-DWITH_LIBXML2=OFF" "-DWITH_BSON=OFF" "-DWITH_MONGOC=OFF")
+fi
+cmake -S "$ROOT" -B "$BUILD_DIR" -G "$CMAKE_GENERATOR" \
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
     -DCMAKE_C_COMPILER="$CC_BIN" \
-    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+    "${CMAKE_FLAGS[@]}"
 cmake --build "$BUILD_DIR" -j "$JOBS"
 
 case "$CONFIG" in
@@ -162,8 +208,13 @@ if [[ ! -f "$EXE_PATH" ]]; then
 fi
 
 PER_TOOLCHAIN="$BIN_DIR/xtate-$COMPILER-$CONFIG"
+if ((STATIC)); then
+    PER_TOOLCHAIN="$PER_TOOLCHAIN-static"
+fi
 install -m 755 "$EXE_PATH" "$PER_TOOLCHAIN"
-if [[ "$CONFIG" == "debug" ]]; then
+if ((STATIC)); then
+    install -m 755 "$EXE_PATH" "$BIN_DIR/xtate_static"
+elif [[ "$CONFIG" == "debug" ]]; then
     install -m 755 "$EXE_PATH" "$BIN_DIR/xtate_debug"
 else
     install -m 755 "$EXE_PATH" "$BIN_DIR/xtate"
@@ -171,7 +222,9 @@ fi
 
 echo "=====Build succeeded"
 echo "  $PER_TOOLCHAIN"
-if [[ "$CONFIG" == "debug" ]]; then
+if ((STATIC)); then
+    echo "  $BIN_DIR/xtate_static"
+elif [[ "$CONFIG" == "debug" ]]; then
     echo "  $BIN_DIR/xtate_debug"
 else
     echo "  $BIN_DIR/xtate"

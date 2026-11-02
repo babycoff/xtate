@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.26.1-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.27.0-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -202,10 +202,13 @@ sudo apt install build-essential cmake pkg-config libpcap-dev \
 ./build.sh                                  # 交互：选择编译器和配置
 ./build.sh --compiler gcc --config release  # 显式指定
 ./build.sh --compiler clang --config debug  # 显式 Debug
+./build.sh --generator ninja                # 使用 Ninja
+./build.sh --static --minimal               # 基础 musl 静态构建
 ```
 
 输出：`bin/xtate`（Release 别名）、`bin/xtate_debug`（Debug 别名），以及
-`bin/xtate-<compiler>-<config>` 按工具链命名的文件。别名规则见[构建产物](docs/zh-CN/build-artifacts.md)。构建目录为
+`bin/xtate-<compiler>-<config>` 按工具链命名的文件。`--generator ninja|make`
+选择 CMake 生成器；见[平台支持](docs/zh-CN/platform-support.md)。别名规则见[构建产物](docs/zh-CN/build-artifacts.md)。构建目录为
 `build-<compiler>-<config>`；`./clean.sh` 清理它们和 `bin/xtate*`，保留
 `bin/.gitignore`。
 
