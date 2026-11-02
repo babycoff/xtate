@@ -525,3 +525,106 @@ const char *i18n_tr_module_param(const char *module, const char *name,
     }
     return i18n_tr(english);
 }
+
+typedef struct I18nModuleDescEntry {
+    const char *name;
+    const char *zh_cn;
+} I18nModuleDescEntry;
+
+static const I18nModuleDescEntry i18n_module_desc_help[] = {
+    {"tcp-syn", "TCP SYN 扫描，判断端口是否开放。"},
+    {"icmp-echo", "ICMP Ping 存活主机发现。"},
+    {"icmp-time", "ICMP 时间戳存活主机发现。"},
+    {"arp-req", "局域网 ARP 扫描。"},
+    {"ndp-ns", "局域网 NDP 邻居发现扫描。"},
+    {"sctp-init", "SCTP INIT 端口扫描。"},
+    {"zbanner", "使用指定探测模块的无状态 TCP banner 扫描。"},
+    {"udp", "单包 UDP 扫描。"},
+    {"tcp-state", "有状态 TCP 扫描。"},
+    {"yarrp-echo", "无状态 ICMP 路由追踪。"},
+    {"yarrp-udp", "无状态 UDP 路由追踪。"},
+    {"null", "不发送数据，只等待响应。"},
+    {"http", "无状态 HTTP 请求探测。"},
+    {"http-state", "有状态 HTTP 请求探测。"},
+    {"echo", "4 字节随机 UDP 探测。"},
+    {"get-state", "有状态 HTTP GET 调试探测。"},
+    {"jarm", "获取未哈希 JARM 指纹。"},
+    {"tls-state", "TLS 上层探测。"},
+    {"dns", "DNS 记录查询。"},
+    {"lua-tcp", "自定义 Lua 无状态 TCP 探测。"},
+    {"lua-udp", "自定义 Lua UDP 探测。"},
+    {"snmp", "SNMP 扫描并获取主机信息。"},
+    {"hello", "无状态自定义 payload 探测。"},
+    {"hello-udp", "UDP 自定义 payload 探测。"},
+    {"hello-state", "有状态自定义 payload 探测。"},
+    {"recog", "无状态 Recog 指纹匹配。"},
+    {"recog-udp", "UDP Recog 指纹匹配。"},
+    {"recog-state", "有状态 Recog 指纹匹配。"},
+    {"close-state", "有状态探测后关闭底层连接。"},
+    {"tls-hello", "TLS ServerHello 版本识别与正则匹配。"},
+    {"nmap", "使用 nmap 探针识别 TCP 服务。"},
+    {"nmap-udp", "使用 nmap 探针识别 UDP 服务。"},
+    {"lzr", "LZR 风格服务识别器。"},
+    {"lzr-http", "HTTP GET 服务识别。"},
+    {"lzr-tls", "TLS ClientHello 服务识别。"},
+    {"lzr-ftp", "FTP 服务识别。"},
+    {"lzr-pop3", "POP3 服务识别。"},
+    {"lzr-imap", "IMAP banner 服务识别。"},
+    {"lzr-smtp", "SMTP 服务识别。"},
+    {"lzr-ssh", "SSH 服务识别。"},
+    {"lzr-socks5", "SOCKS5 服务识别。"},
+    {"lzr-telnet", "Telnet 服务识别。"},
+    {"lzr-fix", "FIX 协议识别。"},
+    {"lzr-smb", "SMB 服务识别。"},
+    {"lzr-mqtt", "MQTT 服务识别。"},
+    {"lzr-amqp", "AMQP 服务识别。"},
+    {"lzr-mysql", "MySQL 服务识别。"},
+    {"lzr-mongodb", "MongoDB 服务识别。"},
+    {"lzr-redis", "Redis 服务识别。"},
+    {"lzr-postgres", "PostgreSQL 服务识别。"},
+    {"lzr-mssql", "MSSQL 服务识别。"},
+    {"lzr-oracle", "Oracle SQL 服务识别。"},
+    {"lzr-rdp", "RDP 服务识别。"},
+    {"lzr-x11", "X11 服务识别。"},
+    {"lzr-vnc", "VNC 服务识别。"},
+    {"lzr-k8s", "Kubernetes 服务识别。"},
+    {"lzr-rtsp", "RTSP 服务识别。"},
+    {"lzr-modbus", "Modbus 服务识别。"},
+    {"lzr-siemens", "Siemens S7 服务识别。"},
+    {"lzr-bgp", "BGP 服务识别。"},
+    {"lzr-pptp", "PPTP 服务识别。"},
+    {"lzr-dns", "DNS 服务识别。"},
+    {"lzr-ipmi", "IPMI 服务识别。"},
+    {"lzr-dnp3", "DNP3 服务识别。"},
+    {"lzr-fox", "FOX 服务识别。"},
+    {"lzr-memcached_ascii", "Memcached ASCII 服务识别。"},
+    {"lzr-memcached_binary", "Memcached 二进制协议服务识别。"},
+    {"lzr-ipp", "IPP 服务识别。"},
+    {"lzr-wait", "不发送数据，不识别服务。"},
+    {"lzr-newlines", "发送 2 个换行，由其它探测识别。"},
+    {"lzr-newlines50", "发送 50 个换行，由其它探测识别。"},
+    {"text", "以文本格式保存结果。"},
+    {"ndjson", "以 NDJSON 格式保存结果。"},
+    {"bson", "以 BSON 二进制 JSON 格式保存结果。"},
+    {"csv", "以 CSV 格式保存结果。"},
+    {"list", "保存 IP/端口结果列表。"},
+    {"mongodb", "保存结果到 MongoDB。"},
+    {"null", "丢弃所有结果，便于调试。"},
+    {"blackrock", "默认目标随机化生成器（IP 和端口）。"},
+    {"ip-stream", "从 IP 范围流生成目标。"},
+    {"addr-stream", "从 IP/端口范围对流生成目标。"},
+    {"ip-list", "从 IP 列表生成目标。"},
+    {"addr-list", "从 IP/端口对列表生成目标。"},
+};
+
+const char *i18n_tr_module_desc(const char *module, const char *english) {
+    if (i18n_language != I18N_ZH_CN || !module)
+        return i18n_tr(english);
+    for (unsigned i = 0;
+         i < sizeof(i18n_module_desc_help) / sizeof(i18n_module_desc_help[0]);
+         i++) {
+        if (strcmp(module, i18n_module_desc_help[i].name) == 0)
+            return i18n_module_desc_help[i].zh_cn;
+    }
+    return i18n_tr(english);
+}

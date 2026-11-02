@@ -80,6 +80,18 @@ def main():
             missing.append("global:%s" % name)
 
     for kind in ("scan", "probe", "out", "gen"):
+        listing = run(binary, "--lang", "zh", "--list-%s" % kind)
+        pending = None
+        for line in listing.splitlines():
+            m = re.match(r"^  \d+\.(\S+)", line)
+            if m:
+                pending = m.group(1)
+                continue
+            if pending and line.startswith("    "):
+                if not CJK.search(line):
+                    missing.append("%s:%s:description" % (kind, pending))
+                pending = None
+
         for module in module_names(binary, kind):
             text = run(binary, "--lang", "zh", "--help-%s" % kind, module)
             params = parse_help(text)
@@ -93,7 +105,7 @@ def main():
             print("  " + item)
         return 1
 
-    print("PASS: every global and module parameter description is Chinese")
+    print("PASS: all help parameters and module descriptions are Chinese")
     return 0
 
 

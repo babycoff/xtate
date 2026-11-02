@@ -52,9 +52,11 @@ void list_searched_generate_modules(const char *name) {
         }
         if (distance <= 2) {
             printf("    %s -> %s\n", generate_modules_list[i]->name,
-                   generate_modules_list[i]->short_desc
-                       ? generate_modules_list[i]->short_desc
-                       : generate_modules_list[i]->desc);
+                   i18n_tr_module_desc(
+                       generate_modules_list[i]->name,
+                       generate_modules_list[i]->short_desc
+                           ? generate_modules_list[i]->short_desc
+                           : generate_modules_list[i]->desc));
         }
     }
 }
@@ -66,9 +68,7 @@ void list_all_generate_modules() {
 
     for (int i = 0; i < len; i++) {
         printf("  %d.%s\n", i + 1, generate_modules_list[i]->name);
-        printf("    %s\n", i18n_tr(generate_modules_list[i]->short_desc
-                                       ? generate_modules_list[i]->short_desc
-                                       : generate_modules_list[i]->desc));
+        printf("    %s\n", i18n_tr_module_desc(generate_modules_list[i]->name, generate_modules_list[i]->short_desc ? generate_modules_list[i]->short_desc : generate_modules_list[i]->desc));
         printf("\n");
     }
 }
@@ -83,7 +83,7 @@ void help_generate_module(Generator *module) {
     printf("  %s%s\n", i18n_tr("GenerateModule Name: "), module->name);
     printf("\n");
     printf("  %s", i18n_tr("Description:\n"));
-    xprint(i18n_tr(module->desc), 6, 80);
+    xprint(i18n_tr_module_desc(module->name, module->desc), 6, 80);
     printf("\n");
     printf("\n");
     if (module->params) {

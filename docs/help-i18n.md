@@ -62,15 +62,16 @@ Translated so far:
 - **all 120 global parameter descriptions**;
 - **all module parameter descriptions** (keyed by parameter name, shared across
   modules where the meaning is the same);
+- **all module descriptions and short descriptions** (concise summaries keyed
+  by module name);
 - module help labels (`Name`, `Probe Type`, `Description`, …);
 - list/search headings;
 - the `--lang` parameter itself.
 
 Falling back to English:
 
-- module descriptions and short descriptions (the prose paragraph above the
-  parameter list);
-- error messages and log text.
+- error messages and log text;
+- parameter/module names and result values (machine interface).
 
 `tests/i18n/check_coverage.py` walks every global parameter and every module
 parameter and fails when a description has no Chinese text. It runs as part of

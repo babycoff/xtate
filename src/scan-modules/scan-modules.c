@@ -65,9 +65,11 @@ void list_searched_scan_modules(const char *name) {
         }
         if (distance <= 2) {
             printf("    %s -> %s\n", scan_modules_list[i]->name,
-                   scan_modules_list[i]->short_desc
-                       ? scan_modules_list[i]->short_desc
-                       : scan_modules_list[i]->desc);
+                   i18n_tr_module_desc(
+                       scan_modules_list[i]->name,
+                       scan_modules_list[i]->short_desc
+                           ? scan_modules_list[i]->short_desc
+                           : scan_modules_list[i]->desc));
         }
     }
 }
@@ -79,9 +81,7 @@ void list_all_scan_modules() {
 
     for (int i = 0; i < len; i++) {
         printf("  %d.%s\n", i + 1, scan_modules_list[i]->name);
-        printf("    %s\n", i18n_tr(scan_modules_list[i]->short_desc
-                                       ? scan_modules_list[i]->short_desc
-                                       : scan_modules_list[i]->desc));
+        printf("    %s\n", i18n_tr_module_desc(scan_modules_list[i]->name, scan_modules_list[i]->short_desc ? scan_modules_list[i]->short_desc : scan_modules_list[i]->desc));
         printf("\n");
     }
 }
@@ -101,7 +101,7 @@ void help_scan_module(Scanner *module) {
     printf("\n");
     printf("\n");
     printf("  %s", i18n_tr("Description:\n"));
-    xprint(i18n_tr(module->desc), 6, 80);
+    xprint(i18n_tr_module_desc(module->name, module->desc), 6, 80);
     printf("\n");
     printf("\n");
     if (module->params) {

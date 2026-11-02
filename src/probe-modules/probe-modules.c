@@ -234,9 +234,11 @@ void list_searched_probe_modules(const char *name) {
         }
         if (distance <= 2) {
             printf("    %s -> %s\n", probe_modules_list[i]->name,
-                   probe_modules_list[i]->short_desc
-                       ? probe_modules_list[i]->short_desc
-                       : probe_modules_list[i]->desc);
+                   i18n_tr_module_desc(
+                       probe_modules_list[i]->name,
+                       probe_modules_list[i]->short_desc
+                           ? probe_modules_list[i]->short_desc
+                           : probe_modules_list[i]->desc));
         }
     }
 }
@@ -248,9 +250,7 @@ void list_all_probe_modules() {
 
     for (int i = 0; i < len; i++) {
         printf("  %d.%s\n", i + 1, probe_modules_list[i]->name);
-        printf("    %s\n", i18n_tr(probe_modules_list[i]->short_desc
-                                       ? probe_modules_list[i]->short_desc
-                                       : probe_modules_list[i]->desc));
+        printf("    %s\n", i18n_tr_module_desc(probe_modules_list[i]->name, probe_modules_list[i]->short_desc ? probe_modules_list[i]->short_desc : probe_modules_list[i]->desc));
         printf("\n");
     }
 }
@@ -272,7 +272,7 @@ void help_probe_module(Probe *module) {
            module->hello_wait);
     printf("\n");
     printf("  %s", i18n_tr("Description:\n"));
-    xprint(i18n_tr(module->desc), 6, 80);
+    xprint(i18n_tr_module_desc(module->name, module->desc), 6, 80);
     printf("\n");
     printf("\n");
     if (module->params) {
