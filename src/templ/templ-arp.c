@@ -15,10 +15,12 @@ static size_t arp_create_by_template_ipv4(const TmplPkt *tmpl,
                          "TemplatePacket.\n");
         return 0;
     }
-    unsigned r_len = sizeof_px;
+    unsigned r_len = tmpl->ipv4.length;
 
-    if (r_len > tmpl->ipv4.length)
-        r_len = tmpl->ipv4.length;
+    if (sizeof_px < r_len) {
+        LOG(LEVEL_ERROR, "(arp_create_by_template_ipv4) buffer too small\n");
+        return 0;
+    }
     memcpy(px, tmpl->ipv4.packet, r_len);
     px = px + tmpl->ipv4.offset_ip;
     U32_TO_BE(px + 14, ip_me);

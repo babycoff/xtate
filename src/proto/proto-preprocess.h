@@ -109,4 +109,6 @@ typedef struct PreprocessedInfo {
 bool preprocess_frame(const unsigned char *px, unsigned length,
                       unsigned link_type, PreInfo *info);
 
+int preprocess_selftest(void);
+
 #endif

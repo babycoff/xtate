@@ -127,6 +127,16 @@ unsigned checksum_ipv6_upper(const unsigned char *ip_src,
     const unsigned char *buf = (const unsigned char *)payload;
     uint64_t             sum = 0;
 
+    if (ip_src == NULL || ip_dst == NULL ||
+        (payload == NULL && payload_length != 0))
+        return 0xFFFFFFFF;
+
+    /* The checksum field must be present before subtracting it. */
+    if ((ip_proto == IP_PROTO_IPv6_ICMP && payload_length < 4) ||
+        (ip_proto == IP_PROTO_TCP && payload_length < 18) ||
+        (ip_proto == IP_PROTO_UDP && payload_length < 8))
+        return 0xFFFFFFFF;
+
     /* Calculate the pseudo-header */
     sum += _checksum_calculate(ip_src, 16);
     sum += _checksum_calculate(ip_dst, 16);

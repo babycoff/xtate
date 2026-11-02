@@ -724,5 +724,30 @@ int ranges6_selftest() {
     if (r.begin.lo != 0x00008a2e03707334ULL)
         return 1;
 
+    /* Boundary prefixes: /0, /128, /32 and an explicit range. */
+    if (target_parse_range("::/0", 0, 0, 0, &r) != Ipv6_Address)
+        ERROR();
+    if (r.begin.hi != 0 || r.begin.lo != 0 || r.end.hi != UINT64_MAX ||
+        r.end.lo != UINT64_MAX)
+        ERROR();
+
+    if (target_parse_range("::1/128", 0, 0, 0, &r) != Ipv6_Address)
+        ERROR();
+    if (r.begin.hi != 0 || r.begin.lo != 1 || r.end.hi != 0 ||
+        r.end.lo != 1)
+        ERROR();
+
+    if (target_parse_range("2001:db8::/32", 0, 0, 0, &r) != Ipv6_Address)
+        ERROR();
+    if (r.begin.hi != 0x20010db800000000ULL || r.begin.lo != 0 ||
+        r.end.hi != 0x20010db8ffffffffULL || r.end.lo != UINT64_MAX)
+        ERROR();
+
+    if (target_parse_range("2001:db8::1-2001:db8::5", 0, 0, 0, &r) !=
+        Ipv6_Address)
+        ERROR();
+    if (r.begin.hi != r.end.hi || r.begin.lo != 1 || r.end.lo != 5)
+        ERROR();
+
     return 0;
 }

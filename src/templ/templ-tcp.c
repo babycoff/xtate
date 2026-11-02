@@ -1076,8 +1076,14 @@ void tcp_set_window(unsigned char *px, size_t px_length, unsigned window) {
     px[offset + 16] = (unsigned char)(0);
     px[offset + 17] = (unsigned char)(0);
 
-    xsum = ~checksum_ipv4_tcp(px, parsed.ip_offset, parsed.transport_offset,
-                              parsed.transport_length);
+    if (parsed.ip_version == 4) {
+        xsum = ~checksum_ipv4_tcp(px, parsed.ip_offset, parsed.transport_offset,
+                                  parsed.transport_length);
+    } else {
+        xsum = ~checksum_ipv6_upper(px + parsed.ip_offset + 8,
+                                    px + parsed.ip_offset + 24, IP_PROTO_TCP,
+                                    parsed.transport_length, px + offset);
+    }
 
     U16_TO_BE(px + offset + 16, xsum);
 }

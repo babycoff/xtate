@@ -599,7 +599,7 @@ void template_packet_clear(TmplSet *templset) {
         FREE(templset->pkts[i].ipv6.packet);
     }
 
-    memset(templset, 1, sizeof(TmplSet));
+    memset(templset, 0, sizeof(TmplSet));
 }
 
 void template_set_tcp_syn_win_of_default(unsigned window) {
@@ -623,10 +623,9 @@ void template_set_ttl(TmplSet *tmplset, unsigned ttl) {
         /**
          * Kludge, very kludge...
          */
-        if (i == TmplType_ARP)
-            continue;
-
         tmpl_pkt = &tmplset->pkts[i];
+        if (tmpl_pkt->tmpl_type == TmplType_ARP)
+            continue;
 
         px             = tmpl_pkt->ipv4.packet;
         offset         = tmpl_pkt->ipv4.offset_ip;
@@ -740,5 +739,7 @@ int template_selftest() {
 
     if (failures)
         LOG(LEVEL_ERROR, "(template) selftest failed\n");
+
+    template_packet_clear(tmplset);
     return failures;
 }

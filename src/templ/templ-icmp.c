@@ -257,11 +257,12 @@ static size_t icmp_timestamp_create_by_template_ipv4(
     uint64_t xsum_icmp;
     unsigned xsum_ip;
     unsigned icmp_length;
-    unsigned r_len = sizeof_px;
+    unsigned r_len = tmpl->ipv4.length;
 
-    /* Create some shorter local variables to work with */
-    if (r_len > tmpl->ipv4.length)
-        r_len = tmpl->ipv4.length;
+    if (sizeof_px < r_len) {
+        LOG(LEVEL_ERROR, "(icmp_timestamp_create_by_template_ipv4) buffer too small\n");
+        return 0;
+    }
     memcpy(px, tmpl->ipv4.packet, r_len);
     offset_ip  = tmpl->ipv4.offset_ip;
     offset_tcp = tmpl->ipv4.offset_tcp;

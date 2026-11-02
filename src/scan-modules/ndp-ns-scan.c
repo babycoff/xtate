@@ -93,6 +93,7 @@ static void ndpns_validate(uint64_t entropy, Recved *recved, PreHandle *pre) {
     if (recved->parsed.icmp_type == ICMPv6_TYPE_NA &&
         recved->parsed.icmp_code == ICMPv6_CODE_NA &&
         ndp_is_solicited_advertise(recved->parsed.src_ip.ipv6, recved->packet,
+                                   recved->length,
                                    recved->parsed.transport_offset)) {
         pre->go_dedup        = 1;
         pre->dedup_port_them = 0;

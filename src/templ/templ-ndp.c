@@ -403,11 +403,12 @@ ndp_create_ns_by_template_ipv6(const TmplPkt *tmpl, ipv6address ip_them,
     uint64_t xsum_ndp;
     unsigned ndp_length;
 
-    unsigned r_len = sizeof_px;
+    unsigned r_len = tmpl->ipv6.length;
 
-    /* Create some shorter local variables to work with */
-    if (r_len > tmpl->ipv6.length)
-        r_len = tmpl->ipv6.length;
+    if (sizeof_px < r_len) {
+        LOG(LEVEL_ERROR, "(ndp_create_by_template_ipv6) buffer too small\n");
+        return 0;
+    }
     memcpy(px, tmpl->ipv6.packet, r_len);
     offset_ip  = tmpl->ipv6.offset_ip;
     offset_tcp = tmpl->ipv6.offset_tcp;
@@ -517,10 +518,43 @@ size_t ndp_create_ns_packet(ipaddress ip_them, ipaddress ip_me,
 }
 
 bool ndp_is_solicited_advertise(ipv6address ip_them, const unsigned char *px,
-                                unsigned icmpv6_offset) {
+                                size_t px_length, unsigned icmpv6_offset) {
+    /* Target address is ICMPv6 offset + 8..23 (16 bytes). */
+    if (px_length < (size_t)icmpv6_offset + 24)
+        return false;
     if (U64_EQUAL_TO_BE(px + icmpv6_offset + 8, ip_them.hi) &&
         U64_EQUAL_TO_BE(px + icmpv6_offset + 16, ip_them.lo))
         return true;
 
     return false;
+}
+
+int ndp_selftest(void) {
+    unsigned char px[32] = {0};
+    ipv6address   target = {0x20010db800000001ULL, 0x0000000000000002ULL};
+    int           x      = 0;
+
+    /* Big-endian target address at ICMPv6 offset + 8 and + 16. */
+    for (unsigned i = 0; i < 8; i++) {
+        px[8 + i]  = (unsigned char)(target.hi >> (56 - 8 * i));
+        px[16 + i] = (unsigned char)(target.lo >> (56 - 8 * i));
+    }
+    if (!ndp_is_solicited_advertise(target, px, sizeof(px), 0))
+        x++;
+    px[8] ^= 1;
+    if (ndp_is_solicited_advertise(target, px, sizeof(px), 0))
+        x++;
+    px[8] ^= 1;
+
+    /* Offset must be honored. */
+    for (unsigned i = 0; i < 8; i++) {
+        px[16 + i] = (unsigned char)(target.hi >> (56 - 8 * i));
+        px[24 + i] = (unsigned char)(target.lo >> (56 - 8 * i));
+    }
+    if (!ndp_is_solicited_advertise(target, px, sizeof(px), 8))
+        x++;
+
+    if (x)
+        LOG(LEVEL_ERROR, "(%s) selftest failed\n", __func__);
+    return x;
 }

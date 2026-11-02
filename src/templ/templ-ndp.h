@@ -35,6 +35,8 @@ size_t ndp_create_ns_packet(ipaddress ip_them, ipaddress ip_me,
  * equal to target ip in ICMPv6
  */
 bool ndp_is_solicited_advertise(ipv6address ip_them, const unsigned char *px,
-                                unsigned icmpv6_offset);
+                                size_t px_length, unsigned icmpv6_offset);
+
+int ndp_selftest(void);
 
 #endif

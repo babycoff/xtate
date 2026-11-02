@@ -106,6 +106,9 @@ static size_t udp_create_by_template_ipv4(
     /*set udp checksum to zero*/
     U16_TO_BE(px + offset_tcp + 6, 0);
     xsum_udp = checksum_ipv4_udp(px, offset_ip, offset_tcp, r_len - offset_tcp);
+    /* RFC 768: a computed zero checksum is transmitted as all ones. */
+    if (xsum_udp == 0)
+        xsum_udp = 0xFFFF;
     U16_TO_BE(px + offset_tcp + 6, xsum_udp);
 
     return r_len;
@@ -178,6 +181,9 @@ static size_t udp_create_by_template_ipv6(
     xsum_udp =
         checksum_ipv6_upper(px + offset_ip + 8, px + offset_ip + 24,
                             IP_PROTO_UDP, r_len - offset_tcp, px + offset_tcp);
+    /* RFC 8200: zero is not a valid transmitted UDP checksum. */
+    if (xsum_udp == 0)
+        xsum_udp = 0xFFFF;
     U16_TO_BE(px + offset_tcp + 6, xsum_udp);
 
     return r_len;

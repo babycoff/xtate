@@ -110,11 +110,12 @@ sctp_create_by_template_ipv4(const TmplPkt *tmpl, ipv4address ip_them,
     unsigned xsum_ip;
 
     unsigned ip_id = ip_them ^ port_them ^ init_tag;
-    unsigned r_len = sizeof_px;
+    unsigned r_len = tmpl->ipv4.length;
 
-    /* Create some shorter local variables to work with */
-    if (r_len > tmpl->ipv4.length)
-        r_len = tmpl->ipv4.length;
+    if (sizeof_px < r_len) {
+        LOG(LEVEL_ERROR, "(sctp_create_by_template_ipv4) buffer too small\n");
+        return 0;
+    }
     memcpy(px, tmpl->ipv4.packet, r_len);
     offset_ip  = tmpl->ipv4.offset_ip;
     offset_tcp = tmpl->ipv4.offset_tcp;
@@ -183,11 +184,12 @@ sctp_create_by_template_ipv6(const TmplPkt *tmpl, ipv6address ip_them,
     unsigned offset_tcp;
     uint64_t xsum_sctp;
 
-    unsigned r_len = sizeof_px;
+    unsigned r_len = tmpl->ipv6.length;
 
-    /* Create some shorter local variables to work with */
-    if (r_len > tmpl->ipv6.length)
-        r_len = tmpl->ipv6.length;
+    if (sizeof_px < r_len) {
+        LOG(LEVEL_ERROR, "(sctp_create_by_template_ipv6) buffer too small\n");
+        return 0;
+    }
     memcpy(px, tmpl->ipv6.packet, r_len);
     offset_ip  = tmpl->ipv6.offset_ip;
     offset_tcp = tmpl->ipv6.offset_tcp;

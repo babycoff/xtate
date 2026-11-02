@@ -22,6 +22,7 @@
 #include "../util-data/data-convert.h"
 #include "../stub/stub-pcap-dlt.h"
 #include "../templ/templ-icmp.h"
+#include "../util-out/logger.h"
 
 /**
  *  Call this frequently while parsing through the headers to make sure that
@@ -137,6 +138,9 @@ parse_tcp: {
     unsigned tcp_length;
     VERIFY_REMAINING(20, FOUND_TCP);
     tcp_length = px[offset + 12] >> 2;
+    if (tcp_length < 20) {
+        return false; /* TCP data offset must cover the 20-byte header */
+    }
     VERIFY_REMAINING(tcp_length, FOUND_TCP);
     info->port_src   = BE_TO_U16(px + offset + 0);
     info->port_dst   = BE_TO_U16(px + offset + 2);
@@ -156,13 +160,12 @@ parse_udp: {
     offset += 8;
     info->app_offset = offset;
     info->app_length = length - info->app_offset;
-    assert(info->app_length < 2000);
 
     return true;
 }
 
 parse_icmp: {
-    VERIFY_REMAINING(4, FOUND_ICMP);
+    VERIFY_REMAINING(8, FOUND_ICMP);
     info->icmp_type  = px[offset + 0];
     info->icmp_code  = px[offset + 1];
     info->icmp_id    = BE_TO_U16(px + offset + 4);
@@ -187,7 +190,6 @@ parse_sctp: {
     info->port_dst   = BE_TO_U16(px + offset + 2);
     info->app_offset = offset + 12;
     info->app_length = length - info->app_offset;
-    assert(info->app_length < 2000);
     return true;
 }
 
@@ -252,7 +254,9 @@ parse_ipv6_hop_by_hop: {
 
     VERIFY_REMAINING(8, FOUND_IPV6_HOP);
     info->ip_protocol = px[offset];
-    len               = px[offset + 1] + 8;
+    /* IPv6 extension-header length is in 8-octet units after the first 8
+     * bytes: total = (Hdr Ext Len + 1) * 8. */
+    len = ((unsigned)px[offset + 1] + 1) * 8;
 
     VERIFY_REMAINING(len, FOUND_IPV6_HOP);
     offset += len;
@@ -262,7 +266,7 @@ parse_ipv6_hop_by_hop: {
     goto parse_ipv6_next;
 
 parse_icmpv6: {
-    VERIFY_REMAINING(4, FOUND_ICMP);
+    VERIFY_REMAINING(8, FOUND_ICMP);
 
     info->icmp_type  = px[offset + 0];
     info->icmp_code  = px[offset + 1];
@@ -588,4 +592,60 @@ parse_arp:
         info->found_offset = info->ip_offset;
         return true;
     }
+}
+
+
+int preprocess_selftest(void) {
+    int x = 0;
+
+    /* 1. Truncated ICMP: the parser must not read id/sequence bytes. */
+    {
+        unsigned char buf[14 + 24] = {0};
+        PreInfo       info;
+        U16_TO_BE(buf + 12, ETHERTYPE_IPv4);
+        buf[14]     = 0x45;
+        U16_TO_BE(buf + 16, 24); /* IPv4 total length */
+        buf[23]     = IP_PROTO_ICMP;
+        if (preprocess_frame(buf, sizeof(buf), PCAP_DLT_ETHERNET, &info))
+            x++;
+    }
+
+    /* 2. TCP data offset must cover the 20-byte header. */
+    {
+        unsigned char buf[14 + 40] = {0};
+        PreInfo       info;
+        U16_TO_BE(buf + 12, ETHERTYPE_IPv4);
+        buf[14] = 0x45;
+        U16_TO_BE(buf + 16, 40);
+        buf[23] = IP_PROTO_TCP;
+        buf[34 + 12] = 0; /* data offset = 0 */
+        if (preprocess_frame(buf, sizeof(buf), PCAP_DLT_ETHERNET, &info))
+            x++;
+    }
+
+    /* 3. IPv6 Hop-by-Hop length is (Hdr Ext Len + 1) * 8. */
+    {
+        unsigned char buf[14 + 40 + 24] = {0};
+        PreInfo       info;
+        U16_TO_BE(buf + 12, ETHERTYPE_IPv6);
+        buf[14] = 0x60;
+        U16_TO_BE(buf + 18, 24); /* payload: 16-byte hop header + 8 UDP */
+        buf[20] = IP_PROTO_HOPOPT;
+        /* Hop-by-Hop: next=UDP, Hdr Ext Len=1 -> 16 bytes total. */
+        buf[54] = IP_PROTO_UDP;
+        buf[55] = 1;
+        /* UDP header after 16-byte hop header. */
+        buf[70] = 0x12;
+        buf[71] = 0x34;
+        buf[72] = 0x56;
+        buf[73] = 0x78;
+        if (!preprocess_frame(buf, sizeof(buf), PCAP_DLT_ETHERNET, &info) ||
+            info.found != FOUND_UDP || info.app_offset != 78 ||
+            info.port_src != 0x1234 || info.port_dst != 0x5678)
+            x++;
+    }
+
+    if (x)
+        LOG(LEVEL_ERROR, "(%s) selftest failed\n", __func__);
+    return x;
 }

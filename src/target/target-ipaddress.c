@@ -442,6 +442,12 @@ int ipv6address_selftest() {
          {.ipv6 = {0x0002000000000000, 0x0000000000000001}, .version = 6}},
         {"1:2::",
          {.ipv6 = {0x0001000200000000, 0x0000000000000000}, .version = 6}},
+        {"::",
+         {.ipv6 = {0x0000000000000000, 0x0000000000000000}, .version = 6}},
+        {"fe80::1",
+         {.ipv6 = {0xfe80000000000000, 0x0000000000000001}, .version = 6}},
+        {"ffff::",
+         {.ipv6 = {0xffff000000000000, 0x0000000000000000}, .version = 6}},
         {NULL, {.ipv6 = {0, 0}, .version = 0}}};
 
     int                        line;
@@ -456,6 +462,27 @@ int ipv6address_selftest() {
                 __func__, line, tests[i].name, fmt.string);
             x++;
         }
+    }
+
+    /* External bytes -> internal representation must be network order. */
+    const unsigned char raw[16] = {0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0,
+                                   0,    0,    0,    0,    0, 0, 0, 1};
+    ipv6address         from_bytes = ipv6address_from_bytes(raw);
+    if (from_bytes.hi != 0x20010db800000000ULL ||
+        from_bytes.lo != 0x0000000000000001ULL) {
+        LOG(LEVEL_ERROR, "(%s) from_bytes failed\n", __func__);
+        x++;
+    }
+
+    /* Prefix comparison around the 32/48-bit boundaries. */
+    ipv6address pfx_a = {0x20010db800000000ULL, 1};
+    ipv6address pfx_b = {0x20010db8ffffffffULL, 2};
+    if (!ipv6address_is_equal_prefixed(pfx_a, pfx_b, 0) ||
+        !ipv6address_is_equal_prefixed(pfx_a, pfx_b, 32) ||
+        ipv6address_is_equal_prefixed(pfx_a, pfx_b, 48) ||
+        ipv6address_is_equal_prefixed(pfx_a, pfx_b, 128)) {
+        LOG(LEVEL_ERROR, "(%s) prefix compare failed\n", __func__);
+        x++;
     }
 
     return x;
