@@ -48,34 +48,85 @@ sudo dnf install gcc make cmake pkgconf-pkg-config libpcap-devel
 
 ## Alpine/musl
 
+不需要把整台机器换成 Alpine。支持的 musl 路径是 Alpine 根文件系统（容器或真实主机）。
+
+### 原生 Alpine
+
 ```bash
 apk add bash build-base cmake ninja pkgconf linux-headers \
   libpcap-dev openssl-dev
+git clone https://github.com/babycoff/xtate.git
+cd xtate
 ./build.sh --generator ninja
+./bin/xtate --selftest
 ```
 
 `linux-headers` 提供 raw socket 初始化所需的 netlink/接口头文件；
-`openssl-dev` 可选，不需要 TLS 探针时可手动传 `-DWITH_OPENSSL=OFF`。
+`openssl-dev` 可选，不需要 TLS 探针时可省略并传 `-DWITH_OPENSSL=OFF`。
 
-产物是 **musl 动态链接**，不是自动静态链接。
+产物是 **musl 动态链接**：
 
-## musl 静态实验
+```text
+bin/xtate
+bin/xtate-gcc-release
+```
 
-基础配置可以静态链接，但可选库需要静态归档：
+### 在 Linux/Windows/macOS 上用 Docker 构建 musl
+
+在仓库根目录执行（Docker Desktop 或 Linux 容器）：
 
 ```bash
-apk add bash build-base cmake ninja pkgconf linux-headers libpcap-dev
-./build.sh --generator ninja --static --minimal
-file bin/xtate_static
-./bin/xtate_static --selftest
+docker run --rm -v "$PWD:/src" -w /src alpine:3.20 sh -c '
+  apk add --no-cache bash build-base cmake ninja pkgconf \
+    linux-headers libpcap-dev openssl-dev &&
+  ./build.sh --generator ninja &&
+  ./bin/xtate --selftest
+'
+```
+
+这会在宿主仓库的 `bin/xtate` 生成 musl 二进制，构建目录为
+`build-gcc-release-ninja/`，可用 `./clean.sh` 清理。
+
+基础静态构建：
+
+```bash
+docker run --rm -v "$PWD:/src" -w /src alpine:3.20 sh -c '
+  apk add --no-cache bash build-base cmake ninja pkgconf \
+    linux-headers libpcap-dev &&
+  ./build.sh --generator ninja --static --minimal &&
+  ./bin/xtate_static --selftest &&
+  file ./bin/xtate_static
+'
+```
+
+输出：
+
+```text
+bin/xtate_static
+bin/xtate-gcc-release-static
 ```
 
 `--minimal` 关闭 OpenSSL/PCRE2/LibXml2/libbson/libmongoc；Alpine 默认包不提供这些
-可选库的静态版本。输出为 `bin/xtate_static` 和
-`bin/xtate-<compiler>-<config>-static`。
+可选库的静态版本。
 
-关闭 OpenSSL 后，需要 libpcap 静态库（Alpine 的 `libpcap-dev` 提供）。静态二进制
-仍需要 raw socket 权限和 libpcap 兼容抓包能力；静态链接不授予网络权限。
+静态二进制仍需要 raw socket 权限和 libpcap 兼容抓包能力；静态链接不授予网络权限。
+
+### 大陆 Docker/镜像源（仅显式 opt-in）
+
+默认镜像是上游 `alpine:3.20`。只有上游不可访问时，大陆用户才显式替换：
+
+```bash
+docker run --rm -v "$PWD:/src" -w /src \
+  docker.m.daocloud.io/library/alpine:3.20 sh -c '
+  echo "https://mirrors.aliyun.com/alpine/v3.20/main" > /etc/apk/repositories
+  echo "https://mirrors.aliyun.com/alpine/v3.20/community" >> /etc/apk/repositories
+  apk add --no-cache bash build-base cmake ninja pkgconf \
+    linux-headers libpcap-dev openssl-dev &&
+  ./build.sh --generator ninja
+'
+```
+
+不要把 DaoCloud/阿里云设为其他用户或 CI 的默认。
 
 ## 旧 CMake / 编译器说明
 

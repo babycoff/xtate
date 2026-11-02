@@ -51,38 +51,90 @@ build directory includes compiler, configuration and generator, for example
 
 ## Alpine/musl
 
+You do **not** need to replace your whole machine with Alpine. The supported
+native path is an Alpine rootfs (container or real host).
+
+### Native Alpine
+
 ```bash
 apk add bash build-base cmake ninja pkgconf linux-headers \
   libpcap-dev openssl-dev
+git clone https://github.com/babycoff/xtate.git
+cd xtate
 ./build.sh --generator ninja
+./bin/xtate --selftest
 ```
 
 `linux-headers` is required for the netlink/interface headers used by the raw
-socket setup. `openssl-dev` is optional; omit it (and pass
-`-DWITH_OPENSSL=OFF` manually) if you do not need TLS probes.
+socket setup. `openssl-dev` is optional; omit it and pass
+`-DWITH_OPENSSL=OFF` if you do not need TLS probes.
 
-The resulting binary is **musl dynamic**, not automatically static.
+The result is **musl dynamic**:
 
-## Static musl experiment
-
-A fully static binary is possible for the basic configuration, but optional
-libraries need static archives:
-
-```bash
-apk add bash build-base cmake ninja pkgconf linux-headers libpcap-dev
-./build.sh --generator ninja --static --minimal
-file bin/xtate_static
-./bin/xtate_static --selftest
+```text
+bin/xtate
+bin/xtate-gcc-release
 ```
 
-`--minimal` disables OpenSSL/PCRE2/LibXml2/libbson/libmongoc; static optional
-libraries are not provided by the default Alpine packages. The output is
-`bin/xtate_static` and `bin/xtate-<compiler>-<config>-static`.
+### Build musl from Linux, Windows or macOS with Docker
 
-Without OpenSSL, libpcap's static archive must be present (`libpcap-dev` on
-Alpine provides it). A static binary still needs raw-socket privileges and
-libpcap-compatible capture capability at runtime; static linking does not grant
-network privileges.
+From the repository root (Docker Desktop/Linux containers):
+
+```bash
+docker run --rm -v "$PWD:/src" -w /src alpine:3.20 sh -c '
+  apk add --no-cache bash build-base cmake ninja pkgconf \
+    linux-headers libpcap-dev openssl-dev &&
+  ./build.sh --generator ninja &&
+  ./bin/xtate --selftest
+'
+```
+
+This creates `bin/xtate` as a musl binary on the host checkout. Build trees are
+`build-gcc-release-ninja/`; remove them with `./clean.sh` if you do not need
+them.
+
+For a static basic build:
+
+```bash
+docker run --rm -v "$PWD:/src" -w /src alpine:3.20 sh -c '
+  apk add --no-cache bash build-base cmake ninja pkgconf \
+    linux-headers libpcap-dev &&
+  ./build.sh --generator ninja --static --minimal &&
+  ./bin/xtate_static --selftest &&
+  file ./bin/xtate_static
+'
+```
+
+Output:
+
+```text
+bin/xtate_static
+bin/xtate-gcc-release-static
+```
+
+`--minimal` disables OpenSSL/PCRE2/LibXml2/libbson/libmongoc. Alpine's default
+packages do not provide static archives for those optional libraries.
+
+A static binary still needs raw-socket privileges and libpcap-compatible
+capture capability at runtime; static linking does not grant network privileges.
+
+### Mainland China Docker/image mirrors (opt-in only)
+
+The default image is the upstream `alpine:3.20`. Only when upstream access is
+unavailable, mainland users may replace it explicitly:
+
+```bash
+docker run --rm -v "$PWD:/src" -w /src \
+  docker.m.daocloud.io/library/alpine:3.20 sh -c '
+  echo "https://mirrors.aliyun.com/alpine/v3.20/main" > /etc/apk/repositories
+  echo "https://mirrors.aliyun.com/alpine/v3.20/community" >> /etc/apk/repositories
+  apk add --no-cache bash build-base cmake ninja pkgconf \
+    linux-headers libpcap-dev openssl-dev &&
+  ./build.sh --generator ninja
+'
+```
+
+Do not make DaoCloud/Aliyun the default for other users or CI.
 
 ## Old CMake / compiler notes
 
