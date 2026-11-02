@@ -914,14 +914,19 @@ static void CPL_global_conf(const char              *cmd,
 
 static void HDL_show(void *conf, char *subcmd) {
     XConf *xconf = conf;
+    int    old   = xconf->echo_all;
+
     if (strcasecmp(subcmd, "diff") == 0) {
+        xconf->echo_all = 0;
         xconf_echo(xconf, stdout);
     } else if (strcasecmp(subcmd, "all") == 0) {
         xconf->echo_all = 1;
         xconf_echo(xconf, stdout);
     } else {
         LOG(LEVEL_ERROR, "usage: show [diff|all]\n");
+        return;
     }
+    xconf->echo_all = old;
 }
 
 static void HDL_help_cmd(void *conf, char *subcmd) {
