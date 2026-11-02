@@ -85,3 +85,5 @@ descriptions and hints are translated.
 - `list-param <filter>` matches whole name tokens, not arbitrary substrings.
 - In non-TTY mode a scan still needs a real target, privileges and libpcap/Npcap;
   script mode only removes the terminal UI, not the scan requirements.
+- Windows Chinese TTY output uses a scoped UTF-8 console code page and restores
+  it on normal exit / Ctrl-C; redirected output remains UTF-8.

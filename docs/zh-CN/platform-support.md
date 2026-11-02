@@ -75,8 +75,9 @@ file bin/xtate_static
 - 没有 `CMAKE_C_BYTE_ORDER` 时使用 `TestBigEndian` 回退。
 - 可选依赖缺失时以 `NOT_FOUND_*` 宏自动关闭；没有 PCRE2、LibXml2、
   libbson/libmongoc 仍可基础构建。
-- 旧发行版仓库可能已 EOL；Debian 10 可使用大陆归档源
-  `mirrors.aliyun.com/debian-archive`。
+- 旧发行版仓库可能已 EOL。国外用户应使用上游归档（`archive.debian.org`）；
+  国内用户可选择大陆镜像，例如 Debian 10 的
+  `mirrors.aliyun.com/debian-archive`。不要把大陆源设为其他用户或 CI 的默认。
 
 ## 当前限制
 

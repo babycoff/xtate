@@ -19,7 +19,9 @@
   searches forward for a packet that looks good.
 
 */
+#ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
+#endif
 #define _FILE_OFFSET_BITS 64
 
 #include "pcapfile.h"

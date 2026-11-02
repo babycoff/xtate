@@ -39,6 +39,18 @@ if (MSVC OR CMAKE_C_SIMULATE_ID STREQUAL "MSVC")
     add_compile_options(/utf-8)
 endif()
 
+if (MSVC)
+    # The codebase uses the C runtime string/file API deliberately (including
+    # crossline). MSVC's deprecation warnings are noise, not findings.
+    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+
+    # Legacy 64-bit C code intentionally stores some sizes in unsigned/int
+    # fields. These conversion categories are suppressed for MSVC, matching the
+    # structural suppressions already used for clang-cl, instead of hiding real
+    # warnings behind a lower warning level.
+    add_compile_options(/wd4244 /wd4267 /wd4018)
+endif()
+
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED True)
 

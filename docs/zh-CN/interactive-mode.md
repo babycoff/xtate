@@ -81,3 +81,5 @@ xtate --lang zh -interactive
 - `list-param <过滤词>` 按完整名称 token 匹配，不做任意子串匹配。
 - 非 TTY 模式只去掉终端 UI，不改变扫描本身对目标、权限和
   libpcap/Npcap 的要求。
+- Windows 中文 TTY 输出只在交互期间临时切到 UTF-8 代码页，正常退出/Ctrl-C
+  时恢复；重定向输出仍为 UTF-8。

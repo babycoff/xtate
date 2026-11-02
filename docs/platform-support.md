@@ -82,8 +82,10 @@ network privileges.
   absent.
 - Optional dependencies are auto-disabled with `NOT_FOUND_*` defines; the
   basic build succeeds without PCRE2, LibXml2, libbson or libmongoc.
-- Old distro packages may be EOL; use a mainland archive mirror such as
-  `mirrors.aliyun.com/debian-archive` for Debian 10.
+- Old distro packages may be EOL. Users outside mainland China should use the
+  upstream archive (`archive.debian.org`); mainland users can opt into a mirror
+  such as `mirrors.aliyun.com/debian-archive` for Debian 10. Do not make a
+  mainland mirror the default for other users or CI.
 
 ## Current limits
 

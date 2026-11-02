@@ -208,6 +208,9 @@ void i18n_write(const char *data, size_t len) {
             if (wide) {
                 MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, data,
                                     (int)len, wide, wlen);
+                /* Keep ordering with raw stdio output (crossline prompts and
+                 * completion menus use printf). */
+                fflush(stdout);
                 DWORD written = 0;
                 WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), wide,
                               (DWORD)wlen, &written, NULL);

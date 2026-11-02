@@ -37,6 +37,35 @@ static bool _interactive_wants_scan = false;
 static XConf *_interactive_xconf = NULL;
 static char _exe_path[256];
 
+#ifdef _WIN32
+static UINT _saved_console_cp;
+static bool _console_cp_changed = false;
+
+static void xcmd_restore_console_cp(void) {
+    if (_console_cp_changed) {
+        SetConsoleOutputCP(_saved_console_cp);
+        _console_cp_changed = false;
+    }
+}
+
+static BOOL WINAPI xcmd_console_ctrl_handler(DWORD type) {
+    (void)type;
+    xcmd_restore_console_cp();
+    return FALSE; /* let the default handler terminate the process */
+}
+
+static void xcmd_enable_utf8_console(void) {
+    if (i18n_get_language() != I18N_ZH_CN)
+        return;
+    _saved_console_cp = GetConsoleOutputCP();
+    if (_saved_console_cp != CP_UTF8 && SetConsoleOutputCP(CP_UTF8)) {
+        _console_cp_changed = true;
+        atexit(xcmd_restore_console_cp);
+        SetConsoleCtrlHandler(xcmd_console_ctrl_handler, TRUE);
+    }
+}
+#endif
+
 static unsigned xcmd_terminal_width(void) {
     unsigned width = 80;
 #ifdef _WIN32
@@ -1150,6 +1179,10 @@ void xcmd_interactive_readline(XConf *xconf, const char *exe_path) {
     _should_recover        = _interactive_tty;
     _interactive_save_on_exit = _interactive_tty;
     safe_strcpy(_exe_path, 256, exe_path);
+#ifdef _WIN32
+    if (_interactive_tty)
+        xcmd_enable_utf8_console();
+#endif
 
     if (_interactive_tty && xconf->have_read_conf) {
         LOG(LEVEL_HINT, "configuration has been recovered.\n");
@@ -1201,6 +1234,9 @@ void xcmd_interactive_readline(XConf *xconf, const char *exe_path) {
     }
 
     FREE(line);
+#ifdef _WIN32
+    xcmd_restore_console_cp();
+#endif
 
     /* `quit`/`exit`/EOF must leave the program; only `run` falls through to
      * the normal scan path. Without this, non-TTY scripts print the normal
