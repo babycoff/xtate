@@ -2,7 +2,7 @@
 
 **English** · [中文](zh-CN/README.md)
 
-This directory is the user manual for **Xtate v2.25.0** — a modular all-stack network scanner for Internet-scale surveys.
+This directory is the user manual for **Xtate v2.26.0** — a modular all-stack network scanner for Internet-scale surveys.
 
 The [README](../README.md) is the landing page. Start here if you want to use Xtate rather than skim its feature list.
 
@@ -57,7 +57,7 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-The docs are written against the v2.25.0 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
+The docs are written against the v2.26.0 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
 
 ## Planned
 
