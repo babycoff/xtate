@@ -694,7 +694,8 @@ static void CPL_value_add(const char *prefix, const char *word,
         CPL_add(word, "", p_completion);
 }
 
-static void CPL_module_args(const ConfParam *params, const char *value,
+static void CPL_module_args(const char *module, const ConfParam *params,
+                            const char *value,
                             crossline_completions_t *p_completion) {
     if (!params)
         return;
@@ -702,7 +703,11 @@ static void CPL_module_args(const ConfParam *params, const char *value,
         char word[128];
         snprintf(word, sizeof(word), "--%s", params[i].name);
         if (!value[0] || strncasecmp(word, value, strlen(value)) == 0)
-            CPL_add(word, params[i].short_hint ? params[i].short_hint : "",
+            CPL_add(word,
+                    i18n_tr_module_param(
+                        module, params[i].name,
+                        params[i].short_hint ? params[i].short_hint
+                                             : params[i].help_text),
                     p_completion);
         for (unsigned j = 0; params[i].alt_names[j]; j++) {
             snprintf(word, sizeof(word), "--%s", params[i].alt_names[j]);
@@ -734,19 +739,25 @@ static void CPL_value(const char *cmd, crossline_completions_t *p_completion) {
          strcasecmp(name, "output-module-args") == 0 ||
          strcasecmp(name, "generate-module-args") == 0)) {
         const ConfParam *params = NULL;
+        const char      *module = NULL;
         if (strcasecmp(name, "scan-module-args") == 0 &&
-            _interactive_xconf->scanner)
+            _interactive_xconf->scanner) {
             params = _interactive_xconf->scanner->params;
-        else if (strcasecmp(name, "probe-module-args") == 0 &&
-                 _interactive_xconf->probe)
+            module = _interactive_xconf->scanner->name;
+        } else if (strcasecmp(name, "probe-module-args") == 0 &&
+                   _interactive_xconf->probe) {
             params = _interactive_xconf->probe->params;
-        else if (strcasecmp(name, "output-module-args") == 0 &&
-                 _interactive_xconf->out_conf.output_module)
+            module = _interactive_xconf->probe->name;
+        } else if (strcasecmp(name, "output-module-args") == 0 &&
+                   _interactive_xconf->out_conf.output_module) {
             params = _interactive_xconf->out_conf.output_module->params;
-        else if (strcasecmp(name, "generate-module-args") == 0 &&
-                 _interactive_xconf->generator)
+            module = _interactive_xconf->out_conf.output_module->name;
+        } else if (strcasecmp(name, "generate-module-args") == 0 &&
+                   _interactive_xconf->generator) {
             params = _interactive_xconf->generator->params;
-        CPL_module_args(params, value, p_completion);
+            module = _interactive_xconf->generator->name;
+        }
+        CPL_module_args(module, params, value, p_completion);
         return;
     }
 
