@@ -23,9 +23,8 @@ pwsh -File .\scripts\build-windows.ps1 -Toolchain all -Yes
 
 ## Compatibility
 
-- [ ] Tier 0: Linux GCC build + selftest
-- [ ] Tier 0: Windows MSVC build + selftest, or not applicable
-- [ ] Tier 1: affected matrix checks from `docs/testing.md`
+- [ ] Tier 0 on my platform: Linux GCC **or** Windows MSVC build + selftest
+- [ ] Tier 1: affected checks I could run from `docs/testing.md`; unavailable environments are noted
 - [ ] Relevant focused suite(s) run (`tests/i18n`, `tests/interactive`, `tests/interactive/tty`, `tests/large-batch`)
 - [ ] Compile warnings did not increase
 - [ ] Optional dependencies remain optional

@@ -33,18 +33,28 @@ tests, documentation, and careful performance work.
 ## Build and test
 
 The full policy and current matrix are in
-[docs/testing.md](docs/testing.md). Minimum expectation:
+[docs/testing.md](docs/testing.md).
+
+**You only need one platform.** Run Tier 0 on the OS you have; do not block a
+change because the other OS is unavailable. Tier 2 (full Linux/Windows matrix)
+is a maintainer/CI responsibility.
+
+Linux:
 
 ```bash
-# Linux: Tier 0
 ./build.sh --compiler gcc --config release --generator ninja
 ./bin/xtate --selftest
 XTATE_BIN=./bin/xtate bash tests/i18n/test.sh
 XTATE_BIN=./bin/xtate bash tests/interactive/test.sh
+```
 
-# Windows: Tier 0
+Windows:
+
+```powershell
 pwsh -File .\scripts\build-windows.ps1 -Toolchain msvc -Config Release -Yes
 .\bin\xtate.exe --selftest
+XTATE_BIN=./bin/xtate.exe bash tests/i18n/test.sh
+XTATE_BIN=./bin/xtate.exe bash tests/interactive/test.sh
 ```
 
 Then add the checks for the dimension you touched:
@@ -74,7 +84,8 @@ XTATE_BIN=$PWD/build/xtate bash tests/large-batch/failure.sh
 ```
 
 If a required environment is unavailable, say so in the pull request instead of
-marking the check as passed. Report exact commands, versions and results.
+marking the check as passed. A Linux-only or Windows-only contribution is
+normal; report what you ran and what you could not run.
 
 ## C and module guidelines
 

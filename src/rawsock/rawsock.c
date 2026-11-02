@@ -173,6 +173,7 @@ void rawsock_flush(Adapter *adapter, AdapterCache *acache) {
     }
 
 #ifndef _WIN32
+#if defined(HAVE_SENDMMSG) && !defined(XTATE_NO_SENDMMSG)
     /**
      * Send in batch with sendmmsg just like ZMap v4.0
      */
@@ -226,6 +227,18 @@ void rawsock_flush(Adapter *adapter, AdapterCache *acache) {
         acache->pkt_index = 0;
         return;
     }
+#else
+    /* Old libc/socket headers without sendmmsg: send one packet at a time.
+     * This keeps basic builds working on very old distributions. */
+    if (adapter->raw_sock && acache->msg_capacity) {
+        for (unsigned i = 0; i < acache->pkt_index; i++) {
+            if (sendmsg(adapter->raw_sock, &acache->msgvec[i].msg_hdr, 0) < 0)
+                LOGPERROR("sendmsg");
+        }
+        acache->pkt_index = 0;
+        return;
+    }
+#endif
 #endif
 
     if (acache->sendq) {

@@ -92,6 +92,10 @@ network privileges.
   absent.
 - Optional dependencies are auto-disabled with `NOT_FOUND_*` defines; the
   basic build succeeds without PCRE2, LibXml2, libbson or libmongoc.
+- CMake checks `sendmmsg` and `pthread_setname_np`; missing interfaces fall back
+  to single-packet `sendmsg` and a no-op thread name. The test matrix forces
+  both fallbacks with `-DXTATE_NO_SENDMMSG -DXTATE_NO_PTHREAD_SETNAME` to keep
+  the paths compiling.
 - Old distro packages may be EOL. Users outside mainland China should use the
   upstream archive (`archive.debian.org`); mainland users can opt into a mirror
   such as `mirrors.aliyun.com/debian-archive` for Debian 10. Do not make a

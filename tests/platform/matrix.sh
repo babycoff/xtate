@@ -64,6 +64,13 @@ bash build.sh --compiler gcc --config release --generator make
 rm -rf build-gcc-release-make
 bash build.sh --compiler gcc --config release --generator ninja
 ./bin/xtate --selftest
+
+# Exercise compile-time fallbacks for old libc interfaces.
+cmake -S . -B /tmp/build-fallback -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_FLAGS='-DXTATE_NO_SENDMMSG -DXTATE_NO_PTHREAD_SETNAME' >/dev/null
+cmake --build /tmp/build-fallback -j 2 >/dev/null
+/tmp/build-fallback/xtate --selftest
 "
 }
 

@@ -84,6 +84,9 @@ file bin/xtate_static
 - 没有 `CMAKE_C_BYTE_ORDER` 时使用 `TestBigEndian` 回退。
 - 可选依赖缺失时以 `NOT_FOUND_*` 宏自动关闭；没有 PCRE2、LibXml2、
   libbson/libmongoc 仍可基础构建。
+- CMake 会检测 `sendmmsg` 和 `pthread_setname_np`；缺失时回退为逐包 `sendmsg`
+  和空线程名。测试矩阵会用 `-DXTATE_NO_SENDMMSG -DXTATE_NO_PTHREAD_SETNAME`
+  强制两条回退路径参与编译。
 - 旧发行版仓库可能已 EOL。国外用户应使用上游归档（`archive.debian.org`）；
   国内用户可选择大陆镜像，例如 Debian 10 的
   `mirrors.aliyun.com/debian-archive`。不要把大陆源设为其他用户或 CI 的默认。

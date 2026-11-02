@@ -40,6 +40,7 @@ static char _exe_path[256];
 #ifdef _WIN32
 static UINT _saved_console_cp;
 static bool _console_cp_changed = false;
+static LPTOP_LEVEL_EXCEPTION_FILTER _saved_exception_filter = NULL;
 
 static void xcmd_restore_console_cp(void) {
     if (_console_cp_changed) {
@@ -54,6 +55,12 @@ static BOOL WINAPI xcmd_console_ctrl_handler(DWORD type) {
     return FALSE; /* let the default handler terminate the process */
 }
 
+static LONG WINAPI xcmd_exception_filter(EXCEPTION_POINTERS *info) {
+    xcmd_restore_console_cp();
+    return _saved_exception_filter ? _saved_exception_filter(info)
+                                   : EXCEPTION_CONTINUE_SEARCH;
+}
+
 static void xcmd_enable_utf8_console(void) {
     if (i18n_get_language() != I18N_ZH_CN)
         return;
@@ -62,6 +69,8 @@ static void xcmd_enable_utf8_console(void) {
         _console_cp_changed = true;
         atexit(xcmd_restore_console_cp);
         SetConsoleCtrlHandler(xcmd_console_ctrl_handler, TRUE);
+        _saved_exception_filter =
+            SetUnhandledExceptionFilter(xcmd_exception_filter);
     }
 }
 #endif

@@ -6,21 +6,26 @@ Xtate now has several compilers, generators and libc variants. A change is not
 "done" just because one local build passes. Use the tiers below to choose the
 minimum verification, and report exactly what you ran.
 
-## Tier 0 — every code change
+## Tier 0 — every code change, on the platform you have
 
-Run these for any change that touches C code, CMake, or user-facing behavior:
+You only need one working platform. Do **not** block a contribution because
+you do not have the other OS.
+
+On Linux:
 
 ```bash
-# Linux, GCC, current CMake
 ./build.sh --compiler gcc --config release --generator ninja
 ./bin/xtate --selftest
+```
 
-# Windows, MSVC (Git Bash or PowerShell)
+On Windows (PowerShell):
+
+```powershell
 pwsh -File .\scripts\build-windows.ps1 -Toolchain msvc -Config Release -Yes
 .\bin\xtate.exe --selftest
 ```
 
-Then run the relevant focused suites:
+Then run the relevant focused suites on that platform:
 
 ```bash
 XTATE_BIN=./bin/xtate bash tests/i18n/test.sh
@@ -35,9 +40,13 @@ XTATE_BIN=./bin/xtate bash tests/interactive/test.sh
 - Large-result/output change: run the relevant `tests/large-batch/` case and
   report the scale and disk usage.
 
-## Tier 1 — build, portability and toolchain changes
+If the other platform is unavailable, write `not available` in the pull
+request. The maintainers/CI will cover it; do not claim it passed.
 
-In addition to Tier 0, verify the affected dimension:
+## Tier 1 — affected dimension (when available)
+
+Add these only for the dimensions you touched and can actually run. Missing
+environments are reported, not silently skipped or marked as passed.
 
 | Change touches | Also run |
 |:---|:---|
@@ -47,6 +56,7 @@ In addition to Tier 0, verify the affected dimension:
 | i18n/catalog | `tests/i18n/test.sh` on a Windows binary too |
 | interactive/TTY | `tests/interactive/test.sh` and `tty.sh` on Linux; interactive smoke on Windows |
 | old distro / CMake | Debian 10-style CMake 3.13 + GCC 8 build |
+| old libc fallbacks | build with `-DXTATE_NO_SENDMMSG -DXTATE_NO_PTHREAD_SETNAME` |
 | musl/libc | Alpine musl build |
 | static linking | Alpine `--static --minimal`, then `file` and `--selftest` |
 | full Linux matrix | `bash tests/platform/matrix.sh` (add `XTATE_CN_MIRROR=1` only in mainland China) |
@@ -66,9 +76,10 @@ pwsh -File .\scripts\build-windows.ps1 -Toolchain all -Config Release -Yes
 ./build.sh --generator ninja --static --minimal
 ```
 
-## Tier 2 — release
+## Tier 2 — release (maintainer/CI)
 
-Before tagging a release, verify the full matrix that the project claims:
+Release owners run the full matrix that the project claims. External
+contributors are not expected to own this tier:
 
 | Platform | Compiler | Config | Generator | Required |
 |:---|:---|:---|:---|:---|

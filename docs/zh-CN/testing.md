@@ -5,21 +5,25 @@
 Xtate 现在有多个编译器、生成器和 libc 变体。一个改动不能只靠“某一次本机构建通过”
 就算完成。按下面的分级选择最低验证，并在 PR 中写清楚实际跑了什么。
 
-## Tier 0：每次代码改动
+## Tier 0：每次代码改动，在你有环境的那一侧
 
-只要修改 C 代码、CMake 或用户可见行为，至少运行：
+**只需要一个平台**。不要因为缺少另一个系统就阻止提交。
+
+Linux：
 
 ```bash
-# Linux，GCC，当前 CMake
 ./build.sh --compiler gcc --config release --generator ninja
 ./bin/xtate --selftest
+```
 
-# Windows，MSVC
+Windows（PowerShell）：
+
+```powershell
 pwsh -File .\scripts\build-windows.ps1 -Toolchain msvc -Config Release -Yes
 .\bin\xtate.exe --selftest
 ```
 
-再根据改动运行对应测试：
+再在该平台运行对应测试：
 
 ```bash
 XTATE_BIN=./bin/xtate bash tests/i18n/test.sh
@@ -32,9 +36,10 @@ XTATE_BIN=./bin/xtate bash tests/interactive/test.sh
 - 改报文解析/内存所有权：跑 sanitizer selftest（见 CONTRIBUTING）；
 - 改大批量/输出：运行对应 `tests/large-batch/` 用例，并报告规模和磁盘占用。
 
-## Tier 1：构建、可移植性、工具链改动
+## Tier 1：受影响的维度（有环境时）
 
-在 Tier 0 基础上，按受影响维度追加：
+只对你实际改动、并且确实能运行的环境追加检查。缺少环境要报告，不能静默跳过
+或标记通过。
 
 | 改动范围 | 追加验证 |
 |:---|:---|
@@ -44,6 +49,7 @@ XTATE_BIN=./bin/xtate bash tests/interactive/test.sh
 | i18n/catalog | Windows 二进制也跑 `tests/i18n/test.sh` |
 | 交互/TTY | Linux `tests/interactive/test.sh` + `tty.sh`；Windows 交互冒烟 |
 | 旧发行版/CMake | Debian 10 风格 CMake 3.13 + GCC 8 构建 |
+| 旧 libc 回退 | 用 `-DXTATE_NO_SENDMMSG -DXTATE_NO_PTHREAD_SETNAME` 构建 |
 | musl/libc | Alpine musl 构建 |
 | 静态链接 | Alpine `--static --minimal`，`file` + selftest |
 | Linux 完整矩阵 | `bash tests/platform/matrix.sh`（仅大陆网络加 `XTATE_CN_MIRROR=1`） |
@@ -63,9 +69,9 @@ pwsh -File .\scripts\build-windows.ps1 -Toolchain all -Config Release -Yes
 ./build.sh --generator ninja --static --minimal
 ```
 
-## Tier 2：发布前
+## Tier 2：发布前（维护者/CI）
 
-发布前验证项目声明的完整矩阵：
+发布负责人验证完整矩阵。外部贡献者不承担这一层：
 
 | 平台 | 编译器 | 配置 | 生成器 | 要求 |
 |:---|:---|:---|:---|:---|
@@ -91,6 +97,7 @@ interactive + PTY: 通过
 - **Warning 是缺陷。** Tier 0/1 出现新 warning 必须修复或明确记录抑制；
   不能悄悄提高 warning 数。
 - **可选依赖必须保持可选。** 缺少 PCRE2/LibXml2/bson/mongoc 不能导致基础构建失败。
+- **只有单平台是正常的。** 完成当前平台 Tier 0 即可；另一侧由维护者/CI 负责。
 - **不能假装跑过。** 没有 Windows 机器、Docker 或 `script` 时，在 PR 中写明；
   不能标记为通过。
 - **证据使用精确产物名。** 别名 `xtate`/`xtate.exe` 只是方便复制，

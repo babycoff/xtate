@@ -289,6 +289,7 @@ void pixie_set_thread_name(const char *name) {
             thread_handle, name, err);
     }
 #else
+#if defined(HAVE_PTHREAD_SETNAME_NP) && !defined(XTATE_NO_PTHREAD_SETNAME)
     int       err;
     pthread_t thread_handle = pthread_self();
     err                     = pthread_setname_np(thread_handle, name);
@@ -296,6 +297,9 @@ void pixie_set_thread_name(const char *name) {
         LOG(LEVEL_WARN, "set thread name %" PRIuPTR " %s. Error %d\n",
             thread_handle, name, err);
     }
+#else
+    (void)name;
+#endif
 #endif
 }
 
