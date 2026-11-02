@@ -10,7 +10,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 
 `-scan` 是必需的；只有当模块声明“不需要探测”时 `-probe` 才是可选的。模块参数分别通过 `-scan-arg` 和 `-probe-arg` 传入，每个都是一整条带引号的字符串（见 `--help-scan <module>`、`--help-probe <module>`）。
 
-> 本文档对应 Xtate v2.21.3。命令行才是最终依据：`--help`、`--help-scan`、`--help-probe`。
+> 本文档对应 Xtate v2.21.4。命令行才是最终依据：`--help`、`--help-scan`、`--help-probe`。
 
 ## 选择扫描模块
 

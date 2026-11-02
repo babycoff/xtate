@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.21.3-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.21.4-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -241,6 +241,13 @@ cmake --build build-mingw -j 8
 也可以用 `scripts\build-windows.ps1` 一次构建整套矩阵；脚本会在复制源码到 ASCII 中转目录前询问，并在构建后清理中转目录。主二进制写入 `bin\xtate.exe`，各工具链副本写入 `bin\xtate-<toolchain>-<config>.exe`（对应 Linux `build.sh` 的 `bin/xtate` 约定）。
 
 Npcap 是报文收发的必需项；`wpcap.dll` 在运行时加载。
+
+清理 Windows 构建目录和二进制（对应 Linux 的 `clean.sh`）：
+
+```powershell
+pwsh -File .\scripts\clean-windows.ps1
+pwsh -File .\scripts\clean-windows.ps1 -IncludeStage  # 同时删除 %LOCALAPPDATA%\xtate-build
+```
 </details>
 
 <details>

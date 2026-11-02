@@ -35,7 +35,7 @@ body:
       label: Xtate version
       description: Paste the output of `xtate --version` (including build libraries/compiler).
       placeholder: |
-        Xtate version 2.21.3 in Release
+        Xtate version 2.21.4 in Release
         Compiler: gcc 13.3.0
   - type: dropdown
     id: platform

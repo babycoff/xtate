@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 project(
     xtate
     LANGUAGES               C
-    VERSION                 2.21.3
+    VERSION                 2.21.4
     DESCRIPTION             "A modular all-stack network scanner for next-generation internet surveys."
     HOMEPAGE_URL            "https://github.com/babycoff/xtate"
     )
@@ -284,21 +284,29 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
         add_compile_definitions(NOT_FOUND_BSON)
     endif ()
 elseif (CMAKE_SYSTEM_NAME STREQUAL "Windows")
-# libbson installed from vcpkg has cmake file.
+# libbson installed from vcpkg has a cmake file. Mongo C driver 1.x exports
+# bson-1.0/mongo::bson_shared; 2.x exports bson/bson::bson.
     if (WITH_BSON)
-        find_package(bson-1.0 1.7)
+        find_package(bson-1.0 1.7 QUIET)
+        if (NOT bson-1.0_FOUND)
+            find_package(bson CONFIG QUIET)
+        endif ()
     endif ()
 
     if (bson-1.0_FOUND)
         target_link_libraries(${exe_name} mongo::bson_shared)
         get_target_property(LIBBSON_LIBRARY mongo::bson_shared LOCATION)
         message(STATUS "Found libbson: ${LIBBSON_LIBRARY}")
-        # special requirement for MinGW
-        if (MINGW)
-            add_compile_definitions(__USE_MINGW_ANSI_STDIO=1)
-        endif ()
+    elseif (bson_FOUND)
+        target_link_libraries(${exe_name} bson::bson)
+        message(STATUS "Found libbson (2.x): bson::bson")
     else ()
         add_compile_definitions(NOT_FOUND_BSON)
+    endif ()
+
+    # special requirement for MinGW
+    if ((bson-1.0_FOUND OR bson_FOUND) AND MINGW)
+        add_compile_definitions(__USE_MINGW_ANSI_STDIO=1)
     endif ()
 else ()
     add_compile_definitions(NOT_FOUND_BSON)
@@ -306,14 +314,22 @@ endif ()
 
 
 # --------------------libmongoc
+# Mongo C driver 1.x exports mongoc-1.0/mongo::mongoc_shared; 2.x exports
+# mongoc/mongoc::mongoc.
 if (WITH_MONGOC)
-    find_package (mongoc-1.0 1.7)
+    find_package(mongoc-1.0 1.7 QUIET)
+    if (NOT mongoc-1.0_FOUND)
+        find_package(mongoc CONFIG QUIET)
+    endif ()
 endif ()
 
 if (mongoc-1.0_FOUND)
     target_link_libraries(${exe_name} mongo::mongoc_shared)
     get_target_property(MONGOC_LIBRARY mongo::mongoc_shared LOCATION)
     message(STATUS "Found libmongoc: ${MONGOC_LIBRARY}")
+elseif (mongoc_FOUND)
+    target_link_libraries(${exe_name} mongoc::mongoc)
+    message(STATUS "Found libmongoc (2.x): mongoc::mongoc")
 else ()
     add_compile_definitions(NOT_FOUND_MONGOC)
 endif ()

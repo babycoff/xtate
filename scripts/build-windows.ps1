@@ -95,6 +95,28 @@ if (Test-Path $scoopSsl) {
     $sslArg = @("-DOPENSSL_ROOT_DIR=$scoopSsl")
 }
 
+# Optional Windows dependencies from vcpkg (PCRE2, LibXml2, libbson, libmongoc).
+# Scoop's vcpkg package sets VCPKG_ROOT for new shells; read the user value too
+# when this script is launched from an older environment.
+$vcpkgRoot = $env:VCPKG_ROOT
+if (-not $vcpkgRoot) {
+    $vcpkgRoot = [Environment]::GetEnvironmentVariable("VCPKG_ROOT", "User")
+}
+$vcpkgToolchain = $null
+if ($vcpkgRoot) {
+    $candidate = Join-Path $vcpkgRoot "scripts\buildsystems\vcpkg.cmake"
+    if (Test-Path $candidate) {
+        $vcpkgToolchain = $candidate
+    }
+}
+$vcpkgArg = @()
+if ($vcpkgToolchain) {
+    Write-Host "vcpkg toolchain: $vcpkgToolchain"
+    $vcpkgArg = @("-DCMAKE_TOOLCHAIN_FILE=$vcpkgToolchain")
+} else {
+    Write-Host "vcpkg toolchain: not found (optional Windows deps may be missing)"
+}
+
 function Invoke-Checked([string]$Name, [scriptblock]$Block) {
     & $Block 2>&1 | Out-Host
     if ($LASTEXITCODE -ne 0) {
@@ -109,6 +131,12 @@ function Publish-Exe([string]$Toolchain, [string]$Exe) {
     $leaf = "xtate-$Toolchain-$($Config.ToLower()).exe"
     Copy-Item $Exe (Join-Path $artifacts $leaf) -Force
     Copy-Item $Exe (Join-Path $binDir $leaf) -Force
+
+    # vcpkg app-local deployment puts required runtime DLLs next to the exe.
+    # They must travel with the project-local binary as well.
+    $exeDir = Split-Path $Exe -Parent
+    Get-ChildItem $exeDir -Filter "*.dll" -File -ErrorAction SilentlyContinue |
+        ForEach-Object { Copy-Item $_.FullName (Join-Path $binDir $_.Name) -Force }
 }
 
 function Build-Msvc {
@@ -118,7 +146,7 @@ function Build-Msvc {
     $build = Join-Path $StageRoot "build-msvc"
     Write-Host "=== MSVC ($vsGenerator) ==="
     Invoke-Checked "MSVC configure" {
-        cmake -S $stageSrc -B $build -G $vsGenerator -A x64 @sslArg
+        cmake -S $stageSrc -B $build -G $vsGenerator -A x64 @sslArg @vcpkgArg
     }
     Invoke-Checked "MSVC build" {
         cmake --build $build --config $Config -j $jobs
@@ -163,6 +191,9 @@ function Build-ClangCl {
     $configureArgs = "-DCMAKE_C_COMPILER=clang-cl -DCMAKE_BUILD_TYPE=$Config"
     if ($sslArg.Count -gt 0) {
         $configureArgs += " `"$($sslArg[0])`""
+    }
+    if ($vcpkgToolchain) {
+        $configureArgs += " `"-DCMAKE_TOOLCHAIN_FILE=$vcpkgToolchain`""
     }
     $cmd = "call `"$vcvars`" >nul && set `"PATH=$ninja;%PATH%`" && " +
         "cmake -S `"$quotedSrc`" -B `"$quotedBuild`" -G Ninja $configureArgs && " +

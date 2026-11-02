@@ -105,7 +105,7 @@ IPv6 has its own traps: a link-local source address must be given explicitly (`-
 - **`zbanner` grabs only the first banner segment** by default and then sends RST. Long banners, multi-segment TLS ServerHellos or large HTTP headers need `-scan-arg "-all-banner"` (optionally bounded with `-all-banner-limit <n>` inside the same string).
 - **TLS probes appear to return nothing.** `tls-state` reports a failed handshake at `info` level, and it sends no SNI or ALPN by default, so virtual hosts/CDNs may answer with their default certificate/site. Add `-show info`, use `-probe-arg "-sni <hostname> -alpn h2,http/1.1"` when the target IPs belong to one known vhost, or promote failures to `failed` with `-probe-arg "-fail-handshake"`; without an explicit SNI, treat stateful TLS evidence as the default virtual host, not as the requested hostname.
 
-These are design trade-offs in v2.21.3, not bugs; the full list with workarounds is in [Known limitations](./known-limitations.md).
+These are design trade-offs in v2.21.4, not bugs; the full list with workarounds is in [Known limitations](./known-limitations.md).
 
 ## Modules are missing or refuse to start
 
@@ -140,6 +140,6 @@ If the environment was changed while Windows Terminal was already running, close
 the whole terminal application (not just the tab) or sign out/in so Explorer
 re-reads the user environment.
 
-Xtate's `--lang zh` does not change the console code page (v2.21.3+); it writes
+Xtate's `--lang zh` does not change the console code page (v2.21.4+); it writes
 Unicode help with `WriteConsoleW`, so even a forced termination cannot leave the
 caller's console in a modified state.

@@ -251,7 +251,12 @@ static bool _print_bson_as_json(const uint8_t *bson_data, size_t bson_size) {
         goto bson_to_json_err1;
     }
 
+#if defined(BSON_MAJOR_VERSION) && BSON_MAJOR_VERSION >= 2
+    /* bson_as_json was removed in the Mongo C driver 2.x line. */
+    json_str = bson_as_relaxed_extended_json(&bson_doc, NULL);
+#else
     json_str = bson_as_json(&bson_doc, NULL);
+#endif
 
     if (json_str) {
         printf("%s\n", json_str);
