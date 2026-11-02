@@ -243,11 +243,16 @@ cmake -S . -B build-mingw -G "MinGW Makefiles" `
 cmake --build build-mingw -j 8
 ```
 
-Or build the whole matrix with `scripts\build-windows.ps1`; it asks before
-copying the source to an ASCII staging directory and cleans the staging tree
-afterwards. The primary binary is placed in `bin\xtate.exe`; per-toolchain
-copies are also written to `bin\xtate-<toolchain>-<config>.exe` (the Linux
+Run `scripts\build-windows.ps1` with no parameters to choose **one compiler**
+and **one configuration** interactively. It asks before copying the source to
+an ASCII staging directory and cleans the staging tree afterwards. The primary
+binary is placed in `bin\xtate.exe` (or `bin\xtate_debug.exe` for Debug);
+per-toolchain copies are `bin\xtate-<toolchain>-<config>.exe` (the Linux
 `build.sh` convention is `bin/xtate`).
+
+All three toolchains support Release and Debug: pass `-Config Debug` with
+`-Toolchain msvc|clangcl|mingw`. Use `-Toolchain all` only when you explicitly
+want the full matrix.
 
 Npcap must be installed for packet I/O; `wpcap.dll` is loaded at runtime.
 

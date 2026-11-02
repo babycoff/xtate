@@ -238,7 +238,10 @@ cmake -S . -B build-mingw -G "MinGW Makefiles" `
 cmake --build build-mingw -j 8
 ```
 
-也可以用 `scripts\build-windows.ps1` 一次构建整套矩阵；脚本会在复制源码到 ASCII 中转目录前询问，并在构建后清理中转目录。主二进制写入 `bin\xtate.exe`，各工具链副本写入 `bin\xtate-<toolchain>-<config>.exe`（对应 Linux `build.sh` 的 `bin/xtate` 约定）。
+不带参数运行 `scripts\build-windows.ps1` 时，会交互选择**一种编译器和一种配置**；脚本会在复制源码到 ASCII 中转目录前询问，并在构建后清理中转目录。主二进制写入 `bin\xtate.exe`（Debug 为 `bin\xtate_debug.exe`），各工具链副本写入 `bin\xtate-<toolchain>-<config>.exe`（对应 Linux `build.sh` 的 `bin/xtate` 约定）。
+
+三种工具链都支持 Release/Debug：使用 `-Config Debug` 配合
+`-Toolchain msvc|clangcl|mingw`。只有显式传 `-Toolchain all` 才构建整套矩阵。
 
 Npcap 是报文收发的必需项；`wpcap.dll` 在运行时加载。
 

@@ -1,10 +1,10 @@
 [CmdletBinding()]
 param(
     [ValidateSet("msvc", "mingw", "clangcl", "all")]
-    [string]$Toolchain = "all",
+    [string]$Toolchain = "",
 
     [ValidateSet("Release", "Debug")]
-    [string]$Config = "Release",
+    [string]$Config = "",
 
     # Pre-approve the staging copy. Without this the script asks interactively.
     [switch]$Yes,
@@ -25,6 +25,50 @@ $stageSrc  = Join-Path $StageRoot "src"
 $artifacts = Join-Path $StageRoot "artifacts"
 $binDir    = Join-Path $repo "bin"
 $jobs      = [Math]::Max(1, [Math]::Min(8, [Environment]::ProcessorCount))
+
+function Read-BuildChoice([string]$Title, [string[]]$Labels,
+                          [string[]]$Values, [int]$DefaultIndex) {
+    Write-Host ""
+    Write-Host $Title
+    for ($i = 0; $i -lt $Labels.Count; $i++) {
+        Write-Host ("  [{0}] {1}" -f ($i + 1), $Labels[$i])
+    }
+    while ($true) {
+        $answer = Read-Host ("Select [1-{0}] (default {1})" -f $Labels.Count, $DefaultIndex + 1)
+        if (-not $answer) { return $Values[$DefaultIndex] }
+        $n = 0
+        if ([int]::TryParse($answer, [ref]$n) -and $n -ge 1 -and $n -le $Values.Count) {
+            return $Values[$n - 1]
+        }
+        Write-Host "Invalid choice." -ForegroundColor Yellow
+    }
+}
+
+# No arguments: choose one compiler and one configuration. Explicit switches
+# keep the script scriptable; -Toolchain all is still available deliberately.
+if (-not $PSBoundParameters.ContainsKey("Toolchain")) {
+    if ($Yes) {
+        $Toolchain = "msvc"
+    } else {
+        $Toolchain = Read-BuildChoice "Select compiler" @(
+            "MSVC (recommended, full vcpkg dependencies)",
+            "ClangCL (MSVC ABI, full vcpkg dependencies)",
+            "MinGW-w64 (no MSVC ABI vcpkg packages)"
+        ) @("msvc", "clangcl", "mingw") 0
+    }
+}
+if (-not $PSBoundParameters.ContainsKey("Config")) {
+    if ($Yes) {
+        $Config = "Release"
+    } else {
+        $Config = Read-BuildChoice "Select configuration" @(
+            "Release",
+            "Debug"
+        ) @("Release", "Debug") 0
+    }
+}
+
+$exeName = if ($Config -eq "Debug") { "xtate_debug.exe" } else { "xtate.exe" }
 
 Write-Host ""
 Write-Host "Xtate Windows build"
@@ -167,7 +211,7 @@ function Build-Mingw {
     Invoke-Checked "MinGW build" {
         cmake --build $build -j $jobs
     }
-    $exe = Join-Path $build "xtate.exe"
+    $exe = Join-Path $build $exeName
     Publish-Exe "mingw" $exe
     return $exe
 }
@@ -201,7 +245,7 @@ function Build-ClangCl {
     Invoke-Checked "ClangCL configure/build" {
         cmd /c $cmd
     }
-    $exe = Join-Path $build "xtate.exe"
+    $exe = Join-Path $build $exeName
     Publish-Exe "clangcl" $exe
     return $exe
 }

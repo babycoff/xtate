@@ -206,19 +206,26 @@ See [Windows optional dependencies](./windows-dependencies.md) for vcpkg, MinGW/
 
 ### Automated Windows build script
 
-`scripts/build-windows.ps1` builds MSVC, MinGW and ClangCL, runs `--version` and
-`--selftest` for each, and keeps the executables in a known directory.
+`scripts/build-windows.ps1` builds the selected toolchain, runs `--version` and
+`--selftest`, and keeps the executables in a known directory. With no arguments
+it asks you to choose **one compiler** and **one configuration**; it does not
+build the whole matrix by default.
 
 ```powershell
-# Ask before copying the source to the staging directory
+# Interactive: choose MSVC/ClangCL/MinGW and Release/Debug
 pwsh -File .\scripts\build-windows.ps1
 
-# Non-interactive: pre-approve staging, build all three toolchains
-pwsh -File .\scripts\build-windows.ps1 -Toolchain all -Yes
+# Non-interactive: pre-approve staging and build one toolchain
+pwsh -File .\scripts\build-windows.ps1 -Toolchain msvc -Config Release -Yes
+pwsh -File .\scripts\build-windows.ps1 -Toolchain mingw -Config Debug -Yes
 
-# Just one toolchain, debug configuration
-pwsh -File .\scripts\build-windows.ps1 -Toolchain msvc -Config Debug -Yes
+# Explicitly build all three toolchains (opt-in)
+pwsh -File .\scripts\build-windows.ps1 -Toolchain all -Yes
 ```
+
+All three toolchains support both `Release` and `Debug`; only the artifacts you
+request are produced. MSVC Debug can also be built with
+`-Toolchain msvc -Config Debug`.
 
 What it does:
 

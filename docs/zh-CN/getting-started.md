@@ -176,18 +176,22 @@ vcpkg、MinGW/MSYS2 triplet 和运行库 DLL 处理见 [Windows 可选依赖](./
 
 ### 自动化 Windows 构建脚本
 
-`scripts/build-windows.ps1` 可以构建 MSVC、MinGW 和 ClangCL，对每个产物运行 `--version` 和 `--selftest`，并把可执行文件放到固定目录。
+`scripts/build-windows.ps1` 构建选定的工具链，运行 `--version` 和 `--selftest`，并把可执行文件放到固定目录。**不带参数时**会交互选择**一种编译器和一种配置**，默认不会构建整套矩阵。
 
 ```powershell
-# 复制源码到中转目录前会先询问
+# 交互：选择 MSVC/ClangCL/MinGW 和 Release/Debug
 pwsh -File .\scripts\build-windows.ps1
 
-# 非交互：预先同意中转，构建三种工具链
-pwsh -File .\scripts\build-windows.ps1 -Toolchain all -Yes
+# 非交互：预先同意中转并只构建一个工具链
+pwsh -File .\scripts\build-windows.ps1 -Toolchain msvc -Config Release -Yes
+pwsh -File .\scripts\build-windows.ps1 -Toolchain mingw -Config Debug -Yes
 
-# 只构建一个工具链，使用 Debug 配置
-pwsh -File .\scripts\build-windows.ps1 -Toolchain msvc -Config Debug -Yes
+# 显式构建整套矩阵（可选）
+pwsh -File .\scripts\build-windows.ps1 -Toolchain all -Yes
 ```
+
+三种工具链都支持 Release/Debug；只会生成你请求的产物。MSVC Debug 也可以用
+`-Toolchain msvc -Config Debug` 单独构建。
 
 脚本流程：
 
