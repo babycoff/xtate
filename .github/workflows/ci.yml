@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         compiler: [gcc, clang]
-        config: [Release, Debug]
+        config: [release, debug]
     steps:
       - uses: actions/checkout@v4
 
@@ -38,7 +38,7 @@ jobs:
 
       - name: Selftest
         run: |
-          if [[ "${{ matrix.config }}" == "Debug" ]]; then
+          if [[ "${{ matrix.config }}" == "debug" ]]; then
             ./bin/xtate_debug --selftest
           else
             ./bin/xtate --selftest
@@ -46,7 +46,7 @@ jobs:
 
       - name: i18n and interactive tests
         run: |
-          if [[ "${{ matrix.config }}" == "Debug" ]]; then
+          if [[ "${{ matrix.config }}" == "debug" ]]; then
             BIN=./bin/xtate_debug
           else
             BIN=./bin/xtate
@@ -55,7 +55,7 @@ jobs:
           XTATE_BIN="$BIN" bash tests/interactive/test.sh
 
       - name: PTY terminal test
-        if: matrix.compiler == 'gcc' && matrix.config == 'Release'
+        if: matrix.compiler == 'gcc' && matrix.config == 'release'
         env:
           XTATE_BIN: ./bin/xtate
         run: |

@@ -158,6 +158,7 @@ if ! command -v "$CC_BIN" >/dev/null 2>&1; then
     exit 1
 fi
 
+CONFIG="$(printf '%s' "$CONFIG" | tr '[:upper:]' '[:lower:]')"
 case "$CONFIG" in
     release) BUILD_TYPE="Release" ;;
     debug) BUILD_TYPE="Debug" ;;
