@@ -50,9 +50,9 @@ check "EOF exits under a PTY" "grep -q 'icanon' \"$out\""
 
 out="$tmp/completion.log"
 XTATE_BIN="$BIN" run_pty \
-  'set-scan tcp-syn\nset scan-module-args = --\t\nset lang = \t\nquit\ny\n' \
+  'set-scan sctp-init\nset scan-module-args = --\t\nset lang = \t\nquit\ny\n' \
   "$out"
-check "module argument completion" "grep -q -- '--send-rst' \"$out\""
+check "module argument completion" "grep -q -- '--record-ttl' \"$out\""
 check "value completion" "grep -q 'zh-CN' \"$out\""
 check "completion PTY restores terminal" "grep -q 'icanon' \"$out\""
 
