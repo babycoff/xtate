@@ -34,6 +34,7 @@ static bool _should_recover = false;
 static bool _interactive_tty = false;
 static bool _interactive_save_on_exit = true;
 static bool _interactive_wants_scan = false;
+static XConf *_interactive_xconf = NULL;
 static char _exe_path[256];
 
 static unsigned xcmd_terminal_width(void) {
@@ -693,6 +694,24 @@ static void CPL_value_add(const char *prefix, const char *word,
         CPL_add(word, "", p_completion);
 }
 
+static void CPL_module_args(const ConfParam *params, const char *value,
+                            crossline_completions_t *p_completion) {
+    if (!params)
+        return;
+    for (unsigned i = 0; params[i].name; i++) {
+        char word[128];
+        snprintf(word, sizeof(word), "--%s", params[i].name);
+        if (!value[0] || strncasecmp(word, value, strlen(value)) == 0)
+            CPL_add(word, params[i].short_hint ? params[i].short_hint : "",
+                    p_completion);
+        for (unsigned j = 0; params[i].alt_names[j]; j++) {
+            snprintf(word, sizeof(word), "--%s", params[i].alt_names[j]);
+            if (!value[0] || strncasecmp(word, value, strlen(value)) == 0)
+                CPL_add(word, "", p_completion);
+        }
+    }
+}
+
 static void CPL_value(const char *cmd, crossline_completions_t *p_completion) {
     const char *eq = strchr(cmd, '=');
     if (!eq)
@@ -708,6 +727,28 @@ static void CPL_value(const char *cmd, crossline_completions_t *p_completion) {
     safe_trim(name, sizeof(name));
     snprintf(value, sizeof(value), "%s", eq + 1);
     safe_trim(value, sizeof(value));
+
+    if (_interactive_xconf &&
+        (strcasecmp(name, "scan-module-args") == 0 ||
+         strcasecmp(name, "probe-module-args") == 0 ||
+         strcasecmp(name, "output-module-args") == 0 ||
+         strcasecmp(name, "generate-module-args") == 0)) {
+        const ConfParam *params = NULL;
+        if (strcasecmp(name, "scan-module-args") == 0 &&
+            _interactive_xconf->scanner)
+            params = _interactive_xconf->scanner->params;
+        else if (strcasecmp(name, "probe-module-args") == 0 &&
+                 _interactive_xconf->probe)
+            params = _interactive_xconf->probe->params;
+        else if (strcasecmp(name, "output-module-args") == 0 &&
+                 _interactive_xconf->out_conf.output_module)
+            params = _interactive_xconf->out_conf.output_module->params;
+        else if (strcasecmp(name, "generate-module-args") == 0 &&
+                 _interactive_xconf->generator)
+            params = _interactive_xconf->generator->params;
+        CPL_module_args(params, value, p_completion);
+        return;
+    }
 
     static const struct {
         const char *name;
@@ -871,6 +912,18 @@ static void CPL_global_conf(const char              *cmd,
     }
 }
 
+static void HDL_show(void *conf, char *subcmd) {
+    XConf *xconf = conf;
+    if (strcasecmp(subcmd, "diff") == 0) {
+        xconf_echo(xconf, stdout);
+    } else if (strcasecmp(subcmd, "all") == 0) {
+        xconf->echo_all = 1;
+        xconf_echo(xconf, stdout);
+    } else {
+        LOG(LEVEL_ERROR, "usage: show [diff|all]\n");
+    }
+}
+
 static void HDL_help_cmd(void *conf, char *subcmd) {
     (void)conf;
     for (unsigned i = 0; config_cmd[i].cmd; i++) {
@@ -891,6 +944,7 @@ static void HDL_list_param_filter(void *conf, char *subcmd) {
 
 static const XPrefix config_prefix[] = {
     {"help", HDL_help_cmd, NULL},
+    {"show", HDL_show, NULL},
     {"list-param", HDL_list_param_filter, NULL},
     {PRE_SET_PARAM, HDL_set, CPL_global_conf},
     {PRE_SET_SCAN, HDL_set_scan, CPL_scan_module},
@@ -1070,6 +1124,7 @@ static void xcmd_history_path(char *buf, size_t size) {
 }
 
 void xcmd_interactive_readline(XConf *xconf, const char *exe_path) {
+    _interactive_xconf = xconf;
     _interactive_tty = false;
 #ifdef _WIN32
     _interactive_tty = _isatty(_fileno(stdin)) != 0;

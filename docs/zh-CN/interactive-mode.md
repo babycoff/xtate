@@ -38,6 +38,8 @@ set-gen <module>     选择生成模块
 list-param [过滤词]  列出全局参数，可按名称 token 过滤
 list-scan/probe/out/gen  列出模块
 echo / show          打印当前配置
+show diff            只显示非默认配置
+show all             显示包含默认值的全部配置
 help <command>       查看单条交互命令帮助
 help-param <name>    全局参数详细帮助
 help-scan <module>   模块帮助
@@ -48,7 +50,8 @@ exit                 不保存直接退出
 
 `<TAB>` 可补全命令、参数名和模块名；补全菜单同时显示简短说明。
 `set <参数> = ...` 会补全已知值（`lang`、输出级别、布尔值）、模块名和文件路径
-（包括 `conf-save`/`conf-read`）。
+（包括 `conf-save`/`conf-read`）。选择模块后，`*-module-args` 会补全该模块的
+`--选项`。
 
 ## 历史
 

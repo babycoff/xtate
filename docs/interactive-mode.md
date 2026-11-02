@@ -39,6 +39,8 @@ set-gen <module>     choose a generate module
 list-param [filter]  list global parameters, optionally by name token
 list-scan/probe/out/gen  list modules
 echo / show          print current configuration
+show diff            only non-default settings
+show all             include defaults
 help <command>       help for one interactive command
 help-param <name>    detailed global-parameter help
 help-scan <module>   module help
@@ -50,7 +52,8 @@ exit                 exit without saving
 Use `<TAB>` to complete commands, parameter names and module names; the
 completion menu also shows concise help. For `set <param> = ...` it completes
 known values (`lang`, output levels, flags), module names and file paths
-(including `conf-save`/`conf-read`).
+(including `conf-save`/`conf-read`). After selecting a module, the
+`*-module-args` parameters complete that module's `--options`.
 
 ## History
 

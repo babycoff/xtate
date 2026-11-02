@@ -45,6 +45,10 @@ out="$(printf 'help set\nshow\nquit\n' | "$BIN" --lang zh -interactive 2>&1 || t
 check "help <command>" "printf '%s' \"\$out\" | grep -q '设置全局参数'"
 check "show prints configuration" "printf '%s' \"\$out\" | grep -q 'rate = 100'"
 
+out="$(printf 'set rate = 321\nshow diff\nshow all\nquit\n' | "$BIN" --lang zh -interactive 2>&1 || true)"
+check "show diff shows changed rate" "printf '%s' \"\$out\" | grep -q 'rate = 321'"
+check "show all includes defaults" "printf '%s' \"\$out\" | grep -q 'wait = 10'"
+
 rm -f recover.conf
 out="$(printf 'list-param rate\nquit\n' | "$BIN" --lang zh -interactive 2>&1 || true)"
 check "list-param filter matches rate" "printf '%s' \"\$out\" | grep -q -- '--rate'"
