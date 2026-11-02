@@ -42,7 +42,9 @@ while keeping the other components fixed:
 Component ranges are **sparse**: they do not mean every address between the
 lower and upper endpoint. Only one component range per address is accepted.
 A single token may expand to at most 65,536 addresses; larger ranges are
-rejected with an error.
+rejected with an error. This limit is per component-range token, not a limit
+on the scan size: use a CIDR block or an explicit range for a large
+continuous space (for example `-ip 0.0.0.0/0` is stored as one range).
 
 ```bash
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn
