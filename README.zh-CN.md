@@ -263,7 +263,7 @@ pwsh -File .\scripts\clean-windows.ps1 -IncludeStage  # 同时删除 %LOCALAPPDA
 | PF_RING | Linux 上的零拷贝数据包 I/O（运行时） | 可选 |
 | Lua 5.3/5.4 | `lua-tcp`、`lua-udp`（运行时） | 可选 |
 
-缺少可选库只会在编译时移除相应模块——核心扫描器仍可正常构建。Windows 上 CMake 可能提示 Conda 里的 PCRE2 找到但配置不完整，或提示 LibXml2/libbson/libmongoc 未安装；这些依赖都是可选的。需要对应模块时，请安装匹配的 vcpkg triplet（例如 `vcpkg install pcre2 libxml2 mongo-c-driver --triplet x64-windows`）。
+缺少可选库只会在编译时移除相应模块——核心扫描器仍可正常构建。Windows 上 CMake 可能提示 Conda 里的 PCRE2 找到但配置不完整，或提示 LibXml2/libbson/libmongoc 未安装；这些依赖都是可选的。需要对应模块时，请安装匹配的 vcpkg triplet（例如 `vcpkg install pcre2 libxml2 mongo-c-driver --triplet x64-windows`；MinGW/MSYS2 与完整安装说明见 [Windows 可选依赖](docs/zh-CN/windows-dependencies.md)）。
 </details>
 
 > [!NOTE]

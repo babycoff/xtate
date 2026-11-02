@@ -202,6 +202,8 @@ pwsh -File .\scripts\build-windows.ps1 -Toolchain mingw
 The script explains the copy, asks for confirmation, and removes the staged
 source/build tree afterwards.
 
+See [Windows optional dependencies](./windows-dependencies.md) for vcpkg, MinGW/MSYS2 triplet details and runtime DLL handling.
+
 ### Automated Windows build script
 
 `scripts/build-windows.ps1` builds MSVC, MinGW and ClangCL, runs `--version` and

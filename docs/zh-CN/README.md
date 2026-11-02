@@ -17,6 +17,7 @@
 | 想了解内部原理 | [架构](./architecture.md) → [ZBanner](./zbanner.md) / [HLTCP](./hltcp.md) |
 | 卡住了 | [故障排查](./troubleshooting.md) → [已知限制](./known-limitations.md) |
 | 中文帮助 / 本地化 | [帮助 i18n](./help-i18n.md) |
+| Windows 可选依赖 | [Windows 依赖](./windows-dependencies.md) |
 
 ## 目录
 

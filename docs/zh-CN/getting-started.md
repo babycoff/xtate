@@ -172,6 +172,8 @@ pwsh -File .\scripts\build-windows.ps1 -Toolchain mingw
 
 脚本会说明复制位置，征得确认后再复制，并在构建结束后删除中转的源码/构建目录。
 
+vcpkg、MinGW/MSYS2 triplet 和运行库 DLL 处理见 [Windows 可选依赖](./windows-dependencies.md)。
+
 ### 自动化 Windows 构建脚本
 
 `scripts/build-windows.ps1` 可以构建 MSVC、MinGW 和 ClangCL，对每个产物运行 `--version` 和 `--selftest`，并把可执行文件放到固定目录。

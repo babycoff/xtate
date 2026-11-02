@@ -273,7 +273,7 @@ pwsh -File .\scripts\clean-windows.ps1 -IncludeStage  # also remove %LOCALAPPDAT
 | PF_RING | zero-copy packet I/O on Linux (runtime) | optional |
 | Lua 5.3/5.4 | `lua-tcp`, `lua-udp` (runtime) | optional |
 
-Missing optional libraries simply remove the corresponding modules at compile time — the core scanner still builds. On Windows, CMake may warn about a found-but-incomplete PCRE2 from Conda, or about LibXml2/libbson/libmongoc not being installed; those are optional. Install a matching vcpkg triplet (for example `vcpkg install pcre2 libxml2 mongo-c-driver --triplet x64-windows`) if you need those modules.
+Missing optional libraries simply remove the corresponding modules at compile time — the core scanner still builds. On Windows, CMake may warn about a found-but-incomplete PCRE2 from Conda, or about LibXml2/libbson/libmongoc not being installed; those are optional. Install a matching vcpkg triplet (for example `vcpkg install pcre2 libxml2 mongo-c-driver --triplet x64-windows`; see [Windows optional dependencies](docs/windows-dependencies.md) for MinGW/MSYS2 and full setup) if you need those modules.
 </details>
 
 > [!NOTE]
