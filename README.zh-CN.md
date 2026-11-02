@@ -194,6 +194,8 @@ README 是落地页，手册在 [`docs/`](docs/zh-CN/README.md) 目录下：
 
 ## 构建
 
+修改代码后的构建/测试矩阵见[测试规范](docs/zh-CN/testing.md)。
+
 ### Linux
 
 ```bash

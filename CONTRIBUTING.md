@@ -32,24 +32,35 @@ tests, documentation, and careful performance work.
 
 ## Build and test
 
-Linux (reference environment):
+The full policy and current matrix are in
+[docs/testing.md](docs/testing.md). Minimum expectation:
 
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j
-./build/xtate --selftest
+# Linux: Tier 0
+./build.sh --compiler gcc --config release --generator ninja
+./bin/xtate --selftest
+XTATE_BIN=./bin/xtate bash tests/i18n/test.sh
+XTATE_BIN=./bin/xtate bash tests/interactive/test.sh
+
+# Windows: Tier 0
+pwsh -File .\scripts\build-windows.ps1 -Toolchain msvc -Config Release -Yes
+.\bin\xtate.exe --selftest
 ```
 
-Windows (all supported toolchains):
+Then add the checks for the dimension you touched:
 
-```powershell
-pwsh -File .\scripts\build-windows.ps1 -Toolchain all -Yes
-```
+- CMake/flags: Linux Clang + Debug; Make and Ninja.
+- Windows scripts: MSVC, ClangCL and MinGW.
+- i18n: run the i18n suite on a Windows binary too.
+- TTY/interactive: `tests/interactive/tty.sh` on Linux.
+- Old distro/CMake: Debian 10-style CMake 3.13 + GCC 8 build.
+- musl: Alpine 3.20 build.
+- static: Alpine `--static --minimal`, then `file` and `--selftest`.
 
-Useful checks before opening a pull request:
+Useful extra checks:
 
 ```bash
-# sanitizer selftest, if your change touches packet parsing or memory ownership
+# sanitizer selftest, if the change touches packet parsing or memory ownership
 cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo \
   -DCMAKE_C_FLAGS="-O1 -fsanitize=address,undefined -fno-omit-frame-pointer"
 cmake --build build-asan -j
@@ -62,8 +73,8 @@ XTATE_BIN=$PWD/build/xtate bash tests/large-batch/replay.sh
 XTATE_BIN=$PWD/build/xtate bash tests/large-batch/failure.sh
 ```
 
-If a full suite needs substantial time or a MongoDB image, say so in the pull
-request: at minimum, report the exact commands you ran and the results.
+If a required environment is unavailable, say so in the pull request instead of
+marking the check as passed. Report exact commands, versions and results.
 
 ## C and module guidelines
 

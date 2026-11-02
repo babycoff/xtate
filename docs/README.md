@@ -21,6 +21,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 | Build artifact names | [Build artifacts](./build-artifacts.md) |
 | Interactive mode | [Interactive mode](./interactive-mode.md) |
 | Platform / build compatibility | [Platform support](./platform-support.md) |
+| Testing and compatibility policy | [Testing policy](./testing.md) |
 
 ## Contents
 
@@ -37,6 +38,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 - [Build artifacts](./build-artifacts.md) — aliases vs per-toolchain binaries, Debug names and DLLs
 - [Interactive mode](./interactive-mode.md) — commands, TTY/script mode, history and completion
 - [Platform support](./platform-support.md) — old CMake/distro baseline, Ninja and musl builds
+- [Testing policy](./testing.md) — Tier 0/1/2 checks, matrix and evidence rules
 
 ### How it works
 

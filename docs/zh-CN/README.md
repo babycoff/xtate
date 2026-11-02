@@ -21,6 +21,7 @@
 | 构建产物命名 | [构建产物](./build-artifacts.md) |
 | 交互式模式 | [交互式模式](./interactive-mode.md) |
 | 平台与构建兼容性 | [平台支持](./platform-support.md) |
+| 测试与兼容性规范 | [测试规范](./testing.md) |
 
 ## 目录
 

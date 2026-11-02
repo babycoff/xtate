@@ -196,6 +196,8 @@ The README is the landing page. The manual lives in [`docs/`](docs/README.md):
 
 ## Build
 
+See [Testing policy](docs/testing.md) for the required build/test matrix after a change.
+
 ### Linux
 
 ```bash
