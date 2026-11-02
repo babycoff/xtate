@@ -4,6 +4,8 @@
 
 #include "xprint.h"
 
+#include "../util-misc/i18n.h"
+
 /*
  * Display width for the help output.
  *
@@ -139,7 +141,7 @@ static void _xprint_impl(const char *text, unsigned indent, unsigned count,
             continue;
         }
 
-        fwrite(text + i, 1, advance, stdout);
+        i18n_write(text + i, advance);
         c += width;
         i += advance;
 

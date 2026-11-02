@@ -221,6 +221,8 @@ int probe_type_to_string(unsigned type, char *string, size_t str_len) {
     return ret;
 }
 
+#define printf i18n_printf
+
 void list_searched_probe_modules(const char *name) {
     int len = (int)(ARRAY_SIZE(probe_modules_list)) - 1;
     int distance;
@@ -290,6 +292,8 @@ void help_probe_module(Probe *module) {
 
     printf("\n");
 }
+
+#undef printf
 
 bool probe_init_nothing(const XConf *xconf) { return true; }
 

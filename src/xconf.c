@@ -3949,6 +3949,8 @@ bool xconf_contains(const char *x, int argc, char **argv) {
     return false;
 }
 
+#define printf i18n_printf
+
 void xconf_print_intro() {
     printf("\n");
     printf("%s", i18n_tr("Welcome to " XTATE_NAME_TITLE_CASE "!"));
@@ -4479,6 +4481,8 @@ void xconf_search_module(const char *module) {
     printf("%s", i18n_tr("GENERATE MODULES:\n"));
     list_searched_generate_modules(module);
 }
+
+#undef printf
 
 void xconf_global_refresh(XConf *xconf) {
     uint64_t seed = xconf->seed;

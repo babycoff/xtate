@@ -52,6 +52,8 @@ Scanner *get_scan_module_by_name(const char *name) {
     return NULL;
 }
 
+#define printf i18n_printf
+
 void list_searched_scan_modules(const char *name) {
     int len = (int)(ARRAY_SIZE(scan_modules_list)) - 1;
     int distance;
@@ -119,6 +121,8 @@ void help_scan_module(Scanner *module) {
 
     printf("\n");
 }
+
+#undef printf
 
 bool scan_init_nothing(const XConf *params) { return true; }
 

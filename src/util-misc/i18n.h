@@ -2,6 +2,7 @@
 #define I18N_H
 
 #include <stdbool.h>
+#include <stddef.h>
 
 /**
  * Help/output language for human-facing help text.
@@ -25,5 +26,14 @@ const char  *i18n_language_name(void);
 
 /** Exact-match lookup; returns src unchanged when untranslated or English. */
 const char *i18n_tr(const char *src);
+
+/**
+ * Help output helpers.
+ *
+ * On Windows, Chinese help is written with WriteConsoleW so the console code
+ * page is never changed. Redirected output stays UTF-8 bytes.
+ */
+void i18n_write(const char *data, size_t len);
+void i18n_printf(const char *fmt, ...);
 
 #endif

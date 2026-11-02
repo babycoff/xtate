@@ -70,6 +70,8 @@ Output *get_output_module_by_name(const char *name) {
     return NULL;
 }
 
+#define printf i18n_printf
+
 void list_searched_output_modules(const char *name) {
     int len = (int)(ARRAY_SIZE(output_modules_list)) - 1;
     int distance;
@@ -134,6 +136,8 @@ void help_output_module(Output *module) {
 
     printf("\n");
 }
+
+#undef printf
 
 static const char fmt_host[]          = "%s host: %-15s";
 static const char fmt_port[]          = " port: %-5u";

@@ -1,10 +1,13 @@
 #include "i18n.h"
 
 #include <ctype.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #if defined(_WIN32)
+#include <io.h>
 #include <windows.h>
 #endif
 
@@ -125,18 +128,6 @@ static const I18nEntry i18n_catalog[] = {
 
 static I18nLanguage i18n_language = I18N_EN;
 
-#if defined(_WIN32)
-static UINT i18n_saved_output_cp = 0;
-static bool i18n_output_cp_saved = false;
-
-static void i18n_restore_console(void) {
-    if (i18n_output_cp_saved && i18n_saved_output_cp) {
-        SetConsoleOutputCP(i18n_saved_output_cp);
-        i18n_output_cp_saved = false;
-    }
-}
-#endif
-
 static char *i18n_lower_trim(const char *src, char *buf, size_t size) {
     size_t n = 0;
     while (src && *src && n + 1 < size) {
@@ -165,28 +156,12 @@ bool i18n_set_language(const char *code) {
 
     if (strcmp(buf, "en") == 0 || strcmp(buf, "english") == 0) {
         i18n_language = I18N_EN;
-#if defined(_WIN32)
-        i18n_restore_console();
-#endif
         return true;
     }
 
     if (strcmp(buf, "zh") == 0 || strcmp(buf, "zhcn") == 0 ||
         strcmp(buf, "cn") == 0 || strcmp(buf, "chinese") == 0) {
         i18n_language = I18N_ZH_CN;
-#if defined(_WIN32)
-        /* Narrow literals are UTF-8; make the Windows console agree, but
-         * restore the caller's code page when this process exits. Changing the
-         * console code page is process-global state, not local to Xtate. */
-        if (!i18n_output_cp_saved) {
-            i18n_saved_output_cp = GetConsoleOutputCP();
-            if (i18n_saved_output_cp) {
-                i18n_output_cp_saved = true;
-                atexit(i18n_restore_console);
-            }
-        }
-        SetConsoleOutputCP(CP_UTF8);
-#endif
         return true;
     }
 
@@ -210,4 +185,60 @@ const char *i18n_tr(const char *src) {
     }
 
     return src;
+}
+
+
+void i18n_write(const char *data, size_t len) {
+    if (!data || len == 0)
+        return;
+
+#if defined(_WIN32)
+    /* The console code page is process-global. Never change it; write Unicode
+     * directly when attached to a console, and keep UTF-8 for pipes/files. */
+    if (i18n_language == I18N_ZH_CN && _isatty(_fileno(stdout))) {
+        int wlen = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, data,
+                                       (int)len, NULL, 0);
+        if (wlen > 0) {
+            wchar_t *wide = (wchar_t *)malloc(((size_t)wlen + 1) * sizeof(wchar_t));
+            if (wide) {
+                MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, data,
+                                    (int)len, wide, wlen);
+                DWORD written = 0;
+                WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), wide,
+                              (DWORD)wlen, &written, NULL);
+                free(wide);
+                return;
+            }
+        }
+    }
+#endif
+
+    fwrite(data, 1, len, stdout);
+}
+
+void i18n_printf(const char *fmt, ...) {
+    va_list ap;
+
+#if defined(_WIN32)
+    if (i18n_language == I18N_ZH_CN && _isatty(_fileno(stdout))) {
+        va_start(ap, fmt);
+        int n = vsnprintf(NULL, 0, fmt, ap);
+        va_end(ap);
+        if (n >= 0) {
+            char *buf = (char *)malloc((size_t)n + 1);
+            if (buf) {
+                va_start(ap, fmt);
+                vsnprintf(buf, (size_t)n + 1, fmt, ap);
+                va_end(ap);
+                i18n_write(buf, (size_t)n);
+                free(buf);
+                return;
+            }
+        }
+    }
+#endif
+
+    va_start(ap, fmt);
+    vfprintf(stdout, fmt, ap);
+    va_end(ap);
 }

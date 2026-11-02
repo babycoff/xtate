@@ -42,10 +42,11 @@ so a typo cannot masquerade as a successful English run. The default is `en`.
 - **UTF-8-aware wrapping.** `xprint()` decodes UTF-8 and counts CJK/full-width
   characters as two terminal columns. It also avoids starting a line with
   common closing punctuation such as `。`, `，`, `）` and `！`.
-- **Windows console.** On Windows the `zh-CN` path switches the console output
-  code page to UTF-8; MSVC/clang-cl builds use `/utf-8` for source and execution
-  charsets. Xtate saves the previous code page and restores it on exit so it
-  does not leave the caller's console in a modified state.
+- **Windows console without changing global state.** On Windows, `zh-CN` help
+  is written with `WriteConsoleW` when stdout is a console; Xtate never changes
+  the console code page. Even a forced termination therefore cannot leave the
+  caller's console in a modified code page. Redirected output remains UTF-8.
+  MSVC/clang-cl builds use `/utf-8` for source and execution charsets.
 
 The catalog is deliberately partial. Untranslated parameter/module
 descriptions remain English and are still usable; this is a framework for

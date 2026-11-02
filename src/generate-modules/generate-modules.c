@@ -39,6 +39,8 @@ Generator *get_generate_module_by_name(const char *name) {
     return NULL;
 }
 
+#define printf i18n_printf
+
 void list_searched_generate_modules(const char *name) {
     int len = (int)(ARRAY_SIZE(generate_modules_list)) - 1;
     int distance;
@@ -101,6 +103,8 @@ void help_generate_module(Generator *module) {
 
     printf("\n");
 }
+
+#undef printf
 
 bool generate_init_nothing(const XConf *xconf, uint64_t *count_targets,
                            uint64_t *count_endpoints, bool *init_ipv4,
