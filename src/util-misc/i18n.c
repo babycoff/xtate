@@ -271,7 +271,7 @@ static const I18nParamEntry i18n_global_help[] = {
     {"usage", "显示基础用法和示例。"},
     {"help", "显示全部参数的详细帮助。"},
     {"introduction", "显示 Xtate 的设计和工作流程介绍。"},
-    {"target-ip", "指定静态 IPv4/IPv6 目标、范围、CIDR 或分量范围/笛卡尔积。"},
+    {"target-ip", "指定静态 IPv4/IPv6 目标、范围、CIDR 或分量范围；单个 token 最多 4 个范围组成笛卡尔积，上限 1,048,576 个地址。"},
     {"port", "指定要扫描的 TCP/UDP/SCTP 端口或端口范围。"},
     {"top-port", "从内置常用 TCP 端口列表中加入若干端口。"},
     {"udp-top-port", "从内置常用 UDP 端口列表中加入若干端口。"},
