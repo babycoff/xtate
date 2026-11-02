@@ -59,15 +59,19 @@ Translated so far:
 - welcome/description/author/GitHub/contact chrome;
 - usage headings and the common example explanations;
 - global help section headings;
+- **all 120 global parameter descriptions** (concise Chinese summaries);
 - module help labels (`Name`, `Probe Type`, `Description`, …);
 - list/search headings;
 - the `--lang` parameter itself.
 
 Falling back to English:
 
-- most global and module parameter descriptions;
+- module parameter descriptions and module defaults/value descriptions;
 - module descriptions and short descriptions;
 - error messages and log text.
+
+The next catalog batch is module parameters, keyed by `(module, parameter name)`
+so the same parameter name can have different meanings in different modules.
 
 ## Adding a translation
 
