@@ -13,6 +13,7 @@ IMAGE="${XTATE_BENCH_LAB_IMAGE:-${XTATE_LAB_IMAGE:-xtate-builder:24.04}}"
 OUT="${XTATE_BENCH_OUT:-$ROOT/bench-results/lab-$(date +%Y%m%d-%H%M%S)}"
 QUICK="${XTATE_BENCH_QUICK:-0}"
 CASE_FILTER="${XTATE_BENCH_CASE:-all}"
+ZBANNER_RATE="${XTATE_BENCH_ZBANNER_RATE:-5000}"
 CN="${XTATE_CN_MIRROR:-0}"
 NET="xtate-bench-$$"
 TARGET="xtate-bench-target-$$"
@@ -76,7 +77,7 @@ docker network create --subnet=172.30.0.0/24 "$NET" >/dev/null
 echo "==> target container"
 docker run -d --name "$TARGET" --network "$NET" \
     --cap-add NET_ADMIN --cap-add NET_RAW \
-    -v "$ROOT_HOST/tests/bench/lab-http.py:/lab-http.py:ro" \
+    -v "$ROOT_HOST/tests/bench/lab-http.c:/lab-http.c:ro" \
     -v "$ROOT_HOST/tests/bench/lab-count.py:/lab-count.py:ro" \
     "$IMAGE" sleep infinity >/dev/null
 
@@ -87,7 +88,8 @@ docker exec "$TARGET" bash -lc "
     DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
         python3 iptables iproute2 >/dev/null
     ulimit -n 65535
-    nohup python3 /lab-http.py $HTTP_FIRST $HTTP_LAST \
+    gcc -O2 -Wall -Wextra -o /tmp/lab-http /lab-http.c
+    nohup /tmp/lab-http $HTTP_FIRST $HTTP_LAST \
         >/tmp/lab-http.log 2>&1 &
     nohup python3 /lab-count.py $TX_FIRST $TX_LAST /tmp/tx.count \
         >/tmp/lab-count.log 2>&1 &
@@ -207,7 +209,7 @@ fi
 if want zbanner; then
     run_case "zbanner-http-lab" "$(((HTTP_LAST - HTTP_FIRST + 1) * 7))" \
         -ip "$TARGET_RANGE" -p "$HTTP_FIRST-$HTTP_LAST" -scan zbanner -probe http \
-        --rate 5000 --wait 1 --no-status --no-resume-file
+        --rate "$ZBANNER_RATE" --wait 1 --no-status --no-resume-file
 fi
 
 if want output; then

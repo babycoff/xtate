@@ -90,6 +90,37 @@ Cases:
 - `stateful`: `tcp-state` against the multi-port HTTP target with
   `tcb-mem=1`, exercising the active-TCB budget.
 
+Full mode uses a private Docker bridge and seven target IPs (one base IP plus
+six aliases). The HTTP target is a tiny C/epoll responder
+(`tests/bench/lab-http.c`) that listens on a large contiguous port range. It is
+a **responsive target**, not a drop sink: ZBanner and `tcp-state` send their
+probe payload only after receiving SYN-ACK, so a drop sink can only measure the
+initial SYN rate, not banners.
+
+Topology:
+
+```text
+scanner container (NET_RAW/NET_ADMIN)
+        |
+   Docker bridge
+        |
+target container: base IP + aliases
+        |
+   C/epoll multi-port HTTP responder
+```
+
+`tx` additionally installs an iptables DROP rule on a separate port range and
+counts incoming SYN packets with a target-side raw socket
+(`tests/bench/lab-count.py`). The raw counter is needed because an iptables
+counter alone did not reliably observe traffic to the alias IPs.
+
+Use `XTATE_BENCH_ZBANNER_RATE` to sweep the banner scan rate, for example:
+
+```bash
+XTATE_BENCH_ZBANNER_RATE=50000 XTATE_BENCH_CASE=zbanner \
+XTATE_CN_MIRROR=1 XTATE_BIN=/path/to/xtate-linux bash tests/bench/lab.sh
+```
+
 The lab is intentionally separate from `run.sh`: it needs Linux raw sockets and
 Docker, while parser/offline cases do not.
 
