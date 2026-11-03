@@ -235,7 +235,7 @@ Uninstall Npcap from **Settings → Apps** if you no longer need packet capture.
 
 ## 8. What Windows CI covers
 
-The repository's Windows CI builds with **MSVC, ClangCL, and MinGW (MSYS2)**, runs
+The repository's Windows CI builds with **MSVC, ClangCL, and MinGW** using both **UCRT64 and legacy MINGW64** MSYS2 environments, runs
 `--version`, `--selftest`, and the parser/i18n tests. It does **not** install the
 Npcap driver and does **not** run live packet tests. A local Npcap installation
 and an Administrator shell are still required for a real scan.

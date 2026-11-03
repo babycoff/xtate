@@ -62,8 +62,16 @@ jobs:
           path: bin/xtate.exe
           if-no-files-found: error
   mingw:
-    name: Windows MinGW Release
+    name: Windows MinGW ${{ matrix.msystem }} Release
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - msystem: UCRT64
+            prefix: mingw-w64-ucrt-x86_64
+          - msystem: MINGW64
+            prefix: mingw-w64-x86_64
 
     steps:
       - uses: actions/checkout@v4
@@ -71,13 +79,14 @@ jobs:
       - name: Set up MSYS2 / MinGW
         uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64
+          msystem: ${{ matrix.msystem }}
           update: false
           cache: true
+          suppress-deprecation-warnings: msystem-mingw64
           install: >-
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-ninja
+            ${{ matrix.prefix }}-gcc
+            ${{ matrix.prefix }}-cmake
+            ${{ matrix.prefix }}-ninja
 
       - name: Build
         shell: msys2 {0}
@@ -106,7 +115,6 @@ jobs:
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
-          name: xtate-windows-mingw-release
+          name: xtate-windows-mingw-${{ matrix.msystem }}-release
           path: build-mingw/xtate.exe
           if-no-files-found: error
-
