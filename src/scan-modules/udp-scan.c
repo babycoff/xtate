@@ -309,6 +309,10 @@ static bool udp_init(const XConf *xconf) {
     src_port_start = xconf->nic.src.port.first;
 
     unsigned slot_count = probe_slot_count(UdpScan.probe);
+    if (!probe_slot_plan_valid(UdpScan.probe)) {
+        LOG(LEVEL_ERROR, "udp: probe has count > 1 but no slot trigger\n");
+        return false;
+    }
     if (UdpScan.probe->slots.trigger == ProbeSlot_AfterFirstReply) {
         LOG(LEVEL_ERROR,
             "udp: ProbeSlot_AfterFirstReply is not supported; use "

@@ -162,7 +162,8 @@ typedef enum ProbeSlotTrigger {
 } ProbeSlotTrigger;
 ```
 
-- `count`：slot 数；`0` 或 `1` 表示单 slot。
+- `count`：slot 数；`0` 或 `1` 表示单 slot。`count > 1` 却使用
+  `ProbeSlot_None` 会在启动时被拒绝。
 - `ProbeSlot_Always`：第一次迭代就发送全部 slot。扫描模块的 transmit 回调
   返回 `true` 请求下一个 slot，下一次调用会看到 `ProbeTarget.index == 1`，
   以此类推。

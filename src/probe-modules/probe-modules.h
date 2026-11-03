@@ -256,6 +256,11 @@ static inline unsigned probe_slot_count(const Probe *probe) {
     return (probe && probe->slots.count > 1) ? probe->slots.count : 1;
 }
 
+static inline bool probe_slot_plan_valid(const Probe *probe) {
+    return probe == NULL || probe->slots.count <= 1 ||
+           probe->slots.trigger != ProbeSlot_None;
+}
+
 Probe *get_probe_module_by_name(const char *name);
 
 const char *get_probe_type_name(const ProbeType type);

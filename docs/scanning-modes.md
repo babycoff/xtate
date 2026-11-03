@@ -207,6 +207,10 @@ JARM is the only shipped multi-slot probe. It declares a `ProbeSlotPlan` with
 the remaining nine slots are sent only when the first slot's response is an
 accepted TLS record.
 
+`ProbeSlot_Always` is the other trigger: ZBanner/TCP and UDP send every slot
+from the first iteration. UDP has no handshake, so it rejects
+`ProbeSlot_AfterFirstReply` at startup; use `Always` for UDP probes.
+
 Slots are distinguished by **source port**: slot `i` uses
 `source_port_start + i`, and the slot number is recovered from the reply's
 destination port. The source-port range must be wide enough for the plan's

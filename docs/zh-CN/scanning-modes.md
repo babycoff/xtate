@@ -163,6 +163,10 @@ JARM 是目前唯一内置的多 slot 探针。它声明 `ProbeSlotPlan`：
 `count = 10`、`trigger = after first reply`。slot 0 正常发送；只有第一个
 slot 的响应被判定为 TLS 记录后，才发送剩余九个 slot。
 
+`ProbeSlot_Always` 是另一种触发方式：ZBanner/TCP 和 UDP 从第一次迭代就发送
+全部 slot。UDP 没有握手，所以启动时会拒绝 `ProbeSlot_AfterFirstReply`；
+UDP 探针应使用 `Always`。
+
 slot 靠**源端口**区分：slot `i` 使用 `source_port_start + i`，响应目的端口
 反推 slot 编号。源端口范围必须覆盖 plan 的 slot 数量。引擎不保存逐目标
 group，也不在扫描器里聚合；每个 slot 输出自己的 `jarm_part`，由输出侧

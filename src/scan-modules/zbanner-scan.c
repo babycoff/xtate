@@ -613,6 +613,10 @@ static bool zbanner_init(const XConf *xconf) {
                                   ? xconf->nic.src.port.last - src_port_start + 1
                                   : 0;
     unsigned slot_count = probe_slot_count(ZBannerScan.probe);
+    if (!probe_slot_plan_valid(ZBannerScan.probe)) {
+        LOG(LEVEL_ERROR, "zbanner: probe has count > 1 but no slot trigger\n");
+        return false;
+    }
     if (src_port_count < slot_count) {
         LOG(LEVEL_ERROR,
             "zbanner: source-port range has %u ports but probe needs %u "

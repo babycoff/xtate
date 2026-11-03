@@ -166,7 +166,8 @@ typedef enum ProbeSlotTrigger {
 } ProbeSlotTrigger;
 ```
 
-- `count`: slot count; `0` or `1` means single-slot.
+- `count`: slot count; `0` or `1` means single-slot. A `count > 1` with
+  `ProbeSlot_None` is rejected at startup.
 - `ProbeSlot_Always`: execute all slots from the first iteration. A scan
   transmitter returns `true` to ask for the next slot; the next call receives
   `ProbeTarget.index == 1`, and so on.
