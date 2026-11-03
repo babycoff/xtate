@@ -115,17 +115,23 @@ def main(argv=None):
     groups = defaultdict(dict)
     duplicate_slots = 0
     invalid_records = 0
-    records = 0
+    records_total = 0
+    records_without_parts = 0
 
     for record in read_records(args.inputs):
-        records += 1
+        records_total += 1
         if record is None:
             invalid_records += 1
             continue
         ip, port = target_of(record)
-        slot, part = part_of(record)
-        if ip is None or port is None or part is None:
+        if ip is None or port is None:
             invalid_records += 1
+            continue
+        slot, part = part_of(record)
+        if part is None:
+            # A valid output row without a JARM part, e.g. an open row or a
+            # non-TLS response. It cannot identify a JARM target on its own.
+            records_without_parts += 1
             continue
         try:
             slot = int(slot)
@@ -170,15 +176,24 @@ def main(argv=None):
             jarm_counts[short] += 1
 
     stats = {
-        "records": records,
+        "records_total": records_total,
+        "records_without_parts": records_without_parts,
         "invalid_records": invalid_records,
-        "targets": len(groups),
+        "targets_with_parts": len(groups),
         "complete": len(complete),
         "incomplete": len(retry),
         "duplicate_slots": duplicate_slots,
         "missing_slot_counts": {str(k): v for k, v in sorted(missing_hist.items())},
         "distinct_jarm": len(jarm_counts),
         "slots": args.slots,
+        "meaning": (
+            "targets_with_parts counts only targets with at least one JARM part; "
+            "it is not the number of scanned targets. A target whose first "
+            "response was lost has no JARM row and is absent from these counts. "
+            "complete and incomplete are subsets of targets_with_parts. "
+            "records_without_parts counts valid rows (for example open rows) "
+            "that carry no JARM part and therefore do not identify a JARM target."
+        ),
     }
 
     def write_jsonl(path, rows):

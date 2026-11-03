@@ -111,6 +111,8 @@ python3 tools/jarm_aggregate.py scan.jsonl \
 `--retry-dir` 会按端口生成 Xtate 可直接读取的 `port-<port>.ips`，配合 `--retry-template` 生成可执行命令；
 `--retry-ports-file` 输出缺失目标的唯一端口列表。统计输出包含缺失 slot 计数和重复 slot 计数。
 
+**统计字段要按字面理解：** `targets_with_parts` 是“至少有 1 个 JARM part 的目标数”，不是实际扫描目标数。第一个响应丢失的目标不会产生 part，因此不会出现在 `targets_with_parts`、`complete` 或 `incomplete` 中。`records_without_parts` 统计的是有效但没有 JARM part 的输出行（例如一条 `open` 行），它们自身不能证明这是一个 JARM 目标。stats 里的 `meaning` 字段也会重复这句解释。retry 文件只覆盖至少有一个 part 的目标；0 part 的目标必须从原始目标/端口清单中补回。
+
 ### bson 与 mongodb
 
 `bson` 把一串二进制文档写入文件，没有 stdout 约定；目标写 `-` 会得到一个字面名为 `-` 的文件。可用 `--parse-bson`（libbson 构建）把它转回 JSON：`xtate --parse-bson out.bson > out.json`。`mongodb` 把 `-output-file` 当作 URI 直接连接：

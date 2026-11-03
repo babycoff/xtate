@@ -33,6 +33,9 @@ for slot in range(1, 11):
     add("192.0.2.12", 443, slot, f"c2{slot:02x}|0303|ext{slot}")
 # duplicate slot on the third target; latest value wins
 add("192.0.2.12", 443, 1, "dup|0303|duplicate")
+# A valid open row with no JARM part: it is not a JARM target.
+rows.append({"ip_them": "192.0.2.13", "port_them": 443,
+             "classification": "open", "reason": "syn-ack"})
 
 with open(path, "w", encoding="utf-8") as out:
     for row in rows:
@@ -57,11 +60,14 @@ from pathlib import Path
 
 tmp = Path(sys.argv[1])
 stats = json.loads((tmp / "stats.json").read_text())
-assert stats["records"] == 29, stats
-assert stats["targets"] == 3, stats
+assert stats["records_total"] == 30, stats
+assert stats["records_without_parts"] == 1, stats
+assert stats["invalid_records"] == 0, stats
+assert stats["targets_with_parts"] == 3, stats
 assert stats["complete"] == 2, stats
 assert stats["incomplete"] == 1, stats
 assert stats["duplicate_slots"] == 1, stats
+assert "not the number of scanned targets" in stats["meaning"]
 assert stats["missing_slot_counts"] == {"3": 1, "4": 1}, stats
 
 complete = [json.loads(line) for line in (tmp / "complete.jsonl").read_text().splitlines()]

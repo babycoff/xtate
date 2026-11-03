@@ -145,6 +145,16 @@ numbers. The CSV is for humans: Xtate target files contain addresses, not
 `--retry-template` is supplied); `--retry-ports-file` writes the unique port
 list. `missing_slot_counts` and duplicate-slot counts are in the stats output.
 
+**Read the stats literally:** `targets_with_parts` is the number of targets
+with at least one JARM part, not the number of scanned targets. A target whose
+first response is lost produces no part and is therefore absent from
+`targets_with_parts`, `complete` and `incomplete`. `records_without_parts`
+counts valid output rows (for example an `open` row) that carry no JARM part,
+so they cannot identify a JARM target on their own. The stats object also
+contains this explanation in its `meaning` field. The retry files only cover
+targets with at least one part; zero-part targets must come from the original
+target/port list.
+
 ### bson and mongodb
 
 `bson` writes a stream of binary documents to the file and has no stdout convention; a
