@@ -12,8 +12,7 @@ BUILD="${FUZZ_BUILD:-$ROOT/tests/fuzz/build}"
 CORPUS="$ROOT/tests/fuzz/corpus"
 ARTIFACTS="$ROOT/tests/fuzz/artifacts"
 
-mkdir -p "$BUILD" "$ARTIFACTS" "$CORPUS/preprocess" "$CORPUS/target-parse"
-mkdir -p "$ROOT/tests/fuzz/corpus/preprocess" "$ROOT/tests/fuzz/corpus/target-parse"
+mkdir -p "$BUILD" "$ARTIFACTS" "$CORPUS/preprocess" "$CORPUS/target-parse" "$CORPUS/targetset" "$CORPUS/targetfile"
 
 if ! command -v "$CC" >/dev/null 2>&1; then
     echo "SKIP: $CC not available (install clang to run the fuzzers)" >&2
@@ -42,6 +41,27 @@ echo "==> building target_parse_fuzz"
     "$ROOT/src/target/target-ipaddress.c" \
     -o "$BUILD/target_parse_fuzz"
 
+TARGET_SRC=(
+    "$ROOT/src/target/target-set.c"
+    "$ROOT/src/target/target-parse.c"
+    "$ROOT/src/target/target-ipaddress.c"
+    "$ROOT/src/target/target-rangev4.c"
+    "$ROOT/src/target/target-rangev6.c"
+    "$ROOT/src/target/target-rangeport.c"
+    "$ROOT/src/util-data/fine-malloc.c"
+)
+echo "==> building targetfile_fuzz"
+"$CC" "${COMMON[@]}" \
+    "$ROOT/tests/fuzz/targetfile_fuzz.c" \
+    "${TARGET_SRC[@]}" \
+    -o "$BUILD/targetfile_fuzz"
+
+echo "==> building targetset_fuzz"
+"$CC" "${COMMON[@]}" \
+    "$ROOT/tests/fuzz/targetset_fuzz.c" \
+    "${TARGET_SRC[@]}" \
+    -o "$BUILD/targetset_fuzz"
+
 export ASAN_OPTIONS="detect_leaks=0:abort_on_error=1"
 export UBSAN_OPTIONS="halt_on_error=1:print_stacktrace=1"
 
@@ -60,5 +80,21 @@ echo "==> fuzzing target parser for ${FUZZ_TIME}s"
     -timeout=5 \
     -artifact_prefix="$ARTIFACTS/target-" \
     "$CORPUS/target-parse"
+
+echo "==> fuzzing target-set parser for ${FUZZ_TIME}s"
+"$BUILD/targetset_fuzz" \
+    -max_total_time="$FUZZ_TIME" \
+    -max_len=1024 \
+    -timeout=5 \
+    -artifact_prefix="$ARTIFACTS/targetset-" \
+    "$CORPUS/targetset"
+
+echo "==> fuzzing target-file parser for ${FUZZ_TIME}s"
+"$BUILD/targetfile_fuzz" \
+    -max_total_time="$FUZZ_TIME" \
+    -max_len=4096 \
+    -timeout=5 \
+    -artifact_prefix="$ARTIFACTS/targetfile-" \
+    "$CORPUS/targetfile"
 
 echo "fuzz smoke passed"

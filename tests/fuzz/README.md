@@ -9,6 +9,8 @@ parser. They complement `--selftest` and the fixed target/parser tests.
 |:---|:---|
 | `preprocess_fuzz` | `preprocess_frame()` with `PCAP_DLT_ETHERNET` frames |
 | `target_parse_fuzz` | `target_parse_range()` with arbitrary target-range text |
+| `targetset_fuzz` | `targetset_add_ip_str()` and `targetset_add_port_str()` |
+| `targetfile_fuzz` | `targetset_parse_file()` line/file tokenizer |
 
 The harnesses stub `LOG` and link only the parser objects. They do not need
 Npcap/OpenSSL and do not open sockets or files.
