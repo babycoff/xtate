@@ -9,7 +9,7 @@ probe slots emits one OutItem with:
     probe report.jarm_part  "cipher|version|extensions"
 
 This tool groups those rows by (ip_them, port_them), reports completeness,
-computes a JARM-style hash from all ten parts, and writes a retry list for
+computes the standard 62-character JARM 1.0 fuzzy hash from all ten parts, and writes a retry list for
 targets that are missing slots.
 
 This is an output-side post-processor: it is not part of the scanner hot path.
@@ -62,24 +62,81 @@ def read_records(paths):
                 stream.close()
 
 
+# Salesforce JARM's ordered cipher table.  The fuzzy hash records the index in
+# this table, not a SHA-256 digest of the cipher name.  Keep this order exactly
+# in sync with jarm.py (JARM 1.0).
+JARM_CIPHERS = [
+    "0004", "0005", "0007", "000a", "0016", "002f", "0033", "0035", "0039",
+    "003c", "003d", "0041", "0045", "0067", "006b", "0084", "0088", "009a",
+    "009c", "009d", "009e", "009f", "00ba", "00be", "00c0", "00c4", "c007",
+    "c008", "c009", "c00a", "c011", "c012", "c013", "c014", "c023", "c024",
+    "c027", "c028", "c02b", "c02c", "c02f", "c030", "c060", "c061", "c072",
+    "c073", "c076", "c077", "c09c", "c09d", "c09e", "c09f", "c0a0", "c0a1",
+    "c0a2", "c0a3", "c0ac", "c0ad", "c0ae", "c0af", "cc13", "cc14", "cca8",
+    "cca9", "1301", "1302", "1303", "1304", "1305",
+]
+
+
+def cipher_bytes(cipher):
+    """Return JARM's two-hex-character cipher index."""
+    if not cipher:
+        return "00"
+    try:
+        index = JARM_CIPHERS.index(cipher.lower()) + 1
+    except ValueError:
+        # An unknown cipher is not part of a valid JARM response; use the
+        # conventional zero contribution rather than inventing an index.
+        return "00"
+    return f"{index:02x}"
+
+
+def version_byte(version):
+    """Return JARM's one-character TLS-version nibble (a-f)."""
+    if not version or len(version) < 4:
+        return "0"
+    digit = int(version[3:4], 16)
+    return "abcdef"[digit] if digit < 6 else "0"
+
+
+def jarm_part_fields(part):
+    fields = part.split("|", 3)
+    while len(fields) < 4:
+        fields.append("")
+    return fields[0], fields[1], fields[2], fields[3]
+
+
 def jarm_hash(parts, slots):
     """Build the standard 62-character JARM fingerprint.
 
-    The first 30 hex characters hash the ten concatenated
-    ``cipher|version`` fields; the last 32 hash the ten concatenated
-    extension fields. Missing slots contribute the conventional ``|||``.
+    This follows Salesforce JARM's ``jarm_hash``: each of the ten slots
+    contributes two hex characters for the selected cipher's index in the
+    ordered cipher table and one character for the TLS-version nibble.  The
+    remaining 32 characters are the first 32 hex characters of SHA-256 over
+    the concatenated ALPN and extension strings.
+
+    ``parts`` may be incomplete; missing slots use the conventional ``|||``
+    and contribute ``000`` to the fuzzy prefix.
     """
-    cipher_version = []
-    extensions = []
+    raw_parts = "".join(parts.get(i, "|||") for i in range(1, slots + 1))
+    if ",".join(parts.get(i, "|||") for i in range(1, slots + 1)) == ",".join(
+        "|||" for _ in range(slots)
+    ):
+        # Salesforce JARM's explicit all-refused case.
+        digest = hashlib.sha256(raw_parts.encode("utf-8")).hexdigest()
+        return digest, "0" * 62
+
+    fuzzy = []
+    alpns_ext = []
     for slot in range(1, slots + 1):
         part = parts.get(slot, "|||")
-        fields = part.split("|", 2)
-        cipher_version.append("|".join(fields[:2]))
-        extensions.append(fields[2] if len(fields) == 3 else "")
-    first = hashlib.sha256("".join(cipher_version).encode("utf-8")).hexdigest()[:30]
-    second = hashlib.sha256("".join(extensions).encode("utf-8")).hexdigest()[:32]
-    raw = "".join(parts.get(i, "|||") for i in range(1, slots + 1))
-    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+        cipher, version, alpn, ext = jarm_part_fields(part)
+        fuzzy.append(cipher_bytes(cipher))
+        fuzzy.append(version_byte(version))
+        alpns_ext.append(alpn)
+        alpns_ext.append(ext)
+    first = "".join(fuzzy)
+    second = hashlib.sha256("".join(alpns_ext).encode("utf-8")).hexdigest()[:32]
+    digest = hashlib.sha256(raw_parts.encode("utf-8")).hexdigest()
     return digest, first + second
 
 

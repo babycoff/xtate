@@ -15,6 +15,7 @@
 | 要把结果接入流水线 | [输出](./output.md) → [聚合](./aggregation.md) |
 | 在挑选模块 | [模块](./modules.md) |
 | 编写模块 | [模块开发](./module-development.md) |
+| 计划中的工作 | [路线图](./roadmap.md) |
 | 想了解内部原理 | [架构](./architecture.md) → [ZBanner](./zbanner.md) / [HLTCP](./hltcp.md) |
 | 卡住了 | [故障排查](./troubleshooting.md) → [已知限制](./known-limitations.md) |
 | 中文帮助 / 本地化 | [帮助 i18n](./help-i18n.md) |
@@ -37,6 +38,7 @@
 - [聚合](./aggregation.md)——结束后 NDJSON 聚合、schema 与规模
 - [模块](./modules.md)——四种模块类型以及 Xtate 自带的模块
 - [模块开发](./module-development.md)——C 接口、注册和 ProbeSlotPlan 示例
+- [路线图](./roadmap.md)——已完成工作与 P2/P3 计划
 - [中文帮助与 i18n](./help-i18n.md)——`--lang`、catalog 回退与 UTF-8 帮助排版
 - [Windows 快速上手](./windows-quickstart.md)——新手安装、Npcap、构建、首次扫描与排查
 - [Windows 可选依赖](./windows-dependencies.md)——PCRE2/LibXml2/bson/mongoc 与 MinGW 注意事项

@@ -106,7 +106,11 @@ python3 tools/jarm_aggregate.py scan.jsonl \
   --stats-out jarm-stats.json
 ```
 
-`jarm.jsonl` 每个完整目标一行 `jarm`/`jarm_sha256`；62 字符的 `jarm` 由 30 字符 cipher/version 哈希加 32 字符扩展哈希组成，`jarm_sha256` 是原始片段的完整 SHA-256；`jarm-retry.jsonl`/`.csv`
+`jarm.jsonl` 每个完整目标一行 `jarm`/`jarm_sha256`；62 字符的 `jarm`
+遵循 Salesforce JARM 1.0：前 30 字符是十个 slot 的 selected cipher 在 JARM
+有序 cipher 表中的索引加 TLS 版本 nibble，后 32 字符是 ALPN 与扩展字符串拼接后
+SHA-256 的前 32 个十六进制字符；`jarm_sha256` 是扫描器原始片段的辅助完整
+SHA-256，不是标准 JARM 值；`jarm-retry.jsonl`/`.csv`
 列出缺失 slot 的目标及缺失编号。CSV 仅用于人工查看，因为 Xtate 的目标文件只有地址，不能直接表达 `ip:port`。
 `--retry-dir` 会按端口生成 Xtate 可直接读取的 `port-<port>.ips`，配合 `--retry-template` 生成可执行命令；
 `--retry-ports-file` 输出缺失目标的唯一端口列表。统计输出包含缺失 slot 计数和重复 slot 计数。

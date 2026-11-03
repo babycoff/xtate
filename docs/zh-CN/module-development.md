@@ -70,6 +70,31 @@ dach_append_banner(&item->probe_report, "banner", px, sizeof_px);
 
 ---
 
+## 可复制示例
+
+[`examples/modules/`](../../examples/modules/) 为每种模块类型提供一个
+编译检查过的模板：
+
+| 模板 | 类型 |
+|:---|:---|
+| [`tcp-probe.c`](../../examples/modules/tcp-probe.c) | 单 slot TCP 探测 |
+| [`udp-probe.c`](../../examples/modules/udp-probe.c) | UDP 探测 |
+| [`state-probe.c`](../../examples/modules/state-probe.c) | HLTCP 状态探测 |
+| [`output-module.c`](../../examples/modules/output-module.c) | 输出模块 |
+| [`generate-module.c`](../../examples/modules/generate-module.c) | 目标生成模块 |
+
+它们**不会注册**进生产二进制。使用时复制到对应的 `src/*-modules/`，修正
+相对 include，添加注册表、i18n、文档和测试。编译检查已接入 CI：
+
+```bash
+bash tests/module-examples/test.sh
+```
+
+内置的 `slot-test` / `slot-test-udp` 仍然是 `ProbeSlot_Always` 的运行期示例；
+这些模板覆盖其它模块类型和 state probe 形状。
+
+---
+
 ## 探测模块（Probe）
 
 探测模块负责生成载荷、校验无状态 UDP 响应，或解析响应并填写 `OutItem`。注册表在
@@ -94,6 +119,8 @@ dach_append_banner(&item->probe_report, "banner", px, sizeof_px);
 只读并复制需要的数据。
 
 ### 最小单 slot 探测
+
+完整版本见 [`examples/modules/tcp-probe.c`](../../examples/modules/tcp-probe.c)。
 
 ```c
 static size_t example_make(ProbeTarget *target, unsigned char *buf) {
@@ -215,6 +242,8 @@ HLTCP 的 TCB 数量。当前不宣称 HLTCP 支持 slot plan。
 
 ### UDP 注意事项
 
+模板见 [`examples/modules/udp-probe.c`](../../examples/modules/udp-probe.c)。
+
 UDP 没有握手，当前 UDP 执行器拒绝 `ProbeSlot_AfterFirstReply`，请使用
 `ProbeSlot_Always`。
 
@@ -268,6 +297,8 @@ i18n 和模块列表。`scan_init_nothing`、`scan_poll_nothing`、
 
 ## 输出模块（Output）
 
+编译模板见 [`examples/modules/output-module.c`](../../examples/modules/output-module.c)。
+
 输出模块序列化 `OutItem`，不解析网络包。注册表在
 [`src/output-modules/output-modules.c`](../../src/output-modules/output-modules.c)。
 
@@ -298,6 +329,8 @@ typedef struct OutputModule {
 ---
 
 ## 生成模块（Generate）
+
+编译模板见 [`examples/modules/generate-module.c`](../../examples/modules/generate-module.c)。
 
 生成模块枚举 `(target, endpoint)` 对，运行在 Tx 线程；`hasmore_cb` 和
 `generate_cb` 必须按 tx index 线程安全。注册表在

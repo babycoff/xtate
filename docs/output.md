@@ -137,7 +137,13 @@ python3 tools/jarm_aggregate.py scan.jsonl \
   --stats-out jarm-stats.json
 ```
 
-`jarm.jsonl` has one `jarm`/`jarm_sha256` row per complete target. The 62-character `jarm` is the usual 30-character cipher/version hash plus the 32-character extension hash; `jarm_sha256` is the full SHA-256 of the raw parts.
+`jarm.jsonl` has one `jarm`/`jarm_sha256` row per complete target. The
+62-character `jarm` follows Salesforce JARM 1.0: the first 30 characters encode
+the selected cipher's index in JARM's ordered cipher table plus the TLS-version
+nibble for each of the ten slots; the last 32 characters are the first 32 hex
+characters of SHA-256 over the concatenated ALPN and extension strings.
+`jarm_sha256` is an auxiliary full SHA-256 of the raw scanner parts, not a
+standard JARM value.
 `jarm-retry.jsonl`/`.csv` list targets missing slots and their missing slot
 numbers. The CSV is for humans: Xtate target files contain addresses, not
 `ip:port` tuples. For a directly runnable retry, `--retry-dir` writes one

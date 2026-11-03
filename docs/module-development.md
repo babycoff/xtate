@@ -72,6 +72,34 @@ returns.
 
 ---
 
+## Copyable examples
+
+The [`examples/modules/`](../examples/modules/) directory contains one
+compile-checked template per module type:
+
+| Template | Type |
+|:---|:---|
+| [`tcp-probe.c`](../examples/modules/tcp-probe.c) | single-slot TCP probe |
+| [`udp-probe.c`](../examples/modules/udp-probe.c) | UDP probe |
+| [`state-probe.c`](../examples/modules/state-probe.c) | HLTCP state probe |
+| [`output-module.c`](../examples/modules/output-module.c) | output sink |
+| [`generate-module.c`](../examples/modules/generate-module.c) | target generator |
+
+They are deliberately **not registered** in the production binaries. To use
+one, copy it under the matching `src/*-modules/` directory, adjust its relative
+includes, add the registry entry, i18n strings, docs and a test. The compile
+check is part of CI:
+
+```bash
+bash tests/module-examples/test.sh
+```
+
+The built-in `slot-test` and `slot-test-udp` probes remain the runtime examples
+for `ProbeSlot_Always`; the templates above cover the other module types and
+the state-probe shape.
+
+---
+
 ## Probe modules
 
 Probe modules are the L5+ side of a scan: make a payload, validate a stateless
@@ -97,6 +125,8 @@ All callbacks can run concurrently. They must be thread-safe for themselves.
 The stateless probe target is not modifiable; read it and copy anything needed.
 
 ### A minimal single-slot probe
+
+The complete version is [`examples/modules/tcp-probe.c`](../examples/modules/tcp-probe.c).
 
 ```c
 static size_t example_make(ProbeTarget *target, unsigned char *buf) {
@@ -227,6 +257,8 @@ trivial and are covered by `tests/lab/run.sh`.
 
 ### UDP notes
 
+The template is [`examples/modules/udp-probe.c`](../examples/modules/udp-probe.c).
+
 UDP has no handshake, so `ProbeSlot_AfterFirstReply` is not meaningful for the
 current UDP executor and is rejected. Use `ProbeSlot_Always`.
 
@@ -284,6 +316,9 @@ no-op callbacks.
 
 ## Output modules
 
+The compile-checked template is
+[`examples/modules/output-module.c`](../examples/modules/output-module.c).
+
 Output modules serialize an `OutItem`; they do not parse packets. The registry
 is [`src/output-modules/output-modules.c`](../src/output-modules/output-modules.c).
 
@@ -316,6 +351,9 @@ no-op helpers.
 ---
 
 ## Generate modules
+
+The compile-checked template is
+[`examples/modules/generate-module.c`](../examples/modules/generate-module.c).
 
 Generators enumerate `(target, endpoint)` pairs. They are low-level and run in
 Tx threads; `hasmore_cb` and `generate_cb` must be thread-safe per tx index. The
