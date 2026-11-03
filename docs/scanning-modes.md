@@ -53,6 +53,34 @@ probe, `udp` a `udp` probe and `tcp-state` a `state` probe - anything else is a 
 Rule of thumb: `tcp-syn` for port inventory, `zbanner` for Internet-scale banners, `udp` for
 UDP services, ICMP/ARP/NDP for host discovery, `tcp-state` for short lists of hosts.
 
+## Rate is not target rate
+
+`-rate` is a **wire-packet rate**. It limits every packet the transmitter flushes, including
+packets created on the receive path. It is not a targets-per-second guarantee, and there is
+**no universal targets/s = rate / N formula**.
+
+The number of TX packets per target depends on the scan module, probe, target responses,
+retransmissions and module options:
+
+| Module | Typical TX packets per target | Important variation |
+|:---|:---|:---|
+| `tcp-syn` | about 1 initial SYN | `--send-rst` adds a packet for an open reply |
+| `zbanner` | about 3 in the default completed-target case: SYN, ACK+payload, RST | `--no-rst` removes one; `--with-ack` adds one; closed/zero-window, `--all-banner`, multi-probe and loss change the ratio |
+| `tcp-state` / HLTCP | variable: SYN, ACK+probe, retransmits, ACK/FIN/RST | depends on TCP state, probe/subprobe, target behaviour and retransmission policy; **do not use a fixed multiplier** |
+| `udp`, `icmp-*`, `sctp-init` | normally one request per target | retries, ICMP errors and probe behaviour can add packets |
+
+The `zbanner` default happens to be roughly `rate / 3` before CPU/network saturation; that
+is a **ZBanner-default observation**, not a rule for HLTCP or other modules. See
+[ZBanner rate accounting](./zbanner.md#rate-accounting) for that narrow case.
+
+To estimate target throughput:
+
+1. start with a small run and measure actual TX packets and results;
+2. compute the observed packets/target for that module, probe and target population;
+3. raise `-rate` only until CPU, NIC or target capacity saturates;
+4. remember that responses, retransmissions and stack-generated packets consume the same
+   budget.
+
 ## Recipes
 
 ### SYN scan - no probe, no firewall

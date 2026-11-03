@@ -9,8 +9,8 @@ and compared — if it matches, the reply is ours.
 
 This is the difference that makes large-scale banner grabbing affordable. A conventional
 banner grab allocates a TCB, a timer and a retransmission queue per target; ZBanner
-allocates none of these. It sends two packets and reads two, then closes the connection
-with a RST.
+allocates none of these. It sends a SYN and an ACK+payload, reads the SYN-ACK and the banner,
+then closes the connection with a RST.
 
 ### Design philosophy: state on the peer, events on our side
 
@@ -134,25 +134,34 @@ and when it is combined with `Multi_AfterHandle` / `Multi_DynamicNext`.
 ## Rate accounting
 
 `--rate` is a **wire-packet rate**, not a target rate. The throttle counts every packet
-that leaves the transmitter, including the ACK+payload and RST generated on the receive
-path. A normally completed ZBanner target therefore costs about three packets:
+that leaves the transmitter, including packets generated on the receive path.
+
+This section applies **only to ZBanner with default options and probes that complete a
+normal handshake**. HLTCP (`tcp-state`) and other scan modules/probes have different packet
+counts per target; do not apply the ZBanner ratio to them. See
+[scanning-modes.md](./scanning-modes.md#rate-is-not-target-rate).
+
+With the default RST behaviour, a normally completed ZBanner target costs about three TX
+packets:
 
 ```text
 SYN  +  ACK + probe payload  +  RST
 ```
 
-So, before CPU/network saturation:
+Only in that default case, and before CPU/network saturation:
 
 ```text
-targets/s  ~=  rate / 3
-rate       ~=  3 x desired targets/s
+ZBanner targets/s  ~=  rate / 3
+rate               ~=  3 x desired ZBanner targets/s
 ```
 
-For example, `--rate 15000` is needed for roughly 5,000 completed targets/s. The ratio is
-approximate because closed ports, zero-window replies and lost responses produce fewer
-packets, and `--with-ack` adds one more packet per target. `--no-rst` removes the final RST,
-giving about `rate / 2`, but it is a research switch, not a census default. Use the
-`ZBANNER_TRACE` benchmark counters when tuning a specific target population.
+For example, `--rate 15000` is needed for roughly 5,000 completed ZBanner targets/s. Even
+this is approximate: closed ports, zero-window replies and lost responses produce fewer
+packets; `--with-ack` adds one packet per target; `--no-rst` removes the final RST (about
+`rate / 2`, but it is a research switch); `--all-banner` and multi-probe modes can add
+further packets. For other modules, or for a different probe/target mix, measure the actual
+wire-to-target ratio instead of assuming 3. The `ZBANNER_TRACE` benchmark counters are
+specific to ZBanner.
 
 ## Usage
 

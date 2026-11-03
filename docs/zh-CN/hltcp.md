@@ -76,6 +76,8 @@ sudo ./bin/xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
 
 按 IP/CIDR 映射到主机名（最长前缀匹配）可以作为后续扩展，目前尚未实现。今天要扫描多个 vhost，就按 SNI 值分开运行。
 
+`-rate` 仍然是**线上总包速率**，不是连接/秒。HLTCP 对一个目标可能发送 SYN、ACK+探测、多个 TLS record、重传以及 FIN/RST；具体包数取决于探测/子探测、目标行为和重传策略。上面的桶数量公式 `rate / 5 / handlers` 只是启发式估算，不是目标速率公式。参见 [速率不是目标速率](./scanning-modes.md#速率不是目标速率)。
+
 ## 探测嵌套与 DataPass
 
 状态探测可以组合：

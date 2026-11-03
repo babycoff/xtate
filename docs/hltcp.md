@@ -121,6 +121,12 @@ sudo ./bin/xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
 A per-IP/CIDR hostname map is a possible future extension (longest-prefix match), but is not
 implemented yet. For mixed vhosts today, run one SNI value per invocation.
 
+`-rate` remains a **wire-packet rate**, not a connections/s rate. HLTCP can send a SYN,
+ACK+probe, several TLS records, retransmissions and a FIN/RST for one target; the exact
+count depends on the probe/subprobe, target behaviour and retransmission policy. The bucket
+sizing above uses `rate / 5 / handlers` only as a heuristic; it is not a target-rate formula.
+See [Rate is not target rate](./scanning-modes.md#rate-is-not-target-rate).
+
 ## Probe nesting and DataPass
 
 State probes compose:
