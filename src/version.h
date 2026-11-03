@@ -9,7 +9,7 @@
 #define XTATE_NAME_TITLE_CASE  "Xtate"
 #define XTATE_VERSION          "2.28.2"
 #define XTATE_VERSION_MAJOR    2
-#define XTATE_VERSION_MINOR    27
+#define XTATE_VERSION_MINOR    28
 #define XTATE_VERSION_PATCH    2
 #define XTATE_WITH_VERSION     "xtate/2.28.2"
 #define XTATE_DESCRIPTION      "A modular all-stack network scanner for next-generation internet surveys."
