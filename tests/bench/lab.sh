@@ -100,6 +100,7 @@ docker exec "$TARGET" bash -lc "
 echo "==> scanner container"
 docker run -d --name "$SCANNER" --network "$NET" \
     --cap-add NET_RAW --cap-add NET_ADMIN \
+    -e XTATE_BENCH_TRACE=1 \
     -v "$BIN_HOST:/xtate:ro" \
     -v "$OUT_HOST:/bench-out" \
     "$IMAGE" sleep infinity >/dev/null

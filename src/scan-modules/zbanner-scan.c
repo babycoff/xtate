@@ -1,8 +1,10 @@
 #include "scan-modules.h"
 #include "../probe-modules/probe-modules.h"
 
+#include <inttypes.h>
 #include <stdlib.h>
 
+#include "../pixie/pixie-timer.h"
 #include "../xconf.h"
 #include "../target/target-cookie.h"
 #include "../templ/templ-tcp.h"
@@ -54,6 +56,17 @@ struct ZBannerConf {
 };
 
 static struct ZBannerConf zbanner_conf = {0};
+
+/* Opt-in benchmark counters. They are disabled in normal scans. */
+static int      bench_trace;
+static uint64_t trace_tx;
+static uint64_t trace_synack;
+static uint64_t trace_data;
+static uint64_t trace_ack;
+static uint64_t trace_handle;
+static uint64_t trace_first_tx;
+static uint64_t trace_last_tx;
+static uint64_t trace_last_rx;
 
 static ConfRes SET_all_banner_floor(void *conf, const char *name,
                                     const char *value) {
@@ -585,6 +598,12 @@ static ConfParam zbanner_parameters[] = {
 static unsigned src_port_start;
 
 static bool zbanner_init(const XConf *xconf) {
+    bench_trace = getenv("XTATE_BENCH_TRACE") != NULL;
+    if (bench_trace) {
+        trace_tx = trace_synack = trace_data = trace_ack = 0;
+        trace_handle = trace_first_tx = trace_last_tx = trace_last_rx = 0;
+    }
+
     src_port_start = xconf->nic.src.port.first;
 
     unsigned src_port_count = (xconf->nic.src.port.last >= src_port_start)
@@ -633,6 +652,14 @@ static bool zbanner_init(const XConf *xconf) {
 
 static bool zbanner_transmit(uint64_t entropy, ScanTarget *target,
                              unsigned char *px, size_t *len) {
+    if (bench_trace) {
+        uint64_t now = pixie_gettime();
+        trace_tx++;
+        if (!trace_first_tx)
+            trace_first_tx = now;
+        trace_last_tx = now;
+    }
+
     /*we just handle tcp target*/
     if (target->target.ip_proto != IP_PROTO_TCP)
         return false;
@@ -660,6 +687,19 @@ static void zbanner_validate(uint64_t entropy, Recved *recved, PreHandle *pre) {
         pre->go_record = 1;
     else
         return;
+
+    uint8_t trace_flags =
+        TCP_FLAGS(recved->packet, recved->parsed.transport_offset);
+    if (bench_trace) {
+        trace_last_rx = pixie_gettime();
+        if (TCP_FLAG_HAS(trace_flags, TCP_FLAG_SYN | TCP_FLAG_ACK))
+            trace_synack++;
+        else if (TCP_FLAG_HAS(trace_flags, TCP_FLAG_ACK) &&
+                 recved->parsed.app_length)
+            trace_data++;
+        else if (TCP_FLAG_HAS(trace_flags, TCP_FLAG_ACK))
+            trace_ack++;
+    }
 
     unsigned seqno_me =
         TCP_ACKNO(recved->packet, recved->parsed.transport_offset);
@@ -754,6 +794,9 @@ static void zbanner_validate(uint64_t entropy, Recved *recved, PreHandle *pre) {
 static void zbanner_handle(unsigned th_idx, uint64_t entropy,
                            ValidPacket *valid_pkt, OutItem *item,
                            NetStack *stack) {
+    if (bench_trace)
+        trace_handle++;
+
     Recved *recved = &valid_pkt->recved;
 
     unsigned mss_them;
@@ -1127,6 +1170,23 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
     }
 }
 
+static void zbanner_close(void) {
+    if (!bench_trace)
+        return;
+
+    uint64_t now       = pixie_gettime();
+    uint64_t send_span = trace_last_tx - trace_first_tx;
+    uint64_t rx_span   = trace_last_rx ? trace_last_rx - trace_first_tx : 0;
+    uint64_t total     = now - trace_first_tx;
+
+    LOG(LEVEL_WARN,
+        "ZBANNER_TRACE tx=%" PRIu64 " synack=%" PRIu64 " data=%" PRIu64
+        " ack=%" PRIu64 " handle=%" PRIu64 " send_ms=%" PRIu64
+        " rx_ms=%" PRIu64 " total_ms=%" PRIu64 "\n",
+        trace_tx, trace_synack, trace_data, trace_ack, trace_handle,
+        send_span / 1000, rx_span / 1000, total / 1000);
+}
+
 Scanner ZBannerScan = {
     .name                = "zbanner",
     .required_probe_type = ProbeType_TCP,
@@ -1157,6 +1217,6 @@ Scanner ZBannerScan = {
     .validate_cb = &zbanner_validate,
     .handle_cb   = &zbanner_handle,
     .poll_cb     = &scan_poll_nothing,
-    .close_cb    = &scan_close_nothing,
+    .close_cb    = &zbanner_close,
     .status_cb   = &scan_no_status,
 };

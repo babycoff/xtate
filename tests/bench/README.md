@@ -123,6 +123,18 @@ XTATE_BENCH_CASE=zbanner XTATE_CN_MIRROR=1 \
 XTATE_BIN=/path/to/xtate-linux bash tests/bench/lab.sh
 ```
 
+The lab starts the scanner with `XTATE_BENCH_TRACE=1`. ZBanner then writes a
+final line to stderr:
+
+```text
+ZBANNER_TRACE tx=... synack=... data=... ack=... handle=...
+send_ms=... rx_ms=... total_ms=...
+```
+
+`send_ms` is the interval between the first and last transmit callback, so it
+separates the send phase from response handling. The counters are approximate
+under multiple RX threads.
+
 The stateful case restarts the C responder in `--hold` mode: it accepts
 connections without replying, so TCBs remain active long enough to exercise
 `tcb-mem`. Set `XTATE_BENCH_STATEFUL_HOLD=0` to disable that behavior.
