@@ -75,6 +75,27 @@ TCP 的 ACK 允许携带数据。把 `ACK + 载荷` 放进同一个报文，意�
 
 启动时如果 `--all-banner` 搭配过小的窗口、包长或 snaplen，或搭配 `Multi_AfterHandle` / `Multi_DynamicNext`，会给出警告。
 
+## 速率计算
+
+`--rate` 统计的是**线上总包速率**，不是目标速率。throttle 会统计发送线程发出的每一个包，
+包括接收路径上生成的 ACK+载荷和 RST。因此一个正常完成的 ZBanner 目标大约需要三个包：
+
+```text
+SYN  +  ACK + 探测载荷  +  RST
+```
+
+在 CPU/网络未饱和时：
+
+```text
+目标/秒  ≈  rate / 3
+rate     ≈  3 × 期望目标/秒
+```
+
+例如，想要约 5,000 个完成目标/秒，需要 `--rate 15000`。这个比例只是近似值：
+closed 端口、零窗口响应、丢包都会让实际包数变少，而 `--with-ack` 会每目标多发一个包。
+`--no-rst` 去掉最后的 RST，约为 `rate / 2`，但它是研究开关，不适合作为普查默认值。
+针对具体目标群体调参时，可使用 `ZBANNER_TRACE` benchmark 计数器。
+
 ## 用法
 
 ZBanner 需要一个 TCP 类型的探测模块——能产生字节、也能解释响应的那种。模块自己的参数经 `--scan-arg` 传入，探测参数经 `--probe-arg` 传入。

@@ -131,6 +131,29 @@ For multi-segment data, the defaults are too small. A practical preset is:
 Startup warns when `--all-banner` is combined with a small window, packet length or snaplen,
 and when it is combined with `Multi_AfterHandle` / `Multi_DynamicNext`.
 
+## Rate accounting
+
+`--rate` is a **wire-packet rate**, not a target rate. The throttle counts every packet
+that leaves the transmitter, including the ACK+payload and RST generated on the receive
+path. A normally completed ZBanner target therefore costs about three packets:
+
+```text
+SYN  +  ACK + probe payload  +  RST
+```
+
+So, before CPU/network saturation:
+
+```text
+targets/s  ~=  rate / 3
+rate       ~=  3 x desired targets/s
+```
+
+For example, `--rate 15000` is needed for roughly 5,000 completed targets/s. The ratio is
+approximate because closed ports, zero-window replies and lost responses produce fewer
+packets, and `--with-ack` adds one more packet per target. `--no-rst` removes the final RST,
+giving about `rate / 2`, but it is a research switch, not a census default. Use the
+`ZBANNER_TRACE` benchmark counters when tuning a specific target population.
+
 ## Usage
 
 ZBanner requires a TCP-type probe module — something that can produce bytes and interpret
