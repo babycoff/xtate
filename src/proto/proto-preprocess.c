@@ -316,7 +316,9 @@ parse_vlanmpls:
 
 wifi_data: {
     unsigned flag;
-    VERIFY_REMAINING(24, FOUND_WIFI_DATA);
+    /* 24-byte base header; ToDS+FromDS adds an Address4 field and shifts the
+     * later fields by 6 bytes. */
+    VERIFY_REMAINING(30, FOUND_WIFI_DATA);
 
     flag = px[offset];
 
@@ -389,6 +391,8 @@ parse_radiotap_header:
         /* If FCS is present at the end of the packet, then change
          * the length to remove it */
         if (features & 0x4000) {
+            if (header_length < 4 || length < 4)
+                return false;
             unsigned fcs_header = LE_TO_U32(px + offset + header_length - 4);
             unsigned fcs_frame  = LE_TO_U32(px + length - 4);
             if (fcs_header == fcs_frame)
@@ -480,6 +484,8 @@ parse_linktype:
      */
     switch (link_type) {
         case PCAP_DLT_NULL:
+            if (length < 4)
+                return false;
             offset += 4;
             /**
              * This can be different in LE or BE, too.
@@ -503,6 +509,8 @@ parse_linktype:
         case PCAP_DLT_ETHERNET:
             goto parse_ethernet;
         case PCAP_DLT_RAW:
+            if (offset >= length)
+                return false;
             switch (px[offset] >> 4) {
                 case 4:
                     goto parse_ipv4;
@@ -689,6 +697,39 @@ int preprocess_selftest(void) {
         if (!preprocess_frame(buf, sizeof(buf), PCAP_DLT_ETHERNET, &info) ||
             info.src_ip.ipv4 != 0xFFFFFFFF ||
             info.dst_ip.ipv4 != 0xFFFFFFFF)
+            x++;
+    }
+
+    /* 6. Short RAW/NULL frames must fail without touching px[0]/px[0..3]. */
+    {
+        PreInfo info;
+        unsigned char one = 0;
+        if (preprocess_frame(&one, 1, PCAP_DLT_RAW, &info))
+            x++;
+        if (preprocess_frame(&one, 3, PCAP_DLT_NULL, &info))
+            x++;
+    }
+
+    /* 7. Radiotap with FCS flag but a header shorter than the FCS field must
+     * fail instead of reading at header_length - 4. */
+    {
+        unsigned char buf[8] = {0};
+        PreInfo       info;
+        buf[2] = 0; /* radiotap header length */
+        buf[4] = 0x00;
+        buf[5] = 0x40; /* LE features: FCS present */
+        if (preprocess_frame(buf, sizeof(buf), PCAP_DLT_IEEE802_11_RADIO,
+                            &info))
+            x++;
+    }
+
+    /* 8. 802.11 ToDS+FromDS adds an Address4 field; a 24-byte header must not
+     * be read as if the extra 6 bytes were present. */
+    {
+        unsigned char buf[24] = {0};
+        PreInfo       info;
+        buf[1] = 0x03; /* ToDS | FromDS */
+        if (preprocess_frame(buf, sizeof(buf), PCAP_DLT_IEEE802_11, &info))
             x++;
     }
 

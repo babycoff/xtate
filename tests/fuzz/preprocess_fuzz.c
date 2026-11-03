@@ -19,7 +19,19 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     if (size > 65535)
         return 0;
 
-    PreInfo info;
-    (void)preprocess_frame(data, (unsigned)size, PCAP_DLT_ETHERNET, &info);
+    /* Exercise every link type the production parser accepts, not just
+     * Ethernet. Each call gets a fresh PreInfo because callbacks may leave
+     * parser-owned offsets/pointers behind. */
+    static const unsigned link_types[] = {
+        PCAP_DLT_ETHERNET,     PCAP_DLT_NULL,
+        PCAP_DLT_RAW,          PCAP_DLT_IEEE802_11,
+        PCAP_DLT_LINUX_SLL,    PCAP_DLT_PRISM_HEADER,
+        PCAP_DLT_IEEE802_11_RADIO,
+    };
+
+    for (size_t i = 0; i < sizeof(link_types) / sizeof(link_types[0]); i++) {
+        PreInfo info;
+        (void)preprocess_frame(data, (unsigned)size, link_types[i], &info);
+    }
     return 0;
 }

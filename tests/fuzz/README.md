@@ -7,7 +7,7 @@ parser. They complement `--selftest` and the fixed target/parser tests.
 
 | Harness | Target |
 |:---|:---|
-| `preprocess_fuzz` | `preprocess_frame()` with `PCAP_DLT_ETHERNET` frames |
+| `preprocess_fuzz` | `preprocess_frame()` with all supported link types (Ethernet, RAW, SLL, 802.11, radiotap, ...) |
 | `target_parse_fuzz` | `target_parse_range()` with arbitrary target-range text |
 | `targetset_fuzz` | `targetset_add_ip_str()` and `targetset_add_port_str()` |
 | `targetfile_fuzz` | `targetset_parse_file()` line/file tokenizer |
@@ -33,10 +33,28 @@ sudo apt install clang
 CC=clang bash tests/fuzz/run.sh
 ```
 
-Optional duration and build directory:
+Optional duration and build/corpus directories:
 
 ```bash
-FUZZ_SECONDS=60 FUZZ_BUILD=/tmp/xtate-fuzz CC=clang bash tests/fuzz/run.sh
+FUZZ_SECONDS=60 \
+FUZZ_BUILD=/tmp/xtate-fuzz \
+FUZZ_WORK_CORPUS=/tmp/xtate-corpus \
+CC=clang bash tests/fuzz/run.sh
+```
+
+The checked-in `corpus/` directories are seed inputs. Generated inputs go to
+`corpus-working/` (ignored by git); the next run starts from both directories.
+The Linux CI caches `tests/fuzz/corpus-working/` between runs and uses it as the
+long-term corpus, so a later run does not restart from only the seed inputs.
+
+For a longer campaign, set `FUZZ_SECONDS` to minutes and preserve the working
+corpus directory. To shrink it periodically:
+
+```bash
+FUZZ_SECONDS=1 CC=clang bash tests/fuzz/run.sh   # build binaries
+tests/fuzz/build/preprocess_fuzz -merge=1 \
+  /tmp/corpus-minimized \
+  tests/fuzz/corpus/preprocess tests/fuzz/corpus-working/preprocess
 ```
 
 The run stops on the first sanitizer finding, writes the reproducer under

@@ -10,9 +10,13 @@ CC="${CC:-clang}"
 FUZZ_TIME="${FUZZ_SECONDS:-15}"
 BUILD="${FUZZ_BUILD:-$ROOT/tests/fuzz/build}"
 CORPUS="$ROOT/tests/fuzz/corpus"
+WORK_CORPUS="${FUZZ_WORK_CORPUS:-$ROOT/tests/fuzz/corpus-working}"
 ARTIFACTS="$ROOT/tests/fuzz/artifacts"
 
-mkdir -p "$BUILD" "$ARTIFACTS" "$CORPUS/preprocess" "$CORPUS/target-parse" "$CORPUS/targetset" "$CORPUS/targetfile"
+mkdir -p "$BUILD" "$ARTIFACTS" \
+    "$CORPUS/preprocess" "$CORPUS/target-parse" "$CORPUS/targetset" "$CORPUS/targetfile" \
+    "$WORK_CORPUS/preprocess" "$WORK_CORPUS/target-parse" \
+    "$WORK_CORPUS/targetset" "$WORK_CORPUS/targetfile"
 
 if ! command -v "$CC" >/dev/null 2>&1; then
     echo "SKIP: $CC not available (install clang to run the fuzzers)" >&2
@@ -71,7 +75,7 @@ echo "==> fuzzing preprocessor for ${FUZZ_TIME}s"
     -max_len=65535 \
     -timeout=5 \
     -artifact_prefix="$ARTIFACTS/preprocess-" \
-    "$CORPUS/preprocess"
+    "$WORK_CORPUS/preprocess" "$CORPUS/preprocess"
 
 echo "==> fuzzing target parser for ${FUZZ_TIME}s"
 "$BUILD/target_parse_fuzz" \
@@ -79,7 +83,7 @@ echo "==> fuzzing target parser for ${FUZZ_TIME}s"
     -max_len=4096 \
     -timeout=5 \
     -artifact_prefix="$ARTIFACTS/target-" \
-    "$CORPUS/target-parse"
+    "$WORK_CORPUS/target-parse" "$CORPUS/target-parse"
 
 echo "==> fuzzing target-set parser for ${FUZZ_TIME}s"
 "$BUILD/targetset_fuzz" \
@@ -87,7 +91,7 @@ echo "==> fuzzing target-set parser for ${FUZZ_TIME}s"
     -max_len=1024 \
     -timeout=5 \
     -artifact_prefix="$ARTIFACTS/targetset-" \
-    "$CORPUS/targetset"
+    "$WORK_CORPUS/targetset" "$CORPUS/targetset"
 
 echo "==> fuzzing target-file parser for ${FUZZ_TIME}s"
 "$BUILD/targetfile_fuzz" \
@@ -95,6 +99,6 @@ echo "==> fuzzing target-file parser for ${FUZZ_TIME}s"
     -max_len=4096 \
     -timeout=5 \
     -artifact_prefix="$ARTIFACTS/targetfile-" \
-    "$CORPUS/targetfile"
+    "$WORK_CORPUS/targetfile" "$CORPUS/targetfile"
 
 echo "fuzz smoke passed"

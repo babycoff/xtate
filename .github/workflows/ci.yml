@@ -63,6 +63,15 @@ jobs:
           XTATE_BIN="$BIN" bash tests/i18n/test.sh
           XTATE_BIN="$BIN" bash tests/interactive/test.sh
 
+      - name: Restore fuzz corpus
+        if: matrix.compiler == 'clang' && matrix.config == 'release'
+        uses: actions/cache@v4
+        with:
+          path: tests/fuzz/corpus-working
+          key: fuzz-corpus-${{ runner.os }}-${{ hashFiles('tests/fuzz/**/*.c', 'tests/fuzz/run.sh', 'src/proto/proto-preprocess.c', 'src/target/target-parse.c') }}
+          restore-keys: |
+            fuzz-corpus-${{ runner.os }}-
+
       - name: Parser fuzz smoke
         if: matrix.compiler == 'clang' && matrix.config == 'release'
         env:
