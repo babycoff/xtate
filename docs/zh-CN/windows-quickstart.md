@@ -220,6 +220,6 @@ pwsh -File .\scripts\clean-windows.ps1 -IncludeStage
 
 ## 8. Windows CI 覆盖什么
 
-仓库的 Windows CI 使用 **MSVC 和 ClangCL** 构建，运行 `--version`、`--selftest`
+仓库的 Windows CI 使用 **MSVC、ClangCL 和 MinGW（MSYS2）** 构建，运行 `--version`、`--selftest`
 以及 parser/i18n 测试。它**不安装 Npcap 驱动**，也**不运行真实抓包/发包测试**。
 真实扫描仍然需要本地安装 Npcap，并使用管理员终端。

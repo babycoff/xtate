@@ -61,3 +61,51 @@ jobs:
           name: xtate-windows-${{ matrix.toolchain }}-release
           path: bin/xtate.exe
           if-no-files-found: error
+  mingw:
+    name: Windows MinGW Release
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up MSYS2 / MinGW
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+
+      - name: Build
+        shell: msys2 {0}
+        run: |
+          cmake -S . -B build-mingw -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DWITH_OPENSSL=OFF \
+            -DWITH_PCRE2=OFF \
+            -DWITH_LIBXML2=OFF \
+            -DWITH_BSON=OFF \
+            -DWITH_MONGOC=OFF
+          cmake --build build-mingw -j 2
+
+      - name: Version and selftest
+        shell: msys2 {0}
+        run: |
+          ./build-mingw/xtate.exe --version
+          ./build-mingw/xtate.exe --selftest
+
+      - name: Parser and i18n tests
+        shell: msys2 {0}
+        run: |
+          XTATE_BIN=./build-mingw/xtate.exe bash tests/target/test.sh
+          XTATE_BIN=./build-mingw/xtate.exe bash tests/i18n/test.sh
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: xtate-windows-mingw-release
+          path: build-mingw/xtate.exe
+          if-no-files-found: error
+
