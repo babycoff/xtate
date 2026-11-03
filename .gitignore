@@ -1,5 +1,8 @@
 resume.conf
 recover.conf
 .vscode
-.cachebench-results/
+.cache
+bench-results/
 .bench-
+__pycache__/
+*.pyc

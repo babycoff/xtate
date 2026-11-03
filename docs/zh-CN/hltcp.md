@@ -114,7 +114,7 @@ tcp-state -> tls-state -> http-state / hello-state / recog-state / get-state / c
 
 表容量的选择是估算而不是预算：大致 `rate / 5 / handlers` 个桶，向上取 2 的幂，下限为十，并夹在 2^10 到 2^24 之间。每个表另有活跃 TCB 预算
 `min(2 x 桶数, 16 MiB / sizeof(TCB))`，下限 1024。所有接收线程表的总额外预算默认 **128 MiB**，
-可用 `-scan-arg "tcb-mem=<MiB>"`（1..4096）调整。预算耗尽时，新 SYN-ACK 仍会报告 open，
+可用 `-scan-arg "--tcb-mem=<MiB>"`（1..4096）调整。预算耗尽时，新 SYN-ACK 仍会报告 open，
 但不会创建 probe 状态，连接被丢弃并计数。状态输出为
 `tcb=<活跃>/<上限> drop=<丢弃数>`。TCB 池化会让峰值内存常驻，但不会超过表/全局预算。
 

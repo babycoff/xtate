@@ -183,7 +183,7 @@ Table sizing is a guess, not a budget: roughly `rate / 5 / handlers` buckets, ro
 power of two, floored at ten and clamped between 2^10 and 2^24. Each table also has an
 active-TCB budget of `min(2 x buckets, 16 MiB / sizeof(TCB))` with a floor of 1024. A total
 budget across all handler tables defaults to **128 MiB** and can be changed with
-`-scan-arg "tcb-mem=<MiB>"` (1..4096). When a table budget is exhausted, a new SYN-ACK is
+`-scan-arg "--tcb-mem=<MiB>"` (1..4096). When a table budget is exhausted, a new SYN-ACK is
 still reported as open, but no probe state is created for it; the connection is dropped and
 counted. Status prints `tcb=<active>/<limit> drop=<dropped>`. Pooled TCBs keep peak memory
 resident, but cannot exceed the table/global budget.

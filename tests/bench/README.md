@@ -60,6 +60,36 @@ The wrapper copies the benchmark scripts into a writable container directory,
 normalizes CRLF, mounts the binary and writes results under
 `bench-results/`.
 
+## Real packet-path lab
+
+`lab.sh` runs the scanner against a private Docker bridge target. It requires
+Docker, a Linux `xtate` binary and permission to create containers with
+`NET_RAW`/`NET_ADMIN`:
+
+```bash
+# Mainland network: use the opt-in mirrors for the container package install
+XTATE_CN_MIRROR=1 XTATE_BIN=/path/to/xtate-linux bash tests/bench/lab.sh
+
+# Quick functional run
+XTATE_BENCH_QUICK=1 XTATE_BIN=/path/to/xtate-linux bash tests/bench/lab.sh
+
+# One case
+XTATE_BENCH_CASE=tx XTATE_BIN=/path/to/xtate-linux bash tests/bench/lab.sh
+```
+
+Cases:
+
+- `tx`: `tcp-syn` to a target whose firewall silently drops the port range;
+  reports target-side DROP packet counts.
+- `zbanner`: HTTP banner scan against a multi-port local target.
+- `output`: `tcp-syn` output comparison (`null`, `text`, `csv`, `ndjson`)
+  against closed ports.
+- `stateful`: `tcp-state` against the multi-port HTTP target with
+  `tcb-mem=1`, exercising the active-TCB budget.
+
+The lab is intentionally separate from `run.sh`: it needs Linux raw sockets and
+Docker, while parser/offline cases do not.
+
 ## Reading the results
 
 `results.jsonl` contains one JSON object per case:
