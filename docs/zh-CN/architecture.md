@@ -24,7 +24,7 @@ Xtate 是一款模块化的全栈网络扫描器，面向大规模主动测量�
 
 ## 线程模型
 
-![Xtate 线程模型：N 个发送线程、1 个接收线程、1 个分发线程，以及 M 个各自持有 TCB 表的处理线程，通过 NetStack 回注队列连接](../../screenshots/architecture.svg)
+![Xtate 运行架构：从目标与 TX 经 Internet、RX + Dispatch、处理线程到输出的 U 形路径；明确绕过主机 TCP 协议栈](../../screenshots/architecture.png)
 
 一次运行中的扫描共有 **N + M + 3** 个线程：1 个主线程、N 个发送线程、1 个接收线程、1 个分发线程和 M 个处理线程。在默认的 `--tx-thread-count 1` 与 `--rx-handler-count 1` 下就是五个线程。
 

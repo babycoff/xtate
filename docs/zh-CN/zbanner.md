@@ -29,7 +29,7 @@ cookie = siphash24(entropy, ip_them, port_them, ip_me, port_me)   // low 32 bits
 
 ## 交互序列
 
-![ZBanner 序列：携带 SipHash cookie 的 SYN，确认 cookie + 1 的 SYN-ACK，携带探测载荷的 ACK，携带 banner 的 ACK，最后是 RST；没有 TCB，也没有超时表](../../screenshots/zbanner-sequence.svg)
+![ZBanner 序列：无状态 SYN 携带 SipHash cookie，SYN-ACK 确认 cookie + 1，携带探测载荷的 ACK，携带 banner 的 ACK，内部解析为 OutItem，最后是 RST；没有 TCB，也没有超时表](../../screenshots/zbanner-sequence.png)
 
 1. **SYN**——`seq = cookie`，`ack = 0`。源端口是 `source_port_start + probe_slot`，于是探测槽位随端口号一起走，而不用占内存。
 2. **SYN-ACK**——服务器确认 `cookie + 1`。只有当 `ackno == cookie + 1`、且目的端口落在我们的源端口区间内时，才接受这个包。

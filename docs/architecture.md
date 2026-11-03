@@ -34,7 +34,9 @@ is split across threads with lock-free rings between the stages.
 
 ## Thread model
 
-![Xtate threading model: N transmit threads, one receive thread, one dispatcher, and M handler threads with per-thread TCB tables, connected by the NetStack follow-up queue](../screenshots/architecture.svg)
+![Xtate runtime overview: a U-shaped packet path from targets and TX through Internet, RX plus dispatch, handlers and output; the host TCP stack is bypassed](../screenshots/architecture.png)
+
+The public overview folds RX and the dispatcher into one `RX + Dispatch` node so the poster stays compact; the thread table below keeps them separate.
 
 A running scan has **N + M + 3** threads: one main thread, N transmitters, one receiver,
 one dispatcher and M handlers. With the default `--tx-thread-count 1` and

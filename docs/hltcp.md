@@ -74,6 +74,8 @@ the process runs.
 TLS is the reason this stack exists, and it is implemented by handing the byte stream to
 OpenSSL rather than by parsing records ourselves.
 
+![HLTCP sequence: a stateless SYN is sent first; only a SYN-ACK creates the TCB; then ACK, an optional TLS handshake, internal evidence collection, and RST](../screenshots/hltcp-sequence.png)
+
 - **One `SSL_CTX`, configured once.** `TLS_method()`, no peer verification, no min/max
   protocol version, security level 0, `ALL:eNULL` ciphers, every TLS 1.3 suite. The context
   disables the client session cache, session tickets and renegotiation: a one-shot scan has

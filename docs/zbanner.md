@@ -49,7 +49,7 @@ No lookup table is consulted, because there is no table.
 
 ## The sequence
 
-![ZBanner sequence: SYN with a SipHash cookie, SYN-ACK acknowledging cookie plus one, ACK with probe payload, ACK with banner, then RST; no TCB and no timeout table](../screenshots/zbanner-sequence.svg)
+![ZBanner sequence: stateless SYN with a SipHash cookie, SYN-ACK acknowledging cookie plus one, ACK with probe payload, ACK with banner, internal parse to OutItem, then RST; no TCB and no timeout table](../screenshots/zbanner-sequence.png)
 
 1. **SYN** — `seq = cookie`, `ack = 0`. The source port is `source_port_start + probe_slot`,
    so the probe slot travels in the port number rather than in memory.

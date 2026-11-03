@@ -51,6 +51,8 @@ peer: DATA -> duplicate prefix trimmed, seqno_them advances, one ACK per segment
 
 TLS 是这个栈存在的理由，它的实现方式是把字节流交给 OpenSSL，而不是自己解析记录。
 
+![HLTCP 时序：先发无状态 SYN；只有收到 SYN-ACK 才创建 TCB；之后是 ACK、可选 TLS 握手、内部证据收集和 RST](../../screenshots/hltcp-sequence.png)
+
 - **一个 `SSL_CTX`，初始化一次。** `TLS_method()`、不验证对端、不设最小/最大协议版本、安全级别 0、`ALL:eNULL` 密码套件、全部 TLS 1.3 套件。上下文关闭客户端 session cache、session ticket 和重协商：一次性扫描不需要复用它们，它们只会增加每连接状态。这不是一个安全的 TLS 客户端，也没打算是；它的配置目标是观察服务器说什么，并有意接受一个兼容性取舍：依赖遗留重协商的服务器不受支持。
 - **每连接：** 两个 `BIO_s_mem()` BIO（一读一写）、一个 4 KiB 的 scratch 缓冲、一个 `SSL` 对象，以及一份目标副本，供 OpenSSL 回调取回目标。`SSL_set_connect_state` 把它设为客户端，`SSL_set_bio` 把内存 BIO 接上。
 - **驱动握手。** `SSL_do_handshake()` 返回 `WANT_READ`，同时把 ClientHello 写进写 BIO；HLTCP 把这些字节当作 TCP 载荷发出。每个到达的段被写入读 BIO，再驱动一次握手。出向字节从写 BIO 抽走；入向明文要到握手完成后才有意义。

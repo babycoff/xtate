@@ -46,7 +46,7 @@ XTATE_BIN=./bin/xtate bash tests/interactive/test.sh
 |:---|:---|
 | CMake / 编译选项 / 头文件 | Linux Clang + 一个 Debug 构建 |
 | build.sh / 生成器 | GCC 和 Clang；Make 和 Ninja |
-| Windows 构建脚本 | MSVC、ClangCL、MinGW |
+| Windows 构建脚本 | MSVC、ClangCL、MinGW UCRT64 和 legacy MINGW64 |
 | i18n/catalog | Windows 二进制也跑 `tests/i18n/test.sh` |
 | 交互/TTY | Linux `tests/interactive/test.sh` + `tty.sh`；Windows 交互冒烟 |
 | 旧发行版/CMake | Debian 10 风格 CMake 3.13 + GCC 8 构建 |
@@ -81,7 +81,7 @@ pwsh -File .\scripts\build-windows.ps1 -Toolchain all -Config Release -Yes
 | Debian 10（基线） | GCC 8.3, CMake 3.13.4 | Release | Make/Ninja | 基础构建 + selftest |
 | Alpine 3.20（musl） | GCC 13.2 | Release | Ninja | 基础构建 + selftest |
 | Alpine 3.20（musl） | GCC 13.2 | Release | Ninja | `--static --minimal`，`file` + selftest |
-| Windows 10/11 | MSVC/ClangCL/MinGW | Release/Debug | Visual Studio / MinGW | 构建 + selftest |
+| Windows 10/11 | MSVC / ClangCL / MinGW UCRT64 / MINGW64 | Release | Visual Studio / MSYS2 | 构建 + selftest |
 
 发布必须报告：
 
@@ -115,7 +115,7 @@ interactive + PTY: 通过
 - 目标语法、i18n 和交互测试；
 - GCC/Release 的 PTY 终端测试。
 
-Windows 构建仍需维护者/手动验证，直到配置带 Npcap/Visual Studio 的托管 runner。
+Windows 构建在 `.github/workflows/windows.yml` 中运行，覆盖 MSVC、ClangCL 和 MSYS2 MinGW UCRT64/MINGW64。托管 runner 不安装 Npcap，因此 CI 只构建并运行 `--selftest`，不做真实抓包扫描。
 
 ## Benchmark
 

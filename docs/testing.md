@@ -53,7 +53,7 @@ environments are reported, not silently skipped or marked as passed.
 |:---|:---|
 | CMake / compiler flags / headers | Linux Clang + one Debug build |
 | build.sh / generators | GCC and Clang; Make and Ninja |
-| Windows build scripts | MSVC, ClangCL and MinGW |
+| Windows build scripts | MSVC, ClangCL, MinGW UCRT64 and legacy MINGW64 |
 | i18n/catalog | `tests/i18n/test.sh` on a Windows binary too |
 | interactive/TTY | `tests/interactive/test.sh` and `tty.sh` on Linux; interactive smoke on Windows |
 | old distro / CMake | Debian 10-style CMake 3.13 + GCC 8 build |
@@ -89,7 +89,7 @@ contributors are not expected to own this tier:
 | Debian 10 (baseline) | GCC 8.3, CMake 3.13.4 | Release | Make/Ninja | basic build + selftest |
 | Alpine 3.20 (musl) | GCC 13.2 | Release | Ninja | basic build + selftest |
 | Alpine 3.20 (musl) | GCC 13.2 | Release | Ninja | `--static --minimal`, `file` + selftest |
-| Windows 10/11 | MSVC/ClangCL/MinGW | Release/Debug | Visual Studio / MinGW | build + selftest |
+| Windows 10/11 | MSVC / ClangCL / MinGW UCRT64 / MINGW64 | Release | Visual Studio / MSYS2 | build + selftest |
 
 Required release evidence:
 
@@ -123,8 +123,9 @@ interactive + PTY: pass
 - target syntax, i18n and interactive suites;
 - PTY terminal test on GCC/Release.
 
-Windows builds remain a maintainer/manual check until a hosted Npcap/Visual
-Studio runner is set up.
+Windows builds run in `.github/workflows/windows.yml` with MSVC, ClangCL and
+MSYS2 MinGW UCRT64/MINGW64. The hosted runners do not install Npcap, so CI
+builds and runs `--selftest` but does not perform a live packet scan.
 
 ## Benchmarks
 

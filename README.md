@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.28.9-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.28.10-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -67,11 +67,11 @@ families and the interactive shell are first-class, not afterthoughts.
 | Build system | **CMake 3.13+**, Unix Makefiles or **Ninja** |
 | Linux glibc | **GCC / Clang**, Release/Debug; Debian 10-class CMake 3.13 baseline |
 | Linux musl | **Alpine/musl**, dynamic build and basic `--static --minimal` build |
-| Windows | **MSVC / ClangCL / MinGW**, Release/Debug, Npcap + optional vcpkg DLLs |
+| Windows | **MSVC / ClangCL / MinGW UCRT64 / MinGW MINGW64**, Release/Debug, Npcap + optional vcpkg DLLs |
 | Binary layout | project-local `bin/`, aliases plus exact per-toolchain names |
 
-See [Platform support](docs/platform-support.md) and
-[Build artifacts](docs/build-artifacts.md).
+Windows CI exercises all four toolchain variants. See [Platform support](docs/platform-support.md),
+[Windows quick start](docs/windows-quickstart.md) and [Build artifacts](docs/build-artifacts.md).
 
 ### Interactive mode
 
@@ -143,10 +143,10 @@ sudo ./bin/xtate -ip 10.0.0.0/24 -p s:38412 -scan sctp-init -show info
 ## Architecture
 
 <p align="center">
-  <img src="screenshots/architecture.svg" alt="Xtate threading model: N transmit threads, one receive thread, one dispatcher, and M handler threads with per-thread TCB tables, connected by the NetStack follow-up queue" width="100%">
+  <img src="screenshots/architecture.png" alt="Xtate runtime overview: a U-shaped packet path from targets and TX through Internet, RX plus dispatch, handlers and output; ZBanner and HLTCP hang off the handler; the host TCP stack is bypassed" width="100%">
 </p>
 
-One Tx thread per shard walks the target space, asks the ScanModule for a packet, and hands it to the fastest available raw path. One Rx thread parses, validates and deduplicates replies, then dispatches by target IP so a given host always lands on the same handle thread.
+The overview folds the packet path into a U: targets and TX on the ingress side, a merged `RX + Dispatch` stage, then handlers and output. Under it, ZBanner stays stateless while HLTCP keeps state only for a user-space TCP/TLS conversation. The host kernel TCP stack is deliberately not on this path.
 
 - **Tx:** N threads; target generation, rate control, packet construction, raw send.
 - **Rx:** one thread; preprocess, validate, dedup, optional pcap capture, then dispatch.
@@ -176,10 +176,18 @@ Handle threads inject follow-up packets (ACK, RST, next probe) through a lock-fr
 The flagship trick, in one sequence:
 
 <p align="center">
-  <img src="screenshots/zbanner-sequence.svg" alt="ZBanner sequence: SYN with a SipHash cookie, SYN-ACK acknowledging cookie plus one, ACK with probe payload, ACK with banner, then RST; no TCB and no timeout table" width="100%">
+  <img src="screenshots/zbanner-sequence.png" alt="ZBanner sequence: stateless SYN with a SipHash cookie, SYN-ACK acknowledging cookie plus one, ACK with probe payload, ACK with banner, internal parse to OutItem, then RST; no TCB and no timeout table" width="100%">
 </p>
 
-No TCB. No timeout table. No retransmission bookkeeping. Just arithmetic that the peer's TCP stack helps you verify. When that is not enough, `tcp-state` takes over and HLTCP keeps the minimum state needed for real TLS/HTTP conversations.
+No TCB. No timeout table. No retransmission bookkeeping. Just arithmetic that the peer's TCP stack helps you verify.
+
+### HLTCP: when statelessness ends
+
+<p align="center">
+  <img src="screenshots/hltcp-sequence.png" alt="HLTCP sequence: a stateless SYN is sent first; only a SYN-ACK creates the TCB; then ACK, an optional TLS handshake, internal evidence collection, and RST" width="100%">
+</p>
+
+The first SYN is stateless. A TCB exists only after the SYN-ACK, and the optional TLS handshake runs inside that user-space state. Raw frames bypass the host TCP stack; the final RST retires the flow.
 
 ## Modules
 

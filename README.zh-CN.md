@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.28.9-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.28.10-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -65,10 +65,10 @@ Xtate 用 C99 编写，除 libpcap/Npcap 外没有硬依赖；构建工具链和
 | 构建系统 | **CMake 3.13+**，Unix Makefiles 或 **Ninja** |
 | Linux glibc | **GCC / Clang**，Release/Debug；Debian 10 级别 CMake 3.13 基线 |
 | Linux musl | **Alpine/musl**，动态构建和基础 `--static --minimal` 静态构建 |
-| Windows | **MSVC / ClangCL / MinGW**，Release/Debug，Npcap + 可选 vcpkg DLL |
+| Windows | **MSVC / ClangCL / MinGW UCRT64 / MinGW MINGW64**，Release/Debug，Npcap + 可选 vcpkg DLL |
 | 产物布局 | 项目内 `bin/`，别名 + 精确的按工具链命名文件 |
 
-详见[平台支持](docs/zh-CN/platform-support.md)和[构建产物](docs/zh-CN/build-artifacts.md)。
+Windows CI 覆盖上述四种工具链。详见[平台支持](docs/zh-CN/platform-support.md)、[Windows 快速上手](docs/zh-CN/windows-quickstart.md)和[构建产物](docs/zh-CN/build-artifacts.md)。
 
 ### 交互式模式
 
@@ -137,10 +137,10 @@ sudo ./bin/xtate -ip 10.0.0.0/24 -p s:38412 -scan sctp-init -show info
 ## 架构
 
 <p align="center">
-  <img src="screenshots/architecture.svg" alt="Xtate 线程模型：N 个发送线程、一个接收线程、一个分发器，以及 M 个各自持有线程级 TCB 表的处理线程，彼此通过 NetStack 后续包队列连接" width="100%">
+  <img src="screenshots/architecture.png" alt="Xtate 运行架构：从目标与 TX 经 Internet、RX + Dispatch、处理线程到输出的 U 形路径；ZBanner 与 HLTCP 挂在处理线程下；明确绕过主机 TCP 协议栈" width="100%">
 </p>
 
-每个分片一个 Tx 线程，遍历目标空间，向 ScanModule 索取数据包，再交给当前最快的 raw 发送路径。一个 Rx 线程负责解析、校验并去重回应，然后按目标 IP 分发，保证同一台主机总是落到同一个处理线程上。
+这张总览把数据包路径折成 U 形：入口侧是目标和 TX，中间是合并的 `RX + Dispatch`，之后是处理线程和输出。ZBanner 不保留状态，HLTCP 只为用户态 TCP/TLS 会话保留状态；主机内核 TCP 协议栈不在这条路径上。
 
 - **Tx：** N 个线程；目标生成、速率控制、数据包构造、raw 发送。
 - **Rx：** 1 个线程；预处理、校验、去重、可选 pcap 抓包，然后分发。
@@ -170,10 +170,18 @@ sudo ./bin/xtate -ip 10.0.0.0/24 -p s:38412 -scan sctp-init -show info
 招牌技巧，一条时序就能讲完：
 
 <p align="center">
-  <img src="screenshots/zbanner-sequence.svg" alt="ZBanner 时序：带 SipHash cookie 的 SYN，SYN-ACK 确认 cookie 加一，带探测载荷的 ACK，带 banner 的 ACK，最后是 RST；全程没有 TCB，也没有超时表" width="100%">
+  <img src="screenshots/zbanner-sequence.png" alt="ZBanner 时序：无状态 SYN 携带 SipHash cookie，SYN-ACK 确认 cookie 加一，带探测载荷的 ACK，带 banner 的 ACK，内部解析为 OutItem，最后是 RST；全程没有 TCB，也没有超时表" width="100%">
 </p>
 
-没有 TCB，没有超时表，也没有重传记录。只有一点算术，而对端的 TCP 协议栈会帮你验证它。当这还不够时，`tcp-state` 接手，由 HLTCP 保留真正的 TLS/HTTP 会话所需的最小状态。
+没有 TCB，没有超时表，也没有重传记录。只有一点算术，而对端的 TCP 协议栈会帮你验证它。
+
+### HLTCP：无状态结束之后
+
+<p align="center">
+  <img src="screenshots/hltcp-sequence.png" alt="HLTCP 时序：先发无状态 SYN；只有收到 SYN-ACK 才创建 TCB；之后是 ACK、可选的 TLS 握手、内部证据收集和 RST" width="100%">
+</p>
+
+第一个 SYN 是无状态的；只有收到 SYN-ACK 后才建立 TCB，可选的 TLS 握手运行在这份用户态状态里。原始帧绕过主机 TCP 协议栈，最后由 RST 结束这条流。
 
 ## 模块
 
