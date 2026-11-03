@@ -14,7 +14,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 `-scan` is mandatory; `-probe` is optional only for modules that declare "no probe". Module
 parameters go through `-scan-arg` and `-probe-arg`, one quoted string each (`--help-scan <module>`, `--help-probe <module>`).
 
-> Documented against Xtate v2.28.10. The CLI is authoritative: `--help`, `--help-scan`,
+> Documented against Xtate v2.28.11. The CLI is authoritative: `--help`, `--help-scan`,
 > `--help-probe`.
 
 ## Choosing a scan module
@@ -22,7 +22,7 @@ parameters go through `-scan-arg` and `-probe-arg`, one quoted string each (`--h
 | Scan module | Probe type | Typical probe | What you get | Kernel RST rules |
 |:---|:---|:---|:---|:---:|
 | `tcp-syn` | none | - | open/closed, no payload | no |
-| `zbanner` | `tcp` | `http`, `hello`, `tls-hello`, `lzr` | real TCP handshake + first banner | **yes** |
+| `zbanner` | `tcp` | `http`, `hello`, `tls-hello` | real TCP handshake + first banner | **yes** |
 | `tcp-state` | `state` | `tls-state`, `http-state`, `hello-state` | full TCP conversation, TLS, HTTP | **yes** |
 | `udp` | `udp` | `echo`, `dns`, `snmp`, `hello-udp` | UDP response or ICMP port-unreachable | **yes** |
 | `icmp-echo` | none | - | alive hosts | no |
@@ -204,9 +204,8 @@ are rebuilt from `(target, distance)` in post-processing.
 
 Some probes send several payloads per target (JARM needs 10 ClientHellos). The mode is a
 property of the probe, not a switch: `Multi_Null` (one payload, most probes), `Multi_Direct`
-(all slots before any reply), `Multi_IfOpen` (remaining slots after a SYN-ACK),
-`Multi_AfterHandle` (after the first reply, as `jarm` does) and `Multi_DynamicNext` (the next
-slot after each reply, as `lzr` does).
+(all slots before any reply), `Multi_IfOpen` (remaining slots after a SYN-ACK), and
+`Multi_AfterHandle` (after the first reply, as `jarm` does).
 
 Slots are distinguished by **source port**: slot `i` uses `source_port_start + i`, and the
 slot number is recovered from the reply's destination port. The range must be wide enough for

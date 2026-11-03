@@ -6,7 +6,7 @@ Xtate 是一款面向大规模主动测量的模块化全栈网络扫描器。�
 
 本页带你在 Linux 或 Windows 上从源码检出走到第一次扫描。阅读前你应当熟悉 shell、`sudo` 和 TCP/IP 基础；本页不是扫描方法本身的教程。
 
-> 本文档针对 Xtate v2.28.10 编写。若你的构建行为与此不同，以 `--help` 和模块帮助为准。
+> 本文档针对 Xtate v2.28.11 编写。若你的构建行为与此不同，以 `--help` 和模块帮助为准。
 
 ## 环境要求
 
@@ -24,13 +24,13 @@ Xtate 是一款面向大规模主动测量的模块化全栈网络扫描器。�
 
 | 平台 | 编译器 | 状态 | 可选依赖 |
 |:---|:---|:---|:---|
-| Ubuntu 24.04 | GCC 13.3 | 构建 + `--selftest` 通过，模块 11/60/7/5 | OpenSSL、PCRE2、LibXml2、BSON、mongoc |
-| Ubuntu 24.04 | Clang 18.1 | 构建 + `--selftest` 通过，模块 11/60/7/5 | OpenSSL、PCRE2、LibXml2、BSON、mongoc |
-| Windows 10/11 | MSVC 19.5x（Visual Studio 2022/2026） | 构建 + `--selftest` 通过，模块 11/54/5/5 | 通过 Scoop 装 OpenSSL；未装 PCRE2/BSON/mongoc |
-| Windows 10/11 | Clang 23（clang-cl） | 构建 + `--selftest` 通过，模块 11/54/5/5 | 通过 Scoop 装 OpenSSL；未装 PCRE2/BSON/mongoc |
+| Ubuntu 24.04 | GCC 13.3 | 构建 + `--selftest` 通过，模块 11/21/7/5 | OpenSSL、PCRE2、LibXml2、BSON、mongoc |
+| Ubuntu 24.04 | Clang 18.1 | 构建 + `--selftest` 通过，模块 11/21/7/5 | OpenSSL、PCRE2、LibXml2、BSON、mongoc |
+| Windows 10/11 | MSVC 19.5x（Visual Studio 2022/2026） | 构建 + `--selftest` 通过，模块 11/15/5/5 | 通过 Scoop 装 OpenSSL；未装 PCRE2/BSON/mongoc |
+| Windows 10/11 | Clang 23（clang-cl） | 构建 + `--selftest` 通过，模块 11/15/5/5 | 通过 Scoop 装 OpenSSL；未装 PCRE2/BSON/mongoc |
 | Windows 10/11 | MinGW-w64 GCC 16 | 构建 + `--selftest` 通过，模块 11/52/5/5 | 无 OpenSSL（Scoop 包是 MSVC ABI） |
 
-模块数量是最快的自检方式：**60 probe + 7 output** 表示依赖齐全；数量变少说明至少有一个可选库没有被找到。
+模块数量是最快的自检方式：**21 probe + 7 output** 表示依赖齐全；数量变少说明至少有一个可选库没有被找到。
 
 ## 在 Linux 上构建
 
@@ -133,7 +133,7 @@ cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
   -DCMAKE_TOOLCHAIN_FILE="$env:USERPROFILE\scoop\apps\vcpkg\current\scripts\buildsystems\vcpkg.cmake"
 ```
 
-没有 PCRE2 时，Windows 构建得到 54 个 probe 而不是 60 个；没有 libbson/mongoc 时，得到 5 个 output 而不是 7 个。这是依赖缺失的预期结果，不是构建失败。
+没有 PCRE2 时，Windows 构建得到 15 个 probe 而不是 21 个；没有 libbson/mongoc 时，得到 5 个 output 而不是 7 个。这是依赖缺失的预期结果，不是构建失败。
 
 ### MSVC
 

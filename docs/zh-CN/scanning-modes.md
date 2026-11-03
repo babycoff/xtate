@@ -10,14 +10,14 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 
 `-scan` 是必需的；只有当模块声明“不需要探测”时 `-probe` 才是可选的。模块参数分别通过 `-scan-arg` 和 `-probe-arg` 传入，每个都是一整条带引号的字符串（见 `--help-scan <module>`、`--help-probe <module>`）。
 
-> 本文档对应 Xtate v2.28.10。命令行才是最终依据：`--help`、`--help-scan`、`--help-probe`。
+> 本文档对应 Xtate v2.28.11。命令行才是最终依据：`--help`、`--help-scan`、`--help-probe`。
 
 ## 选择扫描模块
 
 | 扫描模块 | 探测类型 | 常用探测 | 产出 | 内核 RST 规则 |
 |:---|:---|:---|:---|:---:|
 | `tcp-syn` | none | - | 开放/关闭判定，无载荷 | 否 |
-| `zbanner` | `tcp` | `http`、`hello`、`tls-hello`、`lzr` | 真实 TCP 握手 + 首个 banner | **是** |
+| `zbanner` | `tcp` | `http`、`hello`、`tls-hello` | 真实 TCP 握手 + 首个 banner | **是** |
 | `tcp-state` | `state` | `tls-state`、`http-state`、`hello-state` | 完整 TCP 会话、TLS、HTTP | **是** |
 | `udp` | `udp` | `echo`、`dns`、`snmp`、`hello-udp` | UDP 响应或 ICMP 端口不可达 | **是** |
 | `icmp-echo` | none | - | 存活主机 | 否 |
@@ -159,7 +159,7 @@ sudo ./bin/xtate -ip 198.51.100.7 -p o:1-20 -scan yarrp-udp \
 
 ## 多探测模式
 
-有些探测模块会对一个目标发送多份载荷（JARM 需要 10 个 ClientHello）。模式是探测模块自身的属性，不是命令行开关：`Multi_Null`（一份载荷，多数探测模块）、`Multi_Direct`（任何响应前就发出全部槽位）、`Multi_IfOpen`（收到 SYN-ACK 后发剩余槽位）、`Multi_AfterHandle`（处理完第一个响应后发，如 `jarm`）以及 `Multi_DynamicNext`（每次响应后由探测模块决定下一个槽位，如 `lzr`）。
+有些探测模块会对一个目标发送多份载荷（JARM 需要 10 个 ClientHello）。模式是探测模块自身的属性，不是命令行开关：`Multi_Null`（一份载荷，多数探测模块）、`Multi_Direct`（任何响应前就发出全部槽位）、`Multi_IfOpen`（收到 SYN-ACK 后发剩余槽位）、`Multi_AfterHandle`（处理完第一个响应后发，如 `jarm`）。
 
 槽位靠**源端口**区分：槽位 `i` 使用 `source_port_start + i`，从响应的目的端口可以反推槽位号。范围必须足够容纳探测模块的 `multi_num`：默认跨度为 256 个端口，显式指定的 `-src-port` 范围必须包含 2 的幂个端口。槽位多于范围会导致响应被静默丢弃。
 

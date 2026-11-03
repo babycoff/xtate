@@ -6,7 +6,7 @@ Xtate is a modular all-stack network scanner for large-scale active measurement.
 
 This page takes you from a source checkout to your first scan on Linux or Windows. It assumes you are comfortable with a shell, `sudo`, and basic TCP/IP; it is not a tutorial on scanning itself.
 
-> Documented against Xtate v2.28.10. If your build behaves differently, `--help` and the module help are authoritative.
+> Documented against Xtate v2.28.11. If your build behaves differently, `--help` and the module help are authoritative.
 
 ## Requirements
 
@@ -25,13 +25,13 @@ dependencies are present, so the complete module set is compiled in.
 
 | Platform | Compiler | Status | Optional dependencies |
 |:---|:---|:---|:---|
-| Ubuntu 24.04 | GCC 13.3 | build + `--selftest` pass, 11/60/7/5 modules | OpenSSL, PCRE2, LibXml2, BSON, mongoc |
-| Ubuntu 24.04 | Clang 18.1 | build + `--selftest` pass, 11/60/7/5 modules | OpenSSL, PCRE2, LibXml2, BSON, mongoc |
-| Windows 10/11 | MSVC 19.5x (Visual Studio 2022/2026) | build + `--selftest` pass, 11/54/5/5 modules | OpenSSL via Scoop; PCRE2/BSON/mongoc not installed |
-| Windows 10/11 | Clang 23 (clang-cl) | build + `--selftest` pass, 11/54/5/5 modules | OpenSSL via Scoop; PCRE2/BSON/mongoc not installed |
+| Ubuntu 24.04 | GCC 13.3 | build + `--selftest` pass, 11/21/7/5 modules | OpenSSL, PCRE2, LibXml2, BSON, mongoc |
+| Ubuntu 24.04 | Clang 18.1 | build + `--selftest` pass, 11/21/7/5 modules | OpenSSL, PCRE2, LibXml2, BSON, mongoc |
+| Windows 10/11 | MSVC 19.5x (Visual Studio 2022/2026) | build + `--selftest` pass, 11/15/5/5 modules | OpenSSL via Scoop; PCRE2/BSON/mongoc not installed |
+| Windows 10/11 | Clang 23 (clang-cl) | build + `--selftest` pass, 11/15/5/5 modules | OpenSSL via Scoop; PCRE2/BSON/mongoc not installed |
 | Windows 10/11 | MinGW-w64 GCC 16 | build + `--selftest` pass, 11/52/5/5 modules | no OpenSSL (Scoop build is MSVC-only) |
 
-The module counts are a quick way to verify your dependencies: 60 probes and 7
+The module counts are a quick way to verify your dependencies: 21 probes and 7
 output modules means everything was found; fewer means at least one optional
 library was not discovered.
 
@@ -156,7 +156,7 @@ cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
   -DCMAKE_TOOLCHAIN_FILE="$env:USERPROFILE\scoop\apps\vcpkg\current\scripts\buildsystems\vcpkg.cmake"
 ```
 
-Without PCRE2, Windows builds have 54 probes instead of 60. Without
+Without PCRE2, Windows builds have 15 probes instead of 21. Without
 libbson/mongoc, they have 5 output modules instead of 7. Those are expected
 results, not build failures.
 

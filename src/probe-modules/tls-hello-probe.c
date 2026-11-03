@@ -83,7 +83,7 @@ static char tls1_3_hello_payload[] =
     "\x90\xec\x76\x80\x91\xc6\x95\xc4\x2c\x1b\x26";
 
 /**
- * A TLS clienthello extracted from LZR and supports TLS version from 1.0
+ * A fixed TLS ClientHello that supports TLS version from 1.0
  * to 1.2. It can get domain and cert info from responsed ServerHello but cannot
  * test if the server supports TLSv1.3. This is the default payload of
  * TlsHelloProbe.

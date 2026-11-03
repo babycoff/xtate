@@ -35,46 +35,6 @@ extern Probe CloseStateProbe;
 extern Probe TlsHelloProbe;
 extern Probe NmapProbe;
 extern Probe NmapUdpProbe;
-/*for lzr probes*/
-extern Probe LzrProbe;
-extern Probe LzrHttpProbe;
-extern Probe LzrTlsProbe;
-extern Probe LzrFtpProbe;
-extern Probe LzrPop3Probe;
-extern Probe LzrImapProbe;
-extern Probe LzrSmtpProbe;
-extern Probe LzrSshProbe;
-extern Probe LzrSocks5Probe;
-extern Probe LzrTelnetProbe;
-extern Probe LzrFixProbe;
-extern Probe LzrSmbProbe;
-extern Probe LzrMqttProbe;
-extern Probe LzrAmqpProbe;
-extern Probe LzrMysqlProbe;
-extern Probe LzrMongodbProbe;
-extern Probe LzrRedisProbe;
-extern Probe LzrPostgresProbe;
-extern Probe LzrMssqlProbe;
-extern Probe LzrOracleProbe;
-extern Probe LzrRdpProbe;
-extern Probe LzrX11Probe;
-extern Probe LzrVncProbe;
-extern Probe LzrK8sProbe;
-extern Probe LzrRtspProbe;
-extern Probe LzrModbusProbe;
-extern Probe LzrSiemensProbe;
-extern Probe LzrBgpProbe;
-extern Probe LzrPptpProbe;
-extern Probe LzrDnsProbe;
-extern Probe LzrIpmiProbe;
-extern Probe LzrDnp3Probe;
-extern Probe LzrFoxProbe;
-extern Probe LzrMemcachedAsciiProbe;
-extern Probe LzrMemcachedBinaryProbe;
-extern Probe LzrIppProbe;
-extern Probe LzrWaitProbe;
-extern Probe LzrNewlinesProbe;
-extern Probe LzrNewlines50Probe;
 //! ADD YOUR PROBE MODULE HERE
 
 
@@ -116,46 +76,6 @@ Probe *probe_modules_list[] = {
     &NmapUdpProbe,
 #endif
 
-    /*for lzr probes*/
-    &LzrProbe,
-    &LzrHttpProbe,
-    &LzrTlsProbe,
-    &LzrFtpProbe,
-    &LzrPop3Probe,
-    &LzrImapProbe,
-    &LzrSmtpProbe,
-    &LzrSshProbe,
-    &LzrSocks5Probe,
-    &LzrTelnetProbe,
-    &LzrFixProbe,
-    &LzrSmbProbe,
-    &LzrMqttProbe,
-    &LzrAmqpProbe,
-    &LzrMysqlProbe,
-    &LzrMongodbProbe,
-    &LzrRedisProbe,
-    &LzrPostgresProbe,
-    &LzrMssqlProbe,
-    &LzrOracleProbe,
-    &LzrRdpProbe,
-    &LzrX11Probe,
-    &LzrVncProbe,
-    &LzrK8sProbe,
-    &LzrRtspProbe,
-    &LzrModbusProbe,
-    &LzrSiemensProbe,
-    &LzrBgpProbe,
-    &LzrPptpProbe,
-    &LzrDnsProbe,
-    &LzrIpmiProbe,
-    &LzrDnp3Probe,
-    &LzrFoxProbe,
-    &LzrMemcachedAsciiProbe,
-    &LzrMemcachedBinaryProbe,
-    &LzrIppProbe,
-    &LzrWaitProbe,
-    &LzrNewlinesProbe,
-    &LzrNewlines50Probe,
     //! REGISTER YOUR PROBE MODULE HERE
 
     NULL /*keep the null tail*/

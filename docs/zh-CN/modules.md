@@ -2,7 +2,7 @@
 
 [English](../modules.md) · **中文**
 
-Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上以 `NULL` 结尾的注册表里的一行；没有运行期插件加载。完整构建会注册 **11 个扫描 + 60 个探测 + 7 个输出 + 5 个生成**模块，而缺少可选库的模块会直接从构建中消失（也从 `--list-*` 中消失）。
+Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上以 `NULL` 结尾的注册表里的一行；没有运行期插件加载。完整构建会注册 **11 个扫描 + 21 个探测 + 7 个输出 + 5 个生成**模块，而缺少可选库的模块会直接从构建中消失（也从 `--list-*` 中消失）。
 
 | 类别 | 职责 | 参数 | 注册表 |
 |:---|:---|:---|:---|
@@ -15,7 +15,7 @@ Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上�
 
 ```bash
 xtate --list-scan      # 11 个扫描模块
-xtate --list-probe     # 60 个探测模块
+xtate --list-probe     # 21 个探测模块
 xtate --list-out       # 7 个输出模块
 xtate --list-gen       # 5 个生成模块
 
@@ -43,7 +43,7 @@ xtate --help-gen blackrock
 
 每个扫描模块都通过 `--help-scan <name>` 暴露自己的选项（记录 TTL/IPID/窗口、重复/去重开关、TTL 覆盖等）。如何选择模式、哪些模式需要防火墙规则，见[扫描模式](./scanning-modes.md)。
 
-## 探测模块（60）
+## 探测模块（21）
 
 探测模块会声明一个**类型**，必须与扫描模块匹配：`zbanner` 用 `tcp`，`udp` 用 `udp`，`tcp-state` 用 `state`。它还声明多探测模式和数量；见[扫描模式](./scanning-modes.md#多探测模式)。
 
@@ -63,7 +63,7 @@ xtate --help-gen blackrock
 | `snmp` | udp | SNMP（v1/v2c）请求，并按 MIB 提取主机信息。 |
 | `echo` | udp | 四个由 cookie 派生的字节；接受包含它们的回包。 |
 
-### 指纹识别（44）
+### 指纹识别（5）
 
 | 探测 | 类型 | 功能 |
 |:---|:---:|:---|
@@ -72,17 +72,6 @@ xtate --help-gen blackrock
 | `recog-state` | state | 在有状态 TCP 上的同一功能。 |
 | `nmap` | tcp | 运行一条 `nmap-service-probes` 探测并解析其匹配项。 |
 | `nmap-udp` | udp | UDP 版本。 |
-| `lzr` | tcp | LZR 风格的服务识别器：发送配置好的握手，匹配所有已知服务。 |
-
-LZR 家族由一个聚合模块（`lzr`）加 **38 个握手模块**组成。每个握手也可以单独作为 `lzr-<name>` 使用；作为 `lzr` 的子探测时省略前缀，例如 `-probe-arg "-handshake http,tls"`。这 38 个是：
-
-```text
-http tls ftp pop3 imap smtp ssh socks5 telnet fix smb mqtt amqp mysql mongodb
-redis postgres mssql oracle rdp x11 vnc k8s rtsp modbus siemens bgp pptp dns
-ipmi dnp3 fox memcached_ascii memcached_binary ipp wait newlines newlines50
-```
-
-它们都以 `lzr-<name>` 注册，因此两个 Memcached 握手的写法是 `lzr-memcached_ascii` 与 `lzr-memcached_binary`（下划线，不是连字符）。每个握手都会发送协议相关的载荷，并从回复中识别服务；`wait` 什么都不发，`newlines` / `newlines50` 则分别发送 2 / 50 个换行来诱发问候语。
 
 ### 可脚本化（2）
 
@@ -96,7 +85,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80 -scan zbanner -probe lua-tcp \
   -probe-arg "-script lua-probes/tcp-example.lua" -show info
 ```
 
-Lua 在运行期加载；如果没有可用的 Lua 共享库，这些探测仍会出现在列表里，但会在启动时因加载错误而失败（请安装 Lua 5.3 或 5.4）。Lua 探测共享一个进程级 Lua state，因此选中 `lua-tcp`/`lua-udp` 时会强制 `--rx-handler-count 1`。`lua-probes/` 里的示例脚本在脚本头部声明 `ProbeName`、`ProbeType`、`MultiMode` 和 `MultiNum`。
+Lua 在运行期加载；如果没有可用的 Lua 共享库，这些探测仍会出现在列表里，但会在启动时因加载错误而失败（请安装 Lua 5.3 或 5.4）。Lua 探测使用分离的 tx/rx/handler Lua state；选中 `lua-tcp`/`lua-udp` 时当前会强制 `--tx-thread-count 1` 和 `--rx-handler-count 1`。`lua-probes/` 里的示例脚本在脚本头部声明 `ProbeName`、`ProbeType`、`MultiMode` 和 `MultiNum`。
 
 ### 辅助（3）
 

@@ -4,7 +4,7 @@
 
 Xtate is assembled from four kinds of module. Each is a C struct plus one line in a
 `NULL`-terminated registry; there is no runtime plugin loading. A full build registers
-**11 Scan + 60 Probe + 7 Output + 5 Generate** modules, and modules whose optional library
+**11 Scan + 21 Probe + 7 Output + 5 Generate** modules, and modules whose optional library
 is missing simply disappear from the build (and from `--list-*`).
 
 | Kind | Responsibility | Parameter | Registry |
@@ -22,7 +22,7 @@ sub-parameters travel as one quoted string through `-scan-arg`, `-probe-arg`,
 
 ```bash
 xtate --list-scan      # 11 scan modules
-xtate --list-probe     # 60 probe modules
+xtate --list-probe     # 21 probe modules
 xtate --list-out       # 7 output modules
 xtate --list-gen       # 5 generate modules
 
@@ -52,7 +52,7 @@ Every scan module exposes `--help-scan <name>` with its own options (record TTL/
 repeat/dedup switches, TTL overrides, ...). Which mode to pick, and which of them needs
 firewall rules, is covered in [Scanning modes](./scanning-modes.md).
 
-## Probe modules (60)
+## Probe modules (21)
 
 A probe declares a **type** that must match the scan module: `tcp` for `zbanner`, `udp` for
 `udp`, `state` for `tcp-state`. It also declares a multi-probe mode and count; see
@@ -74,7 +74,7 @@ A probe declares a **type** that must match the scan module: `tcp` for `zbanner`
 | `snmp` | udp | SNMP (v1/v2c) request and MIB-guided host info extraction. |
 | `echo` | udp | Four cookie-derived bytes; accepts a reply containing them. |
 
-### Fingerprinting (44)
+### Fingerprinting (5)
 
 | Probe | Type | What it does |
 |:---|:---:|:---|
@@ -83,22 +83,6 @@ A probe declares a **type** that must match the scan module: `tcp` for `zbanner`
 | `recog-state` | state | The same over stateful TCP. |
 | `nmap` | tcp | Run an `nmap-service-probes` probe and parse its matches. |
 | `nmap-udp` | udp | The same for UDP. |
-| `lzr` | tcp | LZR-style service identifier: sends configured handshakes, matches every known one. |
-
-The LZR family is one aggregator (`lzr`) plus **38 handshake modules**. Each handshake can
-also be used on its own as `lzr-<name>`; as an `lzr` sub-probe the prefix is omitted, e.g.
-`-probe-arg "-handshake http,tls"`. The 38 are:
-
-```text
-http tls ftp pop3 imap smtp ssh socks5 telnet fix smb mqtt amqp mysql mongodb
-redis postgres mssql oracle rdp x11 vnc k8s rtsp modbus siemens bgp pptp dns
-ipmi dnp3 fox memcached_ascii memcached_binary ipp wait newlines newlines50
-```
-
-All are registered as `lzr-<name>`, so the two Memcached handshakes are spelled
-`lzr-memcached_ascii` and `lzr-memcached_binary` (underscore, not hyphen). Each handshake
-sends a protocol-specific payload and identifies the service from the reply; `wait` sends
-nothing, and `newlines` / `newlines50` send 2 / 50 newlines to elicit a greeting.
 
 ### Scriptable (2)
 
@@ -112,7 +96,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80 -scan zbanner -probe lua-tcp \
   -probe-arg "-script lua-probes/tcp-example.lua" -show info
 ```
 
-Lua is loaded at runtime; if no Lua shared library is available the probes are still listed but fail at startup with a load error (install Lua 5.3 or 5.4). Lua probes share one process-wide Lua state, so selecting `lua-tcp`/`lua-udp` forces `--rx-handler-count 1`.
+Lua is loaded at runtime; if no Lua shared library is available the probes are still listed but fail at startup with a load error (install Lua 5.3 or 5.4). Lua probes use separate tx/rx/handler Lua states; selecting `lua-tcp`/`lua-udp` currently forces `--tx-thread-count 1` and `--rx-handler-count 1`.
 The example scripts in `lua-probes/` declare `ProbeName`, `ProbeType`, `MultiMode` and
 `MultiNum` in the script header.
 
