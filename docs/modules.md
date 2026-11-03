@@ -58,6 +58,35 @@ A probe declares a **type** that must match the scan module: `tcp` for `zbanner`
 `udp`, `state` for `tcp-state`. It may declare a `ProbeSlotPlan` (currently only JARM); see
 [Scanning modes](./scanning-modes.md#probe-slots).
 
+### ProbeSlotPlan (multi-slot probes)
+
+Most probes are single-flow and omit the slot plan. A probe that needs several
+independent pseudo-flows declares a `ProbeSlotPlan` in `Probe`:
+
+```c
+typedef struct ProbeSlotPlan {
+    unsigned             count;       /* 0 or 1 = single; JARM uses 10 */
+    ProbeSlotTrigger     trigger;     /* None or AfterFirstReply */
+    probe_slots_continue continue_cb; /* optional */
+} ProbeSlotPlan;
+```
+
+- The engine maps slot `i` to `source_port_start + i`; `ProbeTarget.index` is
+  the zero-based slot.
+- `AfterFirstReply`: slot 0 is sent normally; the remaining slots are sent
+  only if `continue_cb()`, or the slot is unconditional when no callback is
+  supplied, accepts the first response.
+- The source-port range must be at least the plan's `count`; startup rejects
+  a smaller range.
+- The engine keeps **no group state** and does not aggregate. Every slot emits
+  its own `OutItem`. JARM emits `jarm_slot`, `jarm_slots` and `jarm_part`;
+  `tools/jarm_aggregate.py` joins them after the scan.
+- Same-connection multi-step work does not belong here; use HLTCP/state probes.
+
+JARM is the only probe shipped with a multi-slot plan today. A future
+protocol-version or challenge-response probe can reuse the same plan without
+adding a new engine mode.
+
 ### General (11)
 
 | Probe | Type | What it does |

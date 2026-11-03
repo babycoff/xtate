@@ -52,14 +52,17 @@ docker network create "$NET" >/dev/null
 
 echo "==> starting HTTP target"
 docker run -d --name "$HTTP_TARGET" --network "$NET" "$IMAGE" bash -lc \
-    "apt-get update -qq >/dev/null 2>&1 && \
-     apt-get install -y -qq python3 >/dev/null 2>&1 && \
-     python3 -u -m http.server $HTTP_PORT" >/dev/null
+    "if ! command -v python3 >/dev/null 2>&1; then \
+       apt-get update -qq >/dev/null 2>&1 && \
+       apt-get install -y -qq python3 >/dev/null 2>&1; \
+     fi && python3 -u -m http.server $HTTP_PORT" >/dev/null
 
 echo "==> starting TLS target"
 docker run -d --name "$TLS_TARGET" --network "$NET" "$IMAGE" bash -lc \
-    "apt-get update -qq >/dev/null 2>&1 && \
-     apt-get install -y -qq openssl >/dev/null 2>&1 && \
+    "if ! command -v openssl >/dev/null 2>&1; then \
+       apt-get update -qq >/dev/null 2>&1 && \
+       apt-get install -y -qq openssl >/dev/null 2>&1; \
+     fi && \
      openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/key.pem \
        -out /tmp/cert.pem -subj '/CN=localhost' -days 1 >/dev/null 2>&1 && \
      openssl s_server -accept $TLS_PORT -cert /tmp/cert.pem -key /tmp/key.pem -tlsextdebug -www" >/dev/null
@@ -93,8 +96,10 @@ docker run --rm \
     -v "$ROOT:/src:ro" -v "$BIN:/xtate:ro" \
     "$IMAGE" bash -lc '
 set -euo pipefail
-apt-get update -qq >/dev/null 2>&1
-apt-get install -y -qq iptables >/dev/null 2>&1
+if ! command -v iptables >/dev/null 2>&1; then
+    apt-get update -qq >/dev/null 2>&1
+    apt-get install -y -qq iptables >/dev/null 2>&1
+fi
 
 cp -a /src /work/xtate
 cd /work/xtate
@@ -143,6 +148,13 @@ run_case hltcp-tls-http \
     -probe-arg "-subprobe http-state -subprobe-arg '--all-banner' -sni example.test -alpn http/1.1 --dump-version" \
     -rate 100 --wait 2 --no-status -show info -show failed
 grep -q "tls info" /tmp/hltcp-tls-http.log
+
+run_case zbanner-jarm \
+    -ip "$TLS_IP" -p "$TLS_PORT" -scan zbanner -probe jarm \
+    -rate 100 --wait 3 --no-status -show info -show failed
+grep -q "jarm_slot" /tmp/zbanner-jarm.log
+grep -q "jarm_slots" /tmp/zbanner-jarm.log
+grep -q "jarm_part" /tmp/zbanner-jarm.log
 
 bash firewall/rm_rules.sh >/dev/null 2>&1 || true
 

@@ -47,6 +47,32 @@ xtate --help-gen blackrock
 
 探测模块会声明一个**类型**，必须与扫描模块匹配：`zbanner` 用 `tcp`，`udp` 用 `udp`，`tcp-state` 用 `state`。它还声明多探测模式和数量；见[扫描模式](./scanning-modes.md#多探测模式)。
 
+### ProbeSlotPlan（多 slot 探测）
+
+大多数探测模块是单 flow，省略 slot plan。需要多个独立伪连接的探测模块在
+`Probe` 中声明 `ProbeSlotPlan`：
+
+```c
+typedef struct ProbeSlotPlan {
+    unsigned             count;       /* 0 或 1 = 单 flow；JARM 用 10 */
+    ProbeSlotTrigger     trigger;     /* None 或 AfterFirstReply */
+    probe_slots_continue continue_cb; /* 可选 */
+} ProbeSlotPlan;
+```
+
+- 引擎把 slot `i` 映射到 `source_port_start + i`；`ProbeTarget.index` 是
+  从 0 开始的 slot 编号。
+- `AfterFirstReply`：slot 0 正常发送；只有 `continue_cb()` 接受第一个响应后，
+  才发送剩余 slot；没有 callback 时默认继续。
+- 源端口范围必须至少覆盖 plan 的 `count`，启动时会拒绝过小的范围。
+- 引擎**不保存 group**，也不做聚合。每个 slot 输出自己的 `OutItem`。JARM
+  输出 `jarm_slot`、`jarm_slots` 和 `jarm_part`，由
+  `tools/jarm_aggregate.py` 在扫描后合并。
+- 同一 TCP 连接上的多步交互不属于这里；请使用 HLTCP/state 探针。
+
+目前只有 JARM 使用多 slot plan。后续的协议版本变体、challenge-response
+探针可以复用同一 plan，不需要新增引擎模式。
+
 ### 通用（11）
 
 | 探测 | 类型 | 功能 |
