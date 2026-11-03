@@ -11,9 +11,10 @@ source "$ROOT/tests/bench/lib.sh"
 
 usage() {
     cat <<'EOF'
-usage: tests/bench/run.sh [--quick] [--out DIR] [--case NAME]
+usage: tests/bench/run.sh [--quick|--huge] [--out DIR] [--case NAME]
 
   --quick       use 100k target lines instead of 1M
+  --huge        use 10M target lines (parser cases only)
   --out DIR     result directory (default: bench-results/<timestamp>)
   --case NAME   run one case: parse-inline, parse-ranges, syn-offline-1m,
                 syn-offline-16m
@@ -21,10 +22,12 @@ EOF
 }
 
 QUICK=0
+HUGE=0
 CASE=""
 while (($#)); do
     case "$1" in
         --quick) QUICK=1; shift ;;
+        --huge) HUGE=1; shift ;;
         --out) OUT=$2; shift 2 ;;
         --case) CASE=$2; shift 2 ;;
         -h|--help) usage; exit 0 ;;
@@ -32,7 +35,10 @@ while (($#)); do
     esac
 done
 
-if [[ "$QUICK" == "1" ]]; then
+if [[ "$HUGE" == "1" ]]; then
+    MODE="huge"
+    INLINE_COUNT=10000000
+elif [[ "$QUICK" == "1" ]]; then
     MODE="quick"
     INLINE_COUNT=100000
 else
@@ -82,6 +88,14 @@ fi
 
 # Transmit path without raw sockets. This is useful for relative comparisons
 # of target generation, template construction and the Tx loop.
+if [[ "$HUGE" == "1" ]]; then
+    run_case parse-sparse "$INLINE_COUNT" \
+        -iL "$DATA/sparse-$INLINE_COUNT.txt" -p 80 -list-range \
+        --no-resume-file
+    print_summary
+    exit 0
+fi
+
 if want syn-offline-1m; then
     run_case syn-offline-1m 1048576 \
         -ip 10.0.0.0/12 -p 80 -scan tcp-syn \

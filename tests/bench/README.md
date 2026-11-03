@@ -11,6 +11,7 @@ change.
 |:---|:---|:---|
 | `parse-inline` | no packets | target-file tokenizer + RangeList build |
 | `parse-ranges` | no packets | explicit ranges / list formatting |
+| `parse-sparse` | no packets | 10M descending sparse addresses (huge mode only) |
 | `syn-offline-1m` | no raw send | target generation + Tx loop |
 | `syn-offline-16m` | no raw send | large target-space Tx loop |
 
@@ -32,6 +33,9 @@ XTATE_BIN=./bin/xtate bash tests/bench/run.sh --quick
 
 # One case:
 XTATE_BIN=./bin/xtate bash tests/bench/run.sh --case parse-inline
+
+# 10M-line parser stress: 10M inline, explicit-range and descending-sparse files
+XTATE_BIN=./bin/xtate bash tests/bench/run.sh --huge
 ```
 
 Results default to:
