@@ -45,7 +45,7 @@ xtate --help-gen blackrock
 
 ## 探测模块（23）
 
-探测模块会声明一个**类型**，必须与扫描模块匹配：`zbanner` 用 `tcp`，`udp` 用 `udp`，`tcp-state` 用 `state`。它还声明多探测模式和数量；见[扫描模式](./scanning-modes.md#多探测模式)。
+探测模块会声明一个**类型**，必须与扫描模块匹配：`zbanner` 用 `tcp`，`udp` 用 `udp`，`tcp-state` 用 `state`。它可以声明 `ProbeSlotPlan`（JARM 和 `slot-test` 示例）；见[扫描模式](./scanning-modes.md#探测-slot)。
 
 ### ProbeSlotPlan（多 slot 探测）
 
@@ -55,7 +55,7 @@ xtate --help-gen blackrock
 ```c
 typedef struct ProbeSlotPlan {
     unsigned             count;       /* 0 或 1 = 单 flow；JARM 用 10 */
-    ProbeSlotTrigger     trigger;     /* None 或 AfterFirstReply */
+    ProbeSlotTrigger     trigger;     /* None、Always、AfterFirstReply */
     probe_slots_continue continue_cb; /* 可选 */
 } ProbeSlotPlan;
 ```

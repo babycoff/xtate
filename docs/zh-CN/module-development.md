@@ -185,6 +185,23 @@ slot 输出自己的 `OutItem`。
 
 同一连接上的多步交互属于 HLTCP/state 探测，不属于 `ProbeSlotPlan`。
 
+### HLTCP 与 slot plan（计划中）
+
+HLTCP（`tcp-state`）目前还没有接入 `ProbeSlotPlan`。它现有的
+`ProbeState`/`DataPass` 回调已经能在同一条连接上做多步交互，但两种“slot”
+含义不能混为一谈：
+
+- **独立 flow**（`ProbeSlot_Always`）：从不同源端口 slot 建多条 TCP 连接，
+  每条连接跑一条 HLTCP flow。技术上可行，但每条 flow 都占一个 TCB、超时状态
+  和源端口，必须补 TCB/过期测试。
+- **连接内序列**（`AfterFirstReply`）：在**同一条连接**上，收到第一个被接受
+  的响应后发送下一个应用层探测。这天然对应 `ProbeState`/`DataPass`，不是
+  源端口 slot 执行器。
+
+计划：先明确 scope（独立 flow vs 连接内序列），再用 state probe 状态机实现
+连接内 `AfterFirstReply`，最后才考虑并行 HLTCP `Always`。不能悄悄成倍放大
+HLTCP 的 TCB 数量。当前不宣称 HLTCP 支持 slot plan。
+
 ### `ProbeSlot_Always` 示例
 
 内置两个开发测试探针，可直接当模板：

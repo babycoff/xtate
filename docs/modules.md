@@ -55,7 +55,7 @@ firewall rules, is covered in [Scanning modes](./scanning-modes.md).
 ## Probe modules (23)
 
 A probe declares a **type** that must match the scan module: `tcp` for `zbanner`, `udp` for
-`udp`, `state` for `tcp-state`. It may declare a `ProbeSlotPlan` (currently only JARM); see
+`udp`, `state` for `tcp-state`. It may declare a `ProbeSlotPlan` (JARM and the `slot-test` examples); see
 [Scanning modes](./scanning-modes.md#probe-slots).
 
 ### ProbeSlotPlan (multi-slot probes)
@@ -66,7 +66,7 @@ independent pseudo-flows declares a `ProbeSlotPlan` in `Probe`:
 ```c
 typedef struct ProbeSlotPlan {
     unsigned             count;       /* 0 or 1 = single; JARM uses 10 */
-    ProbeSlotTrigger     trigger;     /* None or AfterFirstReply */
+    ProbeSlotTrigger     trigger;     /* None, Always, AfterFirstReply */
     probe_slots_continue continue_cb; /* optional */
 } ProbeSlotPlan;
 ```

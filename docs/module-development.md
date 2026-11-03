@@ -192,6 +192,25 @@ Current executor support:
 Same-connection multi-step logic belongs in HLTCP/state probes, not in a
 `ProbeSlotPlan`.
 
+### HLTCP and slot plans (planned)
+
+HLTCP (`tcp-state`) is not wired into `ProbeSlotPlan` yet. Its existing
+`ProbeState`/`DataPass` callbacks can already perform multi-step work on one
+connection, so the two possible meanings must not be conflated:
+
+- **Independent flows** (`ProbeSlot_Always`): open several TCP connections
+  from different source-port slots and run one HLTCP flow per slot. This is
+  mechanically possible, but each flow consumes a TCB, timeout state and source
+  port; it needs explicit TCB/expiry tests.
+- **Connection-local sequence** (`AfterFirstReply`): send the next application
+  probe on the **same** connection after the first accepted response. This maps
+  naturally to `ProbeState`/`DataPass`, not to the source-port slot executor.
+
+Plan: first document a scope distinction (independent flow vs connection-local
+sequence), then implement connection-local `AfterFirstReply` through the state
+probe state machine, and only then consider parallel HLTCP `Always`. Do not
+multiply HLTCP TCBs silently. No HLTCP slot support is claimed today.
+
 ### `ProbeSlot_Always` examples
 
 Two built-in developer modules exercise the API and double as copyable
