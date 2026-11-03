@@ -115,7 +115,7 @@ lab; the offline cases are intentionally for relative Tx-path comparisons.
 
 ## Future cases
 
-- Tx-only lab sink (`veth`/network namespace) for real raw-send pps.
+- Dedicated veth/network-namespace sink to separate raw-send pps from Docker bridge limits.
 - ZBanner HTTP lab throughput and dedup behavior.
 - Output module comparison: `null` vs `text` vs `ndjson`.
 - Stateful `tcp-state` TCB budget/drop behavior.
