@@ -121,6 +121,11 @@ XTATE_BENCH_ZBANNER_RATE=50000 XTATE_BENCH_CASE=zbanner \
 XTATE_CN_MIRROR=1 XTATE_BIN=/path/to/xtate-linux bash tests/bench/lab.sh
 ```
 
+The C responder answers as soon as it receives data. This is good for ZBanner
+throughput, but it also means a stateful TCB benchmark may complete connections
+faster than the budget can fill; a delayed/keepalive responder is needed for a
+repeatable TCB-drop test.
+
 The lab is intentionally separate from `run.sh`: it needs Linux raw sockets and
 Docker, while parser/offline cases do not.
 
