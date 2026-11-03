@@ -67,6 +67,9 @@ static uint64_t trace_handle;
 static uint64_t trace_first_tx;
 static uint64_t trace_last_tx;
 static uint64_t trace_last_rx;
+static uint64_t trace_cookie_us;
+static uint64_t trace_pkt_us;
+static uint64_t trace_prof_samples;
 
 static ConfRes SET_all_banner_floor(void *conf, const char *name,
                                     const char *value) {
@@ -602,6 +605,7 @@ static bool zbanner_init(const XConf *xconf) {
     if (bench_trace) {
         trace_tx = trace_synack = trace_data = trace_ack = 0;
         trace_handle = trace_first_tx = trace_last_tx = trace_last_rx = 0;
+        trace_cookie_us = trace_pkt_us = trace_prof_samples = 0;
     }
 
     src_port_start = xconf->nic.src.port.first;
@@ -664,14 +668,29 @@ static bool zbanner_transmit(uint64_t entropy, ScanTarget *target,
     if (target->target.ip_proto != IP_PROTO_TCP)
         return false;
 
+    uint64_t t0 = 0, t1 = 0, t2 = 0;
+    if (bench_trace)
+        t0 = pixie_gettime();
+
     unsigned seqno = get_cookie(target->target.ip_them,
                                 target->target.port_them, target->target.ip_me,
                                 src_port_start + target->index, entropy);
+
+    if (bench_trace)
+        t1 = pixie_gettime();
 
     *len = tcp_create_packet(
         target->target.ip_them, target->target.port_them, target->target.ip_me,
         src_port_start + target->index, seqno, 0, TCP_FLAG_SYN,
         zbanner_conf.syn_ttl, 0, NULL, 0, px, PKT_BUF_SIZE);
+
+    if (bench_trace) {
+        t2 = pixie_gettime();
+        if ((trace_prof_samples++ & 63) == 0) {
+            trace_cookie_us += t1 - t0;
+            trace_pkt_us += t2 - t1;
+        }
+    }
 
     /*multi-probe Multi_Direct*/
     if (ZBannerScan.probe->multi_mode == Multi_Direct &&
@@ -1182,9 +1201,12 @@ static void zbanner_close(void) {
     LOG(LEVEL_WARN,
         "ZBANNER_TRACE tx=%" PRIu64 " synack=%" PRIu64 " data=%" PRIu64
         " ack=%" PRIu64 " handle=%" PRIu64 " send_ms=%" PRIu64
-        " rx_ms=%" PRIu64 " total_ms=%" PRIu64 "\n",
+        " rx_ms=%" PRIu64 " total_ms=%" PRIu64
+        " prof_samples=%" PRIu64 " cookie_us=%" PRIu64
+        " pkt_us=%" PRIu64 "\n",
         trace_tx, trace_synack, trace_data, trace_ack, trace_handle,
-        send_span / 1000, rx_span / 1000, total / 1000);
+        send_span / 1000, rx_span / 1000, total / 1000, trace_prof_samples,
+        trace_cookie_us, trace_pkt_us);
 }
 
 Scanner ZBannerScan = {

@@ -135,6 +135,13 @@ send_ms=... rx_ms=... total_ms=...
 separates the send phase from response handling. The counters are approximate
 under multiple RX threads.
 
+Tx rate and thread count can be overridden for the `tx` case:
+
+```bash
+XTATE_BENCH_TX_RATE=5000 XTATE_BENCH_TX_THREADS_LIST="4 8 16" \
+XTATE_BENCH_CASE=tx XTATE_BIN=/path/to/xtate-linux bash tests/bench/lab.sh
+```
+
 The stateful case restarts the C responder in `--hold` mode: it accepts
 connections without replying, so TCBs remain active long enough to exercise
 `tcb-mem`. Set `XTATE_BENCH_STATEFUL_HOLD=0` to disable that behavior.

@@ -14,6 +14,8 @@ OUT="${XTATE_BENCH_OUT:-$ROOT/bench-results/lab-$(date +%Y%m%d-%H%M%S)}"
 QUICK="${XTATE_BENCH_QUICK:-0}"
 CASE_FILTER="${XTATE_BENCH_CASE:-all}"
 ZBANNER_RATE="${XTATE_BENCH_ZBANNER_RATE:-5000}"
+TX_RATE="${XTATE_BENCH_TX_RATE:-10000}"
+TX_THREAD_ARGS="${XTATE_BENCH_TX_THREADS:+--tx-thread-count $XTATE_BENCH_TX_THREADS}"
 ZBANNER_RATES="${XTATE_BENCH_ZBANNER_RATES:-$ZBANNER_RATE}"
 CN="${XTATE_CN_MIRROR:-0}"
 NET="xtate-bench-$$"
@@ -167,7 +169,7 @@ run_case() {
     drop_before="$(target_drop_count)"
     start="$(date +%s%N)"
     set +e
-    docker exec "$SCANNER" /xtate "$@" >"$stdout" 2>"$stderr"
+    docker exec "$SCANNER" /xtate "$@" $TX_THREAD_ARGS >"$stdout" 2>"$stderr"
     rc=$?
     set -e
     end="$(date +%s%N)"
@@ -203,9 +205,19 @@ want() {
 }
 
 if want tx; then
-    run_case "tx-syn-lab" "$(((TX_LAST - TX_FIRST + 1) * 7))" \
-        -ip "$TARGET_RANGE" -p "$TX_FIRST-$TX_LAST" -scan tcp-syn \
-        --rate 10000 --wait 2 --no-status --no-resume-file -out null
+    TX_THREAD_LIST="${XTATE_BENCH_TX_THREADS_LIST:-}"
+    if [[ -n "$TX_THREAD_LIST" ]]; then
+        for threads in $TX_THREAD_LIST; do
+            run_case "tx-syn-tx$threads" "$(((TX_LAST - TX_FIRST + 1) * 7))" \
+                -ip "$TARGET_RANGE" -p "$TX_FIRST-$TX_LAST" -scan tcp-syn \
+                --tx-thread-count "$threads" --rate "$TX_RATE" --wait 0 \
+                --no-status --no-resume-file -out null
+        done
+    else
+        run_case "tx-syn-lab" "$(((TX_LAST - TX_FIRST + 1) * 7))" \
+            -ip "$TARGET_RANGE" -p "$TX_FIRST-$TX_LAST" -scan tcp-syn \
+            --rate "$TX_RATE" --wait 0 --no-status --no-resume-file -out null
+    fi
 fi
 
 if want zbanner; then
