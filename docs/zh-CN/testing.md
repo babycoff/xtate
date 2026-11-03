@@ -131,5 +131,6 @@ Windows 构建在 `.github/workflows/windows.yml` 中运行，覆盖 MSVC、Clan
 | selftest | `xtate --selftest` | 内置回归 |
 | i18n | `tests/i18n/test.sh` | 中文帮助覆盖率 |
 | interactive | `tests/interactive/test.sh` | 非 TTY 命令/帮助/状态 |
+| JARM 聚合 | `tests/jarm/test.sh` | 输出侧 parts、统计、重试列表 |
 | PTY | `tests/interactive/tty.sh` | 终端恢复 + 补全 |
 | large batch | `tests/large-batch/` | replay/RSS/输出失败 |

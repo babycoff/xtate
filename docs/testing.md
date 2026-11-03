@@ -142,5 +142,6 @@ and RSS are noisy on shared runners. See `tests/bench/README.md`.
 | i18n | `tests/i18n/test.sh` | Chinese help coverage |
 | target syntax | `tests/target/test.sh` | address/CIDR/explicit/component ranges |
 | interactive | `tests/interactive/test.sh` | non-TTY commands/help/state |
+| JARM aggregation | `tests/jarm/test.sh` | output-side parts, stats, retry list |
 | PTY | `tests/interactive/tty.sh` | terminal restore + completion |
 | large batch | `tests/large-batch/` | replay/RSS/output failure |

@@ -11,7 +11,7 @@ stream clean.
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80 -scan tcp-syn > results.txt
 ```
 
-> Documented against Xtate v2.28.11. `--help` and `--help-output <module>` are authoritative
+> Documented against Xtate v2.28.12. `--help` and `--help-output <module>` are authoritative
 > for the exact flags of your build.
 
 ## The result line
@@ -118,6 +118,27 @@ One compact object per line:
 
 The `scan report` / `probe report` / `output report` sub-objects are omitted when empty, as
 are `port_them`/`port_me` for port-less results.
+
+### JARM parts and aggregation
+
+`jarm` deliberately keeps ZBanner stateless: every one of its ten slots emits
+its own row instead of holding a per-target group in the scanner. The probe
+report contains `jarm_slot`, `jarm_slots` and `jarm_part`.
+
+Aggregate parts after the scan with the stdlib-only helper:
+
+```bash
+python3 tools/jarm_aggregate.py scan.jsonl \
+  --complete-out jarm.jsonl \
+  --retry-out jarm-retry.jsonl \
+  --retry-csv jarm-retry.csv \
+  --stats-out jarm-stats.json
+```
+
+`jarm.jsonl` has one `jarm`/`jarm_sha256` row per complete target. The 62-character `jarm` is the usual 30-character cipher/version hash plus the 32-character extension hash; `jarm_sha256` is the full SHA-256 of the raw parts.
+`jarm-retry.jsonl`/`.csv` list targets missing slots, with the missing slot
+numbers, so they can be re-probed. `missing_slot_counts` and duplicate-slot
+counts are in the stats output.
 
 ### bson and mongodb
 

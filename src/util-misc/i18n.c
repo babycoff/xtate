@@ -554,7 +554,7 @@ static const I18nModuleDescEntry i18n_module_desc_help[] = {
     {"http-state", "有状态 HTTP 请求探测。"},
     {"echo", "4 字节随机 UDP 探测。"},
     {"get-state", "有状态 HTTP GET 调试探测。"},
-    {"jarm", "获取未哈希 JARM 指纹。"},
+    {"jarm", "收集 10 个 ClientHello slot 的 JARM 片段。"},
     {"tls-state", "TLS 上层探测。"},
     {"dns", "DNS 记录查询。"},
     {"lua-tcp", "自定义 Lua 无状态 TCP 探测。"},

@@ -62,6 +62,7 @@ jobs:
           fi
           XTATE_BIN="$BIN" bash tests/i18n/test.sh
           XTATE_BIN="$BIN" bash tests/interactive/test.sh
+          bash tests/jarm/test.sh
 
       - name: Restore fuzz corpus
         if: matrix.compiler == 'clang' && matrix.config == 'release'

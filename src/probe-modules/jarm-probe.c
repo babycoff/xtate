@@ -197,15 +197,20 @@ static unsigned jarm_handle_response(unsigned th_idx, ProbeTarget *target,
                 item->level = OUT_SUCCESS;
                 safe_strcpy(item->classification, OUT_CLS_SIZE, "jarmed");
                 jarm_decipher_one(px, sizeof_px, tmp_data, sizeof(tmp_data));
-                dach_append_str(&item->probe_report, "fingerprint", tmp_data,
+
+                /* One OutItem per slot.  No per-target group is kept in the
+                 * scanner: an output-side aggregator joins these parts. */
+                dach_append_str(&item->probe_report, "jarm_part", tmp_data,
                                 strlen(tmp_data));
+                dach_set_int(&item->probe_report, "jarm_slots",
+                             JarmProbe.multi_num);
 
                 if (jarm_conf.probe_index) {
-                    dach_set_int(&item->probe_report, "index",
+                    dach_set_int(&item->probe_report, "jarm_slot",
                                  jarm_conf.probe_index);
                     return 0;
                 } else {
-                    dach_set_int(&item->probe_report, "index",
+                    dach_set_int(&item->probe_report, "jarm_slot",
                                  target->index + 1);
                     return 1;
                 }
@@ -225,11 +230,11 @@ Probe JarmProbe = {
     .multi_mode = Multi_AfterHandle,
     .multi_num  = 10,
     .params     = jarm_parameters,
-    .short_desc = "Try to get unhashed JARM fingerprints.",
-    .desc = "Jarm Probe sends 10 various TLS ClientHello probes in total if "
-            "the first response represents the target port is running TLS "
-            "protocol. Results can be analyzed to get JARM fingerprint of the "
-            "target TLS stack for different purposes.\n"
+    .short_desc = "Collect JARM probe parts from 10 ClientHello slots.",
+    .desc = "Jarm Probe sends 10 TLS ClientHello variants if the first response "
+            "shows TLS. Each slot emits jarm_part/jarm_slot; no per-target "
+            "group is kept in the scanner. Aggregate them with "
+            "tools/jarm_aggregate.py.\n"
             "Dependencies: OpenSSL.",
 
     .init_cb               = &probe_init_nothing,

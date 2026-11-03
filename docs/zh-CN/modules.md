@@ -58,7 +58,7 @@ xtate --help-gen blackrock
 | `hello-state` | state | 在有状态 TCP 连接上的同一功能。 |
 | `tls-hello` | tcp | 固定 ClientHello；读取 ServerHello 的版本/记录层线索，但不完成握手。 |
 | `tls-state` | state | OpenSSL 驱动的 TLS 握手，导出证书/密码套件/版本，并可在 TLS 之上跑子探测。 |
-| `jarm` | tcp | 通过 10 个 ClientHello 变体做 JARM 指纹。 |
+| `jarm` | tcp | 通过 10 个 ClientHello slot 做 JARM；输出 `jarm_part`，由 `tools/jarm_aggregate.py` 聚合。 |
 | `dns` | udp | DNS 记录请求，可配置名称/类型/递归。 |
 | `snmp` | udp | SNMP（v1/v2c）请求，并按 MIB 提取主机信息。 |
 | `echo` | udp | 四个由 cookie 派生的字节；接受包含它们的回包。 |

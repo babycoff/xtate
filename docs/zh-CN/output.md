@@ -8,7 +8,7 @@
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80 -scan tcp-syn > results.txt
 ```
 
-> 文档以 Xtate v2.28.11 为准。你所用构建的确切 flag 以 `--help` 和 `--help-output <module>` 为准。
+> 文档以 Xtate v2.28.12 为准。你所用构建的确切 flag 以 `--help` 和 `--help-output <module>` 为准。
 
 ## 结果行
 
@@ -88,6 +88,24 @@ time,level,ip_proto,ip_them,port_them,ip_me,port_me,classification,reason,scan r
 ```
 
 `scan report` / `probe report` / `output report` 子对象为空时会被省略；无端口结果的 `port_them`/`port_me` 同样省略。
+
+### JARM 片段与聚合
+
+`jarm` 为保持 ZBanner 无状态，每个 slot 输出一行，不在扫描器内保存
+逐目标 group。probe report 中包含 `jarm_slot`、`jarm_slots` 和 `jarm_part`。
+
+扫描结束后用只依赖 Python 标准库的脚本聚合：
+
+```bash
+python3 tools/jarm_aggregate.py scan.jsonl \
+  --complete-out jarm.jsonl \
+  --retry-out jarm-retry.jsonl \
+  --retry-csv jarm-retry.csv \
+  --stats-out jarm-stats.json
+```
+
+`jarm.jsonl` 每个完整目标一行 `jarm`/`jarm_sha256`；62 字符的 `jarm` 由 30 字符 cipher/version 哈希加 32 字符扩展哈希组成，`jarm_sha256` 是原始片段的完整 SHA-256；`jarm-retry.jsonl`/`.csv`
+列出缺失 slot 的目标及缺失编号，便于重扫；统计输出包含缺失 slot 计数和重复 slot 计数。
 
 ### bson 与 mongodb
 

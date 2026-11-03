@@ -69,7 +69,7 @@ A probe declares a **type** that must match the scan module: `tcp` for `zbanner`
 | `hello-state` | state | The same over a stateful TCP connection. |
 | `tls-hello` | tcp | Fixed ClientHello; reads ServerHello version/record hints without completing a handshake. |
 | `tls-state` | state | OpenSSL-backed TLS handshake, certificate/cipher/version dump, sub-probe over TLS. |
-| `jarm` | tcp | JARM fingerprinting via 10 ClientHello variants. |
+| `jarm` | tcp | JARM via 10 ClientHello slots; emits `jarm_part`, aggregated by `tools/jarm_aggregate.py`. |
 | `dns` | udp | DNS record request with configurable name/type/recursion. |
 | `snmp` | udp | SNMP (v1/v2c) request and MIB-guided host info extraction. |
 | `echo` | udp | Four cookie-derived bytes; accepts a reply containing them. |
