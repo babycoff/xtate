@@ -75,9 +75,11 @@ TLS is the reason this stack exists, and it is implemented by handing the byte s
 OpenSSL rather than by parsing records ourselves.
 
 - **One `SSL_CTX`, configured once.** `TLS_method()`, no peer verification, no min/max
-  protocol version, security level 0, `ALL:eNULL` ciphers, every TLS 1.3 suite, unsafe legacy
-  renegotiation allowed. This is not a safe TLS client and is not meant to be one; it is
-  configured to talk to old servers and to observe what they say.
+  protocol version, security level 0, `ALL:eNULL` ciphers, every TLS 1.3 suite. The context
+  disables the client session cache, session tickets and renegotiation: a one-shot scan has
+  no reuse for them and they only add per-connection state. This is not a safe TLS client
+  and is not meant to be one; it is configured to observe what servers say, with a deliberate
+  compatibility trade: servers that require legacy renegotiation are not supported.
 - **Per connection:** two `BIO_s_mem()` BIOs (one read, one write), a 4 KiB scratch buffer, an
   `SSL` object, and a copy of the target so OpenSSL callbacks can recover it.
   `SSL_set_connect_state` makes it a client; `SSL_set_bio` wires the memory BIOs.
@@ -265,6 +267,9 @@ For a target where this is not acceptable, re-run it or use a full TCP stack.
 - **Duplicate/lost-ACK repair is partial.** A retransmitted SYN-ACK is answered with a fresh ACK, and duplicate old data or a future segment triggers an immediate ACK of the expected sequence. The peer can then retransmit sooner; there is still no general ACK-repair state machine for arbitrary lost ACKs.
 - **No out-of-order handling.** Data beyond the expected sequence number is dropped and not buffered; the immediate ACK tells the peer what we expect, but large certificate chains and multi-segment TLS flights still depend on peer retransmission.
 - **Fixed 1-second RTO, no backoff.** Retransmits eagerly on high-latency paths. Data retransmissions are capped at three; exceeded connections are closed with RST.
+- **No TLS session reuse, tickets or renegotiation.** The one-shot TLS context disables all
+  three to avoid per-connection state. A server that requires legacy renegotiation is treated
+  as unsupported.
 - **No graceful close by default.** FIN is answered with RST, there is no `TIME_WAIT`, and
   TLS sends no `close_notify`. Targets see an abnormal termination — acceptable for
   scanning, noisy for long-term monitoring. The `tls-state` research switch

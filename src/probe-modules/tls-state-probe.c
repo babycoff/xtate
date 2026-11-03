@@ -788,6 +788,11 @@ static bool tlsstate_init(const XConf *xconf) {
     /* Bound certificate-chain retention per TLS connection. */
     SSL_CTX_set_max_cert_list(ctx, TSP_CERT_LIST_MAX);
 
+    /* This is a one-shot scanner: sessions, tickets and renegotiation have no
+     * reuse value and only add per-connection state. */
+    SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_OFF);
+    SSL_CTX_set_options(ctx, SSL_OP_NO_TICKET | SSL_OP_NO_RENEGOTIATION);
+
     /*no verification for server*/
     SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
 

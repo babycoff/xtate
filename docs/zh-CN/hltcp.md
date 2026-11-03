@@ -51,7 +51,7 @@ peer: DATA -> duplicate prefix trimmed, seqno_them advances, one ACK per segment
 
 TLS 是这个栈存在的理由，它的实现方式是把字节流交给 OpenSSL，而不是自己解析记录。
 
-- **一个 `SSL_CTX`，初始化一次。** `TLS_method()`、不验证对端、不设最小/最大协议版本、安全级别 0、`ALL:eNULL` 密码套件、全部 TLS 1.3 套件、允许不安全的遗留重协商。这不是一个安全的 TLS 客户端，也没打算是；它的配置目标是能和老服务器说话，并观察它们说什么。
+- **一个 `SSL_CTX`，初始化一次。** `TLS_method()`、不验证对端、不设最小/最大协议版本、安全级别 0、`ALL:eNULL` 密码套件、全部 TLS 1.3 套件。上下文关闭客户端 session cache、session ticket 和重协商：一次性扫描不需要复用它们，它们只会增加每连接状态。这不是一个安全的 TLS 客户端，也没打算是；它的配置目标是观察服务器说什么，并有意接受一个兼容性取舍：依赖遗留重协商的服务器不受支持。
 - **每连接：** 两个 `BIO_s_mem()` BIO（一读一写）、一个 4 KiB 的 scratch 缓冲、一个 `SSL` 对象，以及一份目标副本，供 OpenSSL 回调取回目标。`SSL_set_connect_state` 把它设为客户端，`SSL_set_bio` 把内存 BIO 接上。
 - **驱动握手。** `SSL_do_handshake()` 返回 `WANT_READ`，同时把 ClientHello 写进写 BIO；HLTCP 把这些字节当作 TCP 载荷发出。每个到达的段被写入读 BIO，再驱动一次握手。出向字节从写 BIO 抽走；入向明文要到握手完成后才有意义。
 - **记录什么。** 协商出的 TLS 版本、密码套件、对端证书链（base64，每张证书一个字段）、证书主题（subject）与主题备用名称（subject alternative names），以及通过 OpenSSL info 回调暴露的 TLS alert。
@@ -174,6 +174,7 @@ HLTCP 是短生命周期、低状态的栈，不是通用 TCP。唯一的重传�
 - **重复/丢 ACK 修复是部分的。** 对端重传的 SYN-ACK 会重新被 ACK；重复的旧数据或未来段也会立即回一个“期望序号”的 ACK，让对端可以更快重传。但还没有针对任意丢 ACK 的完整修复状态机。
 - **不处理乱序。** 超出期望序号的数据直接丢弃、不缓存；立即回 ACK 只是告诉对端我们期望什么，大证书链和多段 TLS flight 仍然依赖对端重传。
 - **固定 1 秒 RTO，无退避。** 在高延迟链路上会重传得过于急切。数据段最多重传三次，超过后发 RST 关闭连接。
+- **不复用 TLS session、不使用 ticket、不重协商。** 一次性 TLS 上下文关闭这三项以避免每连接状态；要求遗留重协商的服务器会被视为不支持。
 - **默认没有优雅关闭。** FIN 得到 RST 应答，没有 `TIME_WAIT`，TLS 也不发 `close_notify`。目标会看到异常终止——对扫描可接受，对长期监测则很吵。`tls-state` 的研究开关 `-probe-arg "--graceful-tls-close"` 会在 RST 之前发送 TLS `close_notify`；它多花一个包/往返，不推荐用于普通扫描。
 - **关闭端口以 `info` 等级报告。** 匹配不到 TCB 的 RST 会输出 `"closed" because "rst"`；扫描器的去重表会抑制重复 RST。没有 `-show info` 时这些行默认隐藏。
 - **SNI/ALPN 是可选开启的。** 默认情况下虚拟主机和 CDN 目标返回默认证书；当目标 IP 属于一个已知主机名时，在 `tls-state` 上设置 `-sni`/`-alpn`。
