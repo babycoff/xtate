@@ -6,3 +6,5 @@ bench-results/
 .bench-
 __pycache__/
 *.pyc
+tests/fuzz/build/
+tests/fuzz/artifacts/

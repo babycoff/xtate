@@ -565,17 +565,27 @@ parse_linux_sll:
     }
 
 parse_arp:
+    VERIFY_REMAINING(8, FOUND_ARP);
     info->ip_version = (px[offset] >> 4) & 0xF;
     info->ip_offset  = offset;
     {
-        VERIFY_REMAINING(8, FOUND_ARP);
-
         info->arp_info.hardware_type = BE_TO_U16(px + offset);
         info->arp_info.protocol_type = BE_TO_U16(px + offset + 2);
         info->arp_info.hardware_size = px[offset + 4];
         info->arp_info.protocol_size = px[offset + 5];
         info->arp_info.opcode        = BE_TO_U16(px + offset + 6);
         info->ip_protocol            = info->arp_info.opcode; /*for convenient*/
+
+        /* ARP addresses follow the 8-byte header. Validate the complete
+         * address area and require a 4-byte protocol address before reading
+         * the IPv4 addresses below. */
+        unsigned hw_len  = info->arp_info.hardware_size;
+        unsigned proto_len = info->arp_info.protocol_size;
+        VERIFY_REMAINING(8 + 2 * hw_len + 2 * proto_len, FOUND_ARP);
+        if (proto_len < 4) {
+            info->found_offset = info->ip_offset;
+            return true;
+        }
         offset += 8;
 
         VERIFY_REMAINING(2 * info->arp_info.hardware_size +
@@ -651,6 +661,34 @@ int preprocess_selftest(void) {
         if (!preprocess_frame(buf, sizeof(buf), PCAP_DLT_ETHERNET, &info) ||
             info.found != FOUND_UDP || info.app_offset != 78 ||
             info.port_src != 0x1234 || info.port_dst != 0x5678)
+            x++;
+    }
+
+    /* 4. ARP header without address bytes must not read IP fields. */
+    {
+        unsigned char buf[14 + 8] = {0};
+        PreInfo       info;
+        U16_TO_BE(buf + 12, ETHERTYPE_ARP);
+        buf[14 + 4] = 0; /* hardware size */
+        buf[14 + 5] = 0; /* protocol size */
+        if (!preprocess_frame(buf, sizeof(buf), PCAP_DLT_ETHERNET, &info) ||
+            info.found != FOUND_ARP)
+            x++;
+    }
+
+    /* 5. All-ones IPv4 addresses exercise the unsigned BE_TO_U32 path. */
+    {
+        unsigned char buf[14 + 40] = {0};
+        PreInfo       info;
+        U16_TO_BE(buf + 12, ETHERTYPE_IPv4);
+        buf[14] = 0x45;
+        U16_TO_BE(buf + 16, 40);
+        buf[14 + 9] = IP_PROTO_TCP;
+        memset(buf + 14 + 12, 0xFF, 8);
+        buf[14 + 20 + 12] = 5 << 4; /* TCP data offset */
+        if (!preprocess_frame(buf, sizeof(buf), PCAP_DLT_ETHERNET, &info) ||
+            info.src_ip.ipv4 != 0xFFFFFFFF ||
+            info.dst_ip.ipv4 != 0xFFFFFFFF)
             x++;
     }
 

@@ -63,6 +63,21 @@ jobs:
           XTATE_BIN="$BIN" bash tests/i18n/test.sh
           XTATE_BIN="$BIN" bash tests/interactive/test.sh
 
+      - name: Parser fuzz smoke
+        if: matrix.compiler == 'clang' && matrix.config == 'release'
+        env:
+          FUZZ_SECONDS: 10
+        run: |
+          bash tests/fuzz/run.sh
+
+      - name: Upload fuzz artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-artifacts-${{ matrix.compiler }}-${{ matrix.config }}
+          path: tests/fuzz/artifacts/
+          if-no-files-found: ignore
+
       - name: PTY terminal test
         if: matrix.compiler == 'gcc' && matrix.config == 'release'
         env:

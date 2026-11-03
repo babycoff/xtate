@@ -10,7 +10,9 @@
 
 #define BE_TO_U16(px) ((px)[0] << 8 | (px)[1])
 #define BE_TO_U24(px) ((px)[0] << 16 | (px)[1] << 8 | (px)[2])
-#define BE_TO_U32(px) ((px)[0] << 24 | (px)[1] << 16 | (px)[2] << 8 | (px)[3])
+#define BE_TO_U32(px)                                                         \
+    ((uint32_t)(px)[0] << 24 | (uint32_t)(px)[1] << 16 |                      \
+     (uint32_t)(px)[2] << 8 | (uint32_t)(px)[3])
 #define BE_TO_U64(px)                                                          \
     ((uint64_t)(px)[0] << 56 | (uint64_t)(px)[1] << 48 |                       \
      (uint64_t)(px)[2] << 40 | (uint64_t)(px)[3] << 32 |                       \
@@ -19,7 +21,9 @@
 
 #define LE_TO_U16(px) ((px)[1] << 8 | (px)[0])
 #define LE_TO_U24(px) ((px)[2] << 16 | (px)[1] << 8 | (px)[0])
-#define LE_TO_U32(px) ((px)[3] << 24 | (px)[2] << 16 | (px)[1] << 8 | (px)[0])
+#define LE_TO_U32(px)                                                         \
+    ((uint32_t)(px)[3] << 24 | (uint32_t)(px)[2] << 16 |                      \
+     (uint32_t)(px)[1] << 8 | (uint32_t)(px)[0])
 #define LE_TO_U64(px)                                                          \
     ((uint64_t)(px)[7] << 56 | (uint64_t)(px)[6] << 48 |                       \
      (uint64_t)(px)[5] << 40 | (uint64_t)(px)[4] << 32 |                       \

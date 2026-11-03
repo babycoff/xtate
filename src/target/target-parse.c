@@ -356,8 +356,13 @@ static enum {
                         state          = IPV6_BEGIN;
                         break;
                     case ':':
-                        p->ipv6.tmp[p->ipv6.index++] = 0;
-                        state                        = IPV6_COLON;
+                        if (p->ipv6.index >= 8) {
+                            state  = ERROR;
+                            length = i;
+                        } else {
+                            p->ipv6.tmp[p->ipv6.index++] = 0;
+                            state                        = IPV6_COLON;
+                        }
                         break;
                     case '[':
                         p->ipv6.is_bracket = 1;
@@ -504,6 +509,11 @@ static enum {
 
             case IPV6_END:
                 /* Finish off the trailing number */
+                if (p->ipv6.index >= 8) {
+                    state  = ERROR;
+                    length = i;
+                    break;
+                }
                 p->ipv6.tmp[p->ipv6.index++] = (unsigned short)p->tmp;
 
                 /* Do the final processing of this IPv6 address and
@@ -1143,6 +1153,18 @@ static int selftest_targetset_parse_range(void) {
         {"0.0.1.0/24 0.0.3.0-0.0.4.0", {{{0x100, 0x1ff}}, {{0x300, 0x400}}}},
         {0}};
     size_t i;
+
+    /* Overlong IPv6 component input must fail cleanly, not overrun the
+     * eight-hextet parser array. */
+    {
+        const char *bad = "1020:0:A22e:d0:A6ee:dbA::A:A1ee:";
+        struct Range  range4;
+        struct Range6 range6;
+        size_t        offset = 0;
+        if (target_parse_range(bad, &offset, strlen(bad), &range4, &range6) !=
+            Bad_Address)
+            return 1;
+    }
 
     for (i = 0; cases[i].line; i++) {
         size_t        length = strlen(cases[i].line);
