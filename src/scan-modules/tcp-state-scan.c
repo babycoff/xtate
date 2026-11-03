@@ -45,6 +45,7 @@ static unsigned  src_port_start;
 
 struct TcpStateConf {
     unsigned conn_expire;
+    unsigned tcb_mem_mib;
     unsigned is_port_success  : 1;
     unsigned record_ttl       : 1;
     unsigned record_ipid      : 1;
@@ -206,7 +207,29 @@ static ConfRes SET_conn_expire(void *conf, const char *name,
     return Conf_OK;
 }
 
+static ConfRes SET_tcb_mem(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf);
+
+    unsigned mib = conf_parse_int(value);
+
+    if (mib == 0 || mib > 4096) {
+        LOG(LEVEL_ERROR, "%s must be in 1..4096 MiB.\n", name);
+        return Conf_ERR;
+    }
+
+    tcpstate_conf.tcb_mem_mib = mib;
+    return Conf_OK;
+}
+
 static ConfParam tcpstate_parameters[] = {
+    {"tcb-mem",
+     SET_tcb_mem,
+     Type_ARG,
+     {"tcb-memory", 0},
+     "Maximum total memory budget for active TCBs, in MiB, shared by all "
+     "receive handler tables (default 128). Excess new stateful connections "
+     "are dropped rather than letting the scan grow without bound."},
+
     {"conn-expire",
      SET_conn_expire,
      Type_ARG,
@@ -286,6 +309,8 @@ static ConfParam tcpstate_parameters[] = {
 static bool tcpstate_init(const XConf *xconf) {
     if (tcpstate_conf.conn_expire <= 0)
         tcpstate_conf.conn_expire = 30;
+    if (tcpstate_conf.tcb_mem_mib == 0)
+        tcpstate_conf.tcb_mem_mib = 128;
 
     /*create rx_handler_count TCP tables for thread safe*/
     tcpcon_set.count   = xconf->rx_handler_count;
@@ -301,6 +326,15 @@ static bool tcpstate_init(const XConf *xconf) {
             &global_tmplset->pkts[TmplType_TCP_RST],
             (OutConf *)(&xconf->out_conf), tcpstate_conf.conn_expire,
             xconf->seed);
+
+        /* Global budget is divided across handlers; each table's own
+         * bucket/memory cap remains an upper bound. */
+        {
+            uint64_t total_bytes = (uint64_t)tcpstate_conf.tcb_mem_mib *
+                                   1024u * 1024u;
+            uint64_t per_table   = total_bytes / tcpcon_set.count;
+            tcpcon_clamp_tcb_budget(tcpcon_set.tcpcons[i], per_table);
+        }
     }
 
     src_port_start = xconf->nic.src.port.first;

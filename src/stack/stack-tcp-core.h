@@ -75,6 +75,12 @@ uint64_t tcpcon_tcb_limit(TCP_Table *tcpcon);
 
 uint64_t tcpcon_tcb_dropped(TCP_Table *tcpcon);
 
+/**
+ * Clamp a table's active-TCB limit to a total byte budget. The per-table
+ * bucket-based limit remains the upper bound; this can only reduce it.
+ */
+void tcpcon_clamp_tcb_budget(TCP_Table *tcpcon, uint64_t bytes);
+
 bool tcb_is_active(TCB *tcb);
 
 SockRes tcpapi_set_timeout(TCP_Stack *socket, unsigned secs, unsigned usecs);

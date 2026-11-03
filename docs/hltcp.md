@@ -175,14 +175,18 @@ hosts, not for a TLS census of the Internet.
 
 The per-connection TLS scratch buffer doubles on demand but is capped at **1 MiB**; if a
 flight would need more, the connection is closed and a warning is logged instead of allowing
-unbounded memory growth.
+unbounded memory growth. Each TLS connection also has a 16 MiB encrypted-input budget, a
+256 KiB pending-BIO cap and a 256 KiB certificate-chain cap. Exceeding any of them closes that
+connection.
 
 Table sizing is a guess, not a budget: roughly `rate / 5 / handlers` buckets, rounded up to a
-power of two, floored at ten and clamped between 2^10 and 2^24. In addition, each table has an
-active-TCB budget of `min(2 x buckets, 16 MiB / sizeof(TCB))` with a floor of 1024. When it is
-exhausted, a new SYN-ACK is still reported as open, but no probe state is created for it; the
-connection is dropped and counted. Status prints `tcb=<active>/<limit> drop=<dropped>`.
-Pooled TCBs keep peak memory resident, but cannot exceed the budget.
+power of two, floored at ten and clamped between 2^10 and 2^24. Each table also has an
+active-TCB budget of `min(2 x buckets, 16 MiB / sizeof(TCB))` with a floor of 1024. A total
+budget across all handler tables defaults to **128 MiB** and can be changed with
+`-scan-arg "tcb-mem=<MiB>"` (1..4096). When a table budget is exhausted, a new SYN-ACK is
+still reported as open, but no probe state is created for it; the connection is dropped and
+counted. Status prints `tcb=<active>/<limit> drop=<dropped>`. Pooled TCBs keep peak memory
+resident, but cannot exceed the table/global budget.
 
 ## Capacity and timeouts
 

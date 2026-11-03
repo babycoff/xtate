@@ -414,6 +414,7 @@ static const I18nModuleParamEntry i18n_module_param_help[] = {
     {"case-insensitive", "正则匹配时忽略大小写。"},
     {"collection-name", "设置 MongoDB 集合名。"},
     {"compact-mode", "使用紧凑的 BSON/MongoDB 字段格式。"},
+    {"tcb-mem", "设置所有接收线程共用的活跃 TCB 总内存预算（MiB）。"},
     {"conn-expire", "设置 TCP 状态连接的过期秒数。"},
     {"cookie", "设置 HTTP Cookie 头。"},
     {"database-name", "设置 MongoDB 数据库名。"},

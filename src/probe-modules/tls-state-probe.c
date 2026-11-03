@@ -32,6 +32,12 @@
 #define TSP_BIO_MEM_LIMIT  16384
 #define TSP_DATA_INIT_SIZE 4096
 #define TSP_DATA_MAX_SIZE  (1024 * 1024)
+/* Per-connection limits for the OpenSSL input path. TCB limits bound how
+ * many TLS connections can exist; these bound what one connection can make
+ * OpenSSL/BIO retain or process. */
+#define TSP_INPUT_MAX_SIZE  (16u * 1024u * 1024u)
+#define TSP_BIO_PENDING_MAX (256u * 1024u)
+#define TSP_CERT_LIST_MAX   (256L * 1024L)
 #define TSP_EXT_TGT_IDX    0
 #define TSP_EXT_TLS_IDX    1
 
@@ -75,6 +81,7 @@ struct TlsState {
     DataChain            diag;
     unsigned char       *data;
     size_t               data_size;
+    uint64_t             input_bytes;
     SSL                 *ssl;
     BIO                 *rbio;
     BIO                 *wbio;
@@ -778,6 +785,9 @@ static bool tlsstate_init(const XConf *xconf) {
         goto error0;
     }
 
+    /* Bound certificate-chain retention per TLS connection. */
+    SSL_CTX_set_max_cert_list(ctx, TSP_CERT_LIST_MAX);
+
     /*no verification for server*/
     SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
 
@@ -956,6 +966,7 @@ static bool tlsstate_conn_init(ProbeState *state, ProbeTarget *target) {
     tls_state->wbio            = wbio;
     tls_state->data            = data;
     tls_state->data_size       = TSP_DATA_INIT_SIZE;
+    tls_state->input_bytes     = 0;
     tls_state->handshake_state = TLS_ST_BEFORE; /*state for openssl*/
 
     state->data = tls_state;
@@ -1165,6 +1176,15 @@ static unsigned tlsstate_parse_response(DataPass *pass, ProbeState *state,
 
     if (is_continue && px != NULL && sizeof_px != 0) {
         size_t offset = 0;
+
+        if ((uint64_t)sizeof_px > TSP_INPUT_MAX_SIZE - tls_state->input_bytes) {
+            LOG(LEVEL_WARN, "(TSP Parse RESPONSE) TLS input budget exhausted\n");
+            pass->data     = NULL;
+            pass->len      = 0;
+            pass->is_close = 1;
+            return ret;
+        }
+        tls_state->input_bytes += sizeof_px;
         // uint64_t now_time = pixie_gettime();
 
         res = 0;
@@ -1184,6 +1204,14 @@ static unsigned tlsstate_parse_response(DataPass *pass, ProbeState *state,
                 pass->is_close = 1;
                 return ret;
             }
+        }
+
+        if (BIO_ctrl_pending(tls_state->rbio) > TSP_BIO_PENDING_MAX) {
+            LOG(LEVEL_WARN, "(TSP Parse RESPONSE) TLS BIO pending data too large\n");
+            pass->data     = NULL;
+            pass->len      = 0;
+            pass->is_close = 1;
+            return ret;
         }
 
         // now_time = pixie_gettime() - now_time;

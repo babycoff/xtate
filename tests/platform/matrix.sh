@@ -33,8 +33,8 @@ if [[ "$CN" == "1" ]]; then
     ALPINE_IMAGE="docker.m.daocloud.io/library/alpine:3.20"
     DEBIAN_MAIN="http://mirrors.aliyun.com/debian-archive/debian"
     DEBIAN_SEC="http://mirrors.aliyun.com/debian-archive/debian-security"
-    ALPINE_MAIN="https://mirrors.aliyun.com/alpine/v3.20/main"
-    ALPINE_COMMUNITY="https://mirrors.aliyun.com/alpine/v3.20/community"
+    ALPINE_MAIN="http://mirrors.aliyun.com/alpine/v3.20/main"
+    ALPINE_COMMUNITY="http://mirrors.aliyun.com/alpine/v3.20/community"
 else
     DEBIAN_IMAGE="debian:10-slim"
     ALPINE_IMAGE="alpine:3.20"

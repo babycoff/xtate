@@ -221,6 +221,19 @@ uint64_t tcpcon_tcb_limit(TCP_Table *tcpcon) { return tcpcon->tcb_limit; }
 
 uint64_t tcpcon_tcb_dropped(TCP_Table *tcpcon) { return tcpcon->tcb_dropped; }
 
+void tcpcon_clamp_tcb_budget(TCP_Table *tcpcon, uint64_t bytes) {
+    uint64_t limit;
+
+    if (tcpcon == NULL || bytes == 0)
+        return;
+
+    limit = bytes / sizeof(TCB);
+    if (limit < TCP_CORE_TCB_MIN_ACTIVE)
+        limit = TCP_CORE_TCB_MIN_ACTIVE;
+    if (limit < tcpcon->tcb_limit)
+        tcpcon->tcb_limit = limit;
+}
+
 bool tcb_is_active(TCB *tcb) { return tcb->is_active == 1; }
 
 /***************************************************************************
@@ -1660,6 +1673,10 @@ int tcp_seg_ack_selftest(void) {
                                              1, 64, 0, NULL, 0, 0) == NULL,
                            12);
         TCP_SELFTEST_CHECK(table.tcb_dropped == 1, 13);
+
+        table.tcb_limit = 4096;
+        tcpcon_clamp_tcb_budget(&table, (uint64_t)sizeof(TCB) * 2000);
+        TCP_SELFTEST_CHECK(table.tcb_limit == 2000, 14);
     }
 
     return 0;
