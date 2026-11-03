@@ -132,5 +132,6 @@ Windows 构建在 `.github/workflows/windows.yml` 中运行，覆盖 MSVC、Clan
 | i18n | `tests/i18n/test.sh` | 中文帮助覆盖率 |
 | interactive | `tests/interactive/test.sh` | 非 TTY 命令/帮助/状态 |
 | JARM 聚合 | `tests/jarm/test.sh` | 输出侧 parts、统计、重试列表 |
+| slot-plan lab | `tests/lab/run.sh` | 真实 TCP/UDP `ProbeSlot_Always`、JARM `AfterFirstReply` |
 | PTY | `tests/interactive/tty.sh` | 终端恢复 + 补全 |
 | large batch | `tests/large-batch/` | replay/RSS/输出失败 |

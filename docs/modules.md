@@ -4,7 +4,7 @@
 
 Xtate is assembled from four kinds of module. Each is a C struct plus one line in a
 `NULL`-terminated registry; there is no runtime plugin loading. A full build registers
-**11 Scan + 21 Probe + 7 Output + 5 Generate** modules, and modules whose optional library
+**11 Scan + 23 Probe + 7 Output + 5 Generate** modules, and modules whose optional library
 is missing simply disappear from the build (and from `--list-*`).
 
 | Kind | Responsibility | Parameter | Registry |
@@ -22,7 +22,7 @@ sub-parameters travel as one quoted string through `-scan-arg`, `-probe-arg`,
 
 ```bash
 xtate --list-scan      # 11 scan modules
-xtate --list-probe     # 21 probe modules
+xtate --list-probe     # 23 probe modules
 xtate --list-out       # 7 output modules
 xtate --list-gen       # 5 generate modules
 
@@ -52,7 +52,7 @@ Every scan module exposes `--help-scan <name>` with its own options (record TTL/
 repeat/dedup switches, TTL overrides, ...). Which mode to pick, and which of them needs
 firewall rules, is covered in [Scanning modes](./scanning-modes.md).
 
-## Probe modules (21)
+## Probe modules (23)
 
 A probe declares a **type** that must match the scan module: `tcp` for `zbanner`, `udp` for
 `udp`, `state` for `tcp-state`. It may declare a `ProbeSlotPlan` (currently only JARM); see

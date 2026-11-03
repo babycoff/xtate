@@ -21,13 +21,14 @@ NET="xtate-lab-$$"
 HTTP_TARGET="xtate-lab-http-$$"
 TLS_TARGET="xtate-lab-tls-$$"
 JARM_TARGET="xtate-lab-jarm-$$"
+UDP_ECHO_TARGET="xtate-lab-udp-echo-$$"
 HTTP_PORT=8080
 CLOSED_PORT=9
 TLS_PORT=8443
 JARM_PORT=9443
 
 cleanup() {
-    docker rm -f "$HTTP_TARGET" "$TLS_TARGET" "$JARM_TARGET" >/dev/null 2>&1 || true
+    docker rm -f "$HTTP_TARGET" "$TLS_TARGET" "$JARM_TARGET" "$UDP_ECHO_TARGET" >/dev/null 2>&1 || true
     docker network rm "$NET" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
@@ -57,7 +58,8 @@ docker run -d --name "$HTTP_TARGET" --network "$NET" "$IMAGE" bash -lc \
     "if ! command -v python3 >/dev/null 2>&1; then \
        apt-get update -qq >/dev/null 2>&1 && \
        apt-get install -y -qq python3 >/dev/null 2>&1; \
-     fi && python3 -u -m http.server $HTTP_PORT" >/dev/null
+     fi && \
+     python3 -u -m http.server $HTTP_PORT" >/dev/null
 
 echo "==> starting TLS target"
 docker run -d --name "$TLS_TARGET" --network "$NET" "$IMAGE" bash -lc \
@@ -87,6 +89,12 @@ docker run -d --name "$JARM_TARGET" --network "$NET" "$IMAGE" bash -lc \
        -out /tmp/cert.pem -subj '/CN=localhost' -days 1 >/dev/null 2>&1 && \
      openssl s_server -accept $JARM_PORT -cert /tmp/cert.pem -key /tmp/key.pem -tlsextdebug -www" >/dev/null
 
+echo "==> starting UDP echo target"
+MSYS_NO_PATHCONV=1 docker run -d --name "$UDP_ECHO_TARGET" --network "$NET" \
+    -v "$ROOT:/src:ro" "$IMAGE" \
+    python3 -u /src/tests/lab/udp_echo.py >/dev/null
+sleep 1
+
 wait_tcp "$HTTP_TARGET" "$HTTP_PORT"
 wait_tcp "$TLS_TARGET" "$TLS_PORT"
 wait_tcp "$JARM_TARGET" "$JARM_PORT"
@@ -94,14 +102,16 @@ wait_tcp "$JARM_TARGET" "$JARM_PORT"
 HTTP_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$HTTP_TARGET")"
 TLS_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$TLS_TARGET")"
 JARM_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$JARM_TARGET")"
+UDP_ECHO_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$UDP_ECHO_TARGET")"
 echo "HTTP target: $HTTP_IP:$HTTP_PORT (closed test port $CLOSED_PORT)"
 echo "TLS  target: $TLS_IP:$TLS_PORT"
 echo "JARM target: $JARM_IP:$JARM_PORT"
+echo "UDP echo:   $UDP_ECHO_IP:8082"
 
 docker run --rm \
     --cap-add NET_RAW --cap-add NET_ADMIN \
     --network "$NET" \
-    -e HTTP_IP="$HTTP_IP" -e TLS_IP="$TLS_IP" -e JARM_IP="$JARM_IP" \
+    -e HTTP_IP="$HTTP_IP" -e TLS_IP="$TLS_IP" -e JARM_IP="$JARM_IP" -e UDP_ECHO_IP="$UDP_ECHO_IP" \
     -e HTTP_PORT="$HTTP_PORT" -e CLOSED_PORT="$CLOSED_PORT" \
     -e TLS_PORT="$TLS_PORT" -e JARM_PORT="$JARM_PORT" \
     -v "$ROOT:/src:ro" -v "$BIN:/xtate:ro" \
@@ -179,6 +189,20 @@ python3 /work/xtate/tools/jarm_aggregate.py /tmp/jarm.jsonl \
     --stats-out /tmp/jarm-stats.json >/dev/null
 grep -q "jarm" /tmp/jarm-complete.jsonl
 grep -q "complete.*1" /tmp/jarm-stats.json
+
+run_case zbanner-slot-test \
+    -ip "$HTTP_IP" -p "$HTTP_PORT" -scan zbanner -probe slot-test \
+    -src-port 46000-46255 -rate 100 --wait 2 --no-status -show info -show failed
+grep -q "slot_test_slot: 1" /tmp/zbanner-slot-test.log
+grep -q "slot_test_slot: 2" /tmp/zbanner-slot-test.log
+grep -q "slot_test_slot: 3" /tmp/zbanner-slot-test.log
+
+run_case udp-slot-test \
+    -ip "$UDP_ECHO_IP" -p U:8082 -scan udp -probe slot-test-udp \
+    -src-port 47000-47255 -rate 100 --wait 2 --no-status -show info -show failed
+grep -q "slot_test_slot: 1" /tmp/udp-slot-test.log
+grep -q "slot_test_slot: 2" /tmp/udp-slot-test.log
+grep -q "slot_test_slot: 3" /tmp/udp-slot-test.log
 
 if command -v iptables >/dev/null 2>&1; then
     bash firewall/rm_rules.sh >/dev/null 2>&1 || true

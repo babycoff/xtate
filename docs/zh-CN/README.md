@@ -2,7 +2,7 @@
 
 [English](../README.md) · **中文**
 
-本目录是 **Xtate v2.28.13** 的用户手册——一款面向互联网级测量的模块化全栈网络扫描器。
+本目录是 **Xtate v2.28.14** 的用户手册——一款面向互联网级测量的模块化全栈网络扫描器。
 
 项目 [README](../../README.zh-CN.md) 是落地页。如果你想上手使用 Xtate，而不是只扫一眼功能列表，就从这里开始。
 
@@ -14,6 +14,7 @@
 | 正在规划一次扫描 | [目标与端口](./targets-and-ports.md) → [扫描模式](./scanning-modes.md) |
 | 要把结果接入流水线 | [输出](./output.md) → [聚合](./aggregation.md) |
 | 在挑选模块 | [模块](./modules.md) |
+| 编写模块 | [模块开发](./module-development.md) |
 | 想了解内部原理 | [架构](./architecture.md) → [ZBanner](./zbanner.md) / [HLTCP](./hltcp.md) |
 | 卡住了 | [故障排查](./troubleshooting.md) → [已知限制](./known-limitations.md) |
 | 中文帮助 / 本地化 | [帮助 i18n](./help-i18n.md) |
@@ -35,6 +36,7 @@
 - [输出](./output.md)——结果级别、text/CSV/NDJSON/BSON/MongoDB、转义
 - [聚合](./aggregation.md)——结束后 NDJSON 聚合、schema 与规模
 - [模块](./modules.md)——四种模块类型以及 Xtate 自带的模块
+- [模块开发](./module-development.md)——C 接口、注册和 ProbeSlotPlan 示例
 - [中文帮助与 i18n](./help-i18n.md)——`--lang`、catalog 回退与 UTF-8 帮助排版
 - [Windows 快速上手](./windows-quickstart.md)——新手安装、Npcap、构建、首次扫描与排查
 - [Windows 可选依赖](./windows-dependencies.md)——PCRE2/LibXml2/bson/mongoc 与 MinGW 注意事项
@@ -60,14 +62,13 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-本文档基于 v2.28.13 的代码树编写。如果你在更新的 commit 上发现内容有出入，请以二进制为准，也欢迎提 issue。
+本文档基于 v2.28.14 的代码树编写。如果你在更新的 commit 上发现内容有出入，请以二进制为准，也欢迎提 issue。
 
 ## 计划中
 
 以下内容尚未编写：
 
 - 常见测量场景的配方（HTTP banner、TLS 证书、IPv6、LAN 发现）
-- 模块编写指南（用 C 编写扫描/探测/输出/生成模块）
 - 自动生成的 CLI 与各模块参考
 
 可浏览的文档站点计划作为单独一步推进；目前本目录下的内容全部是纯 Markdown。

@@ -35,6 +35,8 @@ extern Probe CloseStateProbe;
 extern Probe TlsHelloProbe;
 extern Probe NmapProbe;
 extern Probe NmapUdpProbe;
+extern Probe SlotTestProbe;
+extern Probe SlotTestUdpProbe;
 //! ADD YOUR PROBE MODULE HERE
 
 
@@ -75,6 +77,10 @@ Probe *probe_modules_list[] = {
     &NmapProbe,
     &NmapUdpProbe,
 #endif
+
+    /* Developer examples / test fixtures for ProbeSlot_Always. */
+    &SlotTestProbe,
+    &SlotTestUdpProbe,
 
     //! REGISTER YOUR PROBE MODULE HERE
 

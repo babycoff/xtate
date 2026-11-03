@@ -94,7 +94,7 @@ if [[ -n "${XTATE_BIN:-}" ]]; then
     grep -q "Slot trigger: after first reply" <<<"$help"
     ! grep -q 'lzr' <<<"$("$XTATE_BIN" --list-probe)"
     count="$("$XTATE_BIN" --list-probe | grep -cE '^[[:space:]]*[0-9]+\.[A-Za-z]')"
-    [[ "$count" -eq 21 ]]
-    echo "PASS: JARM slot plan help and 21-probe inventory"
+    [[ "$count" -eq 23 ]]
+    echo "PASS: JARM slot plan help and 23-probe inventory"
 fi
 

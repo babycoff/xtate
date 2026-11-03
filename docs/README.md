@@ -2,7 +2,7 @@
 
 **English** · [中文](zh-CN/README.md)
 
-This directory is the user manual for **Xtate v2.28.13** — a modular all-stack network scanner for Internet-scale surveys.
+This directory is the user manual for **Xtate v2.28.14** — a modular all-stack network scanner for Internet-scale surveys.
 
 The [README](../README.md) is the landing page. Start here if you want to use Xtate rather than skim its feature list.
 
@@ -14,6 +14,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 | Planning a scan | [Targets and ports](./targets-and-ports.md) → [Scanning modes](./scanning-modes.md) |
 | Wiring results into a pipeline | [Output](./output.md) → [Aggregation](./aggregation.md) |
 | Choosing a module | [Modules](./modules.md) |
+| Writing a module | [Module development](./module-development.md) |
 | Curious how it works | [Architecture](./architecture.md) → [ZBanner](./zbanner.md) / [HLTCP](./hltcp.md) |
 | Stuck | [Troubleshooting](./troubleshooting.md) → [Known limitations](./known-limitations.md) |
 | Chinese help / localization | [Help i18n](./help-i18n.md) |
@@ -35,6 +36,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 - [Output](./output.md) — result levels, text/CSV/NDJSON/BSON/MongoDB, escaping
 - [Aggregation](./aggregation.md) — post-run NDJSON aggregation, schema and scale
 - [Modules](./modules.md) — the four module types and the modules that ship with Xtate
+- [Module development](./module-development.md) — C interfaces, registration and ProbeSlotPlan examples
 - [Chinese help and i18n](./help-i18n.md) — `--lang`, catalog fallback and UTF-8 help layout
 - [Windows quick start](./windows-quickstart.md) — beginner install, Npcap, build, first scan and troubleshooting
 - [Windows optional dependencies](./windows-dependencies.md) — vcpkg/MSYS2 setup for PCRE2, LibXml2, bson/mongoc and MinGW caveats
@@ -65,14 +67,13 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-The docs are written against the v2.28.13 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
+The docs are written against the v2.28.14 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
 
 ## Planned
 
 These are not written yet:
 
 - Recipes for common surveys (HTTP banners, TLS certificates, IPv6, LAN discovery)
-- A module-writing guide (Scan/Probe/Output/Generate in C)
 - Generated CLI and per-module reference
 
 A browsable documentation site is planned as a separate step; for now everything is plain Markdown in this directory.

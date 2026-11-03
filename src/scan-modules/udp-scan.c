@@ -308,6 +308,25 @@ static unsigned src_port_start;
 static bool udp_init(const XConf *xconf) {
     src_port_start = xconf->nic.src.port.first;
 
+    unsigned slot_count = probe_slot_count(UdpScan.probe);
+    if (UdpScan.probe->slots.trigger == ProbeSlot_AfterFirstReply) {
+        LOG(LEVEL_ERROR,
+            "udp: ProbeSlot_AfterFirstReply is not supported; use "
+            "ProbeSlot_Always for UDP probes\n");
+        return false;
+    }
+
+    unsigned src_port_count = (xconf->nic.src.port.last >= src_port_start)
+                                  ? xconf->nic.src.port.last - src_port_start + 1
+                                  : 0;
+    if (src_port_count < slot_count) {
+        LOG(LEVEL_ERROR,
+            "udp: source-port range has %u ports but probe needs %u slots; "
+            "increase --source-port range\n",
+            src_port_count, slot_count);
+        return false;
+    }
+
     if (strcmp(xconf->generator->name, "blackrock") == 0) {
         _targets = &xconf->targets;
     } else {
@@ -348,6 +367,11 @@ static bool udp_transmit(uint64_t entropy, ScanTarget *target,
         udp_create_packet(target->target.ip_them, target->target.port_them,
                           target->target.ip_me, src_port_start + target->index,
                           0, payload, payload_len, px, PKT_BUF_SIZE);
+
+    /* Generic multi-slot plan: let the transmit loop ask for the next slot. */
+    if (UdpScan.probe->slots.trigger == ProbeSlot_Always &&
+        target->index + 1 < probe_slot_count(UdpScan.probe))
+        return true;
 
     return false;
 }
@@ -469,6 +493,11 @@ static void udp_handle(unsigned th_idx, uint64_t entropy,
                                  entropy),
             .index  = recved->parsed.port_dst - src_port_start,
         };
+
+        if (ptarget.index >= probe_slot_count(UdpScan.probe)) {
+            item->no_output = 1;
+            return;
+        }
 
         UdpScan.probe->handle_response_cb(
             th_idx, &ptarget, &recved->packet[recved->parsed.app_offset],
