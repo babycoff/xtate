@@ -16,6 +16,7 @@ CASE_FILTER="${XTATE_BENCH_CASE:-all}"
 ZBANNER_RATE="${XTATE_BENCH_ZBANNER_RATE:-5000}"
 TX_RATE="${XTATE_BENCH_TX_RATE:-10000}"
 TX_THREAD_ARGS="${XTATE_BENCH_TX_THREADS:+--tx-thread-count $XTATE_BENCH_TX_THREADS}"
+RX_ARGS="${XTATE_BENCH_RX_HANDLERS:+--rx-count $XTATE_BENCH_RX_HANDLERS}"
 ZBANNER_RATES="${XTATE_BENCH_ZBANNER_RATES:-$ZBANNER_RATE}"
 CN="${XTATE_CN_MIRROR:-0}"
 NET="xtate-bench-$$"
@@ -169,7 +170,7 @@ run_case() {
     drop_before="$(target_drop_count)"
     start="$(date +%s%N)"
     set +e
-    docker exec "$SCANNER" /xtate "$@" $TX_THREAD_ARGS >"$stdout" 2>"$stderr"
+    docker exec "$SCANNER" /xtate "$@" $TX_THREAD_ARGS $RX_ARGS >"$stdout" 2>"$stderr"
     rc=$?
     set -e
     end="$(date +%s%N)"
@@ -221,6 +222,9 @@ if want tx; then
 fi
 
 if want zbanner; then
+    if [[ "${XTATE_BENCH_ZBANNER_DROP:-0}" == "1" ]]; then
+        docker exec "$TARGET" iptables -A INPUT -p tcp             --dport "$HTTP_FIRST:$HTTP_LAST" -j DROP
+    fi
     for rate in $ZBANNER_RATES; do
         run_case "zbanner-http-$rate" "$(((HTTP_LAST - HTTP_FIRST + 1) * 7))" \
             -ip "$TARGET_RANGE" -p "$HTTP_FIRST-$HTTP_LAST" \

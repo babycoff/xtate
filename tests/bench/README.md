@@ -142,6 +142,12 @@ XTATE_BENCH_TX_RATE=5000 XTATE_BENCH_TX_THREADS_LIST="4 8 16" \
 XTATE_BENCH_CASE=tx XTATE_BIN=/path/to/xtate-linux bash tests/bench/lab.sh
 ```
 
+For a one-shot ZBanner control, `XTATE_BENCH_ZBANNER_DROP=1` makes the target
+drop the HTTP port range before the scan. This measures initial SYN pacing with
+no SYN-ACK/banner path; do not treat its zero results as a banner benchmark.
+
+`XTATE_BENCH_RX_HANDLERS` passes `--rx-count` for response-path experiments.
+
 The stateful case restarts the C responder in `--hold` mode: it accepts
 connections without replying, so TCBs remain active long enough to exercise
 `tcb-mem`. Set `XTATE_BENCH_STATEFUL_HOLD=0` to disable that behavior.
