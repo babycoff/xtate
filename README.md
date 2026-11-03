@@ -116,7 +116,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http -show i
 > [!WARNING]
 > Xtate sends raw packets. Scan only networks you own or have explicit permission to test. Unauthorized scanning may be illegal where you live.
 
-On Windows, install [Npcap](https://npcap.com/), build with CMake, and run `xtate.exe` from an elevated shell. See [Build](#build).
+On Windows, install [Npcap](https://npcap.com/), build with CMake, and run `xtate.exe` from an elevated shell. New to Windows? Start with the [Windows quick start](docs/windows-quickstart.md).
 
 <details>
 <summary><b>More commands to try</b></summary>
@@ -266,8 +266,9 @@ Recommended compilers: GCC, Clang, MSVC and MinGW-w64. Xtate requires a 64-bit l
 <details>
 <summary><b>Windows build</b></summary>
 
-Install **Npcap** (runtime), CMake, and Visual Studio 2022/2026 or MinGW-w64. The
-full platform/toolchain matrix and troubleshooting live in
+Install **Npcap** (runtime), CMake, and Visual Studio 2022/2026 or MinGW-w64. For a
+step-by-step beginner walkthrough, see [Windows quick start](docs/windows-quickstart.md);
+the full platform/toolchain matrix and troubleshooting live in
 [Getting started](docs/getting-started.md#build-on-windows).
 
 Optional dependencies via Scoop (MSVC/clang-cl):

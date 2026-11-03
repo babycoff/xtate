@@ -17,6 +17,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 | Curious how it works | [Architecture](./architecture.md) → [ZBanner](./zbanner.md) / [HLTCP](./hltcp.md) |
 | Stuck | [Troubleshooting](./troubleshooting.md) → [Known limitations](./known-limitations.md) |
 | Chinese help / localization | [Help i18n](./help-i18n.md) |
+| Windows first try | [Windows quick start](./windows-quickstart.md) |
 | Windows optional dependencies | [Windows dependencies](./windows-dependencies.md) |
 | Build artifact names | [Build artifacts](./build-artifacts.md) |
 | Interactive mode | [Interactive mode](./interactive-mode.md) |
@@ -35,6 +36,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 - [Aggregation](./aggregation.md) — post-run NDJSON aggregation, schema and scale
 - [Modules](./modules.md) — the four module types and the modules that ship with Xtate
 - [Chinese help and i18n](./help-i18n.md) — `--lang`, catalog fallback and UTF-8 help layout
+- [Windows quick start](./windows-quickstart.md) — beginner install, Npcap, build, first scan and troubleshooting
 - [Windows optional dependencies](./windows-dependencies.md) — vcpkg/MSYS2 setup for PCRE2, LibXml2, bson/mongoc and MinGW caveats
 - [Build artifacts](./build-artifacts.md) — aliases vs per-toolchain binaries, Debug names and DLLs
 - [Interactive mode](./interactive-mode.md) — commands, TTY/script mode, history and completion

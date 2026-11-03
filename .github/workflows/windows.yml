@@ -1,0 +1,63 @@
+name: windows
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Windows ${{ matrix.toolchain }} Release
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain: [msvc, clangcl]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure build tools
+        shell: pwsh
+        run: |
+          if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) {
+            choco install ninja -y --no-progress
+          }
+          if ('${{ matrix.toolchain }}' -eq 'clangcl') {
+            if (-not (Get-Command clang-cl -ErrorAction SilentlyContinue)) {
+              choco install llvm -y --no-progress
+            }
+          }
+          # Chocolatey updates the persistent PATH, not the current process.
+          $machinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+          $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+          $env:Path = $machinePath + ';' + $userPath
+
+      - name: Build
+        shell: pwsh
+        run: |
+          ./scripts/build-windows.ps1 `
+            -Toolchain '${{ matrix.toolchain }}' `
+            -Config Release -Yes
+
+      - name: Version and selftest
+        shell: pwsh
+        run: |
+          if (-not (Test-Path .\bin\xtate.exe)) {
+            throw 'bin\xtate.exe was not produced'
+          }
+          .\bin\xtate.exe --version
+          .\bin\xtate.exe --selftest
+
+      - name: Parser and i18n tests
+        shell: bash
+        run: |
+          XTATE_BIN=./bin/xtate.exe bash tests/target/test.sh
+          XTATE_BIN=./bin/xtate.exe bash tests/i18n/test.sh
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: xtate-windows-${{ matrix.toolchain }}-release
+          path: bin/xtate.exe
+          if-no-files-found: error

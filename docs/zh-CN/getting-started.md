@@ -94,6 +94,9 @@ Lua 5.3/5.4 与 PF_RING 在运行时加载，而不是链接期依赖：`lua-tcp
 
 ## 在 Windows 上构建
 
+第一次用 Windows 或第一次构建？请先看 [Windows 快速上手](./windows-quickstart.md)。
+下面只是精简的构建参考。
+
 ### 前置条件
 
 1. **Visual Studio 2022 或 2026**，安装“使用 C++ 的桌面开发”工作负载；或者安装 **MinGW-w64**（`scoop install mingw`）。

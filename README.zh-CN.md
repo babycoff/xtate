@@ -110,7 +110,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http -show i
 > [!WARNING]
 > Xtate 发送原始数据包。请只扫描你拥有、或已获得明确授权测试的网络。未经授权的扫描在你所在地区可能违法。
 
-在 Windows 上，安装 [Npcap](https://npcap.com/)，用 CMake 构建，并在管理员权限的终端中运行 `xtate.exe`。参见[构建](#构建)。
+在 Windows 上，安装 [Npcap](https://npcap.com/)，用 CMake 构建，并在管理员权限的终端中运行 `xtate.exe`。第一次用 Windows？请从 [Windows 快速上手](docs/zh-CN/windows-quickstart.md) 开始。
 
 <details>
 <summary><b>更多可尝试的命令</b></summary>
@@ -259,7 +259,7 @@ PCRE2 的发现优先使用 CMake 包配置；在 Debian/Ubuntu 上会回退到 
 <details>
 <summary><b>Windows 构建</b></summary>
 
-安装 **Npcap**（运行时）、CMake，以及 Visual Studio 2022/2026 或 MinGW-w64。完整平台/工具链矩阵和问题排查见[快速上手](docs/zh-CN/getting-started.md)。
+安装 **Npcap**（运行时）、CMake，以及 Visual Studio 2022/2026 或 MinGW-w64。新手分步说明见 [Windows 快速上手](docs/zh-CN/windows-quickstart.md)；完整平台/工具链矩阵和问题排查见[快速上手](docs/zh-CN/getting-started.md)。
 
 可选依赖可以用 Scoop 安装（MSVC/clang-cl）：
 

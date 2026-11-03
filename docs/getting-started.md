@@ -104,6 +104,10 @@ need a Lua shared library, and PF_RING is optional Linux acceleration.
 
 ## Build on Windows
 
+New to Windows or building for the first time? Start with the
+[Windows quick start](./windows-quickstart.md). The sections below are the
+compact build reference.
+
 ### Prerequisites
 
 1. **Visual Studio 2022 or 2026** with the *Desktop development with C++*
