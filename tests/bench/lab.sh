@@ -14,6 +14,7 @@ OUT="${XTATE_BENCH_OUT:-$ROOT/bench-results/lab-$(date +%Y%m%d-%H%M%S)}"
 QUICK="${XTATE_BENCH_QUICK:-0}"
 CASE_FILTER="${XTATE_BENCH_CASE:-all}"
 ZBANNER_RATE="${XTATE_BENCH_ZBANNER_RATE:-5000}"
+ZBANNER_RATES="${XTATE_BENCH_ZBANNER_RATES:-$ZBANNER_RATE}"
 CN="${XTATE_CN_MIRROR:-0}"
 NET="xtate-bench-$$"
 TARGET="xtate-bench-target-$$"
@@ -207,9 +208,12 @@ if want tx; then
 fi
 
 if want zbanner; then
-    run_case "zbanner-http-lab" "$(((HTTP_LAST - HTTP_FIRST + 1) * 7))" \
-        -ip "$TARGET_RANGE" -p "$HTTP_FIRST-$HTTP_LAST" -scan zbanner -probe http \
-        --rate "$ZBANNER_RATE" --wait 1 --no-status --no-resume-file
+    for rate in $ZBANNER_RATES; do
+        run_case "zbanner-http-$rate" "$(((HTTP_LAST - HTTP_FIRST + 1) * 7))" \
+            -ip "$TARGET_RANGE" -p "$HTTP_FIRST-$HTTP_LAST" \
+            -scan zbanner -probe http \
+            --rate "$rate" --wait 1 --no-status --no-resume-file
+    done
 fi
 
 if want output; then
@@ -230,6 +234,15 @@ if want output; then
 fi
 
 if want stateful; then
+    if [[ "${XTATE_BENCH_STATEFUL_HOLD:-1}" != "0" ]]; then
+        docker exec "$TARGET" pkill -f /tmp/lab-http >/dev/null 2>&1 || true
+        docker exec "$TARGET" bash -lc "
+            ulimit -n 65535
+            nohup /tmp/lab-http $HTTP_FIRST $HTTP_LAST --hold \
+                >/tmp/lab-http.log 2>&1 &
+        "
+        wait_port "$HTTP_FIRST"
+    fi
     run_case "stateful-tcb-lab" "$((HTTP_LAST - HTTP_FIRST + 1))" \
         -ip "$TARGET_IP" -p "$HTTP_FIRST-$HTTP_LAST" \
         -scan tcp-state -probe http-state \

@@ -25,6 +25,8 @@
 #define MAX_EVENTS    4096
 #define BACKLOG       256
 
+static int hold_mode = 0;
+
 static const char RESPONSE[] =
     "HTTP/1.1 200 OK\r\n"
     "Content-Type: text/plain\r\n"
@@ -62,10 +64,12 @@ static void close_client(int epfd, int fd) {
 }
 
 int main(int argc, char **argv) {
-    if (argc != 3) {
-        fprintf(stderr, "usage: lab-http START_PORT END_PORT\n");
+    if (argc != 3 && argc != 4) {
+        fprintf(stderr, "usage: lab-http START_PORT END_PORT [--hold]\n");
         return 2;
     }
+    if (argc == 4 && strcmp(argv[3], "--hold") == 0)
+        hold_mode = 1;
 
     unsigned first = (unsigned)strtoul(argv[1], NULL, 10);
     unsigned last  = (unsigned)strtoul(argv[2], NULL, 10);
@@ -100,8 +104,8 @@ int main(int argc, char **argv) {
         listeners++;
     }
 
-    printf("lab-http listening on %u-%u (%u sockets)\n", first, last,
-           listeners);
+    printf("lab-http listening on %u-%u (%u sockets)%s\n", first, last,
+           listeners, hold_mode ? " [hold]" : "");
     fflush(stdout);
 
     struct epoll_event events[MAX_EVENTS];
@@ -130,6 +134,7 @@ int main(int argc, char **argv) {
                         break;
                     }
 
+
                     int one = 1;
                     setsockopt(client, IPPROTO_TCP, TCP_NODELAY, &one,
                                sizeof(one));
@@ -149,8 +154,16 @@ int main(int argc, char **argv) {
             unsigned char buf[2048];
             ssize_t       got = recv(fd, buf, sizeof(buf), 0);
             if (got > 0) {
-                (void)send(fd, RESPONSE, sizeof(RESPONSE) - 1, MSG_NOSIGNAL);
-                close_client(epfd, fd);
+                if (hold_mode) {
+                    /* Keep the accepted socket open without answering so the
+                     * scanner's TCB stays alive. The process is killed by the
+                     * lab when the stateful case ends. */
+                    epoll_ctl(epfd, EPOLL_CTL_DEL, fd, NULL);
+                } else {
+                    (void)send(fd, RESPONSE, sizeof(RESPONSE) - 1,
+                               MSG_NOSIGNAL);
+                    close_client(epfd, fd);
+                }
             } else if (got == 0) {
                 close_client(epfd, fd);
             } else if (errno != EAGAIN && errno != EWOULDBLOCK &&

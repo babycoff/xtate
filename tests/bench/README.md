@@ -114,12 +114,18 @@ counts incoming SYN packets with a target-side raw socket
 (`tests/bench/lab-count.py`). The raw counter is needed because an iptables
 counter alone did not reliably observe traffic to the alias IPs.
 
-Use `XTATE_BENCH_ZBANNER_RATE` to sweep the banner scan rate, for example:
+Use `XTATE_BENCH_ZBANNER_RATE` for one rate, or
+`XTATE_BENCH_ZBANNER_RATES` for a sweep:
 
 ```bash
-XTATE_BENCH_ZBANNER_RATE=50000 XTATE_BENCH_CASE=zbanner \
-XTATE_CN_MIRROR=1 XTATE_BIN=/path/to/xtate-linux bash tests/bench/lab.sh
+XTATE_BENCH_ZBANNER_RATES="5000 20000 50000" \
+XTATE_BENCH_CASE=zbanner XTATE_CN_MIRROR=1 \
+XTATE_BIN=/path/to/xtate-linux bash tests/bench/lab.sh
 ```
+
+The stateful case restarts the C responder in `--hold` mode: it accepts
+connections without replying, so TCBs remain active long enough to exercise
+`tcb-mem`. Set `XTATE_BENCH_STATEFUL_HOLD=0` to disable that behavior.
 
 The C responder answers as soon as it receives data. This is good for ZBanner
 throughput, but it also means a stateful TCB benchmark may complete connections
