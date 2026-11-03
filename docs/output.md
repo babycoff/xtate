@@ -11,7 +11,7 @@ stream clean.
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80 -scan tcp-syn > results.txt
 ```
 
-> Documented against Xtate v2.28.12. `--help` and `--help-output <module>` are authoritative
+> Documented against Xtate v2.28.13. `--help` and `--help-output <module>` are authoritative
 > for the exact flags of your build.
 
 ## The result line
@@ -132,13 +132,18 @@ python3 tools/jarm_aggregate.py scan.jsonl \
   --complete-out jarm.jsonl \
   --retry-out jarm-retry.jsonl \
   --retry-csv jarm-retry.csv \
+  --retry-dir jarm-retry \
+  --retry-template "xtate -iL {ips_file} -p {port} -scan zbanner -probe jarm" \
   --stats-out jarm-stats.json
 ```
 
 `jarm.jsonl` has one `jarm`/`jarm_sha256` row per complete target. The 62-character `jarm` is the usual 30-character cipher/version hash plus the 32-character extension hash; `jarm_sha256` is the full SHA-256 of the raw parts.
-`jarm-retry.jsonl`/`.csv` list targets missing slots, with the missing slot
-numbers, so they can be re-probed. `missing_slot_counts` and duplicate-slot
-counts are in the stats output.
+`jarm-retry.jsonl`/`.csv` list targets missing slots and their missing slot
+numbers. The CSV is for humans: Xtate target files contain addresses, not
+`ip:port` tuples. For a directly runnable retry, `--retry-dir` writes one
+`port-<port>.ips` address file per port (and a command file when
+`--retry-template` is supplied); `--retry-ports-file` writes the unique port
+list. `missing_slot_counts` and duplicate-slot counts are in the stats output.
 
 ### bson and mongodb
 

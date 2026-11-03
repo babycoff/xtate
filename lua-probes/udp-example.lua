@@ -9,10 +9,6 @@ require("xtate-header")
 ProbeName = "udp-example"
 ---@number a predefined Probe_Type value from xtate-header
 ProbeType = Probe_Type.UDP
----@number a predefined Multi_Mode value from xtate-header
-MultiMode = Multi_Mode.Null
----@number multi-probe number.
-MultiNum  = 1
 ---@string description of the probe.
 ProbeDesc = [[
     "This is an example lua script for udp type probe. It sends a TXT version "

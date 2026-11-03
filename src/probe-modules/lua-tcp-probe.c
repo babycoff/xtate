@@ -14,8 +14,6 @@
 
 #define LUA_PROBE_VAR_PROBENAME "ProbeName"
 #define LUA_PROBE_VAR_PROBETYPE "ProbeType"
-#define LUA_PROBE_VAR_MULTIMODE "MultiMode"
-#define LUA_PROBE_VAR_MULTINUM  "MultiNum"
 #define LUA_PROBE_VAR_PROBEDESC "ProbeDesc"
 
 #define LUA_PROBE_FUNC_MAKE_PAYLOAD    "Make_payload"
@@ -116,40 +114,6 @@ static bool sync_probe_config() {
             "" LUA_PROBE_NAME ": need a %s `" LUA_PROBE_VAR_PROBETYPE
             "` in %s.\n",
             get_probe_type_name(ProbeType_TCP), luatcp_conf.script);
-        return false;
-    }
-    lua_pop(luatcp_conf.Ltx, 1);
-
-    /*multi mode*/
-    MultiMode *mode = (MultiMode *)&LuaTcpProbe.multi_mode;
-    lua_getglobal(luatcp_conf.Ltx, LUA_PROBE_VAR_MULTIMODE);
-    if (lua_isinteger(luatcp_conf.Ltx, -1) == 0) {
-        LOG(LEVEL_ERROR,
-            "" LUA_PROBE_NAME ": no `" LUA_PROBE_VAR_MULTIMODE
-            "` setting in script %s.\n",
-            luatcp_conf.script);
-        return false;
-    }
-    *mode = lua_tointeger(luatcp_conf.Ltx, -1);
-    lua_pop(luatcp_conf.Ltx, 1);
-
-    /*multi num*/
-    unsigned *num = (unsigned *)&LuaTcpProbe.multi_num;
-    lua_getglobal(luatcp_conf.Ltx, LUA_PROBE_VAR_MULTINUM);
-    if (lua_isinteger(luatcp_conf.Ltx, -1) == 0) {
-        LOG(LEVEL_ERROR,
-            "" LUA_PROBE_NAME ": no `" LUA_PROBE_VAR_MULTINUM
-            "` setting in script %s.\n",
-            luatcp_conf.script);
-        return false;
-    }
-    if (lua_tointeger(luatcp_conf.Ltx, -1) > 1) {
-        *num = lua_tointeger(luatcp_conf.Ltx, -1);
-    } else if (lua_tointeger(luatcp_conf.Ltx, -1) < 0) {
-        LOG(LEVEL_ERROR,
-            "" LUA_PROBE_NAME ": invalid `" LUA_PROBE_VAR_MULTINUM
-            "` setting in script %s.\n",
-            luatcp_conf.script);
         return false;
     }
     lua_pop(luatcp_conf.Ltx, 1);
@@ -498,8 +462,6 @@ void luatcp_close() {
 Probe LuaTcpProbe = {
     .name       = "lua-tcp",
     .type       = ProbeType_TCP,
-    .multi_mode = Multi_Null,
-    .multi_num  = 1,
     .params     = luatcp_parameters,
     .short_desc = "Use user-defined LUA script to do stateless TCP scan.",
     .desc       = LUA_PROBE_NAME
@@ -510,8 +472,6 @@ Probe LuaTcpProbe = {
     "include:\n"
     "`" LUA_PROBE_VAR_PROBENAME "`\n"
     "`" LUA_PROBE_VAR_PROBETYPE "`\n"
-    "`" LUA_PROBE_VAR_MULTIMODE "`\n"
-    "`" LUA_PROBE_VAR_MULTINUM "`\n"
     "`" LUA_PROBE_VAR_PROBEDESC "`\n"
     "And implement some global functions for calling back include:\n"
     "`" LUA_PROBE_FUNC_MAKE_PAYLOAD "`\n"

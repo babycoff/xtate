@@ -337,8 +337,6 @@ static void hello_close() {
 Probe HelloProbe = {
     .name       = "hello",
     .type       = ProbeType_TCP,
-    .multi_mode = Multi_Null,
-    .multi_num  = 1,
     .params     = hello_parameters,
     .short_desc =
         "Send user-specified payload and get response in stateless TCP scan.",

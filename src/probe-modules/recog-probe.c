@@ -264,8 +264,6 @@ static void recog_close() {
 Probe RecogProbe = {
     .name       = "recog",
     .type       = ProbeType_TCP,
-    .multi_mode = Multi_Null,
-    .multi_num  = 1,
     .params     = recog_parameters,
     .short_desc = "Try to match Recog fingerprints in stateless TCP scan.",
     .desc =

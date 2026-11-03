@@ -24,8 +24,6 @@ static unsigned closestate_parse_response(DataPass *pass, ProbeState *state,
 Probe CloseStateProbe = {
     .name       = "close-state",
     .type       = ProbeType_STATE,
-    .multi_mode = Multi_Null,
-    .multi_num  = 1,
     .hello_wait = 0,
     .params     = NULL,
     .short_desc = "Send nothing and just close lower-layer connection in "

@@ -36,8 +36,6 @@ static bool echo_validate_response(ProbeTarget *target, const unsigned char *px,
 Probe EchoProbe = {
     .name       = "echo",
     .type       = ProbeType_UDP,
-    .multi_mode = Multi_Null,
-    .multi_num  = 1,
     .params     = NULL,
     .short_desc = "UDP scan with 4 random bytes payload.",
     .desc =

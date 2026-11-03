@@ -369,14 +369,14 @@ static ConfParam hellostate_parameters[] = {
      {"banner-limit", "limit-banner", 0},
      "Just record limited number of ACK segments with banner data as results "
      "in all-banner mode. Exceeded ACK segments with banner data won't trigger "
-     "Multi_DynamicNext or Multi_AfterHandle."},
+     "slot expansion."},
     {"banner-floor",
      SET_all_banner_floor,
      Type_ARG,
      {"banner-floor", "floor-banner", 0},
      "Do not record ACK segments with banner data as results if the number is "
      "less than the floor value while in all-banner mode. And non-recorded "
-     "segments won't trigger Multi_DynamicNext or Multi_AfterHandle."},
+     "segments won't trigger slot expansion."},
 
     {0}};
 
@@ -517,8 +517,6 @@ static void hellostate_close() {
 Probe HelloStateProbe = {
     .name       = "hello-state",
     .type       = ProbeType_STATE,
-    .multi_mode = Multi_Null,
-    .multi_num  = 1,
     .hello_wait = 0,
     .params     = hellostate_parameters,
     .short_desc =

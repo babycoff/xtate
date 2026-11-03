@@ -128,7 +128,7 @@ tcp-state -> tls-state -> http-state / hello-state / recog-state / get-state / c
 - **重传：** 固定 1 秒 RTO，重发队首未确认段。没有 RTT 估计、没有退避，也不重传 SYN 或纯 ACK。
 - **每个 TCB 一个定时器槽**，连接活跃期间每秒重新挂载。RTO 与过期共用这个槽，于是两种行为会互相覆盖对方的调度。
 - **接收窗口：** 非 SYN 的 TCP 模板默认通告 1024 字节，这会让对端发出大量小段。如果扫描感觉慢，先试着调大 `--tcp-win`（并相应调整 `--max-pkt-len`）——模块自己的帮助文本也是这么说的。
-- **多探测：** 探测槽位编码为源端口偏移，因此 `--source-port` 区间至少要等于探测模块的 `multi_num`，否则槽位会串线。
+- **探测 slot：** ZBanner/TCP 的 slot plan 把槽位编码在源端口里；HLTCP 本身只跑一条有状态流，因此多 slot plan 不适用于 `tcp-state`。
 
 ## 用法
 

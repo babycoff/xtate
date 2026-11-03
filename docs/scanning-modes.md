@@ -14,7 +14,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 `-scan` is mandatory; `-probe` is optional only for modules that declare "no probe". Module
 parameters go through `-scan-arg` and `-probe-arg`, one quoted string each (`--help-scan <module>`, `--help-probe <module>`).
 
-> Documented against Xtate v2.28.12. The CLI is authoritative: `--help`, `--help-scan`,
+> Documented against Xtate v2.28.13. The CLI is authoritative: `--help`, `--help-scan`,
 > `--help-probe`.
 
 ## Choosing a scan module
@@ -65,7 +65,7 @@ retransmissions and module options:
 | Module | Typical TX packets per target | Important variation |
 |:---|:---|:---|
 | `tcp-syn` | about 1 initial SYN | `--send-rst` adds a packet for an open reply |
-| `zbanner` | about 3 in the default completed-target case: SYN, ACK+payload, RST | `--no-rst` removes one; `--with-ack` adds one; closed/zero-window, `--all-banner`, multi-probe and loss change the ratio |
+| `zbanner` | about 3 in the default completed-target case: SYN, ACK+payload, RST | `--no-rst` removes one; `--with-ack` adds one; closed/zero-window, `--all-banner`, multi-slot and loss change the ratio |
 | `tcp-state` / HLTCP | variable: SYN, ACK+probe, retransmits, ACK/FIN/RST | depends on TCP state, probe/subprobe, target behaviour and retransmission policy; **do not use a fixed multiplier** |
 | `udp`, `icmp-*`, `sctp-init` | normally one request per target | retries, ICMP errors and probe behaviour can add packets |
 
@@ -200,17 +200,18 @@ sudo ./bin/xtate -ip 198.51.100.7 -p o:1-20 -scan yarrp-udp \
 Both produce `path` (TTL exceeded) and `destination` results with a `distance` field; paths
 are rebuilt from `(target, distance)` in post-processing.
 
-## Multi-probe modes
+## Probe slots
 
-Some probes send several payloads per target (JARM needs 10 ClientHellos). The mode is a
-property of the probe, not a switch: `Multi_Null` (one payload, most probes), `Multi_Direct`
-(all slots before any reply), `Multi_IfOpen` (remaining slots after a SYN-ACK), and
-`Multi_AfterHandle` (after the first reply, as `jarm` does).
+JARM is the only shipped multi-slot probe. It declares a `ProbeSlotPlan` with
+`count = 10` and `trigger = after first reply`: slot 0 is sent normally, and
+the remaining nine slots are sent only when the first slot's response is an
+accepted TLS record.
 
-Slots are distinguished by **source port**: slot `i` uses `source_port_start + i`, and the
-slot number is recovered from the reply's destination port. The range must be wide enough for
-the probe's `multi_num`: the default span is 256 ports, and an explicit `-src-port` range must
-contain a power-of-two number of ports. More slots than the range loses replies silently.
+Slots are distinguished by **source port**: slot `i` uses
+`source_port_start + i`, and the slot number is recovered from the reply's
+destination port. The source-port range must be wide enough for the plan's
+slot count. The engine keeps no per-target group and performs no aggregation;
+each slot emits its own `jarm_part` row, and an output-side helper joins them.
 
 ## Firewall rules
 

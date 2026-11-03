@@ -45,6 +45,9 @@ python3 "$ROOT/tools/jarm_aggregate.py" \
     --retry-out "$TMP/retry.jsonl" \
     --retry-csv "$TMP/retry.csv" \
     --retry-ip-file "$TMP/retry-ip.txt" \
+    --retry-ports-file "$TMP/retry-ports.txt" \
+    --retry-dir "$TMP/retry" \
+    --retry-template "xtate -iL {ips_file} -p {port} -scan zbanner -probe jarm" \
     --stats-out "$TMP/stats.json" >/dev/null
 
 python3 - "$TMP" <<'PY'
@@ -72,7 +75,20 @@ assert len(retry) == 1, retry
 assert retry[0]["ip_them"] == "192.0.2.11", retry
 assert retry[0]["missing_slots"] == [3, 4], retry
 assert (tmp / "retry-ip.txt").read_text().strip() == "192.0.2.11"
+assert (tmp / "retry-ports.txt").read_text().strip() == "443"
+assert (tmp / "retry" / "port-443.ips").read_text().strip() == "192.0.2.11"
+assert "xtate -iL" in (tmp / "retry" / "retry-commands.txt").read_text()
 assert "192.0.2.11,443,3 4" in (tmp / "retry.csv").read_text()
 print("PASS: JARM aggregation complete/incomplete/retry")
 PY
+
+if [[ -n "${XTATE_BIN:-}" ]]; then
+    help="$("$XTATE_BIN" --help-probe jarm)"
+    grep -q "Slot count: 10" <<<"$help"
+    grep -q "Slot trigger: after first reply" <<<"$help"
+    ! grep -q 'lzr' <<<"$("$XTATE_BIN" --list-probe)"
+    count="$("$XTATE_BIN" --list-probe | grep -cE '^[[:space:]]*[0-9]+\.[A-Za-z]')"
+    [[ "$count" -eq 21 ]]
+    echo "PASS: JARM slot plan help and 21-probe inventory"
+fi
 

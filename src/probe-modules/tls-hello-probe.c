@@ -507,8 +507,6 @@ static unsigned tlshello_handle_reponse(unsigned th_idx, ProbeTarget *target,
 Probe TlsHelloProbe = {
     .name       = "tls-hello",
     .type       = ProbeType_TCP,
-    .multi_mode = Multi_Null,
-    .multi_num  = 1,
     .params     = tlshello_parameters,
     .short_desc = "Try to get TLS Server Hello and identify the version or do "
                   "regex matching.",

@@ -542,8 +542,6 @@ static void snmp_close() {
 Probe SnmpProbe = {
     .name       = "snmp",
     .type       = ProbeType_UDP,
-    .multi_mode = Multi_Null,
-    .multi_num  = 1,
     .params     = NULL,
     .short_desc = "Do SNMP scan and try to get some host info.",
     .desc = "SnmpProbe sends an snmp(v1) request with community `public` and "

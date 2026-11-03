@@ -8,7 +8,7 @@
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80 -scan tcp-syn > results.txt
 ```
 
-> 文档以 Xtate v2.28.12 为准。你所用构建的确切 flag 以 `--help` 和 `--help-output <module>` 为准。
+> 文档以 Xtate v2.28.13 为准。你所用构建的确切 flag 以 `--help` 和 `--help-output <module>` 为准。
 
 ## 结果行
 
@@ -101,11 +101,15 @@ python3 tools/jarm_aggregate.py scan.jsonl \
   --complete-out jarm.jsonl \
   --retry-out jarm-retry.jsonl \
   --retry-csv jarm-retry.csv \
+  --retry-dir jarm-retry \
+  --retry-template "xtate -iL {ips_file} -p {port} -scan zbanner -probe jarm" \
   --stats-out jarm-stats.json
 ```
 
 `jarm.jsonl` 每个完整目标一行 `jarm`/`jarm_sha256`；62 字符的 `jarm` 由 30 字符 cipher/version 哈希加 32 字符扩展哈希组成，`jarm_sha256` 是原始片段的完整 SHA-256；`jarm-retry.jsonl`/`.csv`
-列出缺失 slot 的目标及缺失编号，便于重扫；统计输出包含缺失 slot 计数和重复 slot 计数。
+列出缺失 slot 的目标及缺失编号。CSV 仅用于人工查看，因为 Xtate 的目标文件只有地址，不能直接表达 `ip:port`。
+`--retry-dir` 会按端口生成 Xtate 可直接读取的 `port-<port>.ips`，配合 `--retry-template` 生成可执行命令；
+`--retry-ports-file` 输出缺失目标的唯一端口列表。统计输出包含缺失 slot 计数和重复 slot 计数。
 
 ### bson 与 mongodb
 

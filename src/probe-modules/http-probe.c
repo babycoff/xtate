@@ -681,8 +681,6 @@ static void http_close() {
 Probe HttpProbe = {
     .name       = "http",
     .type       = ProbeType_TCP,
-    .multi_mode = Multi_Null,
-    .multi_num  = 1,
     .params     = http_parameters,
     .short_desc = "Send user-specified HTTP request and get response in "
                   "stateless TCP scan.",

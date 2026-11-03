@@ -492,7 +492,7 @@ static ConfParam zbanner_parameters[] = {
      "data(deduped by data length) instead of sending RST segment to close the "
      "connection.\n"
      "NOTE1: This could cause some problem while using ProbeModule in "
-     "Multi_AfterHandle mode.\n"
+     "multi-slot mode.\n"
      "NOTE2: This may get so many segments with banner data. We can use some "
      "global params to adjust it. (e.g. --tcp-win, --max-packet-len, "
      "--snaplen)"},
@@ -503,15 +503,14 @@ static ConfParam zbanner_parameters[] = {
      "After received limited number of ACK segments with banner data then send "
      "RST segment to close the connection if the number is enough in "
      "all-banner mode. Exceeded ACK segments with banner data won't be "
-     "recorded as results and won't trigger Multi_DynamicNext or "
-     "Multi_AfterHandle."},
+     "recorded as results and won't trigger slot expansion."},
     {"all-banner-floor",
      SET_all_banner_floor,
      Type_ARG,
      {"banner-floor", "floor-banner", 0},
      "Do not record ACK segments with banner data as results if the number is "
      "less than the floor value while in all-banner mode. And non-recorded "
-     "segments won't trigger Multi_DynamicNext or Multi_AfterHandle."},
+     "segments won't trigger slot expansion."},
     {"syn-ttl",
      SET_syn_ttl,
      Type_ARG,
@@ -593,7 +592,7 @@ static ConfParam zbanner_parameters[] = {
 
 /**
  *For calc the conn index.
- * NOTE: We use a trick of src-port to differenciate multi-probes to avoid
+ * NOTE: We use a trick of src-port to differenciate probe slots to avoid
  * mutual interference of connections.
  * Be careful to the source port range and probe num. Source port range is 256
  *in default and can be set with flag `--source-port`.
@@ -613,11 +612,12 @@ static bool zbanner_init(const XConf *xconf) {
     unsigned src_port_count = (xconf->nic.src.port.last >= src_port_start)
                                   ? xconf->nic.src.port.last - src_port_start + 1
                                   : 0;
-    if (src_port_count < ZBannerScan.probe->multi_num) {
+    unsigned slot_count = probe_slot_count(ZBannerScan.probe);
+    if (src_port_count < slot_count) {
         LOG(LEVEL_ERROR,
             "zbanner: source-port range has %u ports but probe needs %u "
-            "slots for multi-probe; increase --source-port range\n",
-            src_port_count, ZBannerScan.probe->multi_num);
+            "slots; increase --source-port range\n",
+            src_port_count, slot_count);
         return false;
     }
 
@@ -640,14 +640,10 @@ static bool zbanner_init(const XConf *xconf) {
                 "banner data; consider increasing snaplen\n",
                 xconf->nic.snaplen);
         }
-        if (ZBannerScan.probe->multi_mode == Multi_AfterHandle ||
-            ZBannerScan.probe->multi_mode == Multi_DynamicNext) {
+        if (slot_count > 1) {
             LOG(LEVEL_WARN,
-                "zbanner: --all-banner with %s multi-probe mode may emit "
-                "per-segment results; use a single-shot probe or tune limits\n",
-                ZBannerScan.probe->multi_mode == Multi_AfterHandle
-                    ? "Multi_AfterHandle"
-                    : "Multi_DynamicNext");
+                "zbanner: --all-banner with a multi-slot probe may emit "
+                "per-segment results; use a single-slot probe or tune limits\n");
         }
     }
 
@@ -692,11 +688,6 @@ static bool zbanner_transmit(uint64_t entropy, ScanTarget *target,
         }
     }
 
-    /*multi-probe Multi_Direct*/
-    if (ZBannerScan.probe->multi_mode == Multi_Direct &&
-        target->index + 1 < ZBannerScan.probe->multi_num)
-        return true;
-
     return false;
 }
 
@@ -729,10 +720,10 @@ static void zbanner_validate(uint64_t entropy, Recved *recved, PreHandle *pre) {
         TCP_FLAGS(recved->packet, recved->parsed.transport_offset);
 
     /* A response is only meaningful for a probe slot we actually used. The
-     * source-port range is wider than multi_num, so reject out-of-range
+     * source-port range is wider than the probe slot count, so reject out-of-range
      * slots before handing an index to a probe. */
     unsigned index = recved->parsed.port_dst - src_port_start;
-    if (index >= ZBannerScan.probe->multi_num) {
+    if (index >= probe_slot_count(ZBannerScan.probe)) {
         pre->go_record = 0;
         return;
     }
@@ -830,8 +821,9 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
         TCP_FLAGS(recved->packet, recved->parsed.transport_offset);
 
     /* Defense in depth: validate() normally drops out-of-range slots. */
+    unsigned slot_count = probe_slot_count(ZBannerScan.probe);
     unsigned index = recved->parsed.port_dst - src_port_start;
-    if (index >= ZBannerScan.probe->multi_num)
+    if (index >= slot_count)
         return;
 
     /*SYNACK*/
@@ -955,26 +947,6 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
                 stack_transmit_pktbuf(stack, pkt_buffer);
             }
 
-            /*multi-probe Multi_IfOpen*/
-            if (ZBannerScan.probe->multi_mode == Multi_IfOpen &&
-                recved->parsed.port_dst == src_port_start) {
-                for (unsigned idx = 1; idx < ZBannerScan.probe->multi_num;
-                     idx++) {
-                    unsigned cookie = get_cookie(
-                        recved->parsed.src_ip, recved->parsed.port_src,
-                        recved->parsed.dst_ip, src_port_start + idx, entropy);
-
-                    PktBuf *pkt_buffer = stack_get_pktbuf(stack);
-
-                    pkt_buffer->length = tcp_create_packet(
-                        recved->parsed.src_ip, recved->parsed.port_src,
-                        recved->parsed.dst_ip, src_port_start + idx, cookie, 0,
-                        TCP_FLAG_SYN, zbanner_conf.syn_ttl, 0, NULL, 0,
-                        pkt_buffer->px, PKT_BUF_SIZE);
-
-                    stack_transmit_pktbuf(stack, pkt_buffer);
-                }
-            }
         }
     }
     /*RST*/
@@ -1079,7 +1051,7 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
             .index            = recved->parsed.port_dst - src_port_start,
         };
 
-        unsigned is_multi = ZBannerScan.probe->handle_response_cb(
+        ZBannerScan.probe->handle_response_cb(
             th_idx, &ptarget, &recved->packet[recved->parsed.app_offset],
             recved->parsed.app_length, item);
 
@@ -1110,41 +1082,31 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
                                &recved->packet[recved->parsed.app_offset],
                                recved->parsed.app_length);
 
-        /*multi-probe Multi_AfterHandle*/
-        if (ZBannerScan.probe->multi_mode == Multi_AfterHandle && is_multi &&
-            recved->parsed.port_dst == src_port_start) {
-            for (unsigned idx = 1; idx < ZBannerScan.probe->multi_num; idx++) {
-                unsigned cookie = get_cookie(
-                    recved->parsed.src_ip, recved->parsed.port_src,
-                    recved->parsed.dst_ip, src_port_start + idx, entropy);
-
-                PktBuf *pkt_buffer = stack_get_pktbuf(stack);
-
-                pkt_buffer->length = tcp_create_packet(
-                    recved->parsed.src_ip, recved->parsed.port_src,
-                    recved->parsed.dst_ip, src_port_start + idx, cookie, 0,
-                    TCP_FLAG_SYN, zbanner_conf.syn_ttl, 0, NULL, 0,
-                    pkt_buffer->px, PKT_BUF_SIZE);
-
-                stack_transmit_pktbuf(stack, pkt_buffer);
+        /* ProbeSlotPlan: JARM sends its remaining slots only after the first
+         * slot produced an accepted TLS response.  No group state is kept. */
+        if (ZBannerScan.probe->slots.trigger ==
+                ProbeSlot_AfterFirstReply &&
+            recved->parsed.port_dst == src_port_start &&
+            slot_count > 1) {
+            bool proceed = true;
+            if (ZBannerScan.probe->slots.continue_cb)
+                proceed = ZBannerScan.probe->slots.continue_cb(
+                    &ptarget, &recved->packet[recved->parsed.app_offset],
+                    recved->parsed.app_length);
+            if (proceed) {
+                for (unsigned idx = 1; idx < slot_count; idx++) {
+                    unsigned cookie = get_cookie(
+                        recved->parsed.src_ip, recved->parsed.port_src,
+                        recved->parsed.dst_ip, src_port_start + idx, entropy);
+                    PktBuf *pkt_buffer = stack_get_pktbuf(stack);
+                    pkt_buffer->length = tcp_create_packet(
+                        recved->parsed.src_ip, recved->parsed.port_src,
+                        recved->parsed.dst_ip, src_port_start + idx, cookie, 0,
+                        TCP_FLAG_SYN, zbanner_conf.syn_ttl, 0, NULL, 0,
+                        pkt_buffer->px, PKT_BUF_SIZE);
+                    stack_transmit_pktbuf(stack, pkt_buffer);
+                }
             }
-        }
-        /*multi-probe Multi_DynamicNext*/
-        else if (ZBannerScan.probe->multi_mode == Multi_DynamicNext &&
-                 is_multi) {
-            unsigned cookie = get_cookie(
-                recved->parsed.src_ip, recved->parsed.port_src,
-                recved->parsed.dst_ip, src_port_start + is_multi - 1, entropy);
-
-            PktBuf *pkt_buffer = stack_get_pktbuf(stack);
-
-            pkt_buffer->length = tcp_create_packet(
-                recved->parsed.src_ip, recved->parsed.port_src,
-                recved->parsed.dst_ip, src_port_start + is_multi - 1, cookie, 0,
-                TCP_FLAG_SYN, zbanner_conf.syn_ttl, 0, NULL, 0, pkt_buffer->px,
-                PKT_BUF_SIZE);
-
-            stack_transmit_pktbuf(stack, pkt_buffer);
         }
 
         /**

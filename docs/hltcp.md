@@ -146,8 +146,8 @@ probe with `-subprobe` and passes that probe's arguments with `-subprobe-arg`:
 --probe-arg "-subprobe http-state -subprobe-arg '--all-banner'"
 ```
 
-`tls-state` refuses a sub-probe that is not state-typed, and copies the sub-probe's
-multi-probe mode and count onto itself so multi-probe semantics survive the extra layer.
+`tls-state` refuses a sub-probe that is not state-typed. Multi-slot plans are a
+ZBanner/TCP feature; the stateful TLS layer runs one sub-probe flow.
 Lifecycle callbacks nest too: the sub-probe's connection init runs **after the TLS handshake
 succeeds**, immediately before its `make_hello`; its close runs only if that init happened,
 before the `SSL` object is freed.
@@ -209,8 +209,8 @@ resident, but cannot exceed the table/global budget.
 - **Receive window:** the non-SYN TCP template advertises 1024 bytes by default, which makes
   the peer send many small segments. Raising `--tcp-win` (and adjusting `--max-pkt-len`) is
   the first thing to try if a scan feels slow — the module's own help text says as much.
-- **Multi-probe:** the probe slot is encoded as a source-port offset, so `--source-port` must
-  be at least as wide as the probe's `multi_num` or slots will collide.
+- **Probe slots:** ZBanner/TCP slot plans encode the slot in the source port; HLTCP itself
+  runs a single stateful flow, so a multi-slot plan does not apply to `tcp-state`.
 
 ## Usage
 

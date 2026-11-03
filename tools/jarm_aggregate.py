@@ -17,6 +17,7 @@ This is an output-side post-processor: it is not part of the scanner hot path.
 import argparse
 import hashlib
 import json
+import os
 import sys
 from collections import defaultdict
 
@@ -96,6 +97,14 @@ def main(argv=None):
                         help="write incomplete targets as ip_them,port_them,missing_slots")
     parser.add_argument("--retry-ip-file", metavar="FILE",
                         help="write unique incomplete ip_them addresses")
+    parser.add_argument("--retry-ports-file", metavar="FILE",
+                        help="write the unique incomplete ports as a comma list")
+    parser.add_argument("--retry-dir", metavar="DIR",
+                        help="write one Xtate-readable IP list per incomplete port")
+    parser.add_argument("--retry-template", default=None,
+                        help="optional command template; placeholders: {ips_file}, {port}")
+    parser.add_argument("--retry-extra", default="",
+                        help="extra arguments appended to generated retry commands")
     parser.add_argument("--stats-out", metavar="FILE",
                         help="write aggregate statistics as JSON")
     args = parser.parse_args(argv)
@@ -194,6 +203,32 @@ def main(argv=None):
         with open(args.retry_ip_file, "w", encoding="utf-8") as out:
             for ip in sorted({row["ip_them"] for row in retry}):
                 out.write(ip + "\n")
+
+    if args.retry_ports_file:
+        with open(args.retry_ports_file, "w", encoding="utf-8") as out:
+            out.write(",".join(str(port) for port in
+                               sorted({row["port_them"] for row in retry})) + "\n")
+
+    if args.retry_dir:
+        os.makedirs(args.retry_dir, exist_ok=True)
+        by_port = {}
+        for row in retry:
+            by_port.setdefault(row["port_them"], set()).add(row["ip_them"])
+        commands = []
+        for port in sorted(by_port):
+            ips_file = os.path.join(args.retry_dir, f"port-{port}.ips")
+            with open(ips_file, "w", encoding="utf-8") as out:
+                for ip in sorted(by_port[port]):
+                    out.write(ip + "\n")
+            if args.retry_template:
+                command = args.retry_template.format(ips_file=ips_file, port=port)
+                if args.retry_extra:
+                    command += " " + args.retry_extra
+                commands.append(command)
+        if commands:
+            with open(os.path.join(args.retry_dir, "retry-commands.txt"),
+                      "w", encoding="utf-8") as out:
+                out.write("\n".join(commands) + "\n")
 
     if args.stats_out:
         with open(args.stats_out, "w", encoding="utf-8") as out:

@@ -73,7 +73,7 @@ TCP 的 ACK 允许携带数据。把 `ACK + 载荷` 放进同一个报文，意�
 -scan-arg "--all-banner --all-banner-limit 8 --tcp-win 65535 --max-packet-len 65535 --snaplen 65535"
 ```
 
-启动时如果 `--all-banner` 搭配过小的窗口、包长或 snaplen，或搭配 `Multi_AfterHandle` / `Multi_DynamicNext`，会给出警告。
+启动时如果 `--all-banner` 搭配过小的窗口、包长或 snaplen，或搭配 JARM 这类多 slot 探测，会给出警告。
 
 ## 速率计算
 
@@ -97,8 +97,7 @@ rate             ≈  3 × 期望 ZBanner 目标/秒
 
 例如，想要约 5,000 个完成 ZBanner 目标/秒，需要 `--rate 15000`。即便这个比例也只是近似：
 closed 端口、零窗口响应、丢包都会让实际包数变少；`--with-ack` 每目标多加一个包；
-`--no-rst` 去掉最后的 RST（约为 `rate / 2`，但它是研究开关）；`--all-banner` 和 multi-probe
-还可能增加包数。其它模块、或不同探测/目标组合，应实测线上包数与目标数的比例，不要假设 3。
+`--no-rst` 去掉最后的 RST（约为 `rate / 2`，但它是研究开关）；`--all-banner` 和 JARM 多 slot plan 还可能增加包数。其它模块、或不同探测/目标组合，应实测线上包数与目标数的比例，不要假设 3。
 `ZBANNER_TRACE` 计数器只属于 ZBanner。
 
 ## 用法
@@ -172,7 +171,7 @@ Windows 上扫描器使用 Npcap。本地测试（Windows 11、Npcap loopback + 
 - **默认只读一个 banner 段。** 非 SYN 模板通告 1024 字节窗口，且首个数据段之后立即 RST，因此大 banner 和多段 TLS 握手会被截断。请使用 `--all-banner`，并调整 `--tcp-win`、`--max-packet-len` 和 `--snaplen`；这些值仍太小时启动会警告。
 - **不处理乱序。** 数据段按到达顺序处理，没有重组队列，也没有重新排序。
 - **载荷大小受包缓冲限制。** 有效上限是 `PKT_BUF_SIZE - 64`（1984 字节）。声明/实际载荷超过上限时不会发送，并记录警告；不支持把超大探测载荷分段。
-- **multi-probe 需要足够的源端口。** 源端口范围必须至少提供 `multi_num` 个槽位，启动时会拒绝过小的范围。`--all-banner` 搭配 `Multi_AfterHandle` 或 `Multi_DynamicNext` 时会警告，因为这些模式可能按段输出结果。
+- **多 slot 探测需要足够的源端口。** JARM 使用十个 slot；源端口范围必须至少覆盖 slot 数量，启动时会拒绝过小的范围。`--all-banner` 搭配多 slot 探测时会警告，因为可能按段输出结果。
 - **只有一个接收线程。** 去重与校验都跑在那一个接收线程上，因此无论你配置多少发送或处理线程，接收侧处理都是吞吐上限。
 
 完整的清单（含传输层与平台方面的注意事项）见 [known-limitations.md](./known-limitations.md)。要在 ZBanner 与有状态引擎之间做选择，见 [scanning-modes.md](./scanning-modes.md) 与 [hltcp.md](./hltcp.md)。

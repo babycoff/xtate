@@ -275,8 +275,6 @@ static void recogudp_close() {
 Probe RecogUdpProbe = {
     .name       = "recog-udp",
     .type       = ProbeType_UDP,
-    .multi_mode = Multi_Null,
-    .multi_num  = 1,
     .params     = recogudp_parameters,
     .short_desc = "Try to match Recog fingerprints in UDP scan.",
     .desc =

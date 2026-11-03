@@ -10,7 +10,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 
 `-scan` 是必需的；只有当模块声明“不需要探测”时 `-probe` 才是可选的。模块参数分别通过 `-scan-arg` 和 `-probe-arg` 传入，每个都是一整条带引号的字符串（见 `--help-scan <module>`、`--help-probe <module>`）。
 
-> 本文档对应 Xtate v2.28.12。命令行才是最终依据：`--help`、`--help-scan`、`--help-probe`。
+> 本文档对应 Xtate v2.28.13。命令行才是最终依据：`--help`、`--help-scan`、`--help-probe`。
 
 ## 选择扫描模块
 
@@ -47,7 +47,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 | 模块 | 每目标典型发包数 | 主要变化 |
 |:---|:---|:---|
 | `tcp-syn` | 约 1 个初始 SYN | `--send-rst` 会为开放响应多发一个 RST |
-| `zbanner` | 默认正常完成时约 3 个：SYN、ACK+载荷、RST | `--no-rst` 少一个；`--with-ack` 多一个；closed/零窗口、`--all-banner`、multi-probe 和丢包都会改变比例 |
+| `zbanner` | 默认正常完成时约 3 个：SYN、ACK+载荷、RST | `--no-rst` 少一个；`--with-ack` 多一个；closed/零窗口、`--all-banner`、multi-slot 和丢包都会改变比例 |
 | `tcp-state` / HLTCP | 不固定：SYN、ACK+探测、重传、ACK/FIN/RST | 取决于 TCP 状态、探测/子探测、目标行为和重传策略；**不要使用固定倍数** |
 | `udp`、`icmp-*`、`sctp-init` | 通常每目标一个请求 | 重试、ICMP 错误和探测行为可能增加包 |
 
@@ -157,11 +157,16 @@ sudo ./bin/xtate -ip 198.51.100.7 -p o:1-20 -scan yarrp-udp \
 
 两者都会产生 `path`（TTL 超限）和 `destination` 结果，并带 `distance` 字段；路径在后续处理中按 `(target, distance)` 重建。
 
-## 多探测模式
+## 探测 slot
 
-有些探测模块会对一个目标发送多份载荷（JARM 需要 10 个 ClientHello）。模式是探测模块自身的属性，不是命令行开关：`Multi_Null`（一份载荷，多数探测模块）、`Multi_Direct`（任何响应前就发出全部槽位）、`Multi_IfOpen`（收到 SYN-ACK 后发剩余槽位）、`Multi_AfterHandle`（处理完第一个响应后发，如 `jarm`）。
+JARM 是目前唯一内置的多 slot 探针。它声明 `ProbeSlotPlan`：
+`count = 10`、`trigger = after first reply`。slot 0 正常发送；只有第一个
+slot 的响应被判定为 TLS 记录后，才发送剩余九个 slot。
 
-槽位靠**源端口**区分：槽位 `i` 使用 `source_port_start + i`，从响应的目的端口可以反推槽位号。范围必须足够容纳探测模块的 `multi_num`：默认跨度为 256 个端口，显式指定的 `-src-port` 范围必须包含 2 的幂个端口。槽位多于范围会导致响应被静默丢弃。
+slot 靠**源端口**区分：slot `i` 使用 `source_port_start + i`，响应目的端口
+反推 slot 编号。源端口范围必须覆盖 plan 的 slot 数量。引擎不保存逐目标
+group，也不在扫描器里聚合；每个 slot 输出自己的 `jarm_part`，由输出侧
+脚本合并。
 
 ## 防火墙规则
 

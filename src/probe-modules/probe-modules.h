@@ -65,7 +65,7 @@ typedef size_t (*probe_modules_make_payload)(ProbeTarget   *target,
  * This func would be called even if xtate won't send the payload.
  *
  * !Must be implemented for ProbeType_TCP.
- * !Must check index range in multi-probe
+ * !Must check index range in probe slot
  * !Must be thread safe for itself.
  *
  * @param target info of target
@@ -109,8 +109,7 @@ typedef bool (*probe_modules_validate_response)(ProbeTarget         *target,
  * @param px response data
  * @param sizeof_px len of reponse, must>0
  * @param item to define output content.
- * @return true for starting multi-probe in Multi_AfterHandle mode
- * or num=index+1 to set next probe in Multi_DynamicNext mode.
+ * @return currently reserved; multi-slot triggering is owned by ProbeSlotPlan.
  */
 typedef unsigned (*probe_modules_handle_response)(unsigned             th_idx,
                                                   ProbeTarget         *target,
@@ -175,8 +174,7 @@ typedef void (*probe_modules_make_hello)(DataPass *pass, ProbeState *state,
  * @param target info of a target
  * @param px response data
  * @param sizeof_px len of reponse
- * @return true for starting multi-probe in Multi_AfterHandle mode
- * or num=index+1 to set next probe in Multi_DynamicNext mode.
+ * @return currently reserved; multi-slot triggering is owned by ProbeSlotPlan.
  */
 typedef unsigned (*probe_modules_parse_response)(
     DataPass *pass, ProbeState *state, OutConf *out, ProbeTarget *target,
@@ -206,28 +204,27 @@ typedef void (*probe_modules_conn_close)(ProbeState  *state,
  */
 typedef void (*probe_modules_close)();
 
-typedef enum MultiProbeMode {
-    Multi_Null        = 0,
-    /*send multi_num probes(diff in index) from very beginning even don't know
-       openness.*/
-    Multi_Direct      = 1,
-    /**
-     * send multi_num probes(diff in index) if port is open.
-     * !Just for TCP
-     * */
-    Multi_IfOpen      = 2,
-    /*send multi-num probes(diff in index) after first handled.*/
-    Multi_AfterHandle = 3,
-    /*send a specified probe(with index+1) after every time handled*/
-    Multi_DynamicNext = 4,
-} MultiMode;
+typedef enum ProbeSlotTrigger {
+    ProbeSlot_None = 0,
+    /* Send remaining slots only after the first slot gets a reply that the
+     * probe accepts.  JARM uses this for its ten TLS ClientHello variants. */
+    ProbeSlot_AfterFirstReply = 1,
+} ProbeSlotTrigger;
+
+typedef bool (*probe_slots_continue)(ProbeTarget         *target,
+                                     const unsigned char *px,
+                                     unsigned             sizeof_px);
+
+typedef struct ProbeSlotPlan {
+    unsigned           count; /* 0 or 1 means a single flow; 10 for JARM */
+    ProbeSlotTrigger   trigger;
+    probe_slots_continue continue_cb; /* optional, for AfterFirstReply */
+} ProbeSlotPlan;
 
 typedef struct ProbeModule {
     const char     *name;
     const ProbeType type;
-    const MultiMode multi_mode;
-    /*useless for Multi_DynamicNext or Multi_Null*/
-    const unsigned  multi_num;
+    const ProbeSlotPlan slots;
     /*just for statefull scan*/
     unsigned        hello_wait;
     const char     *short_desc; /*an optional short description*/
@@ -252,6 +249,10 @@ typedef struct ProbeModule {
     /*for close*/
     probe_modules_close              close_cb;
 } Probe;
+
+static inline unsigned probe_slot_count(const Probe *probe) {
+    return (probe && probe->slots.count > 1) ? probe->slots.count : 1;
+}
 
 Probe *get_probe_module_by_name(const char *name);
 

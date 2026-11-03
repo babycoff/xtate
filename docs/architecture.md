@@ -126,8 +126,8 @@ guard against accidentally scanning the whole Internet.
 Source addresses and ports can be randomised inside their configured ranges. The source
 port range deserves attention: both ZBanner and HLTCP encode the probe slot in the source
 port (`first + index`), which is how a reply is matched to the probe that produced it.
-`--source-port` must therefore be at least as wide as the probe's `multi_num`, or
-multi-probe replies will be filtered out. `--shard` and `--resume-index` split one logical
+`--source-port` must therefore be at least as wide as the probe's slot count, or
+slot replies will be filtered out. `--shard` and `--resume-index` split one logical
 scan across processes and restart points, both on top of the same permutation.
 
 ## Results

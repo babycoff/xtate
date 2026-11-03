@@ -153,7 +153,7 @@ static size_t jarm_make_payload(ProbeTarget   *target,
 }
 
 static size_t jarm_get_payload_length(ProbeTarget *target) {
-    if (target->index >= JarmProbe.multi_num)
+    if (target->index >= JarmProbe.slots.count)
         return 0;
 
     struct JarmConfig jc;
@@ -169,6 +169,17 @@ static size_t jarm_get_payload_length(ProbeTarget *target) {
     unsigned char buf[TLS_CLIENTHELLO_MAX_LEN];
 
     return jarm_create_ch(&jc, buf, TLS_CLIENTHELLO_MAX_LEN);
+}
+
+static bool jarm_should_continue(ProbeTarget *target,
+                                 const unsigned char *px,
+                                 unsigned sizeof_px) {
+    UNUSEDPARM(target);
+    return sizeof_px >= 7 && px[1] == 0x03 &&
+           (px[2] == 0x00 || px[2] == 0x01 || px[2] == 0x02 ||
+            px[2] == 0x03) &&
+           (px[0] == TLS_RECORD_CONTENT_TYPE_ALERT ||
+            px[0] == TLS_RECORD_CONTENT_TYPE_HANDSHAKE);
 }
 
 static unsigned jarm_handle_response(unsigned th_idx, ProbeTarget *target,
@@ -203,7 +214,7 @@ static unsigned jarm_handle_response(unsigned th_idx, ProbeTarget *target,
                 dach_append_str(&item->probe_report, "jarm_part", tmp_data,
                                 strlen(tmp_data));
                 dach_set_int(&item->probe_report, "jarm_slots",
-                             JarmProbe.multi_num);
+                             JarmProbe.slots.count);
 
                 if (jarm_conf.probe_index) {
                     dach_set_int(&item->probe_report, "jarm_slot",
@@ -212,7 +223,7 @@ static unsigned jarm_handle_response(unsigned th_idx, ProbeTarget *target,
                 } else {
                     dach_set_int(&item->probe_report, "jarm_slot",
                                  target->index + 1);
-                    return 1;
+                    return 0;
                 }
             }
         }
@@ -227,8 +238,9 @@ static unsigned jarm_handle_response(unsigned th_idx, ProbeTarget *target,
 Probe JarmProbe = {
     .name       = "jarm",
     .type       = ProbeType_TCP,
-    .multi_mode = Multi_AfterHandle,
-    .multi_num  = 10,
+    .slots      = {.count = 10,
+                   .trigger = ProbeSlot_AfterFirstReply,
+                   .continue_cb = jarm_should_continue},
     .params     = jarm_parameters,
     .short_desc = "Collect JARM probe parts from 10 ClientHello slots.",
     .desc = "Jarm Probe sends 10 TLS ClientHello variants if the first response "

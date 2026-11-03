@@ -728,26 +728,6 @@ static const char *_what_to_string(TcpWhat state) {
     }
 }
 
-/***************************************************************************
- * This function could be used without TCB.
- * So we could start any conn from any TCP Conn Table.
- ***************************************************************************/
-static void _tcpcon_send_raw_SYN(TCP_Table *tcpcon, ipaddress ip_them,
-                                 unsigned port_them, ipaddress ip_me,
-                                 unsigned port_me, uint32_t seqno_me) {
-    PktBuf *response = 0;
-
-    assert(ip_me.version != 0 && ip_them.version != 0);
-
-    response = stack_get_pktbuf(tcpcon->stack);
-
-    response->length = tcp_create_by_template(
-        tcpcon->syn_template, ip_them, port_them, ip_me, port_me, seqno_me, 0,
-        TCP_FLAG_SYN, 0, 0, NULL, 0, response->px, sizeof(response->px));
-
-    stack_transmit_pktbuf(tcpcon->stack, response);
-}
-
 static bool _tcp_syn_retry_allowed(TCB *tcb) {
     if (tcb->syns_sent >= TCP_CORE_MAX_SYN_RETRIES)
         return false;
@@ -1471,7 +1451,7 @@ again:
 
                     DataPass pass = {0};
 
-                    unsigned is_multi = probe->parse_response_cb(
+                    probe->parse_response_cb(
                         &pass, &socket->tcb->probe_state,
                         socket->tcpcon->out_conf, &target,
                         (const unsigned char *)payload, payload_length);
@@ -1486,47 +1466,6 @@ again:
                                          pass.is_dynamic);
                     if (pass.is_close)
                         tcpapi_close(socket);
-
-                    /**
-                     * multi-probe Multi_AfterHandle.
-                     * we use ip info from target because tcb maybe destroyed
-                     * now
-                     * */
-                    if (probe->multi_mode == Multi_AfterHandle && is_multi &&
-                        target.target.port_me ==
-                            socket->tcpcon->src_port_start) {
-                        for (unsigned idx = 1; idx < probe->multi_num; idx++) {
-                            unsigned cookie = get_cookie(
-                                target.target.ip_them, target.target.port_them,
-                                target.target.ip_me,
-                                socket->tcpcon->src_port_start + idx,
-                                socket->tcpcon->entropy);
-
-                            _tcpcon_send_raw_SYN(
-                                socket->tcpcon, target.target.ip_them,
-                                target.target.port_them, target.target.ip_me,
-                                socket->tcpcon->src_port_start + idx, cookie);
-                        }
-                    }
-
-                    /**
-                     * multi-probe Multi_DynamicNext
-                     * we use ip info from target because tcb maybe destroyed
-                     * now
-                     * */
-                    if (probe->multi_mode == Multi_DynamicNext && is_multi) {
-                        unsigned cookie = get_cookie(
-                            target.target.ip_them, target.target.port_them,
-                            target.target.ip_me,
-                            socket->tcpcon->src_port_start + is_multi - 1,
-                            socket->tcpcon->entropy);
-
-                        _tcpcon_send_raw_SYN(
-                            socket->tcpcon, target.target.ip_them,
-                            target.target.port_them, target.target.ip_me,
-                            socket->tcpcon->src_port_start + is_multi - 1,
-                            cookie);
-                    }
 
                     break;
                 }

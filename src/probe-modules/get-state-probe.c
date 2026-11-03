@@ -94,8 +94,6 @@ static unsigned getstate_parse_response(DataPass *pass, ProbeState *state,
 Probe GetStateProbe = {
     .name       = "get-state",
     .type       = ProbeType_STATE,
-    .multi_mode = Multi_Null,
-    .multi_num  = 1,
     .hello_wait = 0,
     .params     = getstate_parameters,
     .short_desc = "A probe that sends HTTP GET request to test and debug "

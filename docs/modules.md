@@ -55,8 +55,8 @@ firewall rules, is covered in [Scanning modes](./scanning-modes.md).
 ## Probe modules (21)
 
 A probe declares a **type** that must match the scan module: `tcp` for `zbanner`, `udp` for
-`udp`, `state` for `tcp-state`. It also declares a multi-probe mode and count; see
-[Scanning modes](./scanning-modes.md#multi-probe-modes).
+`udp`, `state` for `tcp-state`. It may declare a `ProbeSlotPlan` (currently only JARM); see
+[Scanning modes](./scanning-modes.md#probe-slots).
 
 ### General (11)
 
@@ -97,8 +97,8 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80 -scan zbanner -probe lua-tcp \
 ```
 
 Lua is loaded at runtime; if no Lua shared library is available the probes are still listed but fail at startup with a load error (install Lua 5.3 or 5.4). Lua probes use separate tx/rx/handler Lua states; selecting `lua-tcp`/`lua-udp` currently forces `--tx-thread-count 1` and `--rx-handler-count 1`.
-The example scripts in `lua-probes/` declare `ProbeName`, `ProbeType`, `MultiMode` and
-`MultiNum` in the script header.
+The example scripts in `lua-probes/` declare `ProbeName`, `ProbeType` and
+`ProbeDesc` in the script header.
 
 ### Plumbing (3)
 
@@ -146,7 +146,7 @@ from their own sub-parameters and use the global target options only where noted
 - Name matching is forgiving: case and `-`, `_`, `.` are ignored, so `tls_state` selects
   `tls-state`. `--search-module <text>` fuzzy-searches all four registries.
 - `--list-scan`, `--list-probe`, `--list-out`, `--list-gen` print the registry in order with
-  a one-line description; `--help-<kind> <name>` prints type, multi-probe mode, count and
+  a one-line description; `--help-<kind> <name>` prints type, slot plan and
   the module's own parameter table.
 - Optional dependencies change the inventory. A build without OpenSSL has no `jarm` or
   `tls-state`; without PCRE2 there is no `hello-udp`, `recog*` or `nmap*`; without libbson /

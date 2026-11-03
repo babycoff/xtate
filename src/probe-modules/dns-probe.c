@@ -349,8 +349,6 @@ static void dns_close() { FREE(dns_conf.req_name); }
 Probe DnsProbe = {
     .name       = "dns",
     .type       = ProbeType_UDP,
-    .multi_mode = Multi_Null,
-    .multi_num  = 1,
     .params     = dns_parameters,
     .short_desc = "Do specified DNS record request.",
     .desc =

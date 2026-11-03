@@ -36,7 +36,7 @@ static struct TCP_ConSet tcpcon_set;
 
 /**
  *For calc the conn index.
- * NOTE: We use a trick of src-port to differenciate multi-probes to avoid
+ * NOTE: We use a trick of src-port to differenciate probe slots to avoid
  * mutual interference of connections.
  * Be careful to the source port range and probe num. Source port range is 256
  *in default and can be set with flag `--source-port`.
@@ -361,11 +361,6 @@ static bool tcpstate_transmit(uint64_t entropy, ScanTarget *target,
                              src_port_start + target->index, cookie, 0,
                              TCP_FLAG_SYN, 0, 0, NULL, 0, px, PKT_BUF_SIZE);
 
-    /*multi-probe Multi_Direct*/
-    if (TcpStateScan.probe->multi_mode == Multi_Direct &&
-        target->index + 1 < TcpStateScan.probe->multi_num)
-        return true;
-
     return false;
 }
 
@@ -522,24 +517,6 @@ static void tcpstate_handle(unsigned th_idx, uint64_t entropy,
         stack_incoming_tcp(tcpcon, tcb, TCP_WHAT_SYNACK, 0, 0, recved->secs,
                            recved->usecs, seqno_them + 1, seqno_me);
 
-        /*multi-probe Multi_IfOpen and filter zerowin*/
-        if (TcpStateScan.probe->multi_mode == Multi_IfOpen &&
-            recved->parsed.port_dst == src_port_start) {
-            for (unsigned idx = 1; idx < TcpStateScan.probe->multi_num; idx++) {
-                unsigned cookie = get_cookie(
-                    recved->parsed.src_ip, recved->parsed.port_src,
-                    recved->parsed.dst_ip, src_port_start + idx, entropy);
-
-                PktBuf *pkt_buffer = stack_get_pktbuf(stack);
-
-                pkt_buffer->length = tcp_create_packet(
-                    recved->parsed.src_ip, recved->parsed.port_src,
-                    recved->parsed.dst_ip, src_port_start + idx, cookie, 0,
-                    TCP_FLAG_SYN, 0, 0, NULL, 0, pkt_buffer->px, PKT_BUF_SIZE);
-
-                stack_transmit_pktbuf(stack, pkt_buffer);
-            }
-        }
     } else if (tcb) {
 
         if (tcpstate_conf.record_all_ttl)

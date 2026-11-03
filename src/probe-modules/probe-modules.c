@@ -107,23 +107,6 @@ const char *get_probe_type_name(const ProbeType type) {
     }
 }
 
-static const char *get_multi_mode_name(const MultiMode type) {
-    switch (type) {
-        case Multi_Null:
-            return "no multi-probe";
-        case Multi_Direct:
-            return "send directly";
-        case Multi_IfOpen:
-            return "send if port open";
-        case Multi_AfterHandle:
-            return "send after handled";
-        case Multi_DynamicNext:
-            return "send next dynamicly";
-        default:
-            return "";
-    }
-}
-
 int probe_type_to_string(unsigned type, char *string, size_t str_len) {
     int ret = 0;
 
@@ -185,9 +168,12 @@ void help_probe_module(Probe *module) {
     printf("  %s%s\n", i18n_tr("ProbeModule Name: "), module->name);
     printf("  %s%s\n", i18n_tr("ProbeModule Type: "),
            get_probe_type_name(module->type));
-    printf("  %s%s\n", i18n_tr("Multi-probe mode: "),
-           get_multi_mode_name(module->multi_mode));
-    printf("  %s%u\n", i18n_tr("Multi-probe count: "), module->multi_num);
+    printf("  %s%u\n", i18n_tr("Slot count: "),
+           probe_slot_count(module));
+    printf("  %s%s\n", i18n_tr("Slot trigger: "),
+           module->slots.trigger == ProbeSlot_AfterFirstReply
+               ? "after first reply"
+               : "single");
     printf("  %s%u (for stateful probe)\n", i18n_tr("Hello wait second: "),
            module->hello_wait);
     printf("\n");

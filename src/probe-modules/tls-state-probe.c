@@ -851,16 +851,6 @@ static bool tlsstate_init(const XConf *xconf) {
         }
     }
 
-    /**
-     * multi-probe Multi_Direct
-     * Pass multi-probe attributes of subprobe
-     * Well...ugly but works.
-     * */
-    MultiMode *mode = (MultiMode *)&TlsStateProbe.multi_mode;
-    unsigned  *num  = (unsigned *)&TlsStateProbe.multi_num;
-    *mode           = tlsstate_conf.subprobe->multi_mode;
-    *num            = tlsstate_conf.subprobe->multi_num;
-
     /*init for subprobe*/
     return tlsstate_conf.subprobe->init_cb(xconf);
 
@@ -1596,8 +1586,6 @@ static unsigned tlsstate_parse_response(DataPass *pass, ProbeState *state,
 Probe TlsStateProbe = {
     .name       = "tls-state",
     .type       = ProbeType_STATE,
-    .multi_mode = Multi_Null,
-    .multi_num  = 1,
     .hello_wait = 0,
     .params     = tlsstate_parameters,
     .short_desc = "Do TLS upper-layer scan with specified probe.",

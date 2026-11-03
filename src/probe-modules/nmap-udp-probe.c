@@ -183,8 +183,6 @@ unsigned nmapudp_handle_response(unsigned th_idx, ProbeTarget *target,
 Probe NmapUdpProbe = {
     .name       = "nmap-udp",
     .type       = ProbeType_UDP,
-    .multi_mode = Multi_Null,
-    .multi_num  = 0,
     .params     = nmapservice_parameters,
     .short_desc = "Use specified Nmap probe to identify service over udp.",
     .desc       = "NmapUdpProbe sends specified Nmap probe from loaded "

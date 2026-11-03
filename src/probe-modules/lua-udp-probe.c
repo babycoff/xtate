@@ -14,8 +14,6 @@
 
 #define LUA_PROBE_VAR_PROBENAME "ProbeName"
 #define LUA_PROBE_VAR_PROBETYPE "ProbeType"
-#define LUA_PROBE_VAR_MULTIMODE "MultiMode"
-#define LUA_PROBE_VAR_MULTINUM  "MultiNum"
 #define LUA_PROBE_VAR_PROBEDESC "ProbeDesc"
 
 #define LUA_PROBE_FUNC_MAKE_PAYLOAD      "Make_payload"
@@ -115,40 +113,6 @@ static bool sync_probe_config() {
             "" LUA_PROBE_NAME ": need a %s `" LUA_PROBE_VAR_PROBETYPE
             "` in %s.\n",
             get_probe_type_name(ProbeType_UDP), luaudp_conf.script);
-        return false;
-    }
-    lua_pop(luaudp_conf.Ltx, 1);
-
-    /*multi mode*/
-    MultiMode *mode = (MultiMode *)&LuaUdpProbe.multi_mode;
-    lua_getglobal(luaudp_conf.Ltx, LUA_PROBE_VAR_MULTIMODE);
-    if (lua_isinteger(luaudp_conf.Ltx, -1) == 0) {
-        LOG(LEVEL_ERROR,
-            "" LUA_PROBE_NAME ": no `" LUA_PROBE_VAR_MULTIMODE
-            "` setting in script %s.\n",
-            luaudp_conf.script);
-        return false;
-    }
-    *mode = lua_tointeger(luaudp_conf.Ltx, -1);
-    lua_pop(luaudp_conf.Ltx, 1);
-
-    /*multi num*/
-    unsigned *num = (unsigned *)&LuaUdpProbe.multi_num;
-    lua_getglobal(luaudp_conf.Ltx, LUA_PROBE_VAR_MULTINUM);
-    if (lua_isinteger(luaudp_conf.Ltx, -1) == 0) {
-        LOG(LEVEL_ERROR,
-            "" LUA_PROBE_NAME ": no `" LUA_PROBE_VAR_MULTINUM
-            "` setting in script %s.\n",
-            luaudp_conf.script);
-        return false;
-    }
-    if (lua_tointeger(luaudp_conf.Ltx, -1) > 1) {
-        *num = lua_tointeger(luaudp_conf.Ltx, -1);
-    } else if (lua_tointeger(luaudp_conf.Ltx, -1) < 0) {
-        LOG(LEVEL_ERROR,
-            "" LUA_PROBE_NAME ": invalid `" LUA_PROBE_VAR_MULTINUM
-            "` setting in script %s.\n",
-            luaudp_conf.script);
         return false;
     }
     lua_pop(luaudp_conf.Ltx, 1);
@@ -502,8 +466,6 @@ void luaudp_close() {
 Probe LuaUdpProbe = {
     .name       = "lua-udp",
     .type       = ProbeType_UDP,
-    .multi_mode = Multi_Null,
-    .multi_num  = 1,
     .params     = luaudp_parameters,
     .short_desc = "Use user-defined LUA script to do UDP scan.",
     .desc       = LUA_PROBE_NAME
@@ -514,8 +476,6 @@ Probe LuaUdpProbe = {
     "include:\n"
     "`" LUA_PROBE_VAR_PROBENAME "`\n"
     "`" LUA_PROBE_VAR_PROBETYPE "`\n"
-    "`" LUA_PROBE_VAR_MULTIMODE "`\n"
-    "`" LUA_PROBE_VAR_MULTINUM "`\n"
     "`" LUA_PROBE_VAR_PROBEDESC "`\n"
     "And implement some global functions for calling back include:\n"
     "`" LUA_PROBE_FUNC_MAKE_PAYLOAD "`\n"

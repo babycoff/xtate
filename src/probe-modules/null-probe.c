@@ -6,8 +6,6 @@ extern Probe NullProbe;
 Probe NullProbe = {
     .name       = "null",
     .type       = ProbeType_TCP,
-    .multi_mode = Multi_Null,
-    .multi_num  = 1,
     .params     = NULL,
     .short_desc =
         "Send nothing and just wait for response in stateless TCP scan.",

@@ -129,7 +129,7 @@ For multi-segment data, the defaults are too small. A practical preset is:
 ```
 
 Startup warns when `--all-banner` is combined with a small window, packet length or snaplen,
-and when it is combined with `Multi_AfterHandle` / `Multi_DynamicNext`.
+and when it is combined with a multi-slot probe such as JARM.
 
 ## Rate accounting
 
@@ -158,7 +158,7 @@ rate               ~=  3 x desired ZBanner targets/s
 For example, `--rate 15000` is needed for roughly 5,000 completed ZBanner targets/s. Even
 this is approximate: closed ports, zero-window replies and lost responses produce fewer
 packets; `--with-ack` adds one packet per target; `--no-rst` removes the final RST (about
-`rate / 2`, but it is a research switch); `--all-banner` and multi-probe modes can add
+`rate / 2`, but it is a research switch); `--all-banner` and the JARM multi-slot plan can add
 further packets. For other modules, or for a different probe/target mix, measure the actual
 wire-to-target ratio instead of assuming 3. The `ZBANNER_TRACE` benchmark counters are
 specific to ZBanner.
@@ -271,10 +271,9 @@ without a table.
 - **Payload size is bounded by the packet buffer.** The effective payload ceiling is
   `PKT_BUF_SIZE - 64` (1984 bytes). A probe whose declared/made payload is larger is not
   sent; a warning is logged. There is no segmentation of oversized probe payloads.
-- **Multi-probe needs enough source ports.** The source-port range must provide at least
-  `multi_num` slots; startup refuses a too-small range. `--all-banner` with
-  `Multi_AfterHandle` or `Multi_DynamicNext` warns because those modes may emit per-segment
-  results.
+- **Probe slots need enough source ports.** JARM uses ten slots; the source-port range must
+  provide at least the slot count, and startup refuses a too-small range. `--all-banner`
+  with a multi-slot probe warns because it may emit per-segment results.
 - **Single receiver.** Deduplication and validation run on the one receive thread, so
   receive-side processing is the throughput ceiling regardless of how many transmitters or
   handlers you configure.

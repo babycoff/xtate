@@ -326,8 +326,6 @@ static void helloudp_close() {
 Probe HelloUdpProbe = {
     .name       = "hello-udp",
     .type       = ProbeType_UDP,
-    .multi_mode = Multi_Null,
-    .multi_num  = 1,
     .params     = helloudp_parameters,
     .short_desc = "Send user-specified payload and get response in UDP scan.",
     .desc = "HelloUdpProbe is the udp version of HelloPorbe, it uses static"
