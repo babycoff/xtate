@@ -146,12 +146,34 @@ sudo ./bin/xtate -ip 10.0.0.0/24 -p 80 -scan tcp-state -probe http-state -show i
 
 模块专属选项经 `--scan-arg`（给 `tcp-state`）和 `--probe-arg`（给探测模块）传入。例如 `-scan-arg '--conn-expire 15 --record-all-ttl'` 会缩短连接存活时间并记录每个段的报文级细节；各模块的选项由 `--help-probe` 和 `--help-scan` 列出。
 
+## 重传上限与刻意保持的简单性
+
+HLTCP 是短生命周期、低状态的栈，不是通用 TCP。唯一的重传加固是有上限的重传预算：
+
+- 数据段最多重传 `TCP_CORE_MAX_DATA_RETRIES`（3）次；超过后向对端发 RST 并释放 TCB；
+- 正常情况下不可达的 `SYN_SENT` 分支中，SYN 重发最多 `TCP_CORE_MAX_SYN_RETRIES`（3）次，
+  仅作为防御性保护；`tcp-state` 只在收到 SYN-ACK 后才创建 TCB，因此初始 SYN 仍然不会由
+  这个路径重传；
+- ACK 推进发送队列，或开始新一批数据时，重试计数清零。
+
+刻意不做：
+
+- SRTT/RTTVAR 自适应 RTO（保持固定 1 秒）；
+- 指数退避；
+- 乱序重组队列；
+- 本地快速重传/SACK；
+- 拥塞控制或每段定时器。
+
+这些都会增加每连接内存、每包计算或 HLTCP 短探测不需要的协议状态。乱序数据会被回 ACK
+期望序号并丢弃，让对端自己的 TCP 快速重传。完整性明确让位于内存/CPU 可预测性和扫描吞吐。
+不能接受这种取舍的目标请重跑，或使用完整 TCP 协议栈。
+
 ## 已知限制
 
 - **不重传 SYN。** TCB 只在收到 SYN-ACK 后才存在，所以 `SYN_SENT` 的超时分支永远不会触发。丢掉一个 SYN 就是一次无声的漏报——重跑扫描，或把范围收窄到更有价值的目标。
 - **重复/丢 ACK 修复是部分的。** 对端重传的 SYN-ACK 会重新被 ACK；重复的旧数据或未来段也会立即回一个“期望序号”的 ACK，让对端可以更快重传。但还没有针对任意丢 ACK 的完整修复状态机。
 - **不处理乱序。** 超出期望序号的数据直接丢弃、不缓存；立即回 ACK 只是告诉对端我们期望什么，大证书链和多段 TLS flight 仍然依赖对端重传。
-- **固定 1 秒 RTO，无退避。** 在高延迟链路上会重传得过于急切。
+- **固定 1 秒 RTO，无退避。** 在高延迟链路上会重传得过于急切。数据段最多重传三次，超过后发 RST 关闭连接。
 - **默认没有优雅关闭。** FIN 得到 RST 应答，没有 `TIME_WAIT`，TLS 也不发 `close_notify`。目标会看到异常终止——对扫描可接受，对长期监测则很吵。`tls-state` 的研究开关 `-probe-arg "--graceful-tls-close"` 会在 RST 之前发送 TLS `close_notify`；它多花一个包/往返，不推荐用于普通扫描。
 - **关闭端口以 `info` 等级报告。** 匹配不到 TCB 的 RST 会输出 `"closed" because "rst"`；扫描器的去重表会抑制重复 RST。没有 `-show info` 时这些行默认隐藏。
 - **SNI/ALPN 是可选开启的。** 默认情况下虚拟主机和 CDN 目标返回默认证书；当目标 IP 属于一个已知主机名时，在 `tls-state` 上设置 `-sni`/`-alpn`。
@@ -161,7 +183,7 @@ sudo ./bin/xtate -ip 10.0.0.0/24 -p 80 -scan tcp-state -probe http-state -show i
 
 这些是设计决定，不是 TODO：
 
-- **SYN 重传、RTT 自适应 RTO、乱序缓冲。** TCB 只在收到 SYN-ACK 后才存在，所以 SYN 重传需要在 scan 层维护 pending SYN 表；RTT 需要给每个未确认段记录发送时间；乱序缓冲需要 per-connection 内存。三者都会把 HLTCP 推离 hybrid-state、低内存模型。扫描场景的恢复手段是重跑（`--repeat`，或再跑一遍），而不是每目标重试状态机。
+- **SYN 重传、RTT 自适应 RTO、乱序缓冲。** TCB 只在收到 SYN-ACK 后才存在，所以 SYN 重传需要在 scan 层维护 pending SYN 表；RTT 需要给每个未确认段记录发送时间；乱序缓冲需要 per-connection 内存。三者都会把 HLTCP 推离 hybrid-state、低内存模型。唯一有意的加固是有上限的数据重传；丢 SYN 的恢复手段是重跑（`--repeat`，或再跑一遍），而不是每目标重试状态机。
 - **通用 ACK 修复状态机。** 重复 SYN-ACK、重复/未来数据会在能避免 30 秒卡死的地方回 ACK，但 Xtate 不会为每一个丢失的 ACK 主动发纯 ACK。额外的 ACK 流量几乎不改变扫描结果，却浪费带宽，因此有意不做。
 - **去重被关闭。** `tcp-state` 把去重交给状态机自己处理，因此重复报文行为比 ZBanner 弱。
 

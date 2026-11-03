@@ -94,6 +94,8 @@
 #define TCP_CORE_DEFAULT_EXPIRE 30 /* half a minute before destroying tcb */
 #define TCP_CORE_DEFAULT_MSS    1460
 #define TCP_CORE_RTO_SECS       1
+#define TCP_CORE_MAX_SYN_RETRIES  3
+#define TCP_CORE_MAX_DATA_RETRIES 3
 /* Per-table memory budget for live TCBs. A stateful scan must not turn a very
  * high packet rate into unbounded heap growth; excess connections are dropped
  * rather than queued. */
@@ -159,6 +161,7 @@ struct TCP_Control_Block {
     AppState    app_state;
     uint8_t     ttl;
     uint8_t     syns_sent; /* reconnect */
+    uint8_t     data_retries; /* consecutive data timeout retransmissions */
     uint16_t    mss;       /* maximum segment size 1460 */
     time_t      when_created;
     unsigned    is_active : 1; /*in-use/allocated or to be del soon*/
@@ -745,6 +748,20 @@ static void _tcpcon_send_raw_SYN(TCP_Table *tcpcon, ipaddress ip_them,
     stack_transmit_pktbuf(tcpcon->stack, response);
 }
 
+static bool _tcp_syn_retry_allowed(TCB *tcb) {
+    if (tcb->syns_sent >= TCP_CORE_MAX_SYN_RETRIES)
+        return false;
+    tcb->syns_sent++;
+    return true;
+}
+
+static bool _tcp_data_retry_allowed(TCB *tcb) {
+    if (tcb->data_retries >= TCP_CORE_MAX_DATA_RETRIES)
+        return false;
+    tcb->data_retries++;
+    return true;
+}
+
 /***************************************************************************
  * Called upon timeouts when an acknowledgement hasn't been received in
  * time. Will resend the segments.
@@ -815,6 +832,11 @@ static void _tcb_seg_send(TCP_Table *tcpcon, TCB *tcb, const void *buf,
     for (next = &tcb->segments; *next; next = &(*next)->next) {
         seqno = (unsigned)((*next)->seqno + (*next)->length);
     }
+
+    /* A new data burst starts a fresh retry budget. Split segments recurse
+     * through this function with a non-empty list, so they do not reset it. */
+    if (tcb->segments == NULL)
+        tcb->data_retries = 0;
 
     /* Append this segment to the list */
     seg   = CALLOC(1, sizeof(*seg));
@@ -1162,14 +1184,19 @@ void stack_incoming_tcp(TCP_Table *tcpcon, TCB *tcb, TcpWhat what,
         case STATE_SYNSENT: {
             switch (what) {
                 case TCP_WHAT_TIMEOUT:
+                    if (!_tcp_syn_retry_allowed(tcb)) {
+                        _tcpcon_send_packet(tcpcon, tcb, TCP_FLAG_RST, 0, 0);
+                        _tcpcon_destroy_tcb(tcpcon, tcb, Reason_Anomaly);
+                        break;
+                    }
                     _tcpcon_send_packet(tcpcon, tcb, TCP_FLAG_SYN, NULL, 0);
-                    tcb->syns_sent++;
                     break;
                 case TCP_WHAT_SYNACK:
                     tcb->seqno_them       = seqno_them;
                     tcb->seqno_them_first = seqno_them - 1;
                     tcb->seqno_me         = ackno_them;
                     tcb->seqno_me_first   = ackno_them - 1;
+                    tcb->data_retries     = 0;
 
                     _LOGtcb(tcb, 1, "%s connection established\n",
                             _what_to_string(what));
@@ -1229,7 +1256,8 @@ void stack_incoming_tcp(TCP_Table *tcpcon, TCB *tcb, TcpWhat what,
                     }
                     break;
                 case TCP_WHAT_ACK:
-                    _tcp_seg_acknowledge(tcb, ackno_them);
+                    if (_tcp_seg_acknowledge(tcb, ackno_them))
+                        tcb->data_retries = 0;
 
                     if (tcb->segments == NULL || tcb->segments->length == 0) {
                         /* We've finished sending everything */
@@ -1243,7 +1271,8 @@ void stack_incoming_tcp(TCP_Table *tcpcon, TCB *tcb, TcpWhat what,
                     }
                     break;
                 case TCP_WHAT_TIMEOUT:
-                    if (!_tcb_seg_resend(tcpcon, tcb)) {
+                    if (!_tcp_data_retry_allowed(tcb) ||
+                        !_tcb_seg_resend(tcpcon, tcb)) {
                         _tcpcon_send_packet(tcpcon, tcb, TCP_FLAG_RST, 0, 0);
                         _tcpcon_destroy_tcb(tcpcon, tcb, Reason_Anomaly);
                     }
@@ -1677,6 +1706,18 @@ int tcp_seg_ack_selftest(void) {
         table.tcb_limit = 4096;
         tcpcon_clamp_tcb_budget(&table, (uint64_t)sizeof(TCB) * 2000);
         TCP_SELFTEST_CHECK(table.tcb_limit == 2000, 14);
+    }
+
+    {
+        TCB retry;
+        unsigned i;
+        memset(&retry, 0, sizeof(retry));
+        for (i = 0; i < TCP_CORE_MAX_SYN_RETRIES; i++)
+            TCP_SELFTEST_CHECK(_tcp_syn_retry_allowed(&retry), 15);
+        TCP_SELFTEST_CHECK(!_tcp_syn_retry_allowed(&retry), 16);
+        for (i = 0; i < TCP_CORE_MAX_DATA_RETRIES; i++)
+            TCP_SELFTEST_CHECK(_tcp_data_retry_allowed(&retry), 17);
+        TCP_SELFTEST_CHECK(!_tcp_data_retry_allowed(&retry), 18);
     }
 
     return 0;

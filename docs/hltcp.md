@@ -229,6 +229,34 @@ the probe). For example `-scan-arg '--conn-expire 15 --record-all-ttl'` shortens
 connection lifetime and records packet-level detail on every segment; per-module options are
 listed by `--help-probe` and `--help-scan`.
 
+## Retry bounds and deliberate simplicity
+
+HLTCP is a short-lived, low-state stack, not a general-purpose TCP. The only
+retransmission hardening is a bounded retry budget:
+
+- a data segment is retransmitted at most `TCP_CORE_MAX_DATA_RETRIES` (3) times;
+  on exhaustion the connection is RST and the TCB is released;
+- a SYN attempt in the normally-unreachable `SYN_SENT` branch is capped at
+  `TCP_CORE_MAX_SYN_RETRIES` (3), purely as a guard; `tcp-state` creates its TCB
+  only after a SYN-ACK, so the initial SYN is still not retransmitted by this
+  path;
+- the retry counter resets when an ACK advances the send queue or a new data
+  burst starts.
+
+Deliberately **not** implemented:
+
+- SRTT/RTTVAR-based RTO estimation (fixed 1-second RTO);
+- exponential backoff;
+- out-of-order reassembly queues;
+- local fast retransmit/SACK;
+- congestion control or per-segment timers.
+
+Those add per-connection memory, per-packet work, or protocol state that HLTCP
+does not need for short probes. Out-of-order data is ACKed with the expected
+sequence and dropped; the peer's own TCP can fast-retransmit it. Completeness is
+explicitly allowed to lose to memory/CPU predictability and scan throughput.
+For a target where this is not acceptable, re-run it or use a full TCP stack.
+
 ## Known limitations
 
 - **No SYN retransmission.** A TCB only exists after a SYN-ACK, so the `SYN_SENT` timeout
@@ -236,7 +264,7 @@ listed by `--help-probe` and `--help-scan`.
   higher-value targets.
 - **Duplicate/lost-ACK repair is partial.** A retransmitted SYN-ACK is answered with a fresh ACK, and duplicate old data or a future segment triggers an immediate ACK of the expected sequence. The peer can then retransmit sooner; there is still no general ACK-repair state machine for arbitrary lost ACKs.
 - **No out-of-order handling.** Data beyond the expected sequence number is dropped and not buffered; the immediate ACK tells the peer what we expect, but large certificate chains and multi-segment TLS flights still depend on peer retransmission.
-- **Fixed 1-second RTO, no backoff.** Retransmits eagerly on high-latency paths.
+- **Fixed 1-second RTO, no backoff.** Retransmits eagerly on high-latency paths. Data retransmissions are capped at three; exceeded connections are closed with RST.
 - **No graceful close by default.** FIN is answered with RST, there is no `TIME_WAIT`, and
   TLS sends no `close_notify`. Targets see an abnormal termination — acceptable for
   scanning, noisy for long-term monitoring. The `tls-state` research switch
@@ -256,9 +284,9 @@ These are design decisions, not TODO items:
 - **SYN retransmission, RTT-adaptive RTO, out-of-order buffering.** A TCB only exists after
   a SYN-ACK, so SYN retransmission needs a pending-SYN table in the scan layer; RTT needs a
   timestamp per unacknowledged segment; out-of-order buffering needs per-connection memory.
-  All three push HLTCP away from its hybrid-state, low-memory model. For scanning, the
-  intended recovery is a re-run (`--repeat`, or another pass), not a per-target retry state
-  machine.
+  All three push HLTCP away from its hybrid-state, low-memory model. A bounded data retry
+  limit is the only intended hardening; the intended recovery for a lost SYN is a re-run
+  (`--repeat`, or another pass), not a per-target retry state machine.
 - **General ACK-repair state machine.** Duplicate SYN-ACK and duplicate/future data are
   ACKed where that prevents a 30-second stall, but Xtate does not send speculative pure ACKs
   for every lost acknowledgement. Extra ACK traffic changes almost no scan result and costs
