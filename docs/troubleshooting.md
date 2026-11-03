@@ -69,7 +69,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http -scan-a
 
 On Linux, `sudo setcap cap_net_raw,cap_net_admin=eip ./bin/xtate` avoids `sudo` per run; re-apply it after rebuilding the binary.
 
-IPv6 has its own traps: a link-local source address must be given explicitly (`-src-ip fe80::2`), and NDP scans normally need `-fake-router-mac` because there is no IPv6 default gateway to resolve — `-scan ndp-ns -src-ip fe80::2 -fake-router-mac` is the working shape. IPv6 extension headers (other than hop-by-hop) and fragments are not parsed, so such replies are invisible to the scanner.
+IPv6 has its own traps: a link-local source address must be given explicitly (`-src-ip fe80::2`), and NDP scans normally need `-fake-router-mac` because there is no IPv6 default gateway to resolve — `-scan ndp-ns -src-ip fe80::2 -fake-router-mac` is the working shape. IPv6 Hop-by-Hop, Routing, Destination Options and AH chains are parsed (up to eight headers); Fragment, ESP and No Next Header replies are still invisible to the scanner.
 
 ## Packet capture, PF_RING and Npcap
 
@@ -105,7 +105,7 @@ IPv6 has its own traps: a link-local source address must be given explicitly (`-
 - **`zbanner` grabs only the first banner segment** by default and then sends RST. Long banners, multi-segment TLS ServerHellos or large HTTP headers need `-scan-arg "-all-banner"` (optionally bounded with `-all-banner-limit <n>` inside the same string).
 - **TLS probes appear to return nothing.** `tls-state` reports a failed handshake at `info` level, and it sends no SNI or ALPN by default, so virtual hosts/CDNs may answer with their default certificate/site. Add `-show info`, use `-probe-arg "-sni <hostname> -alpn h2,http/1.1"` when the target IPs belong to one known vhost, or promote failures to `failed` with `-probe-arg "-fail-handshake"`; without an explicit SNI, treat stateful TLS evidence as the default virtual host, not as the requested hostname.
 
-These are design trade-offs in v2.28.8, not bugs; the full list with workarounds is in [Known limitations](./known-limitations.md).
+These are design trade-offs in v2.28.9, not bugs; the full list with workarounds is in [Known limitations](./known-limitations.md).
 
 ## Modules are missing or refuse to start
 

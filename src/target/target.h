@@ -23,6 +23,8 @@
 #define IP_PROTO_IPv6_Frag      44  /*Fragment Header for IPv6*/
 #define IP_PROTO_IDRP           45  /*Inter-Domain Routing Protocol*/
 #define IP_PROTO_GRE            47  /*Generic Routing Encapsulation*/
+#define IP_PROTO_ESP            50  /*Encapsulating Security Payload*/
+#define IP_PROTO_AH             51  /*Authentication Header*/
 #define IP_PROTO_Min_IPv4       55  /*Minimal IPv4 Encapsulation (for mobile)*/
 #define IP_PROTO_IPv6_ICMP      58  /*ICMP for IPv6*/
 #define IP_PROTO_IPv6_NoNxt     59  /*No Next Header for IPv6*/

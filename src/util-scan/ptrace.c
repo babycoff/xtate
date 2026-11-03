@@ -120,6 +120,7 @@ void packet_trace(FILE *fp, double pt_start, const unsigned char *px,
                         timestamp - pt_start, from, to, sz_type);
             break;
         case FOUND_IPV6:
+        case FOUND_IPV6_EXT:
             break;
         default:
             fprintf(fp, "%s (%5.4f) UNK  %-21s > %-21s [%u]\n", direction,

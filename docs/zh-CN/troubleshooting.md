@@ -69,7 +69,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http -scan-a
 
 Linux 上，`sudo setcap cap_net_raw,cap_net_admin=eip ./bin/xtate` 可以免去每次运行的 `sudo`；重新构建二进制后需要重新执行。
 
-IPv6 有自己的坑：链路本地源地址必须显式给出（`-src-ip fe80::2`）；NDP 扫描通常需要 `-fake-router-mac`，因为不存在可解析的 IPv6 默认网关——`-scan ndp-ns -src-ip fe80::2 -fake-router-mac` 是能跑通的形态。IPv6 扩展头（逐跳头之外）和分片不会被解析，带这类头的回包对扫描器不可见。
+IPv6 有自己的坑：链路本地源地址必须显式给出（`-src-ip fe80::2`）；NDP 扫描通常需要 `-fake-router-mac`，因为不存在可解析的 IPv6 默认网关——`-scan ndp-ns -src-ip fe80::2 -fake-router-mac` 是能跑通的形态。IPv6 的逐跳、路由、目的选项和 AH 扩展头链会被解析（最多八个扩展头）；分片、ESP 和 No Next Header 的回包仍对扫描器不可见。
 
 ## 抓包、PF_RING 与 Npcap
 
@@ -105,7 +105,7 @@ IPv6 有自己的坑：链路本地源地址必须显式给出（`-src-ip fe80::
 - **`zbanner` 默认只取第一个 banner 报文段**，随后发 RST。长 banner、多段 TLS ServerHello 或很长的 HTTP 头需要 `-scan-arg "-all-banner"`（可在同一个字符串里用 `-all-banner-limit <n>` 限制段数）。
 - **TLS 探测看起来没有返回。** `tls-state` 把握手失败记为 `info` 等级；默认也不发送 SNI 或 ALPN，所以虚拟主机/CDN 可能用默认证书/默认站点应答。加上 `-show info`；当目标 IP 属于一个已知 vhost 时，用 `-probe-arg "-sni <hostname> -alpn h2,http/1.1"`；或用 `-probe-arg "-fail-handshake"` 把失败提升为 `failed`。没有显式 SNI 时，请把有状态 TLS 的结果当作默认虚拟主机的证据，而不是你所请求主机名的证据。
 
-这些是 v2.28.8 的设计取舍，不是 bug；完整清单与规避方式见[已知限制](./known-limitations.md)。
+这些是 v2.28.9 的设计取舍，不是 bug；完整清单与规避方式见[已知限制](./known-limitations.md)。
 
 ## 模块缺失或启动失败
 

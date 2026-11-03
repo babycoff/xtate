@@ -43,6 +43,7 @@ bool preprocess_frame(const unsigned char *px, unsigned length,
                       unsigned link_type, PreInfo *info) {
     unsigned offset    = 0;
     unsigned ethertype = 0;
+    unsigned ipv6_ext_depth = 0;
 
     info->transport_offset = 0;
     info->found            = FOUND_NOTHING;
@@ -240,7 +241,11 @@ parse_ipv6: {
 parse_ipv6_next:
     switch (info->ip_protocol) {
         case IP_PROTO_HOPOPT:
-            goto parse_ipv6_hop_by_hop;
+        case IP_PROTO_IPv6_Route:
+        case IP_PROTO_IPv6_Opts:
+            goto parse_ipv6_ext;
+        case IP_PROTO_AH:
+            goto parse_ipv6_ah;
         case IP_PROTO_TCP:
             goto parse_tcp;
         case IP_PROTO_UDP:
@@ -250,23 +255,43 @@ parse_ipv6_next:
         case IP_PROTO_SCTP:
             goto parse_sctp;
         case IP_PROTO_IPv6_Frag:
+        case IP_PROTO_ESP:
+        case IP_PROTO_IPv6_NoNxt:
             return false;
         default:
-            // printf("***** test me ******\n");
             return false;
     }
 }
 
-parse_ipv6_hop_by_hop: {
+parse_ipv6_ext: {
     unsigned len;
 
-    VERIFY_REMAINING(8, FOUND_IPV6_HOP);
+    if (++ipv6_ext_depth > 8)
+        return false;
+    VERIFY_REMAINING(8, FOUND_IPV6_EXT);
     info->ip_protocol = px[offset];
-    /* IPv6 extension-header length is in 8-octet units after the first 8
-     * bytes: total = (Hdr Ext Len + 1) * 8. */
+    /* Hop-by-Hop, Routing and Destination Options all use the same length
+     * formula: (Hdr Ext Len + 1) * 8. */
     len = ((unsigned)px[offset + 1] + 1) * 8;
 
-    VERIFY_REMAINING(len, FOUND_IPV6_HOP);
+    VERIFY_REMAINING(len, FOUND_IPV6_EXT);
+    offset += len;
+    info->transport_offset = offset;
+    info->transport_length = length - info->transport_offset;
+}
+    goto parse_ipv6_next;
+
+parse_ipv6_ah: {
+    unsigned len;
+
+    if (++ipv6_ext_depth > 8)
+        return false;
+    VERIFY_REMAINING(8, FOUND_IPV6_EXT);
+    info->ip_protocol = px[offset];
+    /* AH length: (Payload Len + 2) * 4 octets. */
+    len = ((unsigned)px[offset + 1] + 2) * 4;
+
+    VERIFY_REMAINING(len, FOUND_IPV6_EXT);
     offset += len;
     info->transport_offset = offset;
     info->transport_length = length - info->transport_offset;
@@ -672,7 +697,104 @@ int preprocess_selftest(void) {
             x++;
     }
 
-    /* 4. ARP header without address bytes must not read IP fields. */
+    /* 4. IPv6 Routing header followed by TCP. */
+    {
+        unsigned char buf[14 + 40 + 8 + 20] = {0};
+        PreInfo       info;
+        U16_TO_BE(buf + 12, ETHERTYPE_IPv6);
+        buf[14] = 0x60;
+        U16_TO_BE(buf + 18, 28); /* routing 8 + TCP 20 */
+        buf[20] = IP_PROTO_IPv6_Route;
+        buf[54] = IP_PROTO_TCP;
+        buf[55] = 0; /* (0 + 1) * 8 */
+        buf[62 + 12] = 5 << 4;
+        U16_TO_BE(buf + 62 + 0, 12345);
+        U16_TO_BE(buf + 62 + 2, 443);
+        if (!preprocess_frame(buf, sizeof(buf), PCAP_DLT_ETHERNET, &info) ||
+            info.found != FOUND_TCP || info.transport_offset != 62 ||
+            info.port_src != 12345 || info.port_dst != 443)
+            x++;
+    }
+
+    /* 5. IPv6 Destination Options followed by UDP. */
+    {
+        unsigned char buf[14 + 40 + 8 + 8] = {0};
+        PreInfo       info;
+        U16_TO_BE(buf + 12, ETHERTYPE_IPv6);
+        buf[14] = 0x60;
+        U16_TO_BE(buf + 18, 16);
+        buf[20] = IP_PROTO_IPv6_Opts;
+        buf[54] = IP_PROTO_UDP;
+        buf[55] = 0;
+        U16_TO_BE(buf + 62 + 0, 5353);
+        U16_TO_BE(buf + 62 + 2, 53);
+        U16_TO_BE(buf + 62 + 4, 8);
+        if (!preprocess_frame(buf, sizeof(buf), PCAP_DLT_ETHERNET, &info) ||
+            info.found != FOUND_UDP || info.transport_offset != 62 ||
+            info.port_src != 5353 || info.port_dst != 53)
+            x++;
+    }
+
+    /* 6. IPv6 Authentication Header followed by TCP. */
+    {
+        unsigned char buf[14 + 40 + 8 + 20] = {0};
+        PreInfo       info;
+        U16_TO_BE(buf + 12, ETHERTYPE_IPv6);
+        buf[14] = 0x60;
+        U16_TO_BE(buf + 18, 28);
+        buf[20] = IP_PROTO_AH;
+        buf[54] = IP_PROTO_TCP;
+        buf[55] = 0; /* (0 + 2) * 4 */
+        buf[62 + 12] = 5 << 4;
+        if (!preprocess_frame(buf, sizeof(buf), PCAP_DLT_ETHERNET, &info) ||
+            info.found != FOUND_TCP || info.transport_offset != 62)
+            x++;
+    }
+
+    /* 7. IPv6 Fragment header is deliberately unsupported. */
+    {
+        unsigned char buf[14 + 40 + 8] = {0};
+        PreInfo       info;
+        U16_TO_BE(buf + 12, ETHERTYPE_IPv6);
+        buf[14] = 0x60;
+        U16_TO_BE(buf + 18, 8);
+        buf[20] = IP_PROTO_IPv6_Frag;
+        buf[54] = IP_PROTO_TCP;
+        if (preprocess_frame(buf, sizeof(buf), PCAP_DLT_ETHERNET, &info))
+            x++;
+    }
+
+    /* 8. Truncated Routing extension header must fail. */
+    {
+        unsigned char buf[14 + 40 + 8] = {0};
+        PreInfo       info;
+        U16_TO_BE(buf + 12, ETHERTYPE_IPv6);
+        buf[14] = 0x60;
+        U16_TO_BE(buf + 18, 8);
+        buf[20] = IP_PROTO_IPv6_Route;
+        buf[54] = IP_PROTO_TCP;
+        buf[55] = 1; /* 16 bytes, only 8 present */
+        if (preprocess_frame(buf, sizeof(buf), PCAP_DLT_ETHERNET, &info))
+            x++;
+    }
+
+    /* 9. More than eight IPv6 extension headers must fail cleanly. */
+    {
+        unsigned char buf[14 + 40 + 9 * 8] = {0};
+        PreInfo       info;
+        U16_TO_BE(buf + 12, ETHERTYPE_IPv6);
+        buf[14] = 0x60;
+        U16_TO_BE(buf + 18, 9 * 8);
+        buf[20] = IP_PROTO_HOPOPT;
+        for (unsigned i = 0; i < 9; i++) {
+            buf[54 + i * 8] = (i == 8) ? IP_PROTO_TCP : IP_PROTO_HOPOPT;
+            buf[54 + i * 8 + 1] = 0;
+        }
+        if (preprocess_frame(buf, sizeof(buf), PCAP_DLT_ETHERNET, &info))
+            x++;
+    }
+
+    /* 10. ARP header without address bytes must not read IP fields. */
     {
         unsigned char buf[14 + 8] = {0};
         PreInfo       info;
@@ -684,7 +806,7 @@ int preprocess_selftest(void) {
             x++;
     }
 
-    /* 5. All-ones IPv4 addresses exercise the unsigned BE_TO_U32 path. */
+    /* 11. All-ones IPv4 addresses exercise the unsigned BE_TO_U32 path. */
     {
         unsigned char buf[14 + 40] = {0};
         PreInfo       info;
@@ -700,7 +822,7 @@ int preprocess_selftest(void) {
             x++;
     }
 
-    /* 6. Short RAW/NULL frames must fail without touching px[0]/px[0..3]. */
+    /* 12. Short RAW/NULL frames must fail without touching px[0]/px[0..3]. */
     {
         PreInfo info;
         unsigned char one = 0;
@@ -710,7 +832,7 @@ int preprocess_selftest(void) {
             x++;
     }
 
-    /* 7. Radiotap with FCS flag but a header shorter than the FCS field must
+    /* 13. Radiotap with FCS flag but a header shorter than the FCS field must
      * fail instead of reading at header_length - 4. */
     {
         unsigned char buf[8] = {0};
@@ -723,7 +845,7 @@ int preprocess_selftest(void) {
             x++;
     }
 
-    /* 8. 802.11 ToDS+FromDS adds an Address4 field; a 24-byte header must not
+    /* 14. 802.11 ToDS+FromDS adds an Address4 field; a 24-byte header must not
      * be read as if the extra 6 bytes were present. */
     {
         unsigned char buf[24] = {0};

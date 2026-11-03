@@ -28,6 +28,7 @@ typedef enum PreprocessedFoundProtocol {
     FOUND_UDP,
     FOUND_SCTP,
     FOUND_IPV6_HOP,
+    FOUND_IPV6_EXT,
     FOUND_8021Q,
     FOUND_MPLS,
     FOUND_WIFI_DATA,
