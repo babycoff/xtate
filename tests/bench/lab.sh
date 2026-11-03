@@ -18,6 +18,7 @@ TX_RATE="${XTATE_BENCH_TX_RATE:-10000}"
 TX_THREAD_ARGS="${XTATE_BENCH_TX_THREADS:+--tx-thread-count $XTATE_BENCH_TX_THREADS}"
 RX_ARGS="${XTATE_BENCH_RX_HANDLERS:+--rx-count $XTATE_BENCH_RX_HANDLERS}"
 ZBANNER_RATES="${XTATE_BENCH_ZBANNER_RATES:-$ZBANNER_RATE}"
+ZBANNER_EXTRA_ARGS="${XTATE_BENCH_ZBANNER_ARGS:-}"
 CN="${XTATE_CN_MIRROR:-0}"
 NET="xtate-bench-$$"
 TARGET="xtate-bench-target-$$"
@@ -229,6 +230,7 @@ if want zbanner; then
         run_case "zbanner-http-$rate" "$(((HTTP_LAST - HTTP_FIRST + 1) * 7))" \
             -ip "$TARGET_RANGE" -p "$HTTP_FIRST-$HTTP_LAST" \
             -scan zbanner -probe http \
+            ${ZBANNER_EXTRA_ARGS:+-scan-arg} ${ZBANNER_EXTRA_ARGS} \
             --rate "$rate" --wait 1 --no-status --no-resume-file
     done
 fi

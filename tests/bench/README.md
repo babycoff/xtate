@@ -142,6 +142,11 @@ XTATE_BENCH_TX_RATE=5000 XTATE_BENCH_TX_THREADS_LIST="4 8 16" \
 XTATE_BENCH_CASE=tx XTATE_BIN=/path/to/xtate-linux bash tests/bench/lab.sh
 ```
 
+`XTATE_BENCH_ZBANNER_ARGS` passes module flags through `-scan-arg`; for example
+`XTATE_BENCH_ZBANNER_ARGS=--no-rst` tests ZBanner without the final RST packet.
+Keep in mind that `--rate` is a wire-packet rate: ZBanner normally sends SYN,
+ACK+payload and RST per completed target.
+
 For a one-shot ZBanner control, `XTATE_BENCH_ZBANNER_DROP=1` makes the target
 drop the HTTP port range before the scan. This measures initial SYN pacing with
 no SYN-ACK/banner path; do not treat its zero results as a banner benchmark.
