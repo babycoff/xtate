@@ -54,6 +54,21 @@ binaries (`pcre2-8.dll`, `libxml2.dll`, `bson2.dll`, `mongoc2.dll`, ...).
 For CI, reproducible distribution or comparing toolchains, use the exact
 per-toolchain name, not the alias.
 
+## CI artifacts are validation builds
+
+GitHub Actions uploads the `bin\xtate.exe` or `build-mingw/xtate.exe` produced
+by a build job. These uploads are **CI validation artifacts**, not a supported
+binary distribution:
+
+- MinGW UCRT64/MINGW64 binaries may depend on MSYS2 runtime DLLs such as
+  `libwinpthread-1.dll` or `libgcc_s_seh-1.dll`;
+- CI does not install the Npcap driver, so it cannot run a live packet scan;
+- artifacts are not signed, not checksumed and not attached to a Release.
+
+Use them to inspect a build, not as a portable Windows package. A future
+distribution step would need to bundle the exact runtime DLLs (or build
+statically) and add checksums.
+
 ## Feature differences
 
 - MSVC / ClangCL builds can use vcpkg's `x64-windows` packages.

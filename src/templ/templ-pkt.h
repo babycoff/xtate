@@ -47,8 +47,5 @@ typedef struct TemplateSet {
     TmplPkt  pkts[TmplType_Count];
 } TmplSet;
 
-TmplSet templ_copy(const TmplSet *templset);
-
-TmplPkt templ_packet_copy(const TmplPkt *tmpl_pkt);
 
 #endif

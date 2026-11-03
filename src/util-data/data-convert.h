@@ -20,15 +20,9 @@
      (uint64_t)(px)[6] << 8 | (uint64_t)(px)[7])
 
 #define LE_TO_U16(px) ((px)[1] << 8 | (px)[0])
-#define LE_TO_U24(px) ((px)[2] << 16 | (px)[1] << 8 | (px)[0])
 #define LE_TO_U32(px)                                                         \
     ((uint32_t)(px)[3] << 24 | (uint32_t)(px)[2] << 16 |                      \
      (uint32_t)(px)[1] << 8 | (uint32_t)(px)[0])
-#define LE_TO_U64(px)                                                          \
-    ((uint64_t)(px)[7] << 56 | (uint64_t)(px)[6] << 48 |                       \
-     (uint64_t)(px)[5] << 40 | (uint64_t)(px)[4] << 32 |                       \
-     (uint64_t)(px)[3] << 24 | (uint64_t)(px)[2] << 16 |                       \
-     (uint64_t)(px)[1] << 8 | (uint64_t)(px)[0])
 
 /*******************************************************************
   convert unsigned to big endian or little endian

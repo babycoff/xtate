@@ -51,6 +51,19 @@ vcpkg app-local 运行库 DLL 会复制到这些二进制旁边
 
 CI、可复现分发或对比工具链时，请使用按工具链命名的文件，不要依赖别名。
 
+## CI 产物只是验证构建
+
+GitHub Actions 上传的 `bin\xtate.exe` 或 `build-mingw/xtate.exe` 是 **CI
+验证产物**，不是受支持的二进制分发包：
+
+- MinGW UCRT64/MINGW64 产物可能依赖 MSYS2 运行时 DLL，例如
+  `libwinpthread-1.dll`、`libgcc_s_seh-1.dll`；
+- CI 不安装 Npcap 驱动，不能做真实抓包扫描；
+- 产物没有签名、没有校验和，也不会作为 Release 附件发布。
+
+它们适合检查构建结果，不适合作为便携 Windows 包。未来若做分发，需要
+打包对应运行时 DLL（或静态构建），并补上校验和。
+
 ## 功能差异
 
 - MSVC / ClangCL 可以使用 vcpkg 的 `x64-windows` 包。
