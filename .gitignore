@@ -1,4 +1,5 @@
 resume.conf
 recover.conf
 .vscode
-.cache
+.cachebench-results/
+.bench-

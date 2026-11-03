@@ -117,6 +117,12 @@ interactive + PTY: 通过
 
 Windows 构建仍需维护者/手动验证，直到配置带 Npcap/Visual Studio 的托管 runner。
 
+## Benchmark
+
+`tests/bench/` 是手动运行的 Linux 基准套件，覆盖目标解析和离线 Tx 路径。由于
+共享 runner 上的耗时/RSS 噪声较大，默认不放进 CI。详见
+`tests/bench/README.md`。
+
 ## 现有测试套件
 
 | 套件 | 命令 | 范围 |

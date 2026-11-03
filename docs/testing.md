@@ -126,6 +126,12 @@ interactive + PTY: pass
 Windows builds remain a maintainer/manual check until a hosted Npcap/Visual
 Studio runner is set up.
 
+## Benchmarks
+
+`tests/bench/` is a manual Linux benchmark suite for target ingestion and the
+offline Tx path. It is deliberately not part of the CI gate because wall time
+and RSS are noisy on shared runners. See `tests/bench/README.md`.
+
 ## Current test suites
 
 | Suite | Command | Scope |
