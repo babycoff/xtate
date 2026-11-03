@@ -171,9 +171,11 @@ void help_probe_module(Probe *module) {
     printf("  %s%u\n", i18n_tr("Slot count: "),
            probe_slot_count(module));
     printf("  %s%s\n", i18n_tr("Slot trigger: "),
-           module->slots.trigger == ProbeSlot_AfterFirstReply
-               ? "after first reply"
-               : "single");
+           module->slots.trigger == ProbeSlot_Always
+               ? "all slots"
+               : (module->slots.trigger == ProbeSlot_AfterFirstReply
+                      ? "after first reply"
+                      : "single"));
     printf("  %s%u (for stateful probe)\n", i18n_tr("Hello wait second: "),
            module->hello_wait);
     printf("\n");

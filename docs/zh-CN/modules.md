@@ -62,6 +62,7 @@ typedef struct ProbeSlotPlan {
 
 - 引擎把 slot `i` 映射到 `source_port_start + i`；`ProbeTarget.index` 是
   从 0 开始的 slot 编号。
+- `Always`：从第一次扫描迭代起发送所有 slot。
 - `AfterFirstReply`：slot 0 正常发送；只有 `continue_cb()` 接受第一个响应后，
   才发送剩余 slot；没有 callback 时默认继续。
 - 源端口范围必须至少覆盖 plan 的 `count`，启动时会拒绝过小的范围。
@@ -70,8 +71,9 @@ typedef struct ProbeSlotPlan {
   `tools/jarm_aggregate.py` 在扫描后合并。
 - 同一 TCP 连接上的多步交互不属于这里；请使用 HLTCP/state 探针。
 
-目前只有 JARM 使用多 slot plan。后续的协议版本变体、challenge-response
-探针可以复用同一 plan，不需要新增引擎模式。
+目前只有 JARM 使用多 slot plan，但 plan 不是 JARM 专用：`Always` 适合并行
+变体，`AfterFirstReply` 适合条件 fan-out。后续的协议版本变体、
+challenge-response 探针可以复用同一引擎路径，不需要新增模式。
 
 ### 通用（11）
 

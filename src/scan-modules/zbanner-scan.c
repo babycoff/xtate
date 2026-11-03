@@ -688,6 +688,11 @@ static bool zbanner_transmit(uint64_t entropy, ScanTarget *target,
         }
     }
 
+    /* Generic multi-slot plan: ask the transmit loop for the next slot. */
+    if (ZBannerScan.probe->slots.trigger == ProbeSlot_Always &&
+        target->index + 1 < probe_slot_count(ZBannerScan.probe))
+        return true;
+
     return false;
 }
 

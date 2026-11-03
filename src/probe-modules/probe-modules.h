@@ -206,9 +206,11 @@ typedef void (*probe_modules_close)();
 
 typedef enum ProbeSlotTrigger {
     ProbeSlot_None = 0,
+    /* Send every slot from the first scan iteration. */
+    ProbeSlot_Always = 1,
     /* Send remaining slots only after the first slot gets a reply that the
      * probe accepts.  JARM uses this for its ten TLS ClientHello variants. */
-    ProbeSlot_AfterFirstReply = 1,
+    ProbeSlot_AfterFirstReply = 2,
 } ProbeSlotTrigger;
 
 typedef bool (*probe_slots_continue)(ProbeTarget         *target,

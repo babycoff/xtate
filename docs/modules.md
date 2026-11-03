@@ -73,6 +73,7 @@ typedef struct ProbeSlotPlan {
 
 - The engine maps slot `i` to `source_port_start + i`; `ProbeTarget.index` is
   the zero-based slot.
+- `Always`: every slot is sent from the first scan iteration.
 - `AfterFirstReply`: slot 0 is sent normally; the remaining slots are sent
   only if `continue_cb()`, or the slot is unconditional when no callback is
   supplied, accepts the first response.
@@ -83,9 +84,10 @@ typedef struct ProbeSlotPlan {
   `tools/jarm_aggregate.py` joins them after the scan.
 - Same-connection multi-step work does not belong here; use HLTCP/state probes.
 
-JARM is the only probe shipped with a multi-slot plan today. A future
-protocol-version or challenge-response probe can reuse the same plan without
-adding a new engine mode.
+JARM is the only probe shipped with a multi-slot plan today, but the plan is
+not JARM-specific: `Always` covers parallel variants, and
+`AfterFirstReply` covers conditional fan-out. A future protocol-version or
+challenge-response probe can reuse the same engine path without a new mode.
 
 ### General (11)
 
