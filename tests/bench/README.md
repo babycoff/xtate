@@ -80,10 +80,13 @@ XTATE_BENCH_CASE=tx XTATE_BIN=/path/to/xtate-linux bash tests/bench/lab.sh
 Cases:
 
 - `tx`: `tcp-syn` to a target whose firewall silently drops the port range;
-  reports target-side DROP packet counts.
+  reports incoming SYN packets counted by a target-side raw socket (not just
+  the scanner's own rate).
 - `zbanner`: HTTP banner scan against a multi-port local target.
 - `output`: `tcp-syn` output comparison (`null`, `text`, `csv`, `ndjson`)
   against closed ports.
+- Full mode uses six target IP aliases and a 20k-port HTTP target, giving
+  roughly 100k-140k target endpoints depending on the case.
 - `stateful`: `tcp-state` against the multi-port HTTP target with
   `tcb-mem=1`, exercising the active-TCB budget.
 
