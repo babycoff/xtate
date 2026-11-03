@@ -20,12 +20,14 @@ IMAGE="${XTATE_LAB_IMAGE:-xtate-builder:24.04}"
 NET="xtate-lab-$$"
 HTTP_TARGET="xtate-lab-http-$$"
 TLS_TARGET="xtate-lab-tls-$$"
+JARM_TARGET="xtate-lab-jarm-$$"
 HTTP_PORT=8080
 CLOSED_PORT=9
 TLS_PORT=8443
+JARM_PORT=9443
 
 cleanup() {
-    docker rm -f "$HTTP_TARGET" "$TLS_TARGET" >/dev/null 2>&1 || true
+    docker rm -f "$HTTP_TARGET" "$TLS_TARGET" "$JARM_TARGET" >/dev/null 2>&1 || true
     docker network rm "$NET" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
@@ -79,20 +81,29 @@ wait_tcp() {
     echo "target $host port $port did not become ready" >&2
     return 1
 }
+echo "==> starting isolated JARM TLS target"
+docker run -d --name "$JARM_TARGET" --network "$NET" "$IMAGE" bash -lc \
+    "openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/key.pem \
+       -out /tmp/cert.pem -subj '/CN=localhost' -days 1 >/dev/null 2>&1 && \
+     openssl s_server -accept $JARM_PORT -cert /tmp/cert.pem -key /tmp/key.pem -tlsextdebug -www" >/dev/null
+
 wait_tcp "$HTTP_TARGET" "$HTTP_PORT"
 wait_tcp "$TLS_TARGET" "$TLS_PORT"
+wait_tcp "$JARM_TARGET" "$JARM_PORT"
 
 HTTP_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$HTTP_TARGET")"
 TLS_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$TLS_TARGET")"
+JARM_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$JARM_TARGET")"
 echo "HTTP target: $HTTP_IP:$HTTP_PORT (closed test port $CLOSED_PORT)"
 echo "TLS  target: $TLS_IP:$TLS_PORT"
+echo "JARM target: $JARM_IP:$JARM_PORT"
 
 docker run --rm \
     --cap-add NET_RAW --cap-add NET_ADMIN \
     --network "$NET" \
-    -e HTTP_IP="$HTTP_IP" -e TLS_IP="$TLS_IP" \
+    -e HTTP_IP="$HTTP_IP" -e TLS_IP="$TLS_IP" -e JARM_IP="$JARM_IP" \
     -e HTTP_PORT="$HTTP_PORT" -e CLOSED_PORT="$CLOSED_PORT" \
-    -e TLS_PORT="$TLS_PORT" \
+    -e TLS_PORT="$TLS_PORT" -e JARM_PORT="$JARM_PORT" \
     -v "$ROOT:/src:ro" -v "$BIN:/xtate:ro" \
     "$IMAGE" bash -lc '
 set -euo pipefail
@@ -101,13 +112,20 @@ if ! command -v iptables >/dev/null 2>&1; then
     apt-get install -y -qq iptables >/dev/null 2>&1
 fi
 
+mkdir -p /work
 cp -a /src /work/xtate
 cd /work/xtate
 
 # Normalize scripts so a Windows checkout does not inject CRLF into bash.
 sed -i "s/\r$//" firewall/add_rules.sh firewall/rm_rules.sh
 sed -i "s/sudo //g" firewall/add_rules.sh firewall/rm_rules.sh
-bash firewall/add_rules.sh >/dev/null 2>&1
+
+if command -v iptables >/dev/null 2>&1; then
+    bash firewall/add_rules.sh >/dev/null 2>&1
+else
+    echo "WARN: iptables not available in lab image; host RST suppression skipped" >&2
+fi
+
 
 run_case() {
     local name="$1"
@@ -119,25 +137,25 @@ run_case() {
 
 run_case zbanner-default \
     -ip "$HTTP_IP" -p "$HTTP_PORT,$CLOSED_PORT" -scan zbanner -probe http \
-    -rate 100 --wait 2 --no-status -show info -show failed
+    -src-port 41000-41255 -rate 100 --wait 2 --no-status -show info -show failed
 grep -q "\"open\" because \"syn-ack\"" /tmp/zbanner-default.log
 grep -q "\"closed\" because \"rst\"" /tmp/zbanner-default.log
 
 run_case zbanner-record-ack \
     -ip "$HTTP_IP" -p "$HTTP_PORT,$CLOSED_PORT" -scan zbanner -probe http \
-    -scan-arg "--record-ack" -rate 100 --wait 2 --no-status -show info -show failed
+    -src-port 42000-42255 -scan-arg "--record-ack" -rate 100 --wait 2 --no-status -show info -show failed
 grep -q "\"closed\" because \"rst\"" /tmp/zbanner-record-ack.log
 grep -q "\"acknowledged\" because \"ack\"" /tmp/zbanner-record-ack.log
 
 run_case hltcp-http \
     -ip "$HTTP_IP" -p "$HTTP_PORT,$CLOSED_PORT" -scan tcp-state -probe http-state \
-    -rate 100 --wait 2 --no-status -show info -show failed
+    -src-port 43000-43255 -rate 100 --wait 2 --no-status -show info -show failed
 grep -q "\"open\" because \"syn-ack\"" /tmp/hltcp-http.log
 grep -q "\"closed\" because \"rst\"" /tmp/hltcp-http.log
 
 run_case hltcp-tls \
     -ip "$TLS_IP" -p "$TLS_PORT" -scan tcp-state -probe tls-state \
-    -probe-arg "-subprobe close-state -sni example.test -alpn h2,http/1.1 --dump-version --dump-cipher --dump-cert --ssl-keylog --graceful-tls-close" \
+    -src-port 44000-44255 -probe-arg "-subprobe close-state -sni example.test -alpn h2,http/1.1 --dump-version --dump-cipher --dump-cert --ssl-keylog --graceful-tls-close" \
     -rate 100 --wait 2 --no-status -show info -show failed
 grep -q "tls info" /tmp/hltcp-tls.log
 grep -q "TLSv1" /tmp/hltcp-tls.log
@@ -145,18 +163,26 @@ grep -q "key_log" /tmp/hltcp-tls.log
 
 run_case hltcp-tls-http \
     -ip "$TLS_IP" -p "$TLS_PORT" -scan tcp-state -probe tls-state \
-    -probe-arg "-subprobe http-state -subprobe-arg '--all-banner' -sni example.test -alpn http/1.1 --dump-version" \
+    -src-port 45000-45255 -probe-arg "-subprobe http-state -subprobe-arg '--all-banner' -sni example.test -alpn http/1.1 --dump-version" \
     -rate 100 --wait 2 --no-status -show info -show failed
 grep -q "tls info" /tmp/hltcp-tls-http.log
 
 run_case zbanner-jarm \
-    -ip "$TLS_IP" -p "$TLS_PORT" -scan zbanner -probe jarm \
-    -rate 100 --wait 3 --no-status -show info -show failed
+    -ip "$JARM_IP" -p "$JARM_PORT" -scan zbanner -probe jarm \
+    -src-port 40000-40255 -rate 100 --wait 8 --no-status -show info -show failed \
+    -output-module ndjson -output-file /tmp/jarm.jsonl -output-screen
 grep -q "jarm_slot" /tmp/zbanner-jarm.log
 grep -q "jarm_slots" /tmp/zbanner-jarm.log
 grep -q "jarm_part" /tmp/zbanner-jarm.log
+python3 /work/xtate/tools/jarm_aggregate.py /tmp/jarm.jsonl \
+    --complete-out /tmp/jarm-complete.jsonl \
+    --stats-out /tmp/jarm-stats.json >/dev/null
+grep -q "jarm" /tmp/jarm-complete.jsonl
+grep -q "complete.*1" /tmp/jarm-stats.json
 
-bash firewall/rm_rules.sh >/dev/null 2>&1 || true
+if command -v iptables >/dev/null 2>&1; then
+    bash firewall/rm_rules.sh >/dev/null 2>&1 || true
+fi
 
 echo "ALL LOCAL LAB CHECKS PASSED"
 ' 

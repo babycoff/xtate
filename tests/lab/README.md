@@ -7,7 +7,8 @@ Internet: both targets are Docker containers on a dedicated bridge network.
 
 - Docker
 - A Linux `xtate` binary, default `./bin/xtate`; override with `XTATE_BIN`
-- A Ubuntu 24.04 image with `python3`, `openssl` and `iptables`, default
+- A Ubuntu 24.04 image with `python3`, `openssl`, `iptables`, and the Xtate
+  runtime libraries (`libxml2`, libbson, libmongoc, libpcap), default
   `xtate-builder:24.04`; override with `XTATE_LAB_IMAGE`.
 
 For an offline/repeatable lab, build the small target image once (it uses the
@@ -38,7 +39,8 @@ $env:XTATE_LAB_IMAGE = "xtate-builder:24.04"
 - HLTCP `tls-state`: local TLS 1.3 target, version/cipher/certificate output, merged
   `--ssl-keylog` diagnostics, and `--graceful-tls-close` (the scanner still exits cleanly;
   `close_notify` delivery is additionally spot-checked manually).
-- ZBanner JARM: ten slots against the local TLS target; output contains
+- ZBanner JARM: ten slots against a dedicated local TLS target on port 9443;
+  output contains
   `jarm_slot`, `jarm_slots` and `jarm_part`. The output-side
   `tools/jarm_aggregate.py` is tested separately because it is not a scanner
   hot-path component.
