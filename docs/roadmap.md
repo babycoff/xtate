@@ -2,11 +2,11 @@
 
 **English** · [中文](zh-CN/roadmap.md)
 
-This page records the planned work after Xtate 2.30.0. It is not a promise of
+This page records the planned work after Xtate 2.31.0. It is not a promise of
 dates; it is a priority and acceptance-criteria list. Completed work is noted so
 the next change does not silently regress it.
 
-## Done in 2.30.0
+## Done in 2.31.0
 
 - Generic `ProbeSlotPlan` with `ProbeSlot_Always` and
   `ProbeSlot_AfterFirstReply`.
@@ -143,6 +143,6 @@ shared request-builder extraction and broader chunked/body tests remain.
 
 ## Release policy
 
-Functional changes take a minor version (`2.29.x` → `2.30.0`); fixes take a
+Functional changes take a minor version (`2.29.x` → `2.31.0`); fixes take a
 patch version. A release is not complete until the tag is pushed, the GitHub
 release exists, and the build/test evidence is recorded.
