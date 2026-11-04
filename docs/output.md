@@ -119,6 +119,16 @@ One compact object per line:
 The `scan report` / `probe report` / `output report` sub-objects are omitted when empty, as
 are `port_them`/`port_me` for port-less results.
 
+### JARM parts, order and aggregation
+
+Ten probes are sent. The default first request is standard probe 1; after its
+accepted TLS reply the remaining probes are transmitted as a burst. Use
+`--first-probe N` to rotate the first standard probe (for example, 7 sends
+first and, after its reply, bursts `8,9,10,1,2,3,4,5,6`). Replies may arrive in any order: `jarm_slot` records the
+standard probe id, so `tools/jarm_aggregate.py` is order-independent.
+`--probe-index N` sends only one probe and is a debugging aid, not a complete
+fingerprint.
+
 ### JARM parts and aggregation
 
 `jarm` deliberately keeps ZBanner stateless: every one of its ten slots emits

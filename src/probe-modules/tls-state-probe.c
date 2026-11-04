@@ -311,20 +311,28 @@ static ConfParam tlsstate_parameters[] = {
      SET_starttls,
      Type_ARG,
      {"start-tls", 0},
-     "Negotiate plaintext STARTTLS before TLS: smtp, imap, pop3 or ftp. "
-     "TLS certificate details and subprobe run after the upgrade."},
+     "Negotiate plaintext STARTTLS before TLS. Values: smtp, imap, pop3, ftp. "
+     "The probe handles the server greeting, sends the upgrade command and "
+     "only then starts TLS. Certificate/cipher/version output and -subprobe "
+     "run after the upgrade, inside TLS. Failure emits a 'starttls error' "
+     "result. Example: -probe-arg \"-subprobe close-state --starttls smtp "
+     "--dump-cert-details\" for a certificate-only scan."},
     {"subprobe",
      SET_subprobe,
      Type_ARG,
      {"sub-probe-module", 0},
-     "Specifies a ProbeModule as subprobe of TlsState Probe."},
+     "Required state subprobe. It is initialized only after TLS handshake "
+     "success (and after STARTTLS upgrade, when enabled), then runs inside the "
+     "encrypted stream. Use close-state for certificate-only scans."},
     {"subprobe-arg",
      SET_subprobe_args,
      Type_ARG,
      {"subprobe-args", "subarg", "subargs", 0},
-     "Specifies arguments for subprobe.\n"
-     "NOTE: Use double/single quotes and backslashes to handle params with "
-     "spaces in nesting."},
+     "Specifies arguments for the state subprobe. The string is parsed by the "
+     "subprobe's own parameter table after the TLS handshake/STARTTLS upgrade. "
+     "Nested quotes are the usual failure mode; prefer single unquoted tokens "
+     "such as -subprobe-arg --path=/h2 and use double/single quotes only for "
+     "values that really contain spaces."},
     {"sni",
      SET_sni,
      Type_ARG,
@@ -358,9 +366,12 @@ static ConfParam tlsstate_parameters[] = {
      SET_dump_cert_details,
      Type_FLAG,
      {"cert-details", "cert-info", 0},
-     "Record structured X.509 details: subject, issuer, validity, serial, "
-     "signature algorithm, public key type/bits, SAN, TLS version/cipher and "
-     "negotiated ALPN."},
+     "Record structured X.509 and TLS fields: cert_subject, cert_issuer, "
+     "cert_not_before, cert_not_after, cert_serial, "
+     "cert_signature_algorithm, cert_public_key, cert_public_key_bits, "
+     "cert_san, tls_version, tls_cipher and negotiated tls_alpn. Requires a "
+     "successful handshake and works after --starttls. For a certificate-only "
+     "scan use -subprobe close-state."},
     {"dump-cert",
      SET_dump_cert,
      Type_FLAG,
@@ -1973,23 +1984,33 @@ Probe TlsStateProbe = {
     .params     = tlsstate_parameters,
     .short_desc = "Do TLS upper-layer scan with specified probe.",
     .desc =
-        "TlsState Probe emulates SSL/TLS layer by OpenSSL BIO machanism. "
-        "It is used with TcpState ScanModule to perform TLS probing based on "
-        "our user-spase TCP stack. TlsState is just a middle layer(probe), so "
-        "we should specify a subprobe for it.\n"
-        "NOTE1: TlsState doesn't support initial waiting before hello for "
-        "subprobe because the nesting.\n"
-        "NOTE2: TlsState probe is designed to be compatible with wide range of "
-        "servers in version of TLS from v1.0 to v1.3. So our settings of "
-        "OpenSSL is not safe from the modern perspective.\n"
-        "NOTE3: The quote symbol in nested parameter can be a problem while we "
-        "use `subprobearg` for beginners. I give you a complete command as a "
-        "simple example here:\n"
-        "```\n"
-        "    xtate -scan tcp-state -probe tls-state -probearg \"-subprobe "
-        "hello-state -subprobearg '-nmap \\'GET / HTTP/1.0\\r\\n\\r\\n\\'' "
-        "-version -subject\" -ip 192.168.0.1 -p 443 -rate 500 -wait 30\n"
-        "```\n"
+        "TlsState Probe implements a TLS middle layer with OpenSSL BIO on "
+        "HLTCP. Use it with tcp-state and a state subprobe (-subprobe).\n\n"
+        "STARTTLS: --starttls smtp|imap|pop3|ftp first performs the plaintext "
+        "greeting and upgrade commands, then starts TLS in the same TCP "
+        "connection. Supported flows:\n"
+        "  smtp: 220 -> EHLO -> STARTTLS -> 220\n"
+        "  imap: * OK -> a001 STARTTLS -> a001 OK\n"
+        "  pop3: +OK -> STLS -> +OK\n"
+        "  ftp:  220 -> AUTH TLS -> 234\n"
+        "After a successful TLS handshake the probe emits version/cipher/"
+        "certificate evidence and initializes the subprobe inside the TLS "
+        "stream. The subprobe never sees the plaintext STARTTLS exchange.\n\n"
+        "Certificate-only STARTTLS example:\n"
+        "    xtate -ip 203.0.113.10 -p 25 -scan tcp-state -probe tls-state "
+        "-probe-arg \"-subprobe close-state --starttls smtp "
+        "--dump-cert-details\" -show info\n"
+        "HTTPS/HTTP-inside-TLS example:\n"
+        "    xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state "
+        "-probe-arg \"-subprobe http-state -subprobe-arg '--all-banner'\" "
+        "-show info\n\n"
+        "NOTE1: TlsState does not support an initial wait before hello for "
+        "the subprobe because of the nesting.\n"
+        "NOTE2: TlsState is deliberately compatible with TLS 1.0-1.3; the "
+        "OpenSSL settings are not safe for modern verification.\n"
+        "NOTE3: Nested quotes are the usual source of subprobe-arg errors. "
+        "Prefer a single unquoted token such as "
+        "-subprobe-arg --path=/h2 when possible.\n"
         "Dependencies: OpenSSL.",
 
     .init_cb           = &tlsstate_init,

@@ -89,6 +89,14 @@ time,level,ip_proto,ip_them,port_them,ip_me,port_me,classification,reason,scan r
 
 `scan report` / `probe report` / `output report` 子对象为空时会被省略；无端口结果的 `port_them`/`port_me` 同样省略。
 
+### JARM 片段、发送顺序与聚合
+
+一次发送十个探针。默认首个请求是标准探针 1；收到其可接受 TLS 回复后，其余
+探针批量发送。可用 `--first-probe N` 轮换首个标准探针（例如 7 先发，收到回复后其余
+`8,9,10,1,2,3,4,5,6` 批量发送）。回复到达顺序任意：`jarm_slot` 记录标准探针编号，
+所以 `tools/jarm_aggregate.py` 的聚合与发送顺序无关。`--probe-index N` 只发
+一个探针，是调试用途，不是完整指纹。
+
 ### JARM 片段与聚合
 
 `jarm` 为保持 ZBanner 无状态，每个 slot 输出一行，不在扫描器内保存

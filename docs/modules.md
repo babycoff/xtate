@@ -89,6 +89,77 @@ not JARM-specific: `Always` covers parallel variants, and
 `AfterFirstReply` covers conditional fan-out. A future protocol-version or
 challenge-response probe can reuse the same engine path without a new mode.
 
+### JARM transmission order
+
+`jarm` sends ten Salesforce JARM 1.0 probes. The default first request is
+**standard probe 1** (TLS 1.2, all ciphers forward, all ALPN, supported_versions
+TLS 1.2, reverse extension order). After the first accepted TLS reply, the
+remaining nine slots are transmitted as a burst without waiting for individual
+replies; replies may arrive in any order.
+
+```bash
+# Default: 1,2,3,4,5,6,7,8,9,10 (slot 1 waits for its reply)
+xtate -ip 203.0.113.10 -p 443 -scan zbanner -probe jarm
+
+# First request is 7; total order is 7,8,9,10,1,2,3,4,5,6.
+# The burst after probe 7's reply is 8,9,10,1,2,3,4,5,6.
+xtate -ip 203.0.113.10 -p 443 -scan zbanner -probe jarm \
+  -probe-arg "--first-probe 7"
+```
+
+- `--first-probe N` rotates which standard probe gets the first SYN. All ten
+  probes are still sent.
+- `jarm_slot` always records the standard probe id, not the transmission
+  position, so aggregation is order-independent.
+- `--probe-index N` sends only one probe; this is a debugging aid and cannot
+  produce a complete JARM fingerprint.
+
+### TLS evidence, certificate details and STARTTLS
+
+`tls-state` is an HLTCP middle layer and requires a `state` sub-probe. Certificate
+and TLS fields are emitted after a successful handshake, independent of what the
+sub-probe does afterwards.
+
+```bash
+# Direct TLS, certificate-only
+xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
+  -probe-arg "-subprobe close-state --dump-cert-details" -show info
+
+# SMTP STARTTLS, certificate-only
+xtate -ip 203.0.113.10 -p 25 -scan tcp-state -probe tls-state \
+  -probe-arg "-subprobe close-state --starttls smtp --dump-cert-details" -show info
+
+# HTTPS inside TLS
+xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
+  -probe-arg "-subprobe http-state -subprobe-arg '--all-banner'" -show info
+```
+
+`--starttls` values and plaintext flows:
+
+| Value | Greeting | Upgrade command | Success |
+|:---|:---|:---|:---|
+| `smtp` | `220` | `EHLO`, then `STARTTLS` | `250` then `220` |
+| `imap` | `* OK` | `a001 STARTTLS` | `a001 OK` |
+| `pop3` | `+OK` | `STLS` | `+OK` |
+| `ftp` | `220` | `AUTH TLS` | `234` |
+
+Sub-probe lifecycle:
+
+```text
+STARTTLS plaintext negotiation
+-> TLS handshake
+-> certificate/cipher/version output
+-> subprobe conn_init
+-> subprobe runs inside TLS
+```
+
+The sub-probe never sees the plaintext STARTTLS exchange. If the plaintext
+negotiation or TLS handshake fails, the sub-probe is not initialized; failed
+STARTTLS is emitted as `starttls error`. `--dump-cert-details` outputs
+`cert_subject`, `cert_issuer`, `cert_not_before`, `cert_not_after`,
+`cert_serial`, `cert_signature_algorithm`, `cert_public_key`,
+`cert_public_key_bits`, `cert_san`, `tls_version`, `tls_cipher` and `tls_alpn`.
+
 ### General (14)
 
 | Probe | Type | What it does |

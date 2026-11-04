@@ -223,7 +223,25 @@ upgrade command before the TLS handshake:
 - FTP: `220`, `AUTH TLS`, `234`.
 
 After the upgrade, `--dump-cert-details` and subprobes work as on a direct TLS
-port.  A failed plaintext negotiation is emitted as `starttls error`.
+port. The subprobe is initialized **after** the TLS handshake and only sees the
+encrypted stream, never the plaintext STARTTLS exchange. A failed plaintext
+negotiation is emitted as `starttls error` and the subprobe is not initialized.
+
+```bash
+# Certificate only, after SMTP STARTTLS
+sudo ./bin/xtate -ip 203.0.113.10 -p 25 -scan tcp-state -probe tls-state \
+  -probe-arg "-subprobe close-state --starttls smtp --dump-cert-details" \
+  -rate 100 -show info
+
+# Certificate only, after IMAP STARTTLS
+sudo ./bin/xtate -ip 203.0.113.10 -p 143 -scan tcp-state -probe tls-state \
+  -probe-arg "-subprobe close-state --starttls imap --dump-cert-details" \
+  -rate 100 -show info
+```
+
+`close-state` is a valid state subprobe for certificate-only scans: it sends
+nothing and closes after the handshake; the certificate item is emitted before
+subprobe initialization.
 
 ## Certificate details
 

@@ -75,6 +75,71 @@ typedef struct ProbeSlotPlan {
 变体，`AfterFirstReply` 适合条件 fan-out。后续的协议版本变体、
 challenge-response 探针可以复用同一引擎路径，不需要新增模式。
 
+### JARM 发送顺序
+
+`jarm` 发送 10 个 Salesforce JARM 1.0 探针。默认第一个请求是**标准探针 1**
+（TLS 1.2、cipher 全量正序、ALPN 全量、supported_versions TLS 1.2、扩展逆序）。
+第一个可接受的 TLS 回复到达后，其余 9 个 slot 会连续批量发出，不逐个等待回复；
+因此回复到达顺序可以任意。
+
+```bash
+# 默认：1,2,3,4,5,6,7,8,9,10（slot 1 先等回复）
+xtate -ip 203.0.113.10 -p 443 -scan zbanner -probe jarm
+
+# 首选探针 7；总发送顺序是 7,8,9,10,1,2,3,4,5,6。
+# 探针 7 收到回复后的批量顺序是 8,9,10,1,2,3,4,5,6。
+xtate -ip 203.0.113.10 -p 443 -scan zbanner -probe jarm \
+  -probe-arg "--first-probe 7"
+```
+
+- `--first-probe N` 轮换哪个标准探针获得第一个 SYN；仍然发送全部 10 个。
+- `jarm_slot` 始终记录标准探针编号，不是发送位置，因此聚合与顺序无关。
+- `--probe-index N` 只发一个探针，是调试用途，不能产生完整 JARM 指纹。
+
+### TLS 证据、证书细节与 STARTTLS
+
+`tls-state` 是 HLTCP 中间层，必须指定一个 `state` 子探测。证书和 TLS 字段在
+握手成功后输出，与子探测之后做什么无关。
+
+```bash
+# 直接 TLS，只取证书
+xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
+  -probe-arg "-subprobe close-state --dump-cert-details" -show info
+
+# SMTP STARTTLS，只取证书
+xtate -ip 203.0.113.10 -p 25 -scan tcp-state -probe tls-state \
+  -probe-arg "-subprobe close-state --starttls smtp --dump-cert-details" -show info
+
+# TLS 内跑 HTTP
+xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
+  -probe-arg "-subprobe http-state -subprobe-arg '--all-banner'" -show info
+```
+
+`--starttls` 值与明文流程：
+
+| 值 | 问候 | 升级命令 | 成功响应 |
+|:---|:---|:---|:---|
+| `smtp` | `220` | `EHLO`，然后 `STARTTLS` | `250` 然后 `220` |
+| `imap` | `* OK` | `a001 STARTTLS` | `a001 OK` |
+| `pop3` | `+OK` | `STLS` | `+OK` |
+| `ftp` | `220` | `AUTH TLS` | `234` |
+
+子探测生命周期：
+
+```text
+STARTTLS 明文协商
+-> TLS 握手
+-> 证书/cipher/version 输出
+-> 子探测 conn_init
+-> 子探测在 TLS 内运行
+```
+
+子探测看不到明文 STARTTLS 交换。明文协商或 TLS 握手失败时子探测不会初始化；
+STARTTLS 失败输出 `starttls error`。`--dump-cert-details` 输出
+`cert_subject`、`cert_issuer`、`cert_not_before`、`cert_not_after`、
+`cert_serial`、`cert_signature_algorithm`、`cert_public_key`、
+`cert_public_key_bits`、`cert_san`、`tls_version`、`tls_cipher` 和 `tls_alpn`。
+
 ### 通用（14）
 
 | 探测 | 类型 | 功能 |

@@ -139,8 +139,24 @@ tcp-state -> tls-state -> http-state / hello-state / recog-state / get-state / c
 - POP3：`+OK`、`STLS`、`+OK`；
 - FTP：`220`、`AUTH TLS`、`234`。
 
-升级后，`--dump-cert-details` 和 subprobe 与直接 TLS 端口一致。明文协商失败会
-输出 `starttls error`。
+升级后，`--dump-cert-details` 和 subprobe 与直接 TLS 端口一致。子探测只在 TLS
+握手成功后初始化，只能看到加密流，不会看到明文 STARTTLS 交换。明文协商失败会
+输出 `starttls error`，子探测不会初始化。
+
+```bash
+# SMTP STARTTLS 后只取证书
+sudo ./bin/xtate -ip 203.0.113.10 -p 25 -scan tcp-state -probe tls-state \
+  -probe-arg "-subprobe close-state --starttls smtp --dump-cert-details" \
+  -rate 100 -show info
+
+# IMAP STARTTLS 后只取证书
+sudo ./bin/xtate -ip 203.0.113.10 -p 143 -scan tcp-state -probe tls-state \
+  -probe-arg "-subprobe close-state --starttls imap --dump-cert-details" \
+  -rate 100 -show info
+```
+
+`close-state` 是只取证书时的合法 state 子探测：握手后不发送数据并关闭；证书
+item 在子探测初始化之前已经输出。
 
 ## 证书细节
 

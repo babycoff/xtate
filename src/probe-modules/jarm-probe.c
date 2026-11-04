@@ -145,13 +145,18 @@ static ConfParam jarm_parameters[] = {
      SET_probe_index,
      Type_ARG,
      {"index", 0},
-     "Just send one specified jarm probe to target."},
+     "Send only one specified JARM probe (1..10). This is a debugging aid: "
+     "the result has one part and is not a complete JARM fingerprint."},
     {"first-probe",
      SET_first_probe,
      Type_ARG,
      {"first-index", 0},
-     "Rotate the ten JARM probes so this standard probe index is sent first. "
-     "All ten probes are still sent; jarm_slot keeps the standard probe index."},
+     "Rotate the ten JARM probes so standard probe N (1..10) is sent first. "
+     "All ten are still sent. The first SYN is N; after its accepted reply the "
+     "remaining nine are transmitted as a burst in N+1..10,1..N-1 order. "
+     "jarm_slot keeps the standard probe id, so aggregation is order-"
+     "independent. Default: 1. Example: --first-probe 7 sends "
+     "7,8,9,10,1,2,3,4,5,6."},
 
     {0}};
 
@@ -256,11 +261,23 @@ Probe JarmProbe = {
                    .continue_cb = jarm_should_continue},
     .params     = jarm_parameters,
     .short_desc = "Collect JARM probe parts from 10 ClientHello slots.",
-    .desc = "Jarm Probe sends 10 TLS ClientHello variants if the first response "
-            "shows TLS. Each slot emits jarm_part/jarm_slot; no per-target "
-            "group is kept in the scanner. Aggregate them with "
-            "tools/jarm_aggregate.py.\n"
-            "Dependencies: OpenSSL.",
+    .desc =
+        "Jarm Probe sends ten Salesforce JARM 1.0 ClientHello variants. "
+        "The first reply must look like TLS; then the remaining slots are "
+        "transmitted as a burst without waiting for each reply. "
+        "Transmission order is the slot order, but replies may arrive in any "
+        "order and jarm_slot always records the standard probe id.\n\n"
+        "Default first request is standard probe 1: TLS 1.2, all ciphers in "
+        "forward order, all ALPN protocols, supported_versions (TLS 1.2) and "
+        "reverse extension order. With --first-probe N the first request is N "
+        "and the burst order is N..10,1..N-1. All ten probes are still sent; "
+        "the fuzzy hash and aggregation are unaffected.\n\n"
+        "--probe-index N sends only probe N and therefore produces an "
+        "incomplete fingerprint; it is a debugging aid, not a JARM scan.\n\n"
+        "Each slot emits jarm_part/jarm_slot. Aggregate parts with:\n"
+        "    python3 tools/jarm_aggregate.py scan.ndjson "
+        "--complete-out jarm-complete.jsonl\n\n"
+        "Dependencies: OpenSSL.",
 
     .init_cb               = &probe_init_nothing,
     .make_payload_cb       = &jarm_make_payload,

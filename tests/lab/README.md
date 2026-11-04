@@ -51,15 +51,16 @@ $env:XTATE_LAB_IMAGE = "xtate-builder:24.04"
 - UDP `ProbeSlot_Always`: `slot-test-udp` sends three datagrams to the UDP echo
   target and reports `slot_test_slot` 1..3.
 - ZBanner JARM: ten slots against a dedicated local TLS target on port 9443;
-  output contains
-  `jarm_slot`, `jarm_slots` and `jarm_part`. The output-side
+  output contains `jarm_slot`, `jarm_slots` and `jarm_part`. The lab compares
+  the aggregated hash with the vendored Salesforce `tests/reference/jarm.py`
+  on the same target. A second run uses `--first-probe 7` and verifies that the
+  standard slot id is preserved while the burst is rotated. The output-side
   `tools/jarm_aggregate.py` is tested separately because it is not a scanner
   hot-path component.
 - HLTCP `tls-state -> http-state`: the sub-probe initializes after the TLS handshake and
   completes an HTTP exchange inside the tunnel.
-- HLTCP SNI/ALPN: target uses `openssl s_server -tlsextdebug`; the lab asserts that the
-  `server name` and `application layer protocol negotiation` extensions arrived
-  (`-sni example.test -alpn h2,http/1.1`).
+- HLTCP SNI/ALPN: the TLS target uses `openssl s_server -tlsextdebug`; the
+  scanner output asserts negotiated `tls_alpn` (`-sni example.test -alpn h2,http/1.1`).
 
 The scanner runs at 100 pps. Firewall RST suppression is installed only inside
 the throwaway scanner container. Containers, network and rules are removed by a
