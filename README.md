@@ -211,7 +211,7 @@ Counts below assume a full build with all optional dependencies enabled; modules
 
 ### Probe modules (25)
 
-- **General:** `http` (+ state), `hello` (+ UDP/state), `tls-hello`, `tls-state`, `dns`, `snmp`, `echo`, `ssh`, `jarm`, `http2`.
+- **General:** `http` (+ state), `hello` (+ UDP/state), `tls-hello`, `tls-state`, `dns`, `snmp`, `echo`, `ssh`, `jarm`, `h2c`.
 - **Fingerprinting:** `recog` (+ UDP/state, Recog XML), `nmap` (+ UDP, nmap-service-probes).
 - **Scriptable:** `lua-tcp`, `lua-udp` — drop in a Lua script and you have a probe.
 - **Plumbing:** `get-state`, `close-state`, `null`.

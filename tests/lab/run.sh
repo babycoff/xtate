@@ -238,15 +238,15 @@ grep -q "ssh_kexinit" /tmp/zbanner-ssh-custom.log
 ! grep -q "ssh_banner" /tmp/zbanner-ssh-custom.log
 ! grep -q "ssh_software" /tmp/zbanner-ssh-custom.log
 
-run_case zbanner-http2 \
-    -ip "$HTTP2_IP" -p "$HTTP2_PORT" -scan zbanner -probe http2 \
+run_case zbanner-h2c \
+    -ip "$HTTP2_IP" -p "$HTTP2_PORT" -scan zbanner -probe h2c \
     -src-port 49000-49255 -rate 100 --wait 2 --no-status -show info -show failed \
     -probe-arg "--settings-hex 00030000006400040000ffff --all-frames --record-raw"
-grep -q "http/2" /tmp/zbanner-http2.log
-grep -q "http2_frame_type" /tmp/zbanner-http2.log
-grep -q "http2_settings_count" /tmp/zbanner-http2.log
-grep -q "http2_set_3" /tmp/zbanner-http2.log
-grep -q "http2_frame_count: 2" /tmp/zbanner-http2.log
+grep -q "http/2" /tmp/zbanner-h2c.log
+grep -q "http2_frame_type" /tmp/zbanner-h2c.log
+grep -q "http2_settings_count" /tmp/zbanner-h2c.log
+grep -q "http2_set_3" /tmp/zbanner-h2c.log
+grep -q "http2_frame_count: 2" /tmp/zbanner-h2c.log
 
 run_case udp-slot-test \
     -ip "$UDP_ECHO_IP" -p U:8082 -scan udp -probe slot-test-udp \

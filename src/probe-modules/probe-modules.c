@@ -37,7 +37,7 @@ extern Probe NmapProbe;
 extern Probe NmapUdpProbe;
 extern Probe SlotTestProbe;
 extern Probe SshProbe;
-extern Probe Http2Probe;
+extern Probe H2cProbe;
 extern Probe SlotTestUdpProbe;
 //! ADD YOUR PROBE MODULE HERE
 
@@ -81,7 +81,7 @@ Probe *probe_modules_list[] = {
 #endif
 
     &SshProbe,
-    &Http2Probe,
+    &H2cProbe,
 
     /* Developer examples / test fixtures for ProbeSlot_Always. */
     &SlotTestProbe,

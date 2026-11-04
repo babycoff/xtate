@@ -258,7 +258,7 @@ The two new protocol probes follow this rule:
   `--record-kexinit` control output. It reports `ssh_banner`, `ssh_protocol`,
   `ssh_software`, `ssh_comment`, all ten KEXINIT name-lists, and
   `ssh_first_kex_follows`.
-- `http2`: `--settings-hex` changes the client SETTINGS payload; `--ping-hex`
+- `h2c`: cleartext only (no TLS/ALPN). `--settings-hex` changes the client SETTINGS payload; `--ping-hex`
   changes the PING payload (default `Xtate/29`, an overt marker) and
   `--no-ping` disables it. `--all-frames`, `--max-frames`, `--no-settings` and
   `--record-raw` control output. It reports frame headers, `http2_settings_count`,

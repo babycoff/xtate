@@ -42,8 +42,8 @@ $env:XTATE_LAB_IMAGE = "xtate-builder:24.04"
 - SSH banner: the `ssh` probe reads `SSH-2.0-OpenSSH_9.9` and a coalesced
   KEXINIT from a local fake SSH target; it reports `ssh_banner`,
   `ssh_protocol`, `ssh_kex_algorithms` and `ssh_host_key_algorithms`.
-- HTTP/2: the `http2` probe sends the connection preface and reports the first
-  SETTINGS frame from a local fake HTTP/2 target.
+- h2c: the `h2c` probe sends the cleartext HTTP/2 preface and reports SETTINGS/
+  frames from a local fake cleartext h2c target. This does not test HTTP/2 over TLS.
 - TCP `ProbeSlot_Always`: `slot-test` sends three slots to the HTTP target and
   reports `slot_test_slot` 1..3.
 - UDP `ProbeSlot_Always`: `slot-test-udp` sends three datagrams to the UDP echo

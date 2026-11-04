@@ -245,7 +245,7 @@ HLTCP 的 TCB 数量。当前不宣称 HLTCP 支持 slot plan。
   `--record-kexinit` 控制输出；报告 `ssh_banner`、`ssh_protocol`、
   `ssh_software`、`ssh_comment`、全部十个 KEXINIT name-list 和
   `ssh_first_kex_follows`。
-- `http2`：`--settings-hex` 修改客户端 SETTINGS payload；`--ping-hex` 修改
+- `h2c`：仅 cleartext（不做 TLS/ALPN）。`--settings-hex` 修改客户端 SETTINGS payload；`--ping-hex` 修改
   PING payload（默认 `Xtate/29`，明面标记），`--no-ping` 关闭；
   `--all-frames`、`--max-frames`、`--no-settings`、`--record-raw` 控制输出；
   报告帧头、`http2_settings_count`、`http2_set_<id>` 值和可选原始帧。

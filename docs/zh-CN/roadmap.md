@@ -64,9 +64,12 @@ TLS 变体指纹仍未实现。
    完整 KEX 包交换仍是后续工作。
 3. HTTP state 探针增强：状态行、header、重定向目标、body 上限。
 4. STARTTLS：SMTP、IMAP、POP3、FTP；升级后组合 TLS 细节。
-5. HTTP/2 能力/framing 探针已实现（`http2`）；完整 HTTP/2 客户端和
+5. cleartext h2c 能力/framing 探针已实现（`h2c`）；TLS 上的 HTTP/2、完整 HTTP/2 客户端和
    HTTP/3/QUIC 仍是后续工作。
 6. TLS 变体指纹研究：ClientHello 变体、扩展顺序、GREASE、ALPN 顺序。
+7. QUIC 探针与 HTTP/3 探索：独立的 UDP/QUIC 传输路径、ALPN `h3`、QUIC
+   Initial/Handshake 报文，以及可选 QUIC 库评估。没有 QUIC 握手就不能把
+   UDP 数据报叫作 HTTP/3 探针。
 
 约束：
 

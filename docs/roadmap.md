@@ -74,10 +74,14 @@ Planned order:
    body limits.
 4. STARTTLS adapters for SMTP, IMAP, POP3 and FTP; compose TLS detail after the
    plaintext upgrade.
-5. HTTP/2 capability/framing probe is implemented (`http2`); full HTTP/2
+5. Cleartext h2c capability/framing probe is implemented (`h2c`); HTTP/2 over TLS, full HTTP/2
    client behavior and HTTP/3/QUIC remain future work.
 6. TLS variant fingerprint research: ClientHello variants, extension order,
    GREASE, ALPN ordering.
+7. QUIC probe and HTTP/3 exploration: a separate UDP/QUIC transport path,
+   ALPN `h3`, QUIC Initial/Handshake packets and optional QUIC library
+   evaluation. Do not call a UDP datagram an HTTP/3 probe without a QUIC
+   handshake.
 
 Constraints:
 

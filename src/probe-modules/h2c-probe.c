@@ -308,12 +308,12 @@ static unsigned http2_handle(unsigned th_idx, ProbeTarget *target,
     return 0;
 }
 
-Probe Http2Probe = {
-    .name       = "http2",
+Probe H2cProbe = {
+    .name       = "h2c",
     .type       = ProbeType_TCP,
     .slots      = {.count = 1, .trigger = ProbeSlot_None, .continue_cb = NULL},
     .params     = http2_parameters,
-    .short_desc = "Send an HTTP/2 preface and parse server frames/settings.",
+    .short_desc = "Cleartext h2c preface/framing probe (not HTTP/2 over TLS).",
     .desc = "Send the HTTP/2 client preface plus a configurable SETTINGS frame "
             "and report server frame headers, SETTINGS entries and optionally "
             "raw frames. Use --settings-hex, --all-frames, --max-frames, "

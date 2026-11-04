@@ -583,7 +583,7 @@ static const I18nModuleDescEntry i18n_module_desc_help[] = {
     {"nmap", "使用 nmap 探针识别 TCP 服务。"},
     {"nmap-udp", "使用 nmap 探针识别 UDP 服务。"},
     {"ssh", "读取 SSH 服务标识 banner（单 slot）。"},
-    {"http2", "发送 HTTP/2 preface 并校验首个帧。"},
+    {"h2c", "发送 cleartext h2c preface 并解析帧；不是 TLS 上的 HTTP/2。"},
     {"slot-test", "三 slot TCP ProbeSlot_Always 示例。"},
     {"slot-test-udp", "三 slot UDP ProbeSlot_Always 示例。"},
     {"text", "以文本格式保存结果。"},

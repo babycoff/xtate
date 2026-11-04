@@ -6,6 +6,27 @@ This is an engineering feasibility assessment, not an implementation promise.
 It assumes the 2.29.0 architecture: stateless ZBanner/UDP, HLTCP for stateful
 TCP, and output-side aggregation.
 
+## QUIC probe and HTTP/3 exploration
+
+**Verdict: research; high complexity; a separate transport project.**
+
+QUIC is not HTTP/2 over UDP. A real HTTP/3 probe needs:
+
+- a QUIC Initial packet with a valid header protection/encryption path;
+- TLS 1.3 handshake integrated into QUIC, with ALPN `h3`;
+- QUIC connection IDs, packet number spaces, loss detection and timers;
+- HTTP/3 control streams/QPACK if actual requests are required.
+
+Options:
+
+1. optional `libngtcp2`/`libnghttp3`, `quiche` or `msquic` integration;
+2. a deliberately capability-only QUIC/Initial probe without HTTP/3 requests;
+3. no new dependency and a documented non-goal.
+
+Recommendation: first write a QUIC/HTTP/3 research prototype outside the
+scanner hot path; do not add a fake "HTTP/3" UDP payload probe. Any optional
+library must remain optional and must not change the default build.
+
 ## P3 — scan control
 
 ### Limited target-aware probe selection

@@ -5,6 +5,26 @@
 这是工程可行性评估，不是实现承诺。前提是 2.29.0 架构：无状态
 ZBanner/UDP、HLTCP 有状态 TCP、输出侧聚合。
 
+## QUIC 探针与 HTTP/3 探索
+
+**结论：研究项，高复杂度，是独立的传输层工程。**
+
+QUIC 不是“UDP 上的 HTTP/2”。真正的 HTTP/3 探针需要：
+
+- 合法的 QUIC Initial 报文，包含 header protection/加密；
+- 集成 TLS 1.3，ALPN 为 `h3`；
+- QUIC connection ID、packet number space、丢包检测和定时器；
+- 如果要做真实请求，还需要 HTTP/3 control stream/QPACK。
+
+选项：
+
+1. 可选集成 `libngtcp2`/`libnghttp3`、`quiche` 或 `msquic`；
+2. 只做 QUIC/Initial 能力探测，不做 HTTP/3 请求；
+3. 不引入新依赖，明确列为非目标。
+
+建议：先在扫描器热路径之外做 QUIC/HTTP/3 研究原型；不要加一个假的
+“HTTP/3” UDP payload 探针。可选库必须保持可选，不能改变默认构建。
+
 ## P3 — 扫描控制
 
 ### 有限的目标相关探针选择

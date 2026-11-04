@@ -101,7 +101,7 @@ challenge-response probe can reuse the same engine path without a new mode.
 | `tls-hello` | tcp | Fixed ClientHello; reads ServerHello version/record hints without completing a handshake. |
 | `tls-state` | state | OpenSSL-backed TLS handshake, certificate/cipher/version dump, sub-probe over TLS. |
 | `ssh` | tcp | Configurable SSH banner plus KEX/host-key and cipher/MAC/compression lists. |
-| `http2` | tcp | HTTP/2 preface, configurable SETTINGS/PING fingerprint, frame/settings parsing. |
+| `h2c` | tcp | Cleartext h2c preface, configurable SETTINGS/PING fingerprint, frame/settings parsing. Not HTTP/2 over TLS. |
 | `jarm` | tcp | JARM via 10 ClientHello slots; emits `jarm_part`, aggregated by `tools/jarm_aggregate.py`. |
 | `dns` | udp | DNS record request with configurable name/type/recursion. |
 | `snmp` | udp | SNMP (v1/v2c) request and MIB-guided host info extraction. |

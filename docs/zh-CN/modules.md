@@ -87,7 +87,7 @@ challenge-response 探针可以复用同一引擎路径，不需要新增模式�
 | `tls-hello` | tcp | 固定 ClientHello；读取 ServerHello 的版本/记录层线索，但不完成握手。 |
 | `tls-state` | state | OpenSSL 驱动的 TLS 握手，导出证书/密码套件/版本，并可在 TLS 之上跑子探测。 |
 | `ssh` | tcp | 可配置 SSH banner，以及 KEX/host-key、cipher/MAC/压缩算法列表。 |
-| `http2` | tcp | HTTP/2 preface、可配置 SETTINGS/PING 指纹、帧/settings 解析。 |
+| `h2c` | tcp | cleartext h2c preface、可配置 SETTINGS/PING 指纹、帧/settings 解析；不是 TLS 上的 HTTP/2。 |
 | `jarm` | tcp | 通过 10 个 ClientHello slot 做 JARM；输出 `jarm_part`，由 `tools/jarm_aggregate.py` 聚合。 |
 | `dns` | udp | DNS 记录请求，可配置名称/类型/递归。 |
 | `snmp` | udp | SNMP（v1/v2c）请求，并按 MIB 提取主机信息。 |
