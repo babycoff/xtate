@@ -8,6 +8,15 @@ the next change does not silently regress it.
 
 ## Done in 2.32.0
 
+- Salesforce JARM 1.0 comparison on a local target; fixed TLS 1.3 extension
+  offset in `jarm`.
+- `jarm --first-probe N` rotation and standard-slot-preserving aggregation.
+- STARTTLS for SMTP/IMAP/POP3/FTP in `tls-state`, with certificate details and
+  subprobes after the upgrade.
+- Structured X.509 details (`--dump-cert-details`).
+- Parameter parser regression suite, strict value parsing, 200-case fuzz and
+  error propagation.
+- Expanded English/Chinese help and documentation.
 - Generic `ProbeSlotPlan` with `ProbeSlot_Always` and
   `ProbeSlot_AfterFirstReply`.
 - Legacy `MultiMode`/`multi_num` semantics removed.
@@ -25,22 +34,17 @@ the next change does not silently regress it.
 - `tests/module-examples/test.sh` is part of Linux CI.
 - Runtime slot examples remain `slot-test` and `slot-test-udp`.
 
-## Parameter parser coverage (planned)
+## Parameter parser coverage (completed in 2.31.0/2.32.0)
 
-Research and harness design: [Parameter parser plan](./parser-test-plan.md).
+- `tests/config/test.sh` covers flags, argument forms, unknown/missing options,
+  long names, bare `--`, positional tokens and nested `-probe-arg`.
+- Strict bool/int/size/time parsing with checked APIs and setter error
+  propagation.
+- `tests/config/fuzz.py` runs 200 deterministic cases in CI.
+- Interactive malformed-recovery coverage exists.
 
-The CLI/parameter parser has not had a dedicated regression suite. Add one
-before relying on more nested/subprobe options:
-
-- `ConfParam` flag/argument/unknown-option/duplicate-option cases;
-- quoted strings, spaces, backslashes and nested `-subprobe-arg`;
-- integer/range/hex/size boundaries and invalid values;
-- `-scan-arg`, `-probe-arg`, `-output-arg`, `-gen-arg` nesting;
-- interactive `set` and recovered config files;
-- exact nonzero exit and stderr for invalid input.
-
-Acceptance: a `tests/config/` suite runs on Linux CI, covers the parser and a
-representative module from each registry, and does not depend on the network.
+HTTP/1 probe work is intentionally frozen at the current structured response
+parser/pass; no further HTTP rewrite is planned unless requirements change.
 
 ## P2 — JARM correctness
 
@@ -90,12 +94,12 @@ Planned order:
    signature algorithm, ALPN, version/cipher).
 2. SSH banner probe is implemented (`ssh`), including coalesced KEX/host-key
    algorithm lists. Full KEX packet exchange remains future work.
-3. HTTP state probe improvements: status line, headers, redirect target,
-   body limits.
+3. HTTP/1 work is frozen after the structured response parser pass; no further
+   HTTP rewrite is planned.
 4. STARTTLS adapters for SMTP, IMAP, POP3 and FTP are implemented in
    `tls-state --starttls`, including certificate details after the upgrade.
-5. Cleartext h2c capability/framing probe is implemented (`h2c`); HTTP/2 over TLS, full HTTP/2
-   client behavior and HTTP/3/QUIC remain future work.
+5. HTTP/2 remains minimal (`h2`): static/literal HPACK, no Huffman/dynamic
+   table, no full stream management. HTTP/3/QUIC remain separate research.
 6. TLS variant fingerprint research: ClientHello variants, extension order,
    GREASE, ALPN ordering.
 7. QUIC probe and HTTP/3 exploration: a separate UDP/QUIC transport path,
@@ -112,13 +116,11 @@ Constraints:
 
 For P3/P4 feasibility, see [P3/P4 feasibility](./feasibility.md).
 
-## HTTP probe audit/rewrite (planned)
+## HTTP probe audit/rewrite (frozen)
 
-`http` and `http-state` have duplicated request construction and only
-banner/regex response handling. The detailed assessment and phased plan are in
-[HTTP probe audit](./http-probes-audit.md). First parser pass is implemented;
-shared request-builder extraction and broader chunked/body tests remain.
-`h2c`/`h2` remain separate.
+The first response-parser pass is implemented. Per current direction, HTTP/1
+work stops here; shared request-builder extraction and cross-segment chunked
+state are deferred. See [HTTP probe audit](./http-probes-audit.md).
 
 ## P3 — scan control
 
@@ -141,6 +143,23 @@ shared request-builder extraction and broader chunked/body tests remain.
   [Module development](./module-development.md#hltcp-and-slot-plans-planned).
   Connection-local `AfterFirstReply` comes first; parallel independent
   connections later.
+
+## Recommended next order
+
+1. JARM failure modes: scanner-level alert/non-TLS/missing-slot lab cases and
+   an external retry manifest; no scanner-side group state.
+2. SSH deep exchange: actual KEX packet exchange and host-key fingerprints.
+3. Full HTTP/2 (`h2`): HPACK Huffman/dynamic table, SETTINGS ACK, stream/window
+   state and stronger ALPN checks.
+4. HLTCP slot planning: connection-local `AfterFirstReply`, then independent
+   parallel connections.
+5. TLS variant fingerprints: ClientHello variants, extension order, GREASE,
+   ALPN ordering.
+6. P3 external two-pass target selection (lowest-risk scan-control change).
+7. Opt-in adaptive rate controller.
+8. QUIC/HTTP3 research prototype outside the scanner hot path.
+9. HLTCP stateless -> stateful handoff.
+10. YAML templates / traffic randomization (P4, research-gated).
 
 ## Release policy
 

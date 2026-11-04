@@ -7,6 +7,13 @@
 
 ## 2.32.0 已完成
 
+- 本机目标上的 Salesforce JARM 1.0 对比；修复 `jarm` TLS 1.3 扩展解析偏移。
+- `jarm --first-probe N` 轮换；`jarm_slot` 保留标准编号，聚合与顺序无关。
+- `tls-state` 的 SMTP/IMAP/POP3/FTP STARTTLS；升级后输出证书并可运行子探测。
+- 结构化 X.509 细节 `--dump-cert-details`。
+- 参数解析器回归套件、严格值解析、200 例 fuzz 和错误传播。
+- 中英文帮助与文档扩展。
+
 - 通用 `ProbeSlotPlan`：`ProbeSlot_Always`、`ProbeSlot_AfterFirstReply`。
 - 移除旧的 `MultiMode`/`multi_num` 语义。
 - TCP/UDP 独立 slot 执行。
@@ -22,21 +29,15 @@
 - `tests/module-examples/test.sh` 已接入 Linux CI。
 - 运行期 slot 示例仍是 `slot-test` / `slot-test-udp`。
 
-## 参数解析覆盖（计划中）
+## 参数解析覆盖（2.31.0/2.32.0 已完成）
 
-调研与测试框架设计见[参数解析器计划](./parser-test-plan.md)。
+- `tests/config/test.sh` 覆盖 flag、参数形式、未知/缺失、长名称、裸 `--`、
+  位置 token 和嵌套 `-probe-arg`。
+- 严格 bool/int/size/time 解析，checked API 和 setter 错误传播。
+- `tests/config/fuzz.py` 在 CI 跑 200 个确定性用例。
+- 交互式 malformed recovery 有覆盖。
 
-CLI/参数解析器还没有专门的回归测试套件。在依赖更多嵌套/subprobe 参数之前应补齐：
-
-- `ConfParam` 的 flag/argument/未知选项/重复选项；
-- 引号、空格、反斜杠和嵌套 `-subprobe-arg`；
-- 整数/范围/十六进制/size 边界和非法值；
-- `-scan-arg`、`-probe-arg`、`-output-arg`、`-gen-arg` 嵌套；
-- 交互式 `set` 和恢复配置文件；
-- 非法输入的非零退出码和 stderr。
-
-验收：`tests/config/` 在 Linux CI 运行，覆盖解析器和四类注册表各一个代表模块，
-且不依赖网络。
+HTTP/1 探针按当前方向冻结在结构化响应解析阶段。
 
 ## P2 — JARM 正确性
 
@@ -48,7 +49,7 @@ JARM fuzzy hash 已改为 Salesforce JARM 1.0 语义：
 
 测试已加入精确 62 字符参考向量。剩余工作：
 
-1. 在同一个本地 TLS 目标上，把 Xtate 输出与官方 JARM 实现对比，而不只测哈希。
+1. 已完成：本机目标上与 Salesforce 官方 JARM 对比，并修复扩展解析偏移。
 2. 增加扫描器级 lab 断言：完整、alert/非 TLS、缺失 slot。
 3. 继续明确 `targets_with_parts` 语义：0 part 目标无法从 JARM 行反推；不要给
    扫描器加 group 状态。
@@ -64,32 +65,18 @@ JARM fuzzy hash 已改为 Salesforce JARM 1.0 语义：
 
 ## P2 — 协议探针
 
-状态：JARM 哈希/参考向量、SSH banner/KEX、cleartext `h2c` 和
-`h2` state 探针（HLTCP + TLS ALPN h2）已实现。`h2` 支持最小静态/literal
-HPACK 请求以及帧/HEADERS/DATA 解析；Huffman/动态 HPACK、完整流管理、
-STARTTLS、HTTP/3/QUIC 和 TLS 变体指纹仍未实现。TLS 证书/subject 细节已由
-`tls-state` 提供，HTTP state 行为已由 `http-state` 提供。
+已实现：JARM 官方对比/first-probe、SSH banner/KEXINIT、cleartext `h2c`、
+TLS/ALPN h2 `h2`、TLS 证书细节、SMTP/IMAP/POP3/FTP STARTTLS。
 
-增加协议细节探针，同时保持扫描器无 per-target 状态。能单 slot 就单 slot，
-需要并行变体时使用 `ProbeSlot_Always`。
+仍待做：
 
-计划顺序：
+1. SSH 实际 KEX 包交换、host-key 指纹和协商结果。
+2. 完整 HTTP/2：HPACK Huffman/动态表、SETTINGS ACK、流/窗口和更强的 ALPN 校验。
+3. TLS 变体指纹：ClientHello 变体、扩展顺序、GREASE、ALPN 顺序。
+4. QUIC/HTTP3 独立传输研究，不把 UDP 数据报当 HTTP/3。
+5. JARM 失败模式：alert/非 TLS/缺失 slot 的 scanner-level lab。
 
-1. JARM 已在本机目标上与 Salesforce 官方实现对比；修复了扩展解析偏移。
-2. TLS 证书与细节已在 `tls-state` 的 `--dump-cert-details` 中实现
-   （subject、issuer、SAN、有效期、key type/bits、签名算法、ALPN、版本/cipher）。
-3. STARTTLS 已在 `tls-state --starttls` 中实现 SMTP/IMAP/POP3/FTP，
-   升级后可继续输出证书细节。
-2. SSH banner 探针已实现（`ssh`），包括合并报文中的 KEX/host-key 算法列表；
-   完整 KEX 包交换仍是后续工作。
-3. HTTP state 探针增强：状态行、header、重定向目标、body 上限。
-4. STARTTLS：SMTP、IMAP、POP3、FTP；升级后组合 TLS 细节。
-5. cleartext h2c 能力/framing 探针已实现（`h2c`）；TLS 上的 HTTP/2、完整 HTTP/2 客户端和
-   HTTP/3/QUIC 仍是后续工作。
-6. TLS 变体指纹研究：ClientHello 变体、扩展顺序、GREASE、ALPN 顺序。
-7. QUIC 探针与 HTTP/3 探索：独立的 UDP/QUIC 传输路径、ALPN `h3`、QUIC
-   Initial/Handshake 报文，以及可选 QUIC 库评估。没有 QUIC 握手就不能把
-   UDP 数据报叫作 HTTP/3 探针。
+HTTP/1 探针按当前方向冻结，不再继续重写。
 
 约束：
 
@@ -100,11 +87,11 @@ STARTTLS、HTTP/3/QUIC 和 TLS 变体指纹仍未实现。TLS 证书/subject 细
 
 P3/P4 可行性见[P3/P4 可行性](./feasibility.md)。
 
-## HTTP 探针审计/重写（计划中）
+## HTTP 探针审计/重写（冻结）
 
-`http` 和 `http-state` 请求构造重复，响应仅有 banner/regex 处理。详细评估和
-分阶段计划见 [HTTP 探针审计](./http-probes-audit.md)。第一轮响应解析已实现；共享请求构造器抽取和更完整的
-chunked/body 测试仍待做。`h2c`/`h2` 保持独立。
+第一轮结构化响应解析已实现。按当前方向 HTTP/1 工作到此为止；共享请求构造器
+抽取和跨段 chunked 状态暂缓。详见 [HTTP 探针审计](./http-probes-audit.md)。
+`h2c`/`h2` 保持独立。
 
 ## P3 — 扫描控制
 
@@ -124,6 +111,19 @@ chunked/body 测试仍待做。`h2c`/`h2` 保持独立。
   `ProbeSlot_Always`。
 - HLTCP slot：见[模块开发](./module-development.md#hltcp-与-slot-plan计划中)
   的计划。先做连接内 `AfterFirstReply`，再做并行独立连接。
+
+## 建议后续顺序
+
+1. JARM 失败模式：scanner-level alert/非 TLS/缺 slot lab，外部 retry manifest。
+2. SSH 深度交换：实际 KEX 包交换和 host-key 指纹。
+3. 完整 HTTP/2：HPACK Huffman/动态表、SETTINGS ACK、流/窗口和 ALPN 校验。
+4. HLTCP slot：连接内 `AfterFirstReply`，再考虑并行连接。
+5. TLS 变体指纹：ClientHello、扩展顺序、GREASE、ALPN 顺序。
+6. P3 外部两阶段目标选择（风险最低）。
+7. opt-in 自适应速率。
+8. QUIC/HTTP3 原型。
+9. stateless -> stateful handoff。
+10. YAML 模板 / 流量随机化（P4，研究开关）。
 
 ## 发布策略
 
