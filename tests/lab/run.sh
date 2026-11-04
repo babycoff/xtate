@@ -22,13 +22,15 @@ HTTP_TARGET="xtate-lab-http-$$"
 TLS_TARGET="xtate-lab-tls-$$"
 JARM_TARGET="xtate-lab-jarm-$$"
 UDP_ECHO_TARGET="xtate-lab-udp-echo-$$"
+SSH_TARGET="xtate-lab-ssh-$$"
 HTTP_PORT=8080
 CLOSED_PORT=9
 TLS_PORT=8443
 JARM_PORT=9443
+SSH_PORT=2222
 
 cleanup() {
-    docker rm -f "$HTTP_TARGET" "$TLS_TARGET" "$JARM_TARGET" "$UDP_ECHO_TARGET" >/dev/null 2>&1 || true
+    docker rm -f "$HTTP_TARGET" "$TLS_TARGET" "$JARM_TARGET" "$UDP_ECHO_TARGET" "$SSH_TARGET" >/dev/null 2>&1 || true
     docker network rm "$NET" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
@@ -95,25 +97,33 @@ MSYS_NO_PATHCONV=1 docker run -d --name "$UDP_ECHO_TARGET" --network "$NET" \
     python3 -u /src/tests/lab/udp_echo.py >/dev/null
 sleep 1
 
+echo "==> starting SSH banner target"
+MSYS_NO_PATHCONV=1 docker run -d --name "$SSH_TARGET" --network "$NET" \
+    -v "$ROOT:/src:ro" "$IMAGE" \
+    python3 -u /src/tests/lab/ssh_banner.py >/dev/null
+
 wait_tcp "$HTTP_TARGET" "$HTTP_PORT"
 wait_tcp "$TLS_TARGET" "$TLS_PORT"
 wait_tcp "$JARM_TARGET" "$JARM_PORT"
+wait_tcp "$SSH_TARGET" "$SSH_PORT"
 
 HTTP_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$HTTP_TARGET")"
 TLS_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$TLS_TARGET")"
 JARM_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$JARM_TARGET")"
 UDP_ECHO_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$UDP_ECHO_TARGET")"
+SSH_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$SSH_TARGET")"
 echo "HTTP target: $HTTP_IP:$HTTP_PORT (closed test port $CLOSED_PORT)"
 echo "TLS  target: $TLS_IP:$TLS_PORT"
 echo "JARM target: $JARM_IP:$JARM_PORT"
 echo "UDP echo:   $UDP_ECHO_IP:8082"
+echo "SSH banner:  $SSH_IP:$SSH_PORT"
 
 docker run --rm \
     --cap-add NET_RAW --cap-add NET_ADMIN \
     --network "$NET" \
-    -e HTTP_IP="$HTTP_IP" -e TLS_IP="$TLS_IP" -e JARM_IP="$JARM_IP" -e UDP_ECHO_IP="$UDP_ECHO_IP" \
+    -e HTTP_IP="$HTTP_IP" -e TLS_IP="$TLS_IP" -e JARM_IP="$JARM_IP" -e UDP_ECHO_IP="$UDP_ECHO_IP" -e SSH_IP="$SSH_IP" \
     -e HTTP_PORT="$HTTP_PORT" -e CLOSED_PORT="$CLOSED_PORT" \
-    -e TLS_PORT="$TLS_PORT" -e JARM_PORT="$JARM_PORT" \
+    -e TLS_PORT="$TLS_PORT" -e JARM_PORT="$JARM_PORT" -e SSH_PORT="$SSH_PORT" \
     -v "$ROOT:/src:ro" -v "$BIN:/xtate:ro" \
     "$IMAGE" bash -lc '
 set -euo pipefail
@@ -196,6 +206,13 @@ run_case zbanner-slot-test \
 grep -q "slot_test_slot: 1" /tmp/zbanner-slot-test.log
 grep -q "slot_test_slot: 2" /tmp/zbanner-slot-test.log
 grep -q "slot_test_slot: 3" /tmp/zbanner-slot-test.log
+
+run_case zbanner-ssh \
+    -ip "$SSH_IP" -p "$SSH_PORT" -scan zbanner -probe ssh \
+    -src-port 48000-48255 -rate 100 --wait 2 --no-status -show info -show failed
+grep -q "ssh_banner" /tmp/zbanner-ssh.log
+grep -q "ssh_protocol" /tmp/zbanner-ssh.log
+grep -q "OpenSSH_9.9" /tmp/zbanner-ssh.log
 
 run_case udp-slot-test \
     -ip "$UDP_ECHO_IP" -p U:8082 -scan udp -probe slot-test-udp \

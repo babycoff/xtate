@@ -39,6 +39,8 @@ $env:XTATE_LAB_IMAGE = "xtate-builder:24.04"
 - HLTCP `tls-state`: local TLS 1.3 target, version/cipher/certificate output, merged
   `--ssl-keylog` diagnostics, and `--graceful-tls-close` (the scanner still exits cleanly;
   `close_notify` delivery is additionally spot-checked manually).
+- SSH banner: the `ssh` probe reads `SSH-2.0-OpenSSH_9.9` from a local fake
+  SSH target and reports `ssh_banner` / `ssh_protocol`.
 - TCP `ProbeSlot_Always`: `slot-test` sends three slots to the HTTP target and
   reports `slot_test_slot` 1..3.
 - UDP `ProbeSlot_Always`: `slot-test-udp` sends three datagrams to the UDP echo

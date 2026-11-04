@@ -55,7 +55,7 @@ JARM fuzzy hash 已改为 Salesforce JARM 1.0 语义：
 
 1. TLS 证书与细节：subject、issuer、SAN、有效期、key type、签名算法、
    ALPN、协商版本/cipher。
-2. SSH banner/算法：协议版本、KEX、host-key 算法。
+2. SSH banner 探针已实现（`ssh`）；下一步扩展 KEX/host-key 算法解析。
 3. HTTP state 探针增强：状态行、header、重定向目标、body 上限。
 4. STARTTLS：SMTP、IMAP、POP3、FTP；升级后组合 TLS 细节。
 5. HTTP/2、HTTP/3，明确 transport 与 framing 上限。

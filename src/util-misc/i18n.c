@@ -570,6 +570,7 @@ static const I18nModuleDescEntry i18n_module_desc_help[] = {
     {"tls-hello", "TLS ServerHello 版本识别与正则匹配。"},
     {"nmap", "使用 nmap 探针识别 TCP 服务。"},
     {"nmap-udp", "使用 nmap 探针识别 UDP 服务。"},
+    {"ssh", "读取 SSH 服务标识 banner（单 slot）。"},
     {"slot-test", "三 slot TCP ProbeSlot_Always 示例。"},
     {"slot-test-udp", "三 slot UDP ProbeSlot_Always 示例。"},
     {"text", "以文本格式保存结果。"},

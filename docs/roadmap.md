@@ -63,7 +63,8 @@ Planned order:
 
 1. TLS certificate/details probe: subject, issuer, SAN, validity, key type,
    signature algorithm, ALPN, negotiated version/cipher.
-2. SSH banner and algorithm probe: protocol version, KEX, host-key algorithms.
+2. SSH banner probe is implemented (`ssh`). Extend it to SSH KEX/host-key
+   algorithms next.
 3. HTTP state probe improvements: status line, headers, redirect target,
    body limits.
 4. STARTTLS adapters for SMTP, IMAP, POP3 and FTP; compose TLS detail after the

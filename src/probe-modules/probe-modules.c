@@ -36,6 +36,7 @@ extern Probe TlsHelloProbe;
 extern Probe NmapProbe;
 extern Probe NmapUdpProbe;
 extern Probe SlotTestProbe;
+extern Probe SshProbe;
 extern Probe SlotTestUdpProbe;
 //! ADD YOUR PROBE MODULE HERE
 
@@ -77,6 +78,8 @@ Probe *probe_modules_list[] = {
     &NmapProbe,
     &NmapUdpProbe,
 #endif
+
+    &SshProbe,
 
     /* Developer examples / test fixtures for ProbeSlot_Always. */
     &SlotTestProbe,

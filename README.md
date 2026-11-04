@@ -5,7 +5,7 @@
   <h3>Xtate — a modular all-stack network scanner for Internet-scale surveys</h3>
 
   <p>
-    <b>Stateless TCP banners.</b> <b>Hybrid-state TCP/TLS.</b> <b>46 registered modules.</b><br>
+    <b>Stateless TCP banners.</b> <b>Hybrid-state TCP/TLS.</b> <b>47 registered modules.</b><br>
     <sub>C99 · Linux glibc/musl &amp; Windows · GCC/Clang/MSVC/MinGW · Make/Ninja · IPv4 &amp; IPv6</sub>
   </p>
 
@@ -51,7 +51,7 @@ Most fast scanners stop at "port open"; most service scanners give up at Interne
 
 - ⚡ **ZBanner** — real TCP responses without a per-target connection table. The peer's TCP stack holds the state; a SipHash cookie proves the reply is yours.
 - 🧬 **HLTCP** — a hybrid-state user-space TCP stack, created only where needed. It completes TLS handshakes and speaks HTTP inside them.
-- 🧩 **Modules** — 11 scan / 23 probe / 7 output / 5 generate modules. Four interfaces, one pipeline, no runtime plugin magic.
+- 🧩 **Modules** — 11 scan / 24 probe / 7 output / 5 generate modules. Four interfaces, one pipeline, no runtime plugin magic.
 - 🌐 **Chinese help** — `--lang zh` or `XTATE_LANG=zh` localizes human-facing help, with UTF-8-aware wrapping and safe English fallback for untranslated strings.
 - 🎯 **Sparse target patterns** — component ranges such as `132.80-88.90.15` or `2001:db8:1-5::1`; up to four ranges form a Cartesian product (1,048,576-address cap per token) while large continuous spaces still use CIDR/ranges.
 
@@ -209,9 +209,9 @@ Counts below assume a full build with all optional dependencies enabled; modules
 | `yarrp-echo` | — | Stateless topology probing with ICMP echo. |
 | `yarrp-udp` | — | Stateless topology probing with UDP + ICMP errors. |
 
-### Probe modules (23)
+### Probe modules (24)
 
-- **General:** `http` (+ state), `hello` (+ UDP/state), `tls-hello`, `tls-state`, `dns`, `snmp`, `echo`, `jarm`.
+- **General:** `http` (+ state), `hello` (+ UDP/state), `tls-hello`, `tls-state`, `dns`, `snmp`, `echo`, `ssh`, `jarm`.
 - **Fingerprinting:** `recog` (+ UDP/state, Recog XML), `nmap` (+ UDP, nmap-service-probes).
 - **Scriptable:** `lua-tcp`, `lua-udp` — drop in a Lua script and you have a probe.
 - **Plumbing:** `get-state`, `close-state`, `null`.
@@ -354,7 +354,7 @@ xtate --usage                 # short usage and examples
 xtate --help                  # every global parameter
 xtate --intro                 # the architecture tour
 xtate --list-scan             # 11 scan modules
-xtate --list-probe            # 23 probe modules
+xtate --list-probe            # 24 probe modules
 xtate --list-out              # 7 output modules
 xtate --list-gen              # 5 generate modules
 xtate --help-scan zbanner     # module-specific parameters
