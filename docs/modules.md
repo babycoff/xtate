@@ -4,7 +4,7 @@
 
 Xtate is assembled from four kinds of module. Each is a C struct plus one line in a
 `NULL`-terminated registry; there is no runtime plugin loading. A full build registers
-**11 Scan + 24 Probe + 7 Output + 5 Generate** modules, and modules whose optional library
+**11 Scan + 25 Probe + 7 Output + 5 Generate** modules, and modules whose optional library
 is missing simply disappear from the build (and from `--list-*`).
 
 | Kind | Responsibility | Parameter | Registry |
@@ -22,7 +22,7 @@ sub-parameters travel as one quoted string through `-scan-arg`, `-probe-arg`,
 
 ```bash
 xtate --list-scan      # 11 scan modules
-xtate --list-probe     # 24 probe modules
+xtate --list-probe     # 25 probe modules
 xtate --list-out       # 7 output modules
 xtate --list-gen       # 5 generate modules
 
@@ -52,7 +52,7 @@ Every scan module exposes `--help-scan <name>` with its own options (record TTL/
 repeat/dedup switches, TTL overrides, ...). Which mode to pick, and which of them needs
 firewall rules, is covered in [Scanning modes](./scanning-modes.md).
 
-## Probe modules (24)
+## Probe modules (25)
 
 A probe declares a **type** that must match the scan module: `tcp` for `zbanner`, `udp` for
 `udp`, `state` for `tcp-state`. It may declare a `ProbeSlotPlan` (JARM and the `slot-test` examples); see
@@ -89,7 +89,7 @@ not JARM-specific: `Always` covers parallel variants, and
 `AfterFirstReply` covers conditional fan-out. A future protocol-version or
 challenge-response probe can reuse the same engine path without a new mode.
 
-### General (12)
+### General (13)
 
 | Probe | Type | What it does |
 |:---|:---:|:---|
@@ -100,7 +100,8 @@ challenge-response probe can reuse the same engine path without a new mode.
 | `hello-state` | state | The same over a stateful TCP connection. |
 | `tls-hello` | tcp | Fixed ClientHello; reads ServerHello version/record hints without completing a handshake. |
 | `tls-state` | state | OpenSSL-backed TLS handshake, certificate/cipher/version dump, sub-probe over TLS. |
-| `ssh` | tcp | SSH identification banner, protocol prefix and software string. |
+| `ssh` | tcp | Configurable SSH banner plus KEX/host-key and cipher/MAC/compression lists. |
+| `http2` | tcp | HTTP/2 preface, configurable SETTINGS/PING fingerprint, frame/settings parsing. |
 | `jarm` | tcp | JARM via 10 ClientHello slots; emits `jarm_part`, aggregated by `tools/jarm_aggregate.py`. |
 | `dns` | udp | DNS record request with configurable name/type/recursion. |
 | `snmp` | udp | SNMP (v1/v2c) request and MIB-guided host info extraction. |

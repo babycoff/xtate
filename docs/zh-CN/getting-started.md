@@ -30,7 +30,7 @@ Xtate 是一款面向大规模主动测量的模块化全栈网络扫描器。�
 | Windows 10/11 | Clang 23（clang-cl） | 构建 + `--selftest` 通过；探测模块数量取决于可选库 | 通过 Scoop 装 OpenSSL；未装 PCRE2/BSON/mongoc |
 | Windows 10/11 | MinGW-w64 GCC 16 | 构建 + `--selftest` 通过；探测模块数量取决于可选库 | 无 OpenSSL（Scoop 包是 MSVC ABI） |
 
-模块数量是最快的自检方式：**24 probe + 7 output** 表示依赖齐全；数量变少说明至少有一个可选库没有被找到。
+模块数量是最快的自检方式：**25 probe + 7 output** 表示依赖齐全；数量变少说明至少有一个可选库没有被找到。
 
 ## 在 Linux 上构建
 

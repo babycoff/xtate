@@ -241,6 +241,29 @@ sequence), then implement connection-local `AfterFirstReply` through the state
 probe state machine, and only then consider parallel HLTCP `Always`. Do not
 multiply HLTCP TCBs silently. No HLTCP slot support is claimed today.
 
+### Probe controls and fingerprints
+
+Research probes should be explicit and adjustable:
+
+- expose the payload/identification string (for example SSH `--send-banner`);
+- expose output toggles and limits, not only a fixed report;
+- keep an **overt** default Xtate marker when the protocol has a text field,
+  and make it replaceable/disableable;
+- never hide an identity or use an undocumented marker.
+
+The two new protocol probes follow this rule:
+
+- `ssh`: `--send-banner` changes the identification string; default is
+  `SSH-2.0-Xtate_1.0\r\n`. `--no-banner`, `--no-software`, `--no-kex` and
+  `--record-kexinit` control output. It reports `ssh_banner`, `ssh_protocol`,
+  `ssh_software`, `ssh_comment`, all ten KEXINIT name-lists, and
+  `ssh_first_kex_follows`.
+- `http2`: `--settings-hex` changes the client SETTINGS payload; `--ping-hex`
+  changes the PING payload (default `Xtate/29`, an overt marker) and
+  `--no-ping` disables it. `--all-frames`, `--max-frames`, `--no-settings` and
+  `--record-raw` control output. It reports frame headers, `http2_settings_count`,
+  `http2_set_<id>` values and optional raw frames.
+
 ### `ProbeSlot_Always` examples
 
 Two built-in developer modules exercise the API and double as copyable

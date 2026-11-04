@@ -48,6 +48,11 @@ JARM fuzzy hash 已改为 Salesforce JARM 1.0 语义：
 
 ## P2 — 协议探针
 
+状态：JARM 哈希/参考向量、SSH banner/KEX、HTTP/2 能力探针已实现。
+TLS 证书/subject 细节已由 `tls-state` 提供，HTTP state 行为已由
+`http-state` 提供。完整 STARTTLS、完整 HTTP/2 客户端、HTTP/3/QUIC 和
+TLS 变体指纹仍未实现。
+
 增加协议细节探针，同时保持扫描器无 per-target 状态。能单 slot 就单 slot，
 需要并行变体时使用 `ProbeSlot_Always`。
 
@@ -55,10 +60,12 @@ JARM fuzzy hash 已改为 Salesforce JARM 1.0 语义：
 
 1. TLS 证书与细节：subject、issuer、SAN、有效期、key type、签名算法、
    ALPN、协商版本/cipher。
-2. SSH banner 探针已实现（`ssh`）；下一步扩展 KEX/host-key 算法解析。
+2. SSH banner 探针已实现（`ssh`），包括合并报文中的 KEX/host-key 算法列表；
+   完整 KEX 包交换仍是后续工作。
 3. HTTP state 探针增强：状态行、header、重定向目标、body 上限。
 4. STARTTLS：SMTP、IMAP、POP3、FTP；升级后组合 TLS 细节。
-5. HTTP/2、HTTP/3，明确 transport 与 framing 上限。
+5. HTTP/2 能力/framing 探针已实现（`http2`）；完整 HTTP/2 客户端和
+   HTTP/3/QUIC 仍是后续工作。
 6. TLS 变体指纹研究：ClientHello 变体、扩展顺序、GREASE、ALPN 顺序。
 
 约束：
@@ -67,6 +74,8 @@ JARM fuzzy hash 已改为 Salesforce JARM 1.0 语义：
 - 载荷与输出字段有上限；
 - 需要真实服务的路径进 `tests/lab/`，保持确定性；
 - 可选依赖仍然保持可选。
+
+P3/P4 可行性见[P3/P4 可行性](./feasibility.md)。
 
 ## P3 — 扫描控制
 

@@ -56,6 +56,11 @@ Acceptance:
 
 ## P2 — protocol probes
 
+Status: the JARM hash/reference work, SSH banner/KEX and HTTP/2 capability
+probe are implemented. TLS certificate/subject details already exist in
+`tls-state`; HTTP state behavior already exists in `http-state`. Full STARTTLS,
+full HTTP/2 client behavior, HTTP/3/QUIC and TLS-variant fingerprints remain.
+
 Add protocol-specific detail probes without creating scanner-side per-target
 state. Each probe reuses single-slot or `ProbeSlot_Always` where it makes sense.
 
@@ -63,13 +68,14 @@ Planned order:
 
 1. TLS certificate/details probe: subject, issuer, SAN, validity, key type,
    signature algorithm, ALPN, negotiated version/cipher.
-2. SSH banner probe is implemented (`ssh`). Extend it to SSH KEX/host-key
-   algorithms next.
+2. SSH banner probe is implemented (`ssh`), including coalesced KEX/host-key
+   algorithm lists. Full KEX packet exchange remains future work.
 3. HTTP state probe improvements: status line, headers, redirect target,
    body limits.
 4. STARTTLS adapters for SMTP, IMAP, POP3 and FTP; compose TLS detail after the
    plaintext upgrade.
-5. HTTP/2 and HTTP/3 probes, with explicit transport and framing limits.
+5. HTTP/2 capability/framing probe is implemented (`http2`); full HTTP/2
+   client behavior and HTTP/3/QUIC remain future work.
 6. TLS variant fingerprint research: ClientHello variants, extension order,
    GREASE, ALPN ordering.
 
@@ -79,6 +85,8 @@ Constraints:
 - bounded payloads and output fields;
 - deterministic tests in `tests/lab/` where a real service is required;
 - optional dependencies stay optional.
+
+For P3/P4 feasibility, see [P3/P4 feasibility](./feasibility.md).
 
 ## P3 — scan control
 

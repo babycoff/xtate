@@ -229,6 +229,27 @@ HLTCP（`tcp-state`）目前还没有接入 `ProbeSlotPlan`。它现有的
 连接内 `AfterFirstReply`，最后才考虑并行 HLTCP `Always`。不能悄悄成倍放大
 HLTCP 的 TCB 数量。当前不宣称 HLTCP 支持 slot plan。
 
+### 探针控制参数与指纹
+
+研究型探针应当显式、可调：
+
+- 暴露 payload/标识字符串（例如 SSH 的 `--send-banner`）；
+- 暴露输出开关和上限，而不是固定输出；
+- 协议有文本字段时，默认使用**明面上的** Xtate 标记，并且可替换/关闭；
+- 不要隐藏身份，也不要使用未文档化的标记。
+
+两个新协议探针遵循这个规则：
+
+- `ssh`：`--send-banner` 修改标识字符串，默认
+  `SSH-2.0-Xtate_1.0\r\n`；`--no-banner`、`--no-software`、`--no-kex`、
+  `--record-kexinit` 控制输出；报告 `ssh_banner`、`ssh_protocol`、
+  `ssh_software`、`ssh_comment`、全部十个 KEXINIT name-list 和
+  `ssh_first_kex_follows`。
+- `http2`：`--settings-hex` 修改客户端 SETTINGS payload；`--ping-hex` 修改
+  PING payload（默认 `Xtate/29`，明面标记），`--no-ping` 关闭；
+  `--all-frames`、`--max-frames`、`--no-settings`、`--record-raw` 控制输出；
+  报告帧头、`http2_settings_count`、`http2_set_<id>` 值和可选原始帧。
+
 ### `ProbeSlot_Always` 示例
 
 内置两个开发测试探针，可直接当模板：

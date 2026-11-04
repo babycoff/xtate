@@ -15,7 +15,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 | Wiring results into a pipeline | [Output](./output.md) → [Aggregation](./aggregation.md) |
 | Choosing a module | [Modules](./modules.md) |
 | Writing a module | [Module development](./module-development.md) |
-| Planned work | [Roadmap](./roadmap.md) |
+| Planned work | [Roadmap](./roadmap.md) → [P3/P4 feasibility](./feasibility.md) |
 | Curious how it works | [Architecture](./architecture.md) → [ZBanner](./zbanner.md) / [HLTCP](./hltcp.md) |
 | Stuck | [Troubleshooting](./troubleshooting.md) → [Known limitations](./known-limitations.md) |
 | Chinese help / localization | [Help i18n](./help-i18n.md) |
@@ -39,6 +39,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 - [Modules](./modules.md) — the four module types and the modules that ship with Xtate
 - [Module development](./module-development.md) — C interfaces, registration and ProbeSlotPlan examples
 - [Roadmap](./roadmap.md) — completed work and planned P2/P3 changes
+- [P3/P4 feasibility](./feasibility.md) — target selection, adaptive rate, templates and traffic randomization
 - [Chinese help and i18n](./help-i18n.md) — `--lang`, catalog fallback and UTF-8 help layout
 - [Windows quick start](./windows-quickstart.md) — beginner install, Npcap, build, first scan and troubleshooting
 - [Windows optional dependencies](./windows-dependencies.md) — vcpkg/MSYS2 setup for PCRE2, LibXml2, bson/mongoc and MinGW caveats

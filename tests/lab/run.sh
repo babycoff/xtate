@@ -23,14 +23,16 @@ TLS_TARGET="xtate-lab-tls-$$"
 JARM_TARGET="xtate-lab-jarm-$$"
 UDP_ECHO_TARGET="xtate-lab-udp-echo-$$"
 SSH_TARGET="xtate-lab-ssh-$$"
+HTTP2_TARGET="xtate-lab-http2-$$"
 HTTP_PORT=8080
 CLOSED_PORT=9
 TLS_PORT=8443
 JARM_PORT=9443
 SSH_PORT=2222
+HTTP2_PORT=8084
 
 cleanup() {
-    docker rm -f "$HTTP_TARGET" "$TLS_TARGET" "$JARM_TARGET" "$UDP_ECHO_TARGET" "$SSH_TARGET" >/dev/null 2>&1 || true
+    docker rm -f "$HTTP_TARGET" "$TLS_TARGET" "$JARM_TARGET" "$UDP_ECHO_TARGET" "$SSH_TARGET" "$HTTP2_TARGET" >/dev/null 2>&1 || true
     docker network rm "$NET" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
@@ -102,28 +104,36 @@ MSYS_NO_PATHCONV=1 docker run -d --name "$SSH_TARGET" --network "$NET" \
     -v "$ROOT:/src:ro" "$IMAGE" \
     python3 -u /src/tests/lab/ssh_banner.py >/dev/null
 
+echo "==> starting HTTP/2 target"
+MSYS_NO_PATHCONV=1 docker run -d --name "$HTTP2_TARGET" --network "$NET" \
+    -v "$ROOT:/src:ro" "$IMAGE" \
+    python3 -u /src/tests/lab/http2_server.py >/dev/null
+
 wait_tcp "$HTTP_TARGET" "$HTTP_PORT"
 wait_tcp "$TLS_TARGET" "$TLS_PORT"
 wait_tcp "$JARM_TARGET" "$JARM_PORT"
 wait_tcp "$SSH_TARGET" "$SSH_PORT"
+wait_tcp "$HTTP2_TARGET" "$HTTP2_PORT"
 
 HTTP_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$HTTP_TARGET")"
 TLS_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$TLS_TARGET")"
 JARM_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$JARM_TARGET")"
 UDP_ECHO_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$UDP_ECHO_TARGET")"
 SSH_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$SSH_TARGET")"
+HTTP2_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$HTTP2_TARGET")"
 echo "HTTP target: $HTTP_IP:$HTTP_PORT (closed test port $CLOSED_PORT)"
 echo "TLS  target: $TLS_IP:$TLS_PORT"
 echo "JARM target: $JARM_IP:$JARM_PORT"
 echo "UDP echo:   $UDP_ECHO_IP:8082"
 echo "SSH banner:  $SSH_IP:$SSH_PORT"
+echo "HTTP/2:      $HTTP2_IP:$HTTP2_PORT"
 
 docker run --rm \
     --cap-add NET_RAW --cap-add NET_ADMIN \
     --network "$NET" \
-    -e HTTP_IP="$HTTP_IP" -e TLS_IP="$TLS_IP" -e JARM_IP="$JARM_IP" -e UDP_ECHO_IP="$UDP_ECHO_IP" -e SSH_IP="$SSH_IP" \
+    -e HTTP_IP="$HTTP_IP" -e TLS_IP="$TLS_IP" -e JARM_IP="$JARM_IP" -e UDP_ECHO_IP="$UDP_ECHO_IP" -e SSH_IP="$SSH_IP" -e HTTP2_IP="$HTTP2_IP" \
     -e HTTP_PORT="$HTTP_PORT" -e CLOSED_PORT="$CLOSED_PORT" \
-    -e TLS_PORT="$TLS_PORT" -e JARM_PORT="$JARM_PORT" -e SSH_PORT="$SSH_PORT" \
+    -e TLS_PORT="$TLS_PORT" -e JARM_PORT="$JARM_PORT" -e SSH_PORT="$SSH_PORT" -e HTTP2_PORT="$HTTP2_PORT" \
     -v "$ROOT:/src:ro" -v "$BIN:/xtate:ro" \
     "$IMAGE" bash -lc '
 set -euo pipefail
@@ -209,10 +219,34 @@ grep -q "slot_test_slot: 3" /tmp/zbanner-slot-test.log
 
 run_case zbanner-ssh \
     -ip "$SSH_IP" -p "$SSH_PORT" -scan zbanner -probe ssh \
-    -src-port 48000-48255 -rate 100 --wait 2 --no-status -show info -show failed
+    -src-port 48000-48255 -rate 100 --wait 2 --no-status -show info -show failed \
+    -probe-arg "--record-kexinit"
 grep -q "ssh_banner" /tmp/zbanner-ssh.log
 grep -q "ssh_protocol" /tmp/zbanner-ssh.log
 grep -q "OpenSSH_9.9" /tmp/zbanner-ssh.log
+grep -q "ssh_kex_algorithms" /tmp/zbanner-ssh.log
+grep -q "curve25519-sha256" /tmp/zbanner-ssh.log
+grep -q "ssh_host_key_algorithms" /tmp/zbanner-ssh.log
+grep -q "ssh-ed25519" /tmp/zbanner-ssh.log
+grep -q "ssh_kexinit" /tmp/zbanner-ssh.log
+
+run_case zbanner-ssh-custom \
+    -ip "$SSH_IP" -p "$SSH_PORT" -scan zbanner -probe ssh \
+    -src-port 48256-48511 -rate 100 --wait 2 --no-status -show info -show failed \
+    -probe-arg "--send-banner 'SSH-2.0-Xtate_Test\r\n' --no-banner --no-software --record-kexinit"
+grep -q "ssh_kexinit" /tmp/zbanner-ssh-custom.log
+! grep -q "ssh_banner" /tmp/zbanner-ssh-custom.log
+! grep -q "ssh_software" /tmp/zbanner-ssh-custom.log
+
+run_case zbanner-http2 \
+    -ip "$HTTP2_IP" -p "$HTTP2_PORT" -scan zbanner -probe http2 \
+    -src-port 49000-49255 -rate 100 --wait 2 --no-status -show info -show failed \
+    -probe-arg "--settings-hex 00030000006400040000ffff --all-frames --record-raw"
+grep -q "http/2" /tmp/zbanner-http2.log
+grep -q "http2_frame_type" /tmp/zbanner-http2.log
+grep -q "http2_settings_count" /tmp/zbanner-http2.log
+grep -q "http2_set_3" /tmp/zbanner-http2.log
+grep -q "http2_frame_count: 2" /tmp/zbanner-http2.log
 
 run_case udp-slot-test \
     -ip "$UDP_ECHO_IP" -p U:8082 -scan udp -probe slot-test-udp \
