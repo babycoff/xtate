@@ -53,7 +53,10 @@ uint64_t conf_parse_time(const char *value);
 uint64_t conf_parse_size(const char *value);
 int      conf_parse_mac(const char *text, macaddress_t *mac);
 uint64_t conf_parse_int(const char *str);
+bool     conf_parse_int_checked(const char *str, uint64_t *out);
 bool     conf_parse_bool(const char *str);
+
+int configer_selftest(void);
 
 unsigned conf_char2hex(char c);
 

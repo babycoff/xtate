@@ -4684,6 +4684,7 @@ int xconf_selftest(void) {
         x += datachain_selftest();
         x += proto_http_maker_selftest();
         x += proto_http_result_selftest();
+        x += configer_selftest();
         x += template_selftest();
         x += ndp_selftest();
         x += preprocess_selftest();

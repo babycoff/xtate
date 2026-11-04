@@ -66,6 +66,12 @@ rm -f recover.conf
 out="$(printf 'exit\n' | "$BIN" -interactive 2>&1 || true)"
 check "exit does not save" "test ! -e recover.conf"
 
+# A malformed recovered config must not crash the interactive loop.
+printf 'rate = not-a-number\n' > recover.conf
+printf 'exit\n' | "$BIN" -interactive >/dev/null 2>&1
+check "malformed recover exits cleanly" "test $? -eq 0"
+rm -f recover.conf
+
 if [[ "$fail" -ne 0 ]]; then
     echo "$fail interactive check(s) failed" >&2
     exit 1

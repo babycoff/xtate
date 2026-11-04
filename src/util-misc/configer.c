@@ -1,5 +1,6 @@
 #include "configer.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
@@ -20,114 +21,47 @@ uint64_t conf_parse_int(const char *str) {
     return result;
 }
 
+bool conf_parse_int_checked(const char *str, uint64_t *out) {
+    if (!str || !*str || !out)
+        return false;
+    uint64_t result = 0;
+    for (const unsigned char *p = (const unsigned char *)str; *p; p++) {
+        if (!isdigit(*p))
+            return false;
+        unsigned digit = (unsigned)(*p - '0');
+        if (result > (UINT64_MAX - digit) / 10)
+            return false;
+        result = result * 10 + digit;
+    }
+    *out = result;
+    return true;
+}
+
 /**
  * a stricter function for determining if something is boolean.
  */
-bool conf_is_bool(const char *str) {
-    size_t length = str ? strlen(str) : 0;
+static int conf_bool_value(const char *str) {
+    if (str == NULL || str[0] == '\0')
+        return 1; /* bare --flag */
+    if (isdigit((unsigned char)str[0]))
+        return strtoull(str, NULL, 0) == 0 ? 0 : 1;
 
-    if (length == 0)
-        return false;
-
-    /* "0" or "1" is boolean */
-    if (isdigit(str[0])) {
-        if (strtoul(str, 0, 0) == 0)
-            return true;
-        else if (strtoul(str, 0, 0) == 1)
-            return true;
-        else
-            return false;
-    }
-
-    switch (str[0]) {
-        case 'e':
-        case 'E':
-            if (memcasecmp("enable", str, length) == 0)
-                return true;
-            if (memcasecmp("enabled", str, length) == 0)
-                return true;
-            return false;
-        case 'd':
-        case 'D':
-            if (memcasecmp("disable", str, length) == 0)
-                return true;
-            if (memcasecmp("disabled", str, length) == 0)
-                return true;
-            return false;
-
-        case 't':
-        case 'T':
-            if (memcasecmp("true", str, length) == 0)
-                return true;
-            return false;
-        case 'f':
-        case 'F':
-            if (memcasecmp("false", str, length) == 0)
-                return true;
-            return false;
-
-        case 'o':
-        case 'O':
-            if (memcasecmp("on", str, length) == 0)
-                return true;
-            if (memcasecmp("off", str, length) == 0)
-                return true;
-            return false;
-        case 'Y':
-        case 'y':
-            if (memcasecmp("yes", str, length) == 0)
-                return true;
-            return false;
-        case 'n':
-        case 'N':
-            if (memcasecmp("no", str, length) == 0)
-                return true;
-            return false;
-        default:
-            return false;
-    }
+    if (conf_equals(str, "enable") || conf_equals(str, "enabled") ||
+        conf_equals(str, "true") || conf_equals(str, "on") ||
+        conf_equals(str, "yes"))
+        return 1;
+    if (conf_equals(str, "disable") || conf_equals(str, "disabled") ||
+        conf_equals(str, "false") || conf_equals(str, "off") ||
+        conf_equals(str, "no"))
+        return 0;
+    return -1;
 }
 
+bool conf_is_bool(const char *str) { return conf_bool_value(str) >= 0; }
+
 bool conf_parse_bool(const char *str) {
-    if (str == NULL || str[0] == 0)
-        return true;
-    if (isdigit(str[0])) {
-        if (strtoul(str, 0, 0) == 0)
-            return false;
-        else
-            return true;
-    }
-    switch (str[0]) {
-        case 'e': /* enable */
-        case 'E':
-            return true;
-        case 'd': /* disable */
-        case 'D':
-            return false;
-
-        case 't': /* true */
-        case 'T':
-            return true;
-        case 'f': /* false */
-        case 'F':
-            return false;
-
-        case 'o': /* on or off */
-        case 'O':
-            if (str[1] == 'f' || str[1] == 'F')
-                return false;
-            else
-                return true;
-            break;
-
-        case 'Y': /* yes */
-        case 'y':
-            return true;
-        case 'n': /* no */
-        case 'N':
-            return false;
-    }
-    return true;
+    int value = conf_bool_value(str);
+    return value == 1;
 }
 
 /***************************************************************************
@@ -562,7 +496,7 @@ int conf_set_params_from_args(void *conf, ConfParam *cp, int argc,
 
             if (name_length > sizeof(name2) - 1) {
                 LOG(LEVEL_ERROR, "%.*s: name too long\n", name_length, argname);
-                name_length = sizeof(name2) - 1;
+                return -1;
             }
 
             memcpy(name2, argname, name_length);
@@ -632,4 +566,132 @@ int conf_set_params_from_substr(void *conf, ConfParam *cp, char *substring) {
     err = conf_set_params_from_args(conf, cp, sub_argc, sub_argv);
     free(sub_argv);
     return err;
+}
+
+
+struct ConfigerSelftestConf {
+    char     path[64];
+    unsigned flag;
+    uint64_t number;
+};
+
+static ConfRes SET_configer_test_path(void *conf, const char *name,
+                                      const char *value) {
+    UNUSEDPARM(name);
+    struct ConfigerSelftestConf *c = conf;
+    if (!value || strlen(value) >= sizeof(c->path))
+        return Conf_ERR;
+    snprintf(c->path, sizeof(c->path), "%s", value);
+    return Conf_OK;
+}
+
+static ConfRes SET_configer_test_flag(void *conf, const char *name,
+                                      const char *value) {
+    UNUSEDPARM(name);
+    struct ConfigerSelftestConf *c = conf;
+    c->flag = value[0] == '\0' ? 1 : (unsigned)conf_parse_bool(value);
+    return Conf_OK;
+}
+
+static ConfRes SET_configer_test_number(void *conf, const char *name,
+                                        const char *value) {
+    UNUSEDPARM(name);
+    struct ConfigerSelftestConf *c = conf;
+    uint64_t n;
+    if (!conf_parse_int_checked(value, &n))
+        return Conf_ERR;
+    c->number = n;
+    return Conf_OK;
+}
+
+int configer_selftest(void) {
+    int                    errors = 0;
+    uint64_t               number = 0;
+    struct ConfigerSelftestConf c = {0};
+    ConfParam table[] = {
+        {"path", SET_configer_test_path, Type_ARG, {0}, NULL, NULL},
+        {"flag", SET_configer_test_flag, Type_FLAG, {0}, NULL, NULL},
+        {"number", SET_configer_test_number, Type_ARG, {0}, NULL, NULL},
+        {0}};
+
+    if (!conf_parse_int_checked("42", &number) || number != 42)
+        errors++;
+    if (conf_parse_int_checked("4x", &number))
+        errors++;
+    if (conf_parse_int_checked("", &number))
+        errors++;
+    if (conf_parse_int_checked("18446744073709551616", &number))
+        errors++;
+
+    if (!conf_is_bool("yes") || conf_is_bool("elephant"))
+        errors++;
+    if (conf_parse_bool("false") || !conf_parse_bool("1"))
+        errors++;
+
+    {
+        char args[] = "--path=/hello";
+        if (conf_set_params_from_str(&c, table, args) != 0 ||
+            strcmp(c.path, "/hello") != 0)
+            errors++;
+    }
+    {
+        char args[] = "--path";
+        if (conf_set_params_from_args(&c, table, 1, (char *[]){args}) == 0)
+            errors++;
+    }
+    {
+        char args[] = "--this-option-name-is-deliberately-longer-than-"
+                      "sixty-four-characters-aaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        if (conf_set_params_from_args(&c, table, 1, (char *[]){args}) == 0)
+            errors++;
+    }
+    {
+        if (conf_set_params_from_args(
+                &c, table, 4,
+                (char *[]){"--path", "/space", "--number", "7"}) != 0 ||
+            strcmp(c.path, "/space") != 0 || c.number != 7)
+            errors++;
+    }
+    {
+        char  args[] = "--path '/quoted space'";
+        int   argc = 0;
+        char **argv = safe_substr_to_args(args, &argc);
+        if (!argv || argc < 2 || strcmp(argv[1], "/quoted space") != 0) {
+            errors++;
+        }
+        free(argv);
+    }
+    {
+        char args[] = "--flag --number 9";
+        if (conf_set_params_from_substr(&c, table, args) != 0 ||
+            !c.flag || c.number != 9)
+            errors++;
+    }
+    {
+        char args[] = "--path /nested --number 8";
+        if (conf_set_params_from_substr(&c, table, args) != 0 ||
+            strcmp(c.path, "/nested") != 0 || c.number != 8)
+            errors++;
+    }
+    {
+        char *argv[] = {"--flag=false"};
+        if (conf_set_params_from_args(&c, table, 1, argv) != 0 || c.flag)
+            errors++;
+    }
+    {
+        char *argv[] = {"--path:/colon"};
+        if (conf_set_params_from_args(&c, table, 1, argv) != 0 ||
+            strcmp(c.path, "/colon") != 0)
+            errors++;
+    }
+    {
+        char args[] = "--path=/h2 --max-frames 4";
+        if (conf_set_params_from_substr(&c, table, args) == 0)
+            errors++; /* max-frames is not in this table */
+    }
+
+    if (conf_parse_size("1k") != 1024 || conf_parse_time("2m") != 120)
+        errors++;
+
+    return errors;
 }
