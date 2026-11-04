@@ -2,10 +2,10 @@
 
 **中文** · [English](../roadmap.md)
 
-本页记录 Xtate 2.29.0 之后的计划。它不是日期承诺，而是优先级和验收条件；
+本页记录 Xtate 2.30.0 之后的计划。它不是日期承诺，而是优先级和验收条件；
 已完成项也会保留，避免后续修改悄悄回退。
 
-## 2.29.0 已完成
+## 2.30.0 已完成
 
 - 通用 `ProbeSlotPlan`：`ProbeSlot_Always`、`ProbeSlot_AfterFirstReply`。
 - 移除旧的 `MultiMode`/`multi_num` 语义。

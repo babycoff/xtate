@@ -2,11 +2,11 @@
 
 **English** · [中文](zh-CN/roadmap.md)
 
-This page records the planned work after Xtate 2.29.0. It is not a promise of
+This page records the planned work after Xtate 2.30.0. It is not a promise of
 dates; it is a priority and acceptance-criteria list. Completed work is noted so
 the next change does not silently regress it.
 
-## Done in 2.29.0
+## Done in 2.30.0
 
 - Generic `ProbeSlotPlan` with `ProbeSlot_Always` and
   `ProbeSlot_AfterFirstReply`.
