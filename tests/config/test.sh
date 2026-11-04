@@ -21,7 +21,7 @@ run_fail() {
         echo "FAIL: $name (expected nonzero)" >&2
         printf '%s\n' "$out" >&2
         fail=$((fail + 1))
-    elif [[ "$out" != *"unknown"* && "$out" != *"missing"* && "$out" != *"invalid"* && "$out" != *"error"* ]]; then
+    elif [[ "$out" != *"unknown"* && "$out" != *"missing"* && "$out" != *"invalid"* && "$out" != *"error"* && "$out" != *"non-digit"* && "$out" != *"failed"* ]]; then
         echo "FAIL: $name (no explicit error text)" >&2
         printf '%s\n' "$out" >&2
         fail=$((fail + 1))
@@ -55,6 +55,10 @@ run_fail "missing probe-arg value" --probe-arg
 run_fail "missing scan-arg value" --scan-arg
 run_fail "missing output-arg value" --output-arg
 run_fail "missing gen-arg value" --gen-arg
+run_fail "bare double dash" --
+run_fail "positional token" --list-probe stray-token
+run_fail "bad rate suffix" --rate=4x --list-probe
+run_fail "negative rate" --rate -1 --list-probe
 
 # Existing module/help paths should remain usable without a scan.
 run_ok "list probes" --list-probe

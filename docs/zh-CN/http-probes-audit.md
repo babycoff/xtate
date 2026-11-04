@@ -69,6 +69,23 @@
 `h2c` 是明文 HTTP/2 framing；`h2` 是 `tls-state` 上的 TLS/ALPN h2。它们共享
 HTTP/2 frame 概念，不共享 HTTP/1 请求/响应解析器。
 
+## 跨 TCP 段的 chunked 响应
+
+`http` 是无状态探针，handler 只看到一个 segment；如果没有扫描器端逐目标状态，
+它无法重组 chunked body。这与 ZBanner 设计冲突，因此无状态探针应只报告首段
+status/header 和已捕获字节，不能声称得到完整 chunked body。
+
+`http-state` 已有 TCB 和 `ProbeState`，技术上可以实现有界 chunked 状态机：
+累积 header，之后把每个 body segment 喂给 `ph_decode_chunked`，并设置
+`--max-header`/`--max-body` 和 segment 上限。它对 body 完整性重要的场景
+（流式 API、无 Content-Length、研究指纹）有用；对端口/服务 banner 分类不是
+必需。
+
+代价：每个活跃 HLTCP 连接一个有界 buffer 和 decoder，外加超时和 partial
+chunk 测试。HLTCP 可以承受，但 `http`/ZBanner 不值得。建议只在 `http-state`
+里实现，作为 `--record-body` 或 `--chunked` 的可选项，并设上限；`http` 保持
+首段。
+
 ## 建议
 
 **不要一上来全部重写。** 按顺序重构：

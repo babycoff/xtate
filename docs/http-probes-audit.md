@@ -73,6 +73,25 @@ banner/segment collection, not an HTTP/1.1 conversation parser.
 `h2c` is cleartext HTTP/2 framing; `h2` is TLS/ALPN h2 through `tls-state`.
 They share HTTP/2 frame concepts, not the HTTP/1 request/response parser.
 
+## Chunked responses across TCP segments
+
+`http` is stateless and its handler sees one segment; it cannot reassemble a
+chunked body without scanner-side per-target state. That would contradict the
+ZBanner design, so the stateless probe should report the first-segment
+status/headers and the captured bytes, not claim a complete chunked body.
+
+`http-state` already has a TCB and `ProbeState`, so a bounded chunked state
+machine is technically possible: accumulate header bytes, then feed each body
+segment through `ph_decode_chunked`, with `--max-header`/`--max-body` and
+segment limits. It is useful when body completeness matters (streaming APIs,
+no Content-Length, research fingerprints); it is not necessary for port/service
+banner classification.
+
+Cost: one bounded buffer and decoder per active HLTCP connection, plus timeout
+and partial-chunk tests. This is acceptable for HLTCP but not justified for
+`http`/ZBanner. Recommended: implement only in `http-state`, opt-in
+(`--record-body` or `--chunked`), capped; leave `http` first-segment.
+
 ## Recommendation
 
 **Do not start with a full rewrite.** Refactor in this order:

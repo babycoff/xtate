@@ -739,9 +739,11 @@ int configer_selftest(void) {
             errors++;
     }
     {
-        char args[] = "--this-option-name-is-deliberately-longer-than-"
-                      "sixty-four-characters-aaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-        if (conf_set_params_from_args(&c, table, 1, (char *[]){args}) == 0)
+        char *argv[] = {
+            "--this-option-name-is-deliberately-longer-than-sixty-four-"
+            "characters-aaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "x"};
+        if (conf_set_params_from_args(&c, table, 2, argv) == 0)
             errors++;
     }
     {
