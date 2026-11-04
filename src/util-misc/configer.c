@@ -13,11 +13,8 @@
 
 uint64_t conf_parse_int(const char *str) {
     uint64_t result = 0;
-
-    while (*str && isdigit(*str & 0xFF)) {
-        result = result * 10 + (*str - '0');
-        str++;
-    }
+    if (!conf_parse_int_checked(str, &result))
+        return 0;
     return result;
 }
 
@@ -76,104 +73,25 @@ bool conf_parse_bool(const char *str) {
  * 3600
  ***************************************************************************/
 uint64_t conf_parse_time(const char *value) {
-    uint64_t num         = 0;
-    unsigned is_negative = 0;
-
-    while (*value == '-') {
-        is_negative = 1;
-        value++;
+    uint64_t out = 0;
+    if (!conf_parse_time_checked(value, &out)) {
+        LOG(LEVEL_ERROR, "invalid time value: %s\n", value ? value : "(null)");
+        return 0;
     }
-
-    while (isdigit(value[0] & 0xFF)) {
-        num = num * 10 + (value[0] - '0');
-        value++;
-    }
-    while (ispunct(value[0]) || isspace(value[0]))
-        value++;
-
-    if (isalpha(value[0]) && num == 0)
-        num = 1;
-
-    if (value[0] == '\0')
-        return num;
-
-    switch (tolower(value[0])) {
-        case 's':
-            num *= 1;
-            break;
-        case 'm':
-            num *= 60;
-            break;
-        case 'h':
-            num *= 60 * 60;
-            break;
-        case 'd':
-            num *= 24 * 60 * 60;
-            break;
-        case 'w':
-            num *= 24 * 60 * 60 * 7;
-            break;
-        default:
-            LOG(LEVEL_ERROR, "unknown character\n");
-            xcmd_try_reboot();
-            exit(1);
-    }
-    if (num >= 24 * 60 * 60) {
-        LOG(LEVEL_ERROR, "value is greater than 1 day\n");
-        xcmd_try_reboot();
-        exit(1);
-    }
-    if (is_negative)
-        num = 24 * 60 * 60 - num;
-
-    return num;
+    return out;
 }
 
 /***************************************************************************
- * Parses a size integer, which can be suffixed with "tera", "giga",
- * "mega", and "kilo". These numbers are in units of 1024 so suck it.
+ * Parses a size integer, suffixed with kilo/mega/giga/tera/peta/exa.
+ * The checked API rejects malformed and overflowing values without exit().
  ***************************************************************************/
 uint64_t conf_parse_size(const char *value) {
-    uint64_t num = 0;
-
-    while (isdigit(value[0] & 0xFF)) {
-        num = num * 10 + (value[0] - '0');
-        value++;
+    uint64_t out = 0;
+    if (!conf_parse_size_checked(value, &out)) {
+        LOG(LEVEL_ERROR, "invalid size value: %s\n", value ? value : "(null)");
+        return 0;
     }
-    while (ispunct(value[0]) || isspace(value[0]))
-        value++;
-
-    if (isalpha(value[0]) && num == 0)
-        num = 1;
-
-    if (value[0] == '\0')
-        return num;
-
-    switch (tolower(value[0])) {
-        case 'k': /* kilobyte */
-            num *= 1024ULL;
-            break;
-        case 'm': /* megabyte */
-            num *= 1024ULL * 1024ULL;
-            break;
-        case 'g': /* gigabyte */
-            num *= 1024ULL * 1024ULL * 1024ULL;
-            break;
-        case 't': /* terabyte, 'cause we roll that way */
-            num *= 1024ULL * 1024ULL * 1024ULL * 1024ULL;
-            break;
-        case 'p': /* petabyte, 'cause we are awesome */
-            num *= 1024ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL;
-            break;
-        case 'e': /* exabyte, now that's just silly */
-            num *= 1024ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL;
-            break;
-        default:
-            LOG(LEVEL_ERROR, "unknown character\n");
-            xcmd_try_reboot();
-            exit(1);
-    }
-    return num;
+    return out;
 }
 
 bool conf_parse_size_checked(const char *value, uint64_t *out) {
@@ -786,12 +704,23 @@ int configer_selftest(void) {
             errors++;
     }
     {
+        char args[] = "--path '/nested space' --number 6";
+        if (conf_set_params_from_substr(&c, table, args) != 0 ||
+            strcmp(c.path, "/nested space") != 0 || c.number != 6)
+            errors++;
+    }
+    {
         char args[] = "--path=/h2 --max-frames 4";
         if (conf_set_params_from_substr(&c, table, args) == 0)
             errors++; /* max-frames is not in this table */
     }
 
+    if (conf_parse_int("4x") != 0 || conf_parse_int("") != 0 ||
+        conf_parse_int("18446744073709551616") != 0)
+        errors++;
     if (conf_parse_size("1k") != 1024 || conf_parse_time("2m") != 120)
+        errors++;
+    if (conf_parse_size("12x") != 0 || conf_parse_time("2q") != 0)
         errors++;
     {
         uint64_t v = 0;
