@@ -130,6 +130,18 @@ tcp-state -> tls-state -> http-state / hello-state / recog-state / get-state / c
 - **接收窗口：** 非 SYN 的 TCP 模板默认通告 1024 字节，这会让对端发出大量小段。如果扫描感觉慢，先试着调大 `--tcp-win`（并相应调整 `--max-pkt-len`）——模块自己的帮助文本也是这么说的。
 - **探测 slot：** ZBanner/TCP 的 slot plan 把槽位编码在源端口里；HLTCP 本身只跑一条有状态流，因此多 slot plan 不适用于 `tcp-state`。
 
+## STARTTLS
+
+`tls-state --starttls smtp|imap|pop3|ftp` 会在 TLS 握手前完成明文问候和升级命令：
+
+- SMTP：`220` 问候、`EHLO`、`STARTTLS`、`220`；
+- IMAP：`* OK`、`a001 STARTTLS`、`a001 OK`；
+- POP3：`+OK`、`STLS`、`+OK`；
+- FTP：`220`、`AUTH TLS`、`234`。
+
+升级后，`--dump-cert-details` 和 subprobe 与直接 TLS 端口一致。明文协商失败会
+输出 `starttls error`。
+
 ## 证书细节
 
 `tls-state --dump-cert-details` 输出结构化的 `cert_subject`、`cert_issuer`、

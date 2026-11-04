@@ -566,23 +566,23 @@ static size_t extract_ext(const unsigned char *payload, size_t payload_len,
     if ((idx) >= (payload_len))                                                \
         return snprintf(res_buf, res_max, "|");
 
-    CHECK_IDX(47 + 2)
+    CHECK_IDX(43 + 2)
 
     size_t   res_len = 0;
     unsigned counter = payload[43];
+    CHECK_IDX(counter + 49)
     unsigned count   = counter + 49;
     unsigned sh_len  = BE_TO_U16(payload + 3);
-    unsigned length  = BE_TO_U16(payload + 47);
+    unsigned length  = BE_TO_U16(payload + counter + 47);
     unsigned maximum = length + (count - 1);
-
-    CHECK_IDX(counter + 82 + 3)
 
     if (payload[counter + 47] == 11)
         return snprintf(res_buf, res_max, "|");
-    else if (safe_bytes_equals(payload + counter + 50, 3, "\x0e\xac\x0b", 3) >
-                 0 ||
-             safe_bytes_equals(payload + counter + 82, 3, "\x0f\xf0\x0b", 3) >
-                 0)
+    else if ((payload_len > counter + 52 &&
+              safe_bytes_equals(payload + counter + 50, 3, "\x0e\xac\x0b",
+                                3) > 0) ||
+             (payload_len > 84 &&
+              safe_bytes_equals(payload + 82, 3, "\x0f\xf0\x0b", 3) > 0))
         return snprintf(res_buf, res_max, "|");
     else if (counter + 42 >= sh_len)
         return snprintf(res_buf, res_max, "|");

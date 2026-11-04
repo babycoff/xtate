@@ -50,6 +50,15 @@ enum TSP_State {
     TSP_STATE_SAY_HELLO,     /*our turn to say hello*/
     TSP_STATE_RECV_DATA,     /*waiting for data*/
     TSP_STATE_NEED_CLOSE,    /*unexpected state that need to close conn*/
+    TSP_STATE_STARTTLS,      /*plaintext STARTTLS negotiation before TLS*/
+};
+
+enum TSP_StartTlsPhase {
+    TSP_ST_GREETING = 0,
+    TSP_ST_EHLO,
+    TSP_ST_ACK,
+    TSP_ST_EARLY,
+    TSP_ST_DONE,
 };
 
 static const char *_tsp_state_to_string(enum TSP_State state) {
@@ -62,6 +71,8 @@ static const char *_tsp_state_to_string(enum TSP_State state) {
             return "TSP_RECV_DATA";
         case TSP_STATE_NEED_CLOSE:
             return "TSP_NEED_CLOSE";
+        case TSP_STATE_STARTTLS:
+            return "TSP_STARTTLS";
 
         default:
             return "UNKN_TSP_STATE";
@@ -91,6 +102,9 @@ struct TlsState {
     unsigned             have_dump_cert      : 1;
     unsigned             have_dump_cert_details : 1;
     unsigned             substate_inited     : 1;
+    unsigned             starttls_phase;
+    size_t               starttls_buf_len;
+    char                 starttls_buf[1024];
     unsigned             graceful_close_sent : 1;
 };
 
@@ -107,10 +121,29 @@ struct TlsStateConf {
     unsigned dump_cert      : 1;
     unsigned dump_cert_details : 1;
     unsigned fail_handshake : 1;
+    unsigned starttls_proto : 4;
     unsigned graceful_close : 1;
 };
 
 static struct TlsStateConf tlsstate_conf = {0};
+
+static ConfRes SET_starttls(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+    if (conf_equals(value, "smtp"))
+        tlsstate_conf.starttls_proto = 1;
+    else if (conf_equals(value, "imap"))
+        tlsstate_conf.starttls_proto = 2;
+    else if (conf_equals(value, "pop3"))
+        tlsstate_conf.starttls_proto = 3;
+    else if (conf_equals(value, "ftp"))
+        tlsstate_conf.starttls_proto = 4;
+    else {
+        LOG(LEVEL_ERROR, "starttls must be smtp, imap, pop3 or ftp\n");
+        return Conf_ERR;
+    }
+    return Conf_OK;
+}
 
 static ConfRes SET_subprobe(void *conf, const char *name, const char *value) {
     UNUSEDPARM(conf);
@@ -274,6 +307,12 @@ static ConfRes SET_dump_cert_details(void *conf, const char *name,
 }
 
 static ConfParam tlsstate_parameters[] = {
+    {"starttls",
+     SET_starttls,
+     Type_ARG,
+     {"start-tls", 0},
+     "Negotiate plaintext STARTTLS before TLS: smtp, imap, pop3 or ftp. "
+     "TLS certificate details and subprobe run after the upgrade."},
     {"subprobe",
      SET_subprobe,
      Type_ARG,
@@ -1126,6 +1165,9 @@ static bool tlsstate_conn_init(ProbeState *state, ProbeTarget *target) {
     tls_state->data_size       = TSP_DATA_INIT_SIZE;
     tls_state->input_bytes     = 0;
     tls_state->handshake_state = TLS_ST_BEFORE; /*state for openssl*/
+    tls_state->starttls_phase  = TSP_ST_GREETING;
+    state->state =
+        tlsstate_conf.starttls_proto ? TSP_STATE_STARTTLS : TSP_STATE_HANDSHAKE;
 
     state->data = tls_state;
 
@@ -1192,8 +1234,174 @@ static void tlsstate_conn_close(ProbeState *state, ProbeTarget *target) {
 }
 
 static void tlsstate_make_hello(DataPass *pass, ProbeState *state,
+                                ProbeTarget *target);
+
+static void starttls_send(DataPass *pass, const char *cmd) {
+    datapass_set_data(pass, (unsigned char *)cmd, strlen(cmd), false);
+}
+
+static void starttls_fail(DataPass *pass, ProbeState *state,
+                          ProbeTarget *target, const char *reason) {
+    struct TlsState *ts = state->data;
+    if (ts)
+        ts->starttls_phase = TSP_ST_DONE;
+    state->state = TSP_STATE_NEED_CLOSE;
+    pass->is_close = 1;
+    OutItem item = {
+        .target.ip_proto = target->target.ip_proto,
+        .target.ip_them = target->target.ip_them,
+        .target.port_them = target->target.port_them,
+        .target.ip_me = target->target.ip_me,
+        .target.port_me = target->target.port_me,
+        .level = OUT_FAILURE,
+    };
+    safe_strcpy(item.classification, OUT_CLS_SIZE, "starttls error");
+    safe_strcpy(item.reason, OUT_RSN_SIZE, reason);
+    if (ts && ts->starttls_buf_len) {
+        dach_append_banner(&item.probe_report, "starttls_response",
+                           (const unsigned char *)ts->starttls_buf,
+                           ts->starttls_buf_len);
+    }
+    output_result(_tls_out, &item);
+}
+
+static void starttls_make_hello(DataPass *pass, ProbeState *state,
+                                ProbeTarget *target) {
+    struct TlsState *ts = state->data;
+    if (!ts)
+        return;
+    switch (tlsstate_conf.starttls_proto) {
+        case 1:
+            starttls_send(pass, "EHLO xtate.local\r\n");
+            break;
+        case 2:
+            starttls_send(pass, "a001 STARTTLS\r\n");
+            break;
+        case 3:
+            starttls_send(pass, "STLS\r\n");
+            break;
+        case 4:
+            starttls_send(pass, "AUTH TLS\r\n");
+            break;
+        default:
+            break;
+    }
+    /* The greeting may not have arrived yet.  The first parsed line must still
+     * be the protocol greeting, then the command response. */
+    ts->starttls_phase = TSP_ST_EARLY;
+}
+
+static bool starttls_greeting_ok(unsigned proto, const char *line) {
+    switch (proto) {
+        case 1:
+        case 4:
+            return strncmp(line, "220", 3) == 0;
+        case 2:
+            return strncmp(line, "* OK", 4) == 0;
+        case 3:
+            return strncmp(line, "+OK", 3) == 0;
+        default:
+            return false;
+    }
+}
+
+static bool starttls_ack_ok(unsigned proto, const char *line) {
+    switch (proto) {
+        case 1:
+        case 4:
+            return strncmp(line, "220", 3) == 0 ||
+                   strncmp(line, "234", 3) == 0;
+        case 2:
+            return strstr(line, "a001 OK") != NULL;
+        case 3:
+            return strncmp(line, "+OK", 3) == 0;
+        default:
+            return false;
+    }
+}
+
+static void starttls_parse_response(DataPass *pass, ProbeState *state,
+                                    ProbeTarget *target, const unsigned char *px,
+                                    unsigned sizeof_px) {
+    struct TlsState *ts = state->data;
+    if (!ts)
+        return;
+    if (px && sizeof_px) {
+        size_t room = sizeof(ts->starttls_buf) - 1 - ts->starttls_buf_len;
+        size_t n = sizeof_px < room ? sizeof_px : room;
+        memcpy(ts->starttls_buf + ts->starttls_buf_len, px, n);
+        ts->starttls_buf_len += n;
+        ts->starttls_buf[ts->starttls_buf_len] = '\0';
+    }
+
+    char *start = ts->starttls_buf;
+    while (true) {
+        char *nl = strchr(start, '\n');
+        if (!nl)
+            break;
+        *nl = '\0';
+        size_t line_len = (size_t)(nl - start);
+        while (line_len && (start[line_len - 1] == '\r'))
+            start[--line_len] = '\0';
+
+        if (ts->starttls_phase == TSP_ST_EARLY) {
+            if (!starttls_greeting_ok(tlsstate_conf.starttls_proto, start)) {
+                starttls_fail(pass, state, target, "bad greeting");
+                return;
+            }
+            if (tlsstate_conf.starttls_proto == 1)
+                ts->starttls_phase = TSP_ST_EHLO;
+            else
+                ts->starttls_phase = TSP_ST_ACK;
+        } else if (ts->starttls_phase == TSP_ST_GREETING) {
+            if (!starttls_greeting_ok(tlsstate_conf.starttls_proto, start)) {
+                starttls_fail(pass, state, target, "bad greeting");
+                return;
+            }
+            if (tlsstate_conf.starttls_proto == 1) {
+                starttls_send(pass, "EHLO xtate.local\r\n");
+                ts->starttls_phase = TSP_ST_EHLO;
+            } else if (tlsstate_conf.starttls_proto == 2) {
+                starttls_send(pass, "a001 STARTTLS\r\n");
+                ts->starttls_phase = TSP_ST_ACK;
+            } else if (tlsstate_conf.starttls_proto == 3) {
+                starttls_send(pass, "STLS\r\n");
+                ts->starttls_phase = TSP_ST_ACK;
+            } else {
+                starttls_send(pass, "AUTH TLS\r\n");
+                ts->starttls_phase = TSP_ST_ACK;
+            }
+        } else if (ts->starttls_phase == TSP_ST_EHLO) {
+            if (strncmp(start, "250 ", 4) == 0) {
+                starttls_send(pass, "STARTTLS\r\n");
+                ts->starttls_phase = TSP_ST_ACK;
+            }
+        } else if (ts->starttls_phase == TSP_ST_ACK) {
+            if (starttls_ack_ok(tlsstate_conf.starttls_proto, start)) {
+                ts->starttls_phase = TSP_ST_DONE;
+                state->state = TSP_STATE_HANDSHAKE;
+                tlsstate_make_hello(pass, state, target);
+                return;
+            }
+        }
+
+        start = nl + 1;
+    }
+    if (start != ts->starttls_buf) {
+        size_t left = strlen(start);
+        memmove(ts->starttls_buf, start, left + 1);
+        ts->starttls_buf_len = left;
+    }
+}
+
+static void tlsstate_make_hello(DataPass *pass, ProbeState *state,
                                 ProbeTarget *target) {
     LOG(LEVEL_DETAIL, "(TSP Make HELLO) >>>\n");
+
+    if (state->state == TSP_STATE_STARTTLS) {
+        starttls_make_hello(pass, state, target);
+        return;
+    }
 
     if (state->data == NULL)
         goto error1;
@@ -1321,6 +1529,11 @@ static unsigned tlsstate_parse_response(DataPass *pass, ProbeState *state,
     LOG(LEVEL_DETAIL, "(TSP Parse RESPONSE) >>>\n");
 
     struct TlsState *tls_state = state->data;
+
+    if (state->state == TSP_STATE_STARTTLS) {
+        starttls_parse_response(pass, state, target, px, sizeof_px);
+        return 0;
+    }
 
     int      res, res_ex;
     bool     is_continue;

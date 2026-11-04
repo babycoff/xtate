@@ -525,6 +525,8 @@ static const I18nModuleParamEntry i18n_module_param_help[] = {
     {"splitter", "设置地址列表分隔符。"},
     {"ssl-keylog", "导出 TLS 密钥日志。"},
     {"string", "设置自定义探测字符串。"},
+    {"starttls", "在 TLS 前进行明文 STARTTLS 协商：smtp、imap、pop3 或 ftp。"},
+    {"first-probe", "轮换十个 JARM 探针，使指定的标准探针编号最先发送；仍发送全部十个，jarm_slot 保留标准编号。"},
     {"subprobe", "选择 TLS 状态探测的子探测。"},
     {"subprobe-arg", "向 TLS 子探测传递参数。"},
     {"support-tls13", "声明支持 TLS 1.3。"},

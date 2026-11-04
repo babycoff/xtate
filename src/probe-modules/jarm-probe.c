@@ -108,9 +108,10 @@ extern Probe JarmProbe;
 
 struct JarmConf {
     unsigned probe_index;
+    unsigned first_probe;
 };
 
-static struct JarmConf jarm_conf = {0};
+static struct JarmConf jarm_conf = {.first_probe = 1};
 
 static ConfRes SET_probe_index(void *conf, const char *name,
                                const char *value) {
@@ -127,23 +128,44 @@ static ConfRes SET_probe_index(void *conf, const char *name,
     return Conf_OK;
 }
 
+static ConfRes SET_first_probe(void *conf, const char *name,
+                               const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+    jarm_conf.first_probe = conf_parse_int(value);
+    if (jarm_conf.first_probe < 1 || jarm_conf.first_probe > 10) {
+        LOG(LEVEL_ERROR, "(JarmProbe) first probe should be in 1..10\n");
+        return Conf_ERR;
+    }
+    return Conf_OK;
+}
+
 static ConfParam jarm_parameters[] = {
     {"probe-index",
      SET_probe_index,
      Type_ARG,
      {"index", 0},
      "Just send one specified jarm probe to target."},
+    {"first-probe",
+     SET_first_probe,
+     Type_ARG,
+     {"first-index", 0},
+     "Rotate the ten JARM probes so this standard probe index is sent first. "
+     "All ten probes are still sent; jarm_slot keeps the standard probe index."},
 
     {0}};
+
+static unsigned jarm_probe_id(const ProbeTarget *target) {
+    if (jarm_conf.probe_index)
+        return jarm_conf.probe_index;
+    return ((target->index + jarm_conf.first_probe - 1) % 10) + 1;
+}
 
 static size_t jarm_make_payload(ProbeTarget   *target,
                                 unsigned char *payload_buf) {
     struct JarmConfig jc;
 
-    if (jarm_conf.probe_index)
-        jc = jc_list[jarm_conf.probe_index - 1];
-    else
-        jc = jc_list[target->index];
+    jc = jc_list[jarm_probe_id(target) - 1];
 
     ipaddress_formatted_t ip_them_fmt = ipaddress_fmt(target->target.ip_them);
     jc.servername                     = ip_them_fmt.string;
@@ -158,10 +180,7 @@ static size_t jarm_get_payload_length(ProbeTarget *target) {
 
     struct JarmConfig jc;
 
-    if (jarm_conf.probe_index)
-        jc = jc_list[jarm_conf.probe_index - 1];
-    else
-        jc = jc_list[target->index];
+    jc = jc_list[jarm_probe_id(target) - 1];
 
     ipaddress_formatted_t ip_them_fmt = ipaddress_fmt(target->target.ip_them);
     jc.servername                     = ip_them_fmt.string;
@@ -216,15 +235,9 @@ static unsigned jarm_handle_response(unsigned th_idx, ProbeTarget *target,
                 dach_set_int(&item->probe_report, "jarm_slots",
                              JarmProbe.slots.count);
 
-                if (jarm_conf.probe_index) {
-                    dach_set_int(&item->probe_report, "jarm_slot",
-                                 jarm_conf.probe_index);
-                    return 0;
-                } else {
-                    dach_set_int(&item->probe_report, "jarm_slot",
-                                 target->index + 1);
-                    return 0;
-                }
+                dach_set_int(&item->probe_report, "jarm_slot",
+                             jarm_probe_id(target));
+                return 0;
             }
         }
     }

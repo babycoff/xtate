@@ -2,10 +2,10 @@
 
 **中文** · [English](../roadmap.md)
 
-本页记录 Xtate 2.31.0 之后的计划。它不是日期承诺，而是优先级和验收条件；
+本页记录 Xtate 2.32.0 之后的计划。它不是日期承诺，而是优先级和验收条件；
 已完成项也会保留，避免后续修改悄悄回退。
 
-## 2.31.0 已完成
+## 2.32.0 已完成
 
 - 通用 `ProbeSlotPlan`：`ProbeSlot_Always`、`ProbeSlot_AfterFirstReply`。
 - 移除旧的 `MultiMode`/`multi_num` 语义。
@@ -75,8 +75,11 @@ STARTTLS、HTTP/3/QUIC 和 TLS 变体指纹仍未实现。TLS 证书/subject 细
 
 计划顺序：
 
-1. TLS 证书与细节已在 `tls-state` 的 `--dump-cert-details` 中实现
+1. JARM 已在本机目标上与 Salesforce 官方实现对比；修复了扩展解析偏移。
+2. TLS 证书与细节已在 `tls-state` 的 `--dump-cert-details` 中实现
    （subject、issuer、SAN、有效期、key type/bits、签名算法、ALPN、版本/cipher）。
+3. STARTTLS 已在 `tls-state --starttls` 中实现 SMTP/IMAP/POP3/FTP，
+   升级后可继续输出证书细节。
 2. SSH banner 探针已实现（`ssh`），包括合并报文中的 KEX/host-key 算法列表；
    完整 KEX 包交换仍是后续工作。
 3. HTTP state 探针增强：状态行、header、重定向目标、body 上限。
@@ -124,5 +127,5 @@ chunked/body 测试仍待做。`h2c`/`h2` 保持独立。
 
 ## 发布策略
 
-功能变化使用中版本（`2.29.x` → `2.31.0`），修复使用补丁版本。标签推送、
+功能变化使用中版本（`2.29.x` → `2.32.0`），修复使用补丁版本。标签推送、
 GitHub Release 和构建/测试证据齐全才算发布完成。

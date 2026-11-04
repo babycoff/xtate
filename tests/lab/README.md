@@ -65,6 +65,12 @@ The scanner runs at 100 pps. Firewall RST suppression is installed only inside
 the throwaway scanner container. Containers, network and rules are removed by a
 trap on exit.
 
+## STARTTLS
+
+The lab starts a local Python target with SMTP, IMAP, POP3 and FTP STARTTLS
+listeners. `tls-state --starttls <proto> --dump-cert-details` must complete the
+plaintext upgrade and report the certificate subject.
+
 ## Notes
 
 - The script normalizes `firewall/*.sh` line endings before running, so a

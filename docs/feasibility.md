@@ -3,7 +3,7 @@
 **English** · [中文](zh-CN/feasibility.md)
 
 This is an engineering feasibility assessment, not an implementation promise.
-It assumes the 2.31.0 architecture: stateless ZBanner/UDP, HLTCP for stateful
+It assumes the 2.32.0 architecture: stateless ZBanner/UDP, HLTCP for stateful
 TCP, and output-side aggregation.
 
 ## QUIC probe and HTTP/3 exploration

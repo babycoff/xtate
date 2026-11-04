@@ -212,6 +212,19 @@ resident, but cannot exceed the table/global budget.
 - **Probe slots:** ZBanner/TCP slot plans encode the slot in the source port; HLTCP itself
   runs a single stateful flow, so a multi-slot plan does not apply to `tcp-state`.
 
+## STARTTLS
+
+`tls-state --starttls smtp|imap|pop3|ftp` performs the plaintext greeting and
+upgrade command before the TLS handshake:
+
+- SMTP: `220` greeting, `EHLO`, `STARTTLS`, `220`;
+- IMAP: `* OK`, `a001 STARTTLS`, `a001 OK`;
+- POP3: `+OK`, `STLS`, `+OK`;
+- FTP: `220`, `AUTH TLS`, `234`.
+
+After the upgrade, `--dump-cert-details` and subprobes work as on a direct TLS
+port.  A failed plaintext negotiation is emitted as `starttls error`.
+
 ## Certificate details
 
 `tls-state --dump-cert-details` emits structured `cert_subject`, `cert_issuer`,

@@ -2,11 +2,11 @@
 
 **English** · [中文](zh-CN/roadmap.md)
 
-This page records the planned work after Xtate 2.31.0. It is not a promise of
+This page records the planned work after Xtate 2.32.0. It is not a promise of
 dates; it is a priority and acceptance-criteria list. Completed work is noted so
 the next change does not silently regress it.
 
-## Done in 2.31.0
+## Done in 2.32.0
 
 - Generic `ProbeSlotPlan` with `ProbeSlot_Always` and
   `ProbeSlot_AfterFirstReply`.
@@ -53,8 +53,8 @@ The fuzzy hash was corrected to Salesforce JARM 1.0 semantics:
 The test fixture now asserts an exact 62-character reference vector. Remaining
 work:
 
-1. Compare Xtate's output with the official JARM implementation on the same
-   local TLS target, not only with the hash fixture.
+1. JARM is compared with the vendored Salesforce implementation on the same
+   local TLS target; the parser extension offset was corrected to match.
 2. Add scanner-level lab assertions for a known local TLS configuration:
    complete, alert/non-TLS, and missing slots.
 3. Keep `targets_with_parts` semantics explicit: zero-part targets are not
@@ -92,8 +92,8 @@ Planned order:
    algorithm lists. Full KEX packet exchange remains future work.
 3. HTTP state probe improvements: status line, headers, redirect target,
    body limits.
-4. STARTTLS adapters for SMTP, IMAP, POP3 and FTP; compose TLS detail after the
-   plaintext upgrade.
+4. STARTTLS adapters for SMTP, IMAP, POP3 and FTP are implemented in
+   `tls-state --starttls`, including certificate details after the upgrade.
 5. Cleartext h2c capability/framing probe is implemented (`h2c`); HTTP/2 over TLS, full HTTP/2
    client behavior and HTTP/3/QUIC remain future work.
 6. TLS variant fingerprint research: ClientHello variants, extension order,
@@ -144,6 +144,6 @@ shared request-builder extraction and broader chunked/body tests remain.
 
 ## Release policy
 
-Functional changes take a minor version (`2.29.x` → `2.31.0`); fixes take a
+Functional changes take a minor version (`2.29.x` → `2.32.0`); fixes take a
 patch version. A release is not complete until the tag is pushed, the GitHub
 release exists, and the build/test evidence is recorded.

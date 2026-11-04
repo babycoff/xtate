@@ -115,6 +115,7 @@ if [[ -n "${XTATE_BIN:-}" ]]; then
     help="$("$XTATE_BIN" --help-probe jarm)"
     grep -q "Slot count: 10" <<<"$help"
     grep -q "Slot trigger: after first reply" <<<"$help"
+    grep -q -- "--first-probe" <<<"$help"
     ! grep -q 'lzr' <<<"$("$XTATE_BIN" --list-probe)"
     count="$("$XTATE_BIN" --list-probe | grep -cE '^[[:space:]]*[0-9]+\.[A-Za-z]')"
     [[ "$count" -eq 26 ]]
