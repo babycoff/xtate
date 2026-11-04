@@ -250,6 +250,21 @@ HLTCP 的 TCB 数量。当前不宣称 HLTCP 支持 slot plan。
   `--all-frames`、`--max-frames`、`--no-settings`、`--record-raw` 控制输出；
   报告帧头、`http2_settings_count`、`http2_set_<id>` 值和可选原始帧。
 
+### TLS 上的 HTTP/2
+
+`h2` 是 **state probe**，不是单 slot TCP 探针：
+
+```bash
+-scan tcp-state -probe tls-state \
+  -probe-arg "-subprobe h2 -sni example.test -alpn h2"
+```
+
+它在 `tls-state` 完成 ALPN `h2` 后发送 HTTP/2 preface、SETTINGS 和最小
+HPACK 请求，并解析 SETTINGS/HEADERS/DATA。参数：`--path`、`--authority`、
+`--user-agent`/`--no-user-agent`、`--settings-hex`、`--max-frames`、
+`--max-data`、`--record-raw`、`--no-decode-headers`。
+HPACK 目前支持静态表和 literal，不支持 Huffman/动态表索引。
+
 ### `ProbeSlot_Always` 示例
 
 内置两个开发测试探针，可直接当模板：

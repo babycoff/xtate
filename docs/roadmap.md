@@ -25,6 +25,21 @@ the next change does not silently regress it.
 - `tests/module-examples/test.sh` is part of Linux CI.
 - Runtime slot examples remain `slot-test` and `slot-test-udp`.
 
+## Parameter parser coverage (planned)
+
+The CLI/parameter parser has not had a dedicated regression suite. Add one
+before relying on more nested/subprobe options:
+
+- `ConfParam` flag/argument/unknown-option/duplicate-option cases;
+- quoted strings, spaces, backslashes and nested `-subprobe-arg`;
+- integer/range/hex/size boundaries and invalid values;
+- `-scan-arg`, `-probe-arg`, `-output-arg`, `-gen-arg` nesting;
+- interactive `set` and recovered config files;
+- exact nonzero exit and stderr for invalid input.
+
+Acceptance: a `tests/config/` suite runs on Linux CI, covers the parser and a
+representative module from each registry, and does not depend on the network.
+
 ## P2 — JARM correctness
 
 The fuzzy hash was corrected to Salesforce JARM 1.0 semantics:
@@ -56,10 +71,12 @@ Acceptance:
 
 ## P2 — protocol probes
 
-Status: the JARM hash/reference work, SSH banner/KEX and HTTP/2 capability
-probe are implemented. TLS certificate/subject details already exist in
-`tls-state`; HTTP state behavior already exists in `http-state`. Full STARTTLS,
-full HTTP/2 client behavior, HTTP/3/QUIC and TLS-variant fingerprints remain.
+Status: the JARM hash/reference work, SSH banner/KEX, cleartext `h2c` and the
+`h2` state probe (TLS/ALPN h2 via HLTCP) are implemented. `h2` has a minimal
+static/literal HPACK request and frame/HEADERS/DATA parsing; Huffman/dynamic
+HPACK, full stream management, STARTTLS, HTTP/3/QUIC and TLS-variant
+fingerprints remain. TLS certificate/subject details already exist in
+`tls-state`; HTTP state behavior already exists in `http-state`.
 
 Add protocol-specific detail probes without creating scanner-side per-target
 state. Each probe reuses single-slot or `ProbeSlot_Always` where it makes sense.

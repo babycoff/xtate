@@ -22,6 +22,20 @@
 - `tests/module-examples/test.sh` 已接入 Linux CI。
 - 运行期 slot 示例仍是 `slot-test` / `slot-test-udp`。
 
+## 参数解析覆盖（计划中）
+
+CLI/参数解析器还没有专门的回归测试套件。在依赖更多嵌套/subprobe 参数之前应补齐：
+
+- `ConfParam` 的 flag/argument/未知选项/重复选项；
+- 引号、空格、反斜杠和嵌套 `-subprobe-arg`；
+- 整数/范围/十六进制/size 边界和非法值；
+- `-scan-arg`、`-probe-arg`、`-output-arg`、`-gen-arg` 嵌套；
+- 交互式 `set` 和恢复配置文件；
+- 非法输入的非零退出码和 stderr。
+
+验收：`tests/config/` 在 Linux CI 运行，覆盖解析器和四类注册表各一个代表模块，
+且不依赖网络。
+
 ## P2 — JARM 正确性
 
 JARM fuzzy hash 已改为 Salesforce JARM 1.0 语义：
@@ -48,10 +62,11 @@ JARM fuzzy hash 已改为 Salesforce JARM 1.0 语义：
 
 ## P2 — 协议探针
 
-状态：JARM 哈希/参考向量、SSH banner/KEX、HTTP/2 能力探针已实现。
-TLS 证书/subject 细节已由 `tls-state` 提供，HTTP state 行为已由
-`http-state` 提供。完整 STARTTLS、完整 HTTP/2 客户端、HTTP/3/QUIC 和
-TLS 变体指纹仍未实现。
+状态：JARM 哈希/参考向量、SSH banner/KEX、cleartext `h2c` 和
+`h2` state 探针（HLTCP + TLS ALPN h2）已实现。`h2` 支持最小静态/literal
+HPACK 请求以及帧/HEADERS/DATA 解析；Huffman/动态 HPACK、完整流管理、
+STARTTLS、HTTP/3/QUIC 和 TLS 变体指纹仍未实现。TLS 证书/subject 细节已由
+`tls-state` 提供，HTTP state 行为已由 `http-state` 提供。
 
 增加协议细节探针，同时保持扫描器无 per-target 状态。能单 slot 就单 slot，
 需要并行变体时使用 `ProbeSlot_Always`。

@@ -44,6 +44,8 @@ $env:XTATE_LAB_IMAGE = "xtate-builder:24.04"
   `ssh_protocol`, `ssh_kex_algorithms` and `ssh_host_key_algorithms`.
 - h2c: the `h2c` probe sends the cleartext HTTP/2 preface and reports SETTINGS/
   frames from a local fake cleartext h2c target. This does not test HTTP/2 over TLS.
+- h2: `tcp-state + tls-state --alpn h2 -subprobe h2` against a local TLS ALPN h2
+  target; reports `h2_status`, HEADERS and DATA.
 - TCP `ProbeSlot_Always`: `slot-test` sends three slots to the HTTP target and
   reports `slot_test_slot` 1..3.
 - UDP `ProbeSlot_Always`: `slot-test-udp` sends three datagrams to the UDP echo

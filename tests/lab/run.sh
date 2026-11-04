@@ -24,15 +24,17 @@ JARM_TARGET="xtate-lab-jarm-$$"
 UDP_ECHO_TARGET="xtate-lab-udp-echo-$$"
 SSH_TARGET="xtate-lab-ssh-$$"
 HTTP2_TARGET="xtate-lab-http2-$$"
+H2_TARGET="xtate-lab-h2-$$"
 HTTP_PORT=8080
 CLOSED_PORT=9
 TLS_PORT=8443
 JARM_PORT=9443
 SSH_PORT=2222
 HTTP2_PORT=8084
+H2_PORT=8445
 
 cleanup() {
-    docker rm -f "$HTTP_TARGET" "$TLS_TARGET" "$JARM_TARGET" "$UDP_ECHO_TARGET" "$SSH_TARGET" "$HTTP2_TARGET" >/dev/null 2>&1 || true
+    docker rm -f "$HTTP_TARGET" "$TLS_TARGET" "$JARM_TARGET" "$UDP_ECHO_TARGET" "$SSH_TARGET" "$HTTP2_TARGET" "$H2_TARGET" >/dev/null 2>&1 || true
     docker network rm "$NET" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
@@ -109,11 +111,19 @@ MSYS_NO_PATHCONV=1 docker run -d --name "$HTTP2_TARGET" --network "$NET" \
     -v "$ROOT:/src:ro" "$IMAGE" \
     python3 -u /src/tests/lab/http2_server.py >/dev/null
 
+echo "==> starting TLS HTTP/2 target"
+MSYS_NO_PATHCONV=1 docker run -d --name "$H2_TARGET" --network "$NET" \
+    -v "$ROOT:/src:ro" "$IMAGE" bash -lc \
+    "openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/h2-key.pem \
+       -out /tmp/h2-cert.pem -subj '/CN=example.test' -days 1 >/dev/null 2>&1 && \
+     python3 -u /src/tests/lab/h2_tls_server.py" >/dev/null
+
 wait_tcp "$HTTP_TARGET" "$HTTP_PORT"
 wait_tcp "$TLS_TARGET" "$TLS_PORT"
 wait_tcp "$JARM_TARGET" "$JARM_PORT"
 wait_tcp "$SSH_TARGET" "$SSH_PORT"
 wait_tcp "$HTTP2_TARGET" "$HTTP2_PORT"
+wait_tcp "$H2_TARGET" "$H2_PORT"
 
 HTTP_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$HTTP_TARGET")"
 TLS_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$TLS_TARGET")"
@@ -121,19 +131,21 @@ JARM_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{
 UDP_ECHO_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$UDP_ECHO_TARGET")"
 SSH_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$SSH_TARGET")"
 HTTP2_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$HTTP2_TARGET")"
+H2_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$H2_TARGET")"
 echo "HTTP target: $HTTP_IP:$HTTP_PORT (closed test port $CLOSED_PORT)"
 echo "TLS  target: $TLS_IP:$TLS_PORT"
 echo "JARM target: $JARM_IP:$JARM_PORT"
 echo "UDP echo:   $UDP_ECHO_IP:8082"
 echo "SSH banner:  $SSH_IP:$SSH_PORT"
 echo "HTTP/2:      $HTTP2_IP:$HTTP2_PORT"
+echo "TLS h2:      $H2_IP:$H2_PORT"
 
 docker run --rm \
     --cap-add NET_RAW --cap-add NET_ADMIN \
     --network "$NET" \
-    -e HTTP_IP="$HTTP_IP" -e TLS_IP="$TLS_IP" -e JARM_IP="$JARM_IP" -e UDP_ECHO_IP="$UDP_ECHO_IP" -e SSH_IP="$SSH_IP" -e HTTP2_IP="$HTTP2_IP" \
+    -e HTTP_IP="$HTTP_IP" -e TLS_IP="$TLS_IP" -e JARM_IP="$JARM_IP" -e UDP_ECHO_IP="$UDP_ECHO_IP" -e SSH_IP="$SSH_IP" -e HTTP2_IP="$HTTP2_IP" -e H2_IP="$H2_IP" \
     -e HTTP_PORT="$HTTP_PORT" -e CLOSED_PORT="$CLOSED_PORT" \
-    -e TLS_PORT="$TLS_PORT" -e JARM_PORT="$JARM_PORT" -e SSH_PORT="$SSH_PORT" -e HTTP2_PORT="$HTTP2_PORT" \
+    -e TLS_PORT="$TLS_PORT" -e JARM_PORT="$JARM_PORT" -e SSH_PORT="$SSH_PORT" -e HTTP2_PORT="$HTTP2_PORT" -e H2_PORT="$H2_PORT" \
     -v "$ROOT:/src:ro" -v "$BIN:/xtate:ro" \
     "$IMAGE" bash -lc '
 set -euo pipefail
@@ -254,6 +266,21 @@ run_case udp-slot-test \
 grep -q "slot_test_slot: 1" /tmp/udp-slot-test.log
 grep -q "slot_test_slot: 2" /tmp/udp-slot-test.log
 grep -q "slot_test_slot: 3" /tmp/udp-slot-test.log
+
+run_case hltcp-h2 \
+    -ip "$H2_IP" -p "$H2_PORT" -scan tcp-state -probe tls-state \
+    -probe-arg "-subprobe h2 -sni example.test -alpn h2" \
+    -src-port 50000-50255 -rate 100 --wait 3 --no-status -show info -show failed
+grep -q "h2_status" /tmp/hltcp-h2.log
+    grep -q "200" /tmp/hltcp-h2.log
+grep -q "h2_frame_count" /tmp/hltcp-h2.log
+grep -q "http/2" /tmp/hltcp-h2.log
+
+run_case hltcp-h2-params \
+    -ip "$H2_IP" -p "$H2_PORT" -scan tcp-state -probe tls-state \
+    -probe-arg "-subprobe h2 -subprobe-arg --path=/h2 -sni example.test -alpn h2" \
+    -src-port 50256-50511 -rate 100 --wait 3 --no-status -show info -show failed
+grep -q "h2_frame_count" /tmp/hltcp-h2-params.log
 
 if command -v iptables >/dev/null 2>&1; then
     bash firewall/rm_rules.sh >/dev/null 2>&1 || true

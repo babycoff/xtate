@@ -264,6 +264,22 @@ The two new protocol probes follow this rule:
   `--record-raw` control output. It reports frame headers, `http2_settings_count`,
   `http2_set_<id>` values and optional raw frames.
 
+### HTTP/2 over TLS
+
+`h2` is a **state probe**, not a single-slot TCP probe:
+
+```bash
+-scan tcp-state -probe tls-state \
+  -probe-arg "-subprobe h2 -sni example.test -alpn h2"
+```
+
+It sends the HTTP/2 preface, SETTINGS and a minimal HPACK request through
+`tls-state` after ALPN `h2`; it parses SETTINGS, HEADERS and DATA. Controls:
+`--path`, `--authority`, `--user-agent`/`--no-user-agent`, `--settings-hex`,
+`--max-frames`, `--max-data`, `--record-raw`, `--no-decode-headers`.
+The HPACK decoder currently handles the static table and literal fields, not
+Huffman coding or dynamic-table indexing.
+
 ### `ProbeSlot_Always` examples
 
 Two built-in developer modules exercise the API and double as copyable

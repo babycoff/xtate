@@ -2,7 +2,7 @@
 
 [English](../modules.md) · **中文**
 
-Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上以 `NULL` 结尾的注册表里的一行；没有运行期插件加载。完整构建会注册 **11 个扫描 + 25 个探测 + 7 个输出 + 5 个生成**模块，而缺少可选库的模块会直接从构建中消失（也从 `--list-*` 中消失）。
+Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上以 `NULL` 结尾的注册表里的一行；没有运行期插件加载。完整构建会注册 **11 个扫描 + 26 个探测 + 7 个输出 + 5 个生成**模块，而缺少可选库的模块会直接从构建中消失（也从 `--list-*` 中消失）。
 
 | 类别 | 职责 | 参数 | 注册表 |
 |:---|:---|:---|:---|
@@ -43,7 +43,7 @@ xtate --help-gen blackrock
 
 每个扫描模块都通过 `--help-scan <name>` 暴露自己的选项（记录 TTL/IPID/窗口、重复/去重开关、TTL 覆盖等）。如何选择模式、哪些模式需要防火墙规则，见[扫描模式](./scanning-modes.md)。
 
-## 探测模块（25）
+## 探测模块（26）
 
 探测模块会声明一个**类型**，必须与扫描模块匹配：`zbanner` 用 `tcp`，`udp` 用 `udp`，`tcp-state` 用 `state`。它可以声明 `ProbeSlotPlan`（JARM 和 `slot-test` 示例）；见[扫描模式](./scanning-modes.md#探测-slot)。
 
@@ -75,7 +75,7 @@ typedef struct ProbeSlotPlan {
 变体，`AfterFirstReply` 适合条件 fan-out。后续的协议版本变体、
 challenge-response 探针可以复用同一引擎路径，不需要新增模式。
 
-### 通用（13）
+### 通用（14）
 
 | 探测 | 类型 | 功能 |
 |:---|:---:|:---|
@@ -88,6 +88,7 @@ challenge-response 探针可以复用同一引擎路径，不需要新增模式�
 | `tls-state` | state | OpenSSL 驱动的 TLS 握手，导出证书/密码套件/版本，并可在 TLS 之上跑子探测。 |
 | `ssh` | tcp | 可配置 SSH banner，以及 KEX/host-key、cipher/MAC/压缩算法列表。 |
 | `h2c` | tcp | cleartext h2c preface、可配置 SETTINGS/PING 指纹、帧/settings 解析；不是 TLS 上的 HTTP/2。 |
+| `h2` | state | 通过 HLTCP + TLS ALPN h2 的 HTTP/2：preface、SETTINGS、最小 HPACK 请求、帧/HEADERS/DATA。 |
 | `jarm` | tcp | 通过 10 个 ClientHello slot 做 JARM；输出 `jarm_part`，由 `tools/jarm_aggregate.py` 聚合。 |
 | `dns` | udp | DNS 记录请求，可配置名称/类型/递归。 |
 | `snmp` | udp | SNMP（v1/v2c）请求，并按 MIB 提取主机信息。 |
