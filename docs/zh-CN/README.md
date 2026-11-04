@@ -16,6 +16,8 @@
 | 在挑选模块 | [模块](./modules.md) |
 | 编写模块 | [模块开发](./module-development.md) |
 | 计划中的工作 | [路线图](./roadmap.md) → [P3/P4 可行性](./feasibility.md) |
+| HTTP 探针质量 | [HTTP 探针审计](./http-probes-audit.md) |
+| 参数解析测试 | [参数解析器计划](./parser-test-plan.md) |
 | 想了解内部原理 | [架构](./architecture.md) → [ZBanner](./zbanner.md) / [HLTCP](./hltcp.md) |
 | 卡住了 | [故障排查](./troubleshooting.md) → [已知限制](./known-limitations.md) |
 | 中文帮助 / 本地化 | [帮助 i18n](./help-i18n.md) |
@@ -39,6 +41,8 @@
 - [模块](./modules.md)——四种模块类型以及 Xtate 自带的模块
 - [模块开发](./module-development.md)——C 接口、注册和 ProbeSlotPlan 示例
 - [路线图](./roadmap.md)——已完成工作与 P2/P3 计划
+- [HTTP 探针审计](./http-probes-audit.md)——现状问题与重写计划
+- [参数解析器计划](./parser-test-plan.md)——覆盖范围与测试框架
 - [P3/P4 可行性](./feasibility.md)——目标选择、自适应速率、模板与流量随机化
 - [中文帮助与 i18n](./help-i18n.md)——`--lang`、catalog 回退与 UTF-8 帮助排版
 - [Windows 快速上手](./windows-quickstart.md)——新手安装、Npcap、构建、首次扫描与排查

@@ -24,6 +24,8 @@
 
 ## 参数解析覆盖（计划中）
 
+调研与测试框架设计见[参数解析器计划](./parser-test-plan.md)。
+
 CLI/参数解析器还没有专门的回归测试套件。在依赖更多嵌套/subprobe 参数之前应补齐：
 
 - `ConfParam` 的 flag/argument/未知选项/重复选项；
@@ -94,6 +96,12 @@ STARTTLS、HTTP/3/QUIC 和 TLS 变体指纹仍未实现。TLS 证书/subject 细
 - 可选依赖仍然保持可选。
 
 P3/P4 可行性见[P3/P4 可行性](./feasibility.md)。
+
+## HTTP 探针审计/重写（计划中）
+
+`http` 和 `http-state` 请求构造重复，响应仅有 banner/regex 处理。详细评估和
+分阶段计划见 [HTTP 探针审计](./http-probes-audit.md)。建议共享请求构造器 +
+有界 HTTP/1 响应解析器，而不是盲目全部重写；`h2c`/`h2` 保持独立。
 
 ## P3 — 扫描控制
 
