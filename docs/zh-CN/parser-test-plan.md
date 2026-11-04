@@ -3,7 +3,9 @@
 **中文** · [English](../parser-test-plan.md)
 
 这是 CLI 与模块参数解析器的调研/实施计划。初始 `tests/config/test.sh`
-已实现；完整矩阵仍未完成。尾部 `--arg` 缺 value 的越界路径已修复并有覆盖。
+已实现；纯 parser 的 `--selftest` 覆盖严格 bool/int/size/time、引号和嵌套
+参数字符串。尾部 `--arg` 缺 value 越界和长名称截断已修复并有覆盖。完整矩阵
+仍未完成。
 
 ## 当前解析面
 

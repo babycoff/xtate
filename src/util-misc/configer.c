@@ -176,6 +176,105 @@ uint64_t conf_parse_size(const char *value) {
     return num;
 }
 
+bool conf_parse_size_checked(const char *value, uint64_t *out) {
+    if (!value || !out || !*value)
+        return false;
+    uint64_t num = 0;
+    const char *p = value;
+    while (isdigit((unsigned char)*p)) {
+        unsigned d = (unsigned)(*p - '0');
+        if (num > (UINT64_MAX - d) / 10)
+            return false;
+        num = num * 10 + d;
+        p++;
+    }
+    while (ispunct((unsigned char)*p) || isspace((unsigned char)*p))
+        p++;
+    if (*p && num == 0)
+        num = 1;
+    uint64_t mul = 1;
+    switch (tolower((unsigned char)*p)) {
+        case '\0':
+            break;
+        case 'k':
+            mul = 1024ULL;
+            break;
+        case 'm':
+            mul = 1024ULL * 1024ULL;
+            break;
+        case 'g':
+            mul = 1024ULL * 1024ULL * 1024ULL;
+            break;
+        case 't':
+            mul = 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+            break;
+        case 'p':
+            mul = 1024ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+            break;
+        case 'e':
+            mul = 1024ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL;
+            break;
+        default:
+            return false;
+    }
+    if (num > UINT64_MAX / mul)
+        return false;
+    *out = num * mul;
+    return true;
+}
+
+bool conf_parse_time_checked(const char *value, uint64_t *out) {
+    if (!value || !out || !*value)
+        return false;
+    uint64_t num = 0;
+    unsigned negative = 0;
+    const char *p = value;
+    while (*p == '-') {
+        negative = 1;
+        p++;
+    }
+    if (!isdigit((unsigned char)*p))
+        return false;
+    while (isdigit((unsigned char)*p)) {
+        unsigned d = (unsigned)(*p - '0');
+        if (num > (UINT64_MAX - d) / 10)
+            return false;
+        num = num * 10 + d;
+        p++;
+    }
+    while (ispunct((unsigned char)*p) || isspace((unsigned char)*p))
+        p++;
+    uint64_t mul = 1;
+    switch (tolower((unsigned char)*p)) {
+        case '\0':
+            break;
+        case 's':
+            mul = 1;
+            break;
+        case 'm':
+            mul = 60;
+            break;
+        case 'h':
+            mul = 60 * 60;
+            break;
+        case 'd':
+            mul = 24 * 60 * 60;
+            break;
+        case 'w':
+            mul = 24 * 60 * 60 * 7;
+            break;
+        default:
+            return false;
+    }
+    if (num > UINT64_MAX / mul)
+        return false;
+    num *= mul;
+    if (num >= 24 * 60 * 60)
+        return false;
+    *out = negative ? 24 * 60 * 60 - num : num;
+    return true;
+}
+
 unsigned conf_char2hex(char c) {
     if ('0' <= c && c <= '9')
         return (unsigned)(c - '0');
@@ -692,6 +791,17 @@ int configer_selftest(void) {
 
     if (conf_parse_size("1k") != 1024 || conf_parse_time("2m") != 120)
         errors++;
+    {
+        uint64_t v = 0;
+        if (!conf_parse_size_checked("1k", &v) || v != 1024)
+            errors++;
+        if (conf_parse_size_checked("12x", &v))
+            errors++;
+        if (!conf_parse_time_checked("2m", &v) || v != 120)
+            errors++;
+        if (!conf_parse_time_checked("120s", &v) || v != 120)
+            errors++;
+    }
 
     return errors;
 }

@@ -3,9 +3,11 @@
 **English** · [中文](zh-CN/parser-test-plan.md)
 
 This is a research/implementation plan for the CLI and module-parameter parser.
-An initial `tests/config/test.sh` suite is implemented; the remaining matrix is
-still open. The trailing-`--arg` missing-value out-of-bounds path has been
-fixed and is covered.
+An initial `tests/config/test.sh` suite is implemented, and the pure parser has
+a `--selftest` cover for strict bool/int/size/time parsing, quoting and nested
+parameter strings. The trailing-`--arg` missing-value out-of-bounds path and
+the truncating long-name path have been fixed and are covered. The remaining
+matrix is still open.
 
 ## Current parser surface
 

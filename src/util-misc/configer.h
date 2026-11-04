@@ -51,6 +51,8 @@ bool conf_is_power_of_2(uint64_t x);
 
 uint64_t conf_parse_time(const char *value);
 uint64_t conf_parse_size(const char *value);
+bool     conf_parse_time_checked(const char *value, uint64_t *out);
+bool     conf_parse_size_checked(const char *value, uint64_t *out);
 int      conf_parse_mac(const char *text, macaddress_t *mac);
 uint64_t conf_parse_int(const char *str);
 bool     conf_parse_int_checked(const char *str, uint64_t *out);

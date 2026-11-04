@@ -6,8 +6,8 @@
 `h2c` 是明文 prior knowledge，`h2` 是通过 HLTCP 的 TLS/ALPN h2。
 
 状态：第一轮重写已实现。`http` 和 `http-state` 现在都使用
-`proto-http-result` 输出 status/reason/version、响应头和有限 body/chunked
-信息。请求构造器仍然重复，抽取共享构造器是后续工作。
+`proto-http-result` 输出 status/reason/version、响应头、Content-Length 和
+有限 body/chunked 信息。请求构造器仍然重复，抽取共享构造器是后续工作。
 
 ## 当前探针
 
