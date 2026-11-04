@@ -100,8 +100,8 @@ P3/P4 可行性见[P3/P4 可行性](./feasibility.md)。
 ## HTTP 探针审计/重写（计划中）
 
 `http` 和 `http-state` 请求构造重复，响应仅有 banner/regex 处理。详细评估和
-分阶段计划见 [HTTP 探针审计](./http-probes-audit.md)。建议共享请求构造器 +
-有界 HTTP/1 响应解析器，而不是盲目全部重写；`h2c`/`h2` 保持独立。
+分阶段计划见 [HTTP 探针审计](./http-probes-audit.md)。第一轮响应解析已实现；共享请求构造器抽取和更完整的
+chunked/body 测试仍待做。`h2c`/`h2` 保持独立。
 
 ## P3 — 扫描控制
 

@@ -182,6 +182,8 @@ run_case zbanner-default \
     -src-port 41000-41255 -rate 100 --wait 2 --no-status -show info -show failed
 grep -q "\"open\" because \"syn-ack\"" /tmp/zbanner-default.log
 grep -q "\"closed\" because \"rst\"" /tmp/zbanner-default.log
+grep -q "http_status" /tmp/zbanner-default.log
+grep -q "http_header_count" /tmp/zbanner-default.log
 
 run_case zbanner-record-ack \
     -ip "$HTTP_IP" -p "$HTTP_PORT,$CLOSED_PORT" -scan zbanner -probe http \
@@ -194,6 +196,8 @@ run_case hltcp-http \
     -src-port 43000-43255 -rate 100 --wait 2 --no-status -show info -show failed
 grep -q "\"open\" because \"syn-ack\"" /tmp/hltcp-http.log
 grep -q "\"closed\" because \"rst\"" /tmp/hltcp-http.log
+grep -q "http_status" /tmp/hltcp-http.log
+grep -q "http_header_count" /tmp/hltcp-http.log
 
 run_case hltcp-tls \
     -ip "$TLS_IP" -p "$TLS_PORT" -scan tcp-state -probe tls-state \

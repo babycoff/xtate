@@ -115,9 +115,9 @@ For P3/P4 feasibility, see [P3/P4 feasibility](./feasibility.md).
 
 `http` and `http-state` have duplicated request construction and only
 banner/regex response handling. The detailed assessment and phased plan are in
-[HTTP probe audit](./http-probes-audit.md). Recommendation: shared request
-builder + bounded HTTP/1 response parser, not a blind full rewrite; `h2c`/`h2`
-remain separate.
+[HTTP probe audit](./http-probes-audit.md). First parser pass is implemented;
+shared request-builder extraction and broader chunked/body tests remain.
+`h2c`/`h2` remain separate.
 
 ## P3 — scan control
 

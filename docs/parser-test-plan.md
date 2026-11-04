@@ -3,7 +3,9 @@
 **English** · [中文](zh-CN/parser-test-plan.md)
 
 This is a research/implementation plan for the CLI and module-parameter parser.
-It is not yet a complete test suite.
+An initial `tests/config/test.sh` suite is implemented; the remaining matrix is
+still open. The trailing-`--arg` missing-value out-of-bounds path has been
+fixed and is covered.
 
 ## Current parser surface
 

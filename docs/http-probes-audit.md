@@ -6,6 +6,11 @@ This is an assessment of the HTTP/1 probes, not a commitment to a full rewrite.
 HTTP/2 is separate: `h2c` is cleartext prior knowledge and `h2` is TLS/ALPN h2
 through HLTCP.
 
+Status: the first rewrite pass is implemented. Both `http` and `http-state` now
+use `proto-http-result` for status/reason/version, response headers and bounded
+body/chunked metadata. The request builders are still duplicated; extracting
+them remains follow-up work.
+
 ## Current inventory
 
 | Probe | Type | Lines (approx.) | Main role |

@@ -38,6 +38,7 @@
 #include "nmap/nmap-service.h"
 #include "pixie/pixie-timer.h"
 #include "proto/proto-http-maker.h"
+#include "proto/proto-http-result.h"
 #include "proto/proto-preprocess.h"
 
 #include "templ/templ-init.h"
@@ -4682,6 +4683,7 @@ int xconf_selftest(void) {
         x += base64_selftest();
         x += datachain_selftest();
         x += proto_http_maker_selftest();
+        x += proto_http_result_selftest();
         x += template_selftest();
         x += ndp_selftest();
         x += preprocess_selftest();

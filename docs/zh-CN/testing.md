@@ -133,6 +133,7 @@ Windows 构建在 `.github/workflows/windows.yml` 中运行，覆盖 MSVC、Clan
 | interactive | `tests/interactive/test.sh` | 非 TTY 命令/帮助/状态 |
 | JARM 聚合 | `tests/jarm/test.sh` | 输出侧 parts、统计、重试列表 |
 | 模块模板 | `tests/module-examples/test.sh` | 编译检查四类模块接口示例 |
+| 参数解析器 | `tests/config/test.sh` | 未知/缺失/help/CLI 解析基础 |
 | slot-plan lab | `tests/lab/run.sh` | 真实 TCP/UDP `ProbeSlot_Always`、JARM `AfterFirstReply`、SSH banner/KEX、h2c/h2 framing |
 | PTY | `tests/interactive/tty.sh` | 终端恢复 + 补全 |
 | large batch | `tests/large-batch/` | replay/RSS/输出失败 |

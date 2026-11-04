@@ -12,6 +12,7 @@
 #include "../xconf.h"
 #include "../version.h"
 #include "../proto/proto-http-maker.h"
+#include "../proto/proto-http-result.h"
 #include "../util-data/fine-malloc.h"
 #include "../util-data/safe-string.h"
 #include "../util-out/logger.h"
@@ -94,6 +95,10 @@ struct HttpStateConf {
     unsigned record_utf8     : 1;
     unsigned record_data     : 1;
     unsigned record_data_len : 1;
+    unsigned report_status   : 1;
+    unsigned report_headers  : 1;
+    unsigned report_body     : 1;
+    unsigned max_body;
     /*dynamic set ip:port as Host field*/
     unsigned dynamic_host    : 1;
     unsigned all_banner      : 1;
@@ -101,7 +106,12 @@ struct HttpStateConf {
     unsigned all_banner_floor;
 };
 
-static struct HttpStateConf httpstate_conf = {0};
+static struct HttpStateConf httpstate_conf = {
+    .report_status = 1,
+    .report_headers = 1,
+    .report_body = 0,
+    .max_body = 4096,
+};
 
 static ConfRes SET_all_banner_floor(void *conf, const char *name,
                                     const char *value) {
@@ -445,7 +455,58 @@ static ConfRes SET_dynamic_host(void *conf, const char *name,
     return Conf_OK;
 }
 
+static ConfRes SET_no_report_status(void *conf, const char *name,
+                                    const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+    httpstate_conf.report_status = !conf_parse_bool(value);
+    return Conf_OK;
+}
+
+static ConfRes SET_no_report_headers(void *conf, const char *name,
+                                     const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+    httpstate_conf.report_headers = !conf_parse_bool(value);
+    return Conf_OK;
+}
+
+static ConfRes SET_report_body(void *conf, const char *name,
+                               const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+    httpstate_conf.report_body = conf_parse_bool(value);
+    return Conf_OK;
+}
+
+static ConfRes SET_max_body(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+    httpstate_conf.max_body = conf_parse_int(value);
+    return Conf_OK;
+}
+
 static ConfParam httpstate_parameters[] = {
+    {"no-record-status",
+     SET_no_report_status,
+     Type_FLAG,
+     {0},
+     "Do not report parsed HTTP status/reason/version."},
+    {"no-record-headers",
+     SET_no_report_headers,
+     Type_FLAG,
+     {0},
+     "Do not report parsed HTTP response headers."},
+    {"record-body",
+     SET_report_body,
+     Type_FLAG,
+     {0},
+     "Record the parsed HTTP body (bounded by --max-body)."},
+    {"max-body",
+     SET_max_body,
+     Type_ARG,
+     {0},
+     "Maximum parsed body bytes to record (default 4096)."},
     {"method",
      SET_method,
      Type_ARG,
@@ -756,6 +817,46 @@ static void httpstate_make_hello(DataPass *pass, ProbeState *state,
     }
 }
 
+static void httpstate_report_result(OutItem *item, const unsigned char *px,
+                                    unsigned sizeof_px) {
+    HttpResult result;
+    if (http_result_parse(px, sizeof_px, &result) != 0)
+        return;
+
+    if (httpstate_conf.report_status) {
+        dach_set_int(&item->probe_report, "http_status", result.status);
+        dach_set_int(&item->probe_report, "http_minor_version",
+                     result.minor_version);
+        dach_append_str(&item->probe_report, "http_reason", result.reason,
+                        strlen(result.reason));
+    }
+    if (httpstate_conf.report_headers) {
+        dach_set_int(&item->probe_report, "http_header_count",
+                     result.header_count);
+        for (unsigned i = 0; i < result.header_count; i++) {
+            char name[32];
+            char value[512];
+            snprintf(name, sizeof(name), "http_header_%u", i);
+            snprintf(value, sizeof(value), "%s: %s", result.headers[i].name,
+                     result.headers[i].value);
+            dach_append_str(&item->probe_report, name, value, strlen(value));
+        }
+    }
+    dach_set_int(&item->probe_report, "http_body_len", result.body_len);
+    if (result.has_content_length)
+        dach_set_int(&item->probe_report, "http_content_length",
+                     result.content_length);
+    dach_set_bool(&item->probe_report, "http_chunked", result.chunked);
+    if (httpstate_conf.report_body && result.body_len &&
+        result.body_offset < sizeof_px) {
+        size_t body_len = result.body_len;
+        if (body_len > httpstate_conf.max_body)
+            body_len = httpstate_conf.max_body;
+        dach_append_bin(&item->probe_report, "http_body",
+                        px + result.body_offset, body_len);
+    }
+}
+
 static unsigned httpstate_parse_response(DataPass *pass, ProbeState *state,
                                          OutConf *out, ProbeTarget *target,
                                          const unsigned char *px,
@@ -791,6 +892,8 @@ static unsigned httpstate_parse_response(DataPass *pass, ProbeState *state,
         .target.port_them = target->target.port_them,
         .target.port_me   = target->target.port_me,
     };
+
+    httpstate_report_result(&item, px, sizeof_px);
 
 #ifndef NOT_FOUND_PCRE2
 

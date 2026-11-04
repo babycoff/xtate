@@ -536,10 +536,17 @@ int conf_set_params_from_args(void *conf, ConfParam *cp, int argc,
                 value = strchr(&argv[i][2], ':');
             if (value == NULL) {
                 /*Type_FLAG doesn't carry args*/
-                if (conf_is_parm_flag(cp, argname))
+                if (conf_is_parm_flag(cp, argname)) {
                     value = "";
-                else
+                } else {
+                    /* Check before incrementing: a trailing --arg has no value. */
+                    if (i + 1 >= argc) {
+                        LOG(LEVEL_ERROR, "%.*s: missing parameter value\n",
+                            (int)strlen(argname), argname);
+                        return -1;
+                    }
                     value = argv[++i];
+                }
                 name_length = (unsigned)strlen(argname);
             } else {
                 name_length = (unsigned)(value - argname);
