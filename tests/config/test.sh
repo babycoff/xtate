@@ -58,6 +58,7 @@ run_fail "missing gen-arg value" --gen-arg
 run_fail "bare double dash" --
 run_fail "positional token" --list-probe stray-token
 run_fail "bad rate suffix" --rate=4x --list-probe
+run_fail "bad wait value" --wait=abc --list-probe
 run_fail "negative rate" --rate -1 --list-probe
 
 # Existing module/help paths should remain usable without a scan.

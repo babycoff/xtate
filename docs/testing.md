@@ -145,6 +145,6 @@ and RSS are noisy on shared runners. See `tests/bench/README.md`.
 | JARM aggregation | `tests/jarm/test.sh` | output-side parts, stats, retry list |
 | module templates | `tests/module-examples/test.sh` | compile all four module interface examples |
 | parameter parser | `tests/config/test.sh` | unknown/missing/help/CLI parser basics |
-| slot-plan lab | `tests/lab/run.sh` | real TCP/UDP `ProbeSlot_Always`, JARM `AfterFirstReply`, SSH banner/KEX, h2c/h2 framing |
+| slot-plan lab | `tests/lab/run.sh` | real TCP/UDP `ProbeSlot_Always`, JARM `AfterFirstReply`, SSH banner/KEX, h2c/h2 framing, TLS certificate details |
 | PTY | `tests/interactive/tty.sh` | terminal restore + completion |
 | large batch | `tests/large-batch/` | replay/RSS/output failure |

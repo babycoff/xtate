@@ -11,10 +11,14 @@
 #include "../util-out/logger.h"
 #include "../util-misc/misc.h"
 
+static int _conf_parse_error = 0;
+
 uint64_t conf_parse_int(const char *str) {
     uint64_t result = 0;
-    if (!conf_parse_int_checked(str, &result))
+    if (!conf_parse_int_checked(str, &result)) {
+        _conf_parse_error = 1;
         return 0;
+    }
     return result;
 }
 
@@ -23,11 +27,15 @@ bool conf_parse_int_checked(const char *str, uint64_t *out) {
         return false;
     uint64_t result = 0;
     for (const unsigned char *p = (const unsigned char *)str; *p; p++) {
-        if (!isdigit(*p))
+        if (!isdigit(*p)) {
+            _conf_parse_error = 1;
             return false;
+        }
         unsigned digit = (unsigned)(*p - '0');
-        if (result > (UINT64_MAX - digit) / 10)
+        if (result > (UINT64_MAX - digit) / 10) {
+            _conf_parse_error = 1;
             return false;
+        }
         result = result * 10 + digit;
     }
     *out = result;
@@ -58,6 +66,8 @@ bool conf_is_bool(const char *str) { return conf_bool_value(str) >= 0; }
 
 bool conf_parse_bool(const char *str) {
     int value = conf_bool_value(str);
+    if (value < 0)
+        _conf_parse_error = 1;
     return value == 1;
 }
 
@@ -75,6 +85,7 @@ bool conf_parse_bool(const char *str) {
 uint64_t conf_parse_time(const char *value) {
     uint64_t out = 0;
     if (!conf_parse_time_checked(value, &out)) {
+        _conf_parse_error = 1;
         LOG(LEVEL_ERROR, "invalid time value: %s\n", value ? value : "(null)");
         return 0;
     }
@@ -88,6 +99,7 @@ uint64_t conf_parse_time(const char *value) {
 uint64_t conf_parse_size(const char *value) {
     uint64_t out = 0;
     if (!conf_parse_size_checked(value, &out)) {
+        _conf_parse_error = 1;
         LOG(LEVEL_ERROR, "invalid size value: %s\n", value ? value : "(null)");
         return 0;
     }
@@ -437,19 +449,25 @@ int conf_set_one_param(void *conf, ConfParam *cp, const char *name,
     size_t i;
 
     for (i = 0; cp[i].name; i++) {
+        int matched = 0;
         if (conf_equals(cp[i].name, name)) {
-            if (Conf_ERR == cp[i].setter(conf, name, value))
-                return -1;
-            return 0;
+            matched = 1;
         } else {
-            size_t j;
-            for (j = 0; cp[i].alt_names[j]; j++) {
+            for (size_t j = 0; cp[i].alt_names[j]; j++) {
                 if (conf_equals(cp[i].alt_names[j], name)) {
-                    if (Conf_ERR == cp[i].setter(conf, name, value))
-                        return -1;
-                    return 0;
+                    matched = 1;
+                    break;
                 }
             }
+        }
+        if (matched) {
+            _conf_parse_error = 0;
+            ConfRes result = cp[i].setter(conf, name, value);
+            if (result == Conf_ERR || _conf_parse_error) {
+                _conf_parse_error = 0;
+                return -1;
+            }
+            return 0;
         }
     }
 
@@ -695,6 +713,11 @@ int configer_selftest(void) {
     {
         char *argv[] = {"--flag=false"};
         if (conf_set_params_from_args(&c, table, 1, argv) != 0 || c.flag)
+            errors++;
+    }
+    {
+        char *argv[] = {"--number", "not-a-number"};
+        if (conf_set_params_from_args(&c, table, 2, argv) == 0)
             errors++;
     }
     {

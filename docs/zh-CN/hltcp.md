@@ -130,6 +130,13 @@ tcp-state -> tls-state -> http-state / hello-state / recog-state / get-state / c
 - **接收窗口：** 非 SYN 的 TCP 模板默认通告 1024 字节，这会让对端发出大量小段。如果扫描感觉慢，先试着调大 `--tcp-win`（并相应调整 `--max-pkt-len`）——模块自己的帮助文本也是这么说的。
 - **探测 slot：** ZBanner/TCP 的 slot plan 把槽位编码在源端口里；HLTCP 本身只跑一条有状态流，因此多 slot plan 不适用于 `tcp-state`。
 
+## 证书细节
+
+`tls-state --dump-cert-details` 输出结构化的 `cert_subject`、`cert_issuer`、
+`cert_not_before`、`cert_not_after`、`cert_serial`、`cert_signature_algorithm`、
+`cert_public_key`、`cert_public_key_bits`、`cert_san`、`tls_version`、
+`tls_cipher` 和协商后的 `tls_alpn`。
+
 ## 用法
 
 ```bash

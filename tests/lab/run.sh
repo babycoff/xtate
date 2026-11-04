@@ -75,7 +75,7 @@ docker run -d --name "$TLS_TARGET" --network "$NET" "$IMAGE" bash -lc \
      fi && \
      openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/key.pem \
        -out /tmp/cert.pem -subj '/CN=localhost' -days 1 >/dev/null 2>&1 && \
-     openssl s_server -accept $TLS_PORT -cert /tmp/cert.pem -key /tmp/key.pem -tlsextdebug -www" >/dev/null
+     openssl s_server -accept $TLS_PORT -cert /tmp/cert.pem -key /tmp/key.pem -tlsextdebug -alpn h2,http/1.1 -www" >/dev/null
 
 wait_tcp() {
     local host="$1"
@@ -201,11 +201,15 @@ grep -q "http_header_count" /tmp/hltcp-http.log
 
 run_case hltcp-tls \
     -ip "$TLS_IP" -p "$TLS_PORT" -scan tcp-state -probe tls-state \
-    -src-port 44000-44255 -probe-arg "-subprobe close-state -sni example.test -alpn h2,http/1.1 --dump-version --dump-cipher --dump-cert --ssl-keylog --graceful-tls-close" \
+    -src-port 44000-44255 -probe-arg "-subprobe close-state -sni example.test -alpn h2,http/1.1 --dump-version --dump-cipher --dump-cert --dump-cert-details --ssl-keylog --graceful-tls-close" \
     -rate 100 --wait 2 --no-status -show info -show failed
 grep -q "tls info" /tmp/hltcp-tls.log
 grep -q "TLSv1" /tmp/hltcp-tls.log
 grep -q "key_log" /tmp/hltcp-tls.log
+grep -q "cert_subject" /tmp/hltcp-tls.log
+grep -q "cert_issuer" /tmp/hltcp-tls.log
+grep -q "cert_public_key" /tmp/hltcp-tls.log
+grep -q "tls_alpn" /tmp/hltcp-tls.log
 
 run_case hltcp-tls-http \
     -ip "$TLS_IP" -p "$TLS_PORT" -scan tcp-state -probe tls-state \

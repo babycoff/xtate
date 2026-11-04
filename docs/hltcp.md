@@ -212,6 +212,13 @@ resident, but cannot exceed the table/global budget.
 - **Probe slots:** ZBanner/TCP slot plans encode the slot in the source port; HLTCP itself
   runs a single stateful flow, so a multi-slot plan does not apply to `tcp-state`.
 
+## Certificate details
+
+`tls-state --dump-cert-details` emits structured `cert_subject`, `cert_issuer`,
+`cert_not_before`, `cert_not_after`, `cert_serial`, `cert_signature_algorithm`,
+`cert_public_key`, `cert_public_key_bits`, `cert_san`, `tls_version`,
+`tls_cipher` and negotiated `tls_alpn`.
+
 ## Usage
 
 ```bash

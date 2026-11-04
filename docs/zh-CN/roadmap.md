@@ -75,8 +75,8 @@ STARTTLS、HTTP/3/QUIC 和 TLS 变体指纹仍未实现。TLS 证书/subject 细
 
 计划顺序：
 
-1. TLS 证书与细节：subject、issuer、SAN、有效期、key type、签名算法、
-   ALPN、协商版本/cipher。
+1. TLS 证书与细节已在 `tls-state` 的 `--dump-cert-details` 中实现
+   （subject、issuer、SAN、有效期、key type/bits、签名算法、ALPN、版本/cipher）。
 2. SSH banner 探针已实现（`ssh`），包括合并报文中的 KEX/host-key 算法列表；
    完整 KEX 包交换仍是后续工作。
 3. HTTP state 探针增强：状态行、header、重定向目标、body 上限。

@@ -67,6 +67,7 @@ jobs:
           XTATE_BIN="$BIN" bash tests/i18n/test.sh
           XTATE_BIN="$BIN" bash tests/interactive/test.sh
           XTATE_BIN="$BIN" bash tests/config/test.sh
+          XTATE_BIN="$BIN" python3 tests/config/fuzz.py
           XTATE_BIN="$BIN" bash tests/jarm/test.sh
 
       - name: Restore fuzz corpus

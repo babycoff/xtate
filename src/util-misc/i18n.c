@@ -442,6 +442,7 @@ static const I18nModuleParamEntry i18n_module_param_help[] = {
     {"database-name", "设置 MongoDB 数据库名。"},
     {"default-port", "设置默认目标端口。"},
     {"dump-cert", "输出 TLS 证书信息。"},
+    {"dump-cert-details", "输出结构化 X.509 细节、SAN、公钥、TLS 版本/cipher/ALPN。"},
     {"dump-cipher", "输出 TLS 协商的加密套件。"},
     {"dump-subject", "输出 TLS 证书主题。"},
     {"dump-version", "输出 TLS 协议版本。"},

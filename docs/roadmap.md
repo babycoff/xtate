@@ -85,8 +85,9 @@ state. Each probe reuses single-slot or `ProbeSlot_Always` where it makes sense.
 
 Planned order:
 
-1. TLS certificate/details probe: subject, issuer, SAN, validity, key type,
-   signature algorithm, ALPN, negotiated version/cipher.
+1. TLS certificate/details probe is implemented in `tls-state` via
+   `--dump-cert-details` (subject, issuer, SAN, validity, key type/bits,
+   signature algorithm, ALPN, version/cipher).
 2. SSH banner probe is implemented (`ssh`), including coalesced KEX/host-key
    algorithm lists. Full KEX packet exchange remains future work.
 3. HTTP state probe improvements: status line, headers, redirect target,

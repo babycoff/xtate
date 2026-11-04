@@ -89,6 +89,7 @@ struct TlsState {
     unsigned             have_dump_subject   : 1;
     unsigned             have_dump_cipher    : 1;
     unsigned             have_dump_cert      : 1;
+    unsigned             have_dump_cert_details : 1;
     unsigned             substate_inited     : 1;
     unsigned             graceful_close_sent : 1;
 };
@@ -104,6 +105,7 @@ struct TlsStateConf {
     unsigned dump_cipher    : 1;
     unsigned ssl_keylog     : 1;
     unsigned dump_cert      : 1;
+    unsigned dump_cert_details : 1;
     unsigned fail_handshake : 1;
     unsigned graceful_close : 1;
 };
@@ -263,6 +265,14 @@ static ConfRes SET_graceful_close(void *conf, const char *name,
     return Conf_OK;
 }
 
+static ConfRes SET_dump_cert_details(void *conf, const char *name,
+                                      const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+    tlsstate_conf.dump_cert_details = conf_parse_bool(value);
+    return Conf_OK;
+}
+
 static ConfParam tlsstate_parameters[] = {
     {"subprobe",
      SET_subprobe,
@@ -305,6 +315,13 @@ static ConfParam tlsstate_parameters[] = {
      Type_FLAG,
      {"cipher", 0},
      "Record cipher suites of SSL/TLS connection to results as INFO."},
+    {"dump-cert-details",
+     SET_dump_cert_details,
+     Type_FLAG,
+     {"cert-details", "cert-info", 0},
+     "Record structured X.509 details: subject, issuer, validity, serial, "
+     "signature algorithm, public key type/bits, SAN, TLS version/cipher and "
+     "negotiated ALPN."},
     {"dump-cert",
      SET_dump_cert,
      Type_FLAG,
@@ -385,6 +402,152 @@ static void tlsstate_flush_diag(ProbeTarget *target, struct TlsState *ts) {
     output_result(_tls_out, &item);
     dach_release(&ts->diag);
     ts->diag.count = 0;
+}
+
+static void cert_bio_string(BIO *bio, char *out, size_t out_size) {
+    size_t off = 0;
+    while (off + 1 < out_size) {
+        int n = BIO_read(bio, out + off, (int)(out_size - off - 1));
+        if (n <= 0)
+            break;
+        off += (size_t)n;
+    }
+    out[off] = '\0';
+}
+
+static bool output_cert_details(OutConf *out, ProbeTarget *target, SSL *ssl) {
+    X509 *cert = SSL_get_peer_certificate(ssl);
+    if (!cert)
+        return false;
+
+    OutItem item = {
+        .target.ip_proto = target->target.ip_proto,
+        .target.ip_them = target->target.ip_them,
+        .target.port_them = target->target.port_them,
+        .target.ip_me = target->target.ip_me,
+        .target.port_me = target->target.port_me,
+        .level = OUT_SUCCESS,
+    };
+    safe_strcpy(item.classification, OUT_CLS_SIZE, "tls info");
+
+    BIO *bio = BIO_new(BIO_s_mem());
+    char  buf[1024];
+    if (bio) {
+        X509_NAME *subject = X509_get_subject_name(cert);
+        if (subject && X509_NAME_print_ex(bio, subject, 0, XN_FLAG_RFC2253) >= 0) {
+            BIO_write(bio, "\0", 1);
+            cert_bio_string(bio, buf, sizeof(buf));
+            dach_append_str(&item.probe_report, "cert_subject", buf, strlen(buf));
+            BIO_reset(bio);
+        }
+
+        X509_NAME *issuer = X509_get_issuer_name(cert);
+        if (issuer && X509_NAME_print_ex(bio, issuer, 0, XN_FLAG_RFC2253) >= 0) {
+            BIO_write(bio, "\0", 1);
+            cert_bio_string(bio, buf, sizeof(buf));
+            dach_append_str(&item.probe_report, "cert_issuer", buf, strlen(buf));
+            BIO_reset(bio);
+        }
+
+        ASN1_TIME *not_before = X509_getm_notBefore(cert);
+        if (not_before && ASN1_TIME_print(bio, not_before) == 1) {
+            BIO_write(bio, "\0", 1);
+            cert_bio_string(bio, buf, sizeof(buf));
+            dach_append_str(&item.probe_report, "cert_not_before", buf,
+                            strlen(buf));
+            BIO_reset(bio);
+        }
+        ASN1_TIME *not_after = X509_getm_notAfter(cert);
+        if (not_after && ASN1_TIME_print(bio, not_after) == 1) {
+            BIO_write(bio, "\0", 1);
+            cert_bio_string(bio, buf, sizeof(buf));
+            dach_append_str(&item.probe_report, "cert_not_after", buf,
+                            strlen(buf));
+            BIO_reset(bio);
+        }
+
+        int sig_nid = X509_get_signature_nid(cert);
+        const char *sig = sig_nid != NID_undef ? OBJ_nid2ln(sig_nid) : NULL;
+        if (sig)
+            dach_append_str(&item.probe_report, "cert_signature_algorithm", sig,
+                            strlen(sig));
+
+        EVP_PKEY *pkey = X509_get_pubkey(cert);
+        if (pkey) {
+            int type = EVP_PKEY_base_id(pkey);
+            const char *name = "unknown";
+            if (type == EVP_PKEY_RSA)
+                name = "RSA";
+            else if (type == EVP_PKEY_EC)
+                name = "EC";
+            else if (type == EVP_PKEY_ED25519)
+                name = "Ed25519";
+            else if (type == EVP_PKEY_ED448)
+                name = "Ed448";
+            else if (type == EVP_PKEY_DSA)
+                name = "DSA";
+            dach_append_str(&item.probe_report, "cert_public_key", name,
+                            strlen(name));
+            dach_set_int(&item.probe_report, "cert_public_key_bits",
+                         (uint64_t)EVP_PKEY_bits(pkey));
+            EVP_PKEY_free(pkey);
+        }
+        BIO_free(bio);
+    }
+
+    ASN1_INTEGER *serial = X509_get_serialNumber(cert);
+    BIGNUM       *bn = serial ? ASN1_INTEGER_to_BN(serial, NULL) : NULL;
+    if (bn) {
+        char *hex = BN_bn2hex(bn);
+        if (hex) {
+            dach_append_str(&item.probe_report, "cert_serial", hex,
+                            strlen(hex));
+            OPENSSL_free(hex);
+        }
+        BN_free(bn);
+    }
+
+    STACK_OF(GENERAL_NAME) *sans =
+        X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
+    if (sans) {
+        BIO *san_bio = BIO_new(BIO_s_mem());
+        for (int i = 0; san_bio && i < sk_GENERAL_NAME_num(sans); i++) {
+            GENERAL_NAME *name = sk_GENERAL_NAME_value(sans, i);
+            if (!name)
+                continue;
+            if (i)
+                BIO_puts(san_bio, ",");
+            GENERAL_NAME_simple_print(san_bio, name);
+        }
+        if (san_bio) {
+            BIO_write(san_bio, "\0", 1);
+            cert_bio_string(san_bio, buf, sizeof(buf));
+            if (buf[0])
+                dach_append_str(&item.probe_report, "cert_san", buf,
+                                strlen(buf));
+            BIO_free(san_bio);
+        }
+        sk_GENERAL_NAME_pop_free(sans, GENERAL_NAME_free);
+    }
+
+    const unsigned char *alpn = NULL;
+    unsigned             alpn_len = 0;
+    SSL_get0_alpn_selected(ssl, &alpn, &alpn_len);
+    if (alpn && alpn_len)
+        dach_append_str(&item.probe_report, "tls_alpn", (const char *)alpn,
+                        alpn_len);
+    const char *version = SSL_get_version(ssl);
+    const char *cipher = SSL_get_cipher_name(ssl);
+    if (version)
+        dach_append_str(&item.probe_report, "tls_version", version,
+                        strlen(version));
+    if (cipher)
+        dach_append_str(&item.probe_report, "tls_cipher", cipher,
+                        strlen(cipher));
+
+    output_result(out, &item);
+    X509_free(cert);
+    return true;
 }
 
 static bool output_subject_info(OutConf *out, ProbeTarget *target, SSL *ssl) {
@@ -1268,6 +1431,13 @@ static unsigned tlsstate_parse_response(DataPass *pass, ProbeState *state,
                     !tls_state->have_dump_subject) {
                     if (output_subject_info(out, target, tls_state->ssl))
                         tls_state->have_dump_subject = 1;
+                }
+
+                /*output structured certificate details*/
+                if (tlsstate_conf.dump_cert_details &&
+                    !tls_state->have_dump_cert_details) {
+                    if (output_cert_details(out, target, tls_state->ssl))
+                        tls_state->have_dump_cert_details = 1;
                 }
 
                 // finished handshake

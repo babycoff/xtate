@@ -99,7 +99,7 @@ challenge-response probe can reuse the same engine path without a new mode.
 | `hello-udp` | udp | The same for UDP. |
 | `hello-state` | state | The same over a stateful TCP connection. |
 | `tls-hello` | tcp | Fixed ClientHello; reads ServerHello version/record hints without completing a handshake. |
-| `tls-state` | state | OpenSSL-backed TLS handshake, certificate/cipher/version dump, sub-probe over TLS. |
+| `tls-state` | state | OpenSSL-backed TLS handshake; certificate/cipher/version dump; `--dump-cert-details` adds structured X.509/SAN/public-key/validity/ALPN; sub-probe over TLS. |
 | `ssh` | tcp | Configurable SSH banner plus KEX/host-key and cipher/MAC/compression lists. |
 | `h2c` | tcp | Cleartext h2c preface, configurable SETTINGS/PING fingerprint, frame/settings parsing. Not HTTP/2 over TLS. |
 | `h2` | state | TLS/ALPN h2 HTTP/2 via HLTCP; preface, SETTINGS, minimal HPACK request, frames/HEADERS/DATA. |
