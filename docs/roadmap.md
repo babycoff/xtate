@@ -184,6 +184,15 @@ state are deferred. See [HTTP probe audit](./http-probes-audit.md).
 9. P3 external two-pass target selection, opt-in adaptive rate.
 10. HLTCP stateless -> stateful handoff.
 
+## Windows quic-state TODO
+
+- [ ] Add an ngtcp2 OpenSSL backend for the Windows MSVC build.
+- [ ] Detect `vcpkg install ngtcp2[openssl]:x64-windows` in CMake (no pkg-config
+      assumption).
+- [ ] Port `quic-state` certificate/TLS metadata and `http3-state` to OpenSSL.
+- [ ] Add MSVC build + local HTTP/3 lab coverage before calling it supported.
+- [ ] Keep GnuTLS as the Linux backend until the OpenSSL path is proven.
+
 ## Release policy
 
 Functional changes take a minor version (`2.29.x` → `2.33.0`); fixes take a

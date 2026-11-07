@@ -54,6 +54,7 @@ Xtate 是一款面向大规模主动测量的网络扫描器。它把扫描栈�
 - 🔐 **TLS 证据**——完整握手后可输出结构化证书细节（subject、issuer、SAN、有效期、序列号、公钥、签名、ALPN），并支持 SMTP/IMAP/POP3/FTP STARTTLS 升级。
 - 🧪 **JARM**——十个标准 Salesforce 探针，可用 `--first-probe` 轮换首个标准探针；后续探针批量发送，输出与顺序无关。
 - 🧩 **模块**——11 个基础扫描模块（有 ngtcp2/GnuTLS 时另有 `quic-state`）/ 27 个基础探测模块（另有 `http3-state`）/ 7 个输出模块 / 5 个生成模块。四套接口，一条流水线，没有运行时的插件魔法。
+- 🪟 **Windows 限制**——`quic-state`/`http3-state` 当前仅支持 Linux + ngtcp2/GnuTLS；Windows MSVC 会省略它们，OpenSSL backend 已列入 roadmap TODO。
 - 🌐 **中文帮助**——`--lang zh` 或 `XTATE_LANG=zh` 可切换人类可读帮助；支持 UTF-8 宽度换行，未翻译内容安全回退英文。
 - 🎯 **稀疏目标模式**——支持 `132.80-88.90.15`、`2001:db8:1-5::1` 这类分量范围；单个 token 最多 4 个范围组成笛卡尔积（上限 1,048,576 个地址），大范围连续空间仍用 CIDR/区间。
 

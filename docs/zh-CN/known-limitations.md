@@ -97,6 +97,19 @@ Xtate v2.33.0 围绕一个刻意的取舍构建：极高的报文速率与低廉
 - **超大规模 IPv4 普查需要显式确认。** 目标 IP 超过 1,000,000,000 且没有 `--exclude` 时会在启动阶段被拒绝；`--exclude 255.255.255.255` 是文档给出的确认方式。
 - **默认生成模块在整个扫描空间上随机化。** `--shard` 只对默认的 `blackrock` 生成模块有文档保证；`--resume`（重新载入已保存的配置）和 `--resume-index`（从绝对扫描索引开始）都假设目标可按索引寻址，这一点只对默认生成模块成立。
 
+## QUIC state 与 HTTP/3
+
+适用于 `quic-state` 和 `http3-state`：
+
+- 当前只有 Linux + ngtcp2 + GnuTLS 是受支持配置。
+- **Windows MSVC 不构建这些模块。** GnuTLS 没有原生 MSVC 包；构建会直接省略
+  `quic-state`/`http3-state`，而不是产出坏二进制。
+- Windows 支持需要 ngtcp2 OpenSSL backend 以及 vcpkg/CMake 发现逻辑；已列入
+  roadmap TODO。
+- HTTP/3 只是最小 GET：static QPACK/literal name，不使用 dynamic table、不支持
+  Huffman literal、push 或 server-initiated stream。不支持的 QPACK 头编码会输出
+  `http3_qpack_partial`，不会假装完整解码。
+
 ## 用好 v2.33.0
 
 用 `tcp-syn` 做覆盖与开放/关闭判定，用 `zbanner` 做大范围无状态 banner 抓取，用 `tcp-state` 处理少量高价值的 TLS/HTTP 目标。只在需要的扫描前后添加防火墙规则，保持载荷和速率克制；选探测模块之前，先读[扫描模式](./scanning-modes.md)里的模块级限制。

@@ -348,6 +348,8 @@ pwsh -File .\scripts\clean-windows.ps1 -IncludeStage  # also remove %LOCALAPPDAT
 | Lua 5.3/5.4 | `lua-tcp`, `lua-udp` (runtime) | optional |
 | ngtcp2 + GnuTLS | `quic-state` QUIC transport scanner | `-DWITH_NGTCP2=OFF` |
 
+`quic-state` and `http3-state` are currently Linux + ngtcp2/GnuTLS only; Windows MSVC omits them. OpenSSL backend support is a [roadmap TODO](docs/roadmap.md#windows-quic-state-todo).
+
 Missing optional libraries simply remove the corresponding modules at compile time — the core scanner still builds. On Windows, CMake may warn about a found-but-incomplete PCRE2 from Conda, or about LibXml2/libbson/libmongoc not being installed; those are optional. Install a matching vcpkg triplet (for example `vcpkg install pcre2 libxml2 mongo-c-driver --triplet x64-windows`; see [Windows optional dependencies](docs/windows-dependencies.md) for MinGW/MSYS2 and full setup) if you need those modules.
 </details>
 

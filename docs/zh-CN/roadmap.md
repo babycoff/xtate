@@ -148,6 +148,14 @@ P3/P4 可行性见[P3/P4 可行性](./feasibility.md)。
 9. P3 外部两阶段目标选择、opt-in 自适应速率。
 10. stateless -> stateful handoff。
 
+## Windows quic-state TODO
+
+- [ ] 为 Windows MSVC 增加 ngtcp2 OpenSSL backend。
+- [ ] CMake 识别 `vcpkg install ngtcp2[openssl]:x64-windows`，不再假设 pkg-config。
+- [ ] 将 `quic-state` 的证书/TLS 元数据和 `http3-state` 移植到 OpenSSL。
+- [ ] 在声称支持前补齐 MSVC 构建和本地 HTTP/3 lab。
+- [ ] OpenSSL 路径验证前保持 Linux 的 GnuTLS backend。
+
 ## 发布策略
 
 功能变化使用中版本（`2.29.x` → `2.33.0`），修复使用补丁版本。标签推送、

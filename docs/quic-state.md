@@ -28,6 +28,19 @@ CMake option:
 `WITH_NGTCP2=ON` is the default; if ngtcp2/GnuTLS or pkg-config is missing,
 the module is simply absent. A normal build does not require ngtcp2.
 
+## Platform support
+
+| Platform | quic-state | http3-state | Notes |
+|:---|:---:|:---:|:---|
+| Linux (GCC/Clang) with ngtcp2 + GnuTLS | supported | supported | Reference build and lab |
+| Windows MSVC | **not supported** | **not supported** | GnuTLS is not available for native MSVC; modules are absent from the build |
+| Windows MinGW/MSYS2 | not tested | not tested | Possible future path, not a supported configuration |
+
+**Windows TODO:** add an ngtcp2 OpenSSL backend and CMake discovery for
+`vcpkg install ngtcp2[openssl]:x64-windows`; the current implementation uses
+GnuTLS directly and cannot be built with MSVC. Until that work lands, Windows
+MSVC builds simply do not register `quic-state` or `http3-state`.
+
 ## Architecture
 
 ```text
@@ -110,6 +123,8 @@ evidence, not a trust decision.
 - Flow table is global, hash-bucketed and mutex-protected in this milestone; do
   not use it as a high-rate benchmark yet.
 - The scanner does not claim HTTP/3 merely because ALPN is `h3`.
+- Windows MSVC is explicitly unsupported for `quic-state`/`http3-state` in this
+  milestone; see the platform table and TODO above.
 
 ## HTTP/3 child probe
 
@@ -117,7 +132,9 @@ evidence, not a trust decision.
 client bidirectional stream, and parses response HEADERS/DATA. Output uses
 classification `http3` and includes `http3_status`, `http3_header_count`,
 `http3_body_len`, optional `http3_body`, and `http3_qpack_partial` when an
-unsupported QPACK encoding (for example a Huffman literal) was skipped.
+unsupported QPACK encoding (for example a Huffman literal) was skipped. The
+same item also carries the transport evidence: `quic_version`,
+`quic_tls_version`, `quic_alpn` and the certificate fields.
 
 The first implementation deliberately does not use a dynamic QPACK table. A
 server that answers with only static-table headers is decoded fully; a server

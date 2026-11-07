@@ -26,6 +26,19 @@ CMake 开关：
 `WITH_NGTCP2=ON` 是默认值；如果 ngtcp2/GnuTLS 或 pkg-config 缺失，模块会自动
 消失，普通构建不依赖 ngtcp2。
 
+## 平台支持
+
+| 平台 | quic-state | http3-state | 说明 |
+|:---|:---:|:---:|:---|
+| Linux（GCC/Clang）+ ngtcp2 + GnuTLS | 支持 | 支持 | 参考构建和 lab |
+| Windows MSVC | **不支持** | **不支持** | GnuTLS 没有原生 MSVC 支持；模块从构建中缺席 |
+| Windows MinGW/MSYS2 | 未验证 | 未验证 | 可能的后续路径，不是受支持配置 |
+
+**Windows TODO：** 增加 ngtcp2 的 OpenSSL backend，并让 CMake 识别
+`vcpkg install ngtcp2[openssl]:x64-windows`。当前实现直接依赖 GnuTLS，不能
+用 MSVC 构建；在该工作完成前，Windows MSVC 构建不会注册 `quic-state` 或
+`http3-state`。
+
 ## 架构
 
 ```text
@@ -104,6 +117,8 @@ xtate --list-scan | grep quic-state
 - 不做跨连接 follow-up；使用 `close-state` 或后续应用探测。
 - 当前 flow 表是全局哈希分桶且受互斥锁保护，不要把它当作高吞吐基准。
 - 仅因 ALPN 是 `h3` 不代表已经验证 HTTP/3。
+- 本里程碑明确不支持 Windows MSVC 的 `quic-state`/`http3-state`；见上方平台表和
+  TODO。
 
 ## HTTP/3 子探针
 
@@ -111,7 +126,8 @@ xtate --list-scan | grep quic-state
 上发送 GET，并解析响应 HEADERS/DATA。输出 classification 为 `http3`，包含
 `http3_status`、`http3_header_count`、`http3_body_len`、可选 `http3_body`，
 以及不支持的 QPACK 编码（例如 Huffman literal）被跳过时的
-`http3_qpack_partial`。
+`http3_qpack_partial`；同一条结果还带 `quic_version`、`quic_tls_version`、
+`quic_alpn` 和证书字段。
 
 第一版刻意不使用 dynamic QPACK table。只用 static table 响应的服务器可以完整
 解码；对非 status 头使用 Huffman 的服务器仍算成功响应，但会带

@@ -101,6 +101,21 @@ Applies to v2.33.0, all platforms.
 - **Very large IPv4 surveys need explicit confirmation.** More than 1,000,000,000 target IPs and no `--exclude` is refused at startup; `--exclude 255.255.255.255` is the documented acknowledgement.
 - **The default generator randomizes over the whole scan space.** `--shard` is documented for the default `blackrock` generator only; `--resume` (reload a saved configuration) and `--resume-index` (start at an absolute scan index) assume index-addressable targets, which holds for the default generator.
 
+## QUIC state and HTTP/3
+
+Applies to `quic-state` and `http3-state`:
+
+- Linux with ngtcp2 + GnuTLS is the only supported configuration today.
+- **Windows MSVC does not build these modules.** GnuTLS has no native MSVC
+  package; the build silently omits `quic-state`/`http3-state` instead of
+  creating a broken binary.
+- Windows support requires an ngtcp2 OpenSSL backend plus vcpkg/CMake
+  discovery; this is tracked in the roadmap TODO.
+- HTTP/3 is a minimal GET: static QPACK/literal names, no dynamic table, no
+  Huffman literals, no push and no server-initiated streams. Unsupported QPACK
+  header encodings are reported as `http3_qpack_partial`, not silently treated
+  as fully decoded.
+
 ## Getting the most out of v2.33.0
 
 Use `tcp-syn` for coverage and open/closed classification, `zbanner` for stateless banners at scale, and `tcp-state` for a small number of high-value TLS/HTTP targets. Add firewall rules only around the scans that need them, keep payloads and rates modest, and read the module-level limitations in [Scanning modes](./scanning-modes.md) before choosing a probe.
