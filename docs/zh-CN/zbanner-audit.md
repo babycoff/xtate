@@ -86,7 +86,9 @@ floor 大于非零 limit 会在启动时拒绝。
 - all-banner 的 limit/floor/RST/ACK/truncated 决策抽成
   `zb_all_banner_decide()`，并有 policy 自检。
 - `AfterFirstReply` 只在首个被接受 banner（`repeats == 0`）后 fan-out，避免
-  重复/多段 banner 的重复 slot 突发。
+  重复/多段 banner 的重复 slot 突发。注意：这依赖去重 `repeats`；使用
+  `--no-dedup-banner` 或全局 `-nodedup` 时 repeats 恒为 0，仍可能重复 fan-out。
+  若该模式需要严格 one-shot，后续应加有界 one-shot 表。
 - 增加 all-banner limit/floor 边界和 floor<=limit 校验。
 - 记录并保留 `with-ack` 零 payload 行为。
 

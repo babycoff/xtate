@@ -100,6 +100,9 @@ startup.
   `zb_all_banner_decide()` with a policy self-test.
 - `AfterFirstReply` requires the first accepted banner (`repeats == 0`) before
   fan-out, preventing duplicate slot bursts on repeated/multi-segment banners.
+  Caveat: this relies on the dedup `repeats` counter; with `--no-dedup-banner`
+  or global `-nodedup`, `repeats` stays 0 and duplicate fan-out can still occur.
+  A bounded one-shot table remains future work if that mode needs it.
 - all-banner limit/floor bounds and floor<=limit validation added.
 - Existing `with-ack` zero-payload behavior documented and preserved.
 
