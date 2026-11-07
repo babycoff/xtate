@@ -153,12 +153,13 @@ P3/P4 可行性见[P3/P4 可行性](./feasibility.md)。
 ZBanner 是最大、最复杂的无状态链路。审计和验收条件见
 [ZBanner 审计](./zbanner-audit.md)。优先级：当前协议工作之后、ZBanner 新功能之前。
 
-- [ ] 给 `AfterFirstReply` 加 one-shot 保护；
-- [ ] 修复 all-banner limit/truncated 边界，合并 limit/floor 逻辑；
-- [ ] 澄清 `banner idx` 与 `banner seqno` 的语义；
+- [x] 给 `AfterFirstReply` 加 one-shot 保护；
+- [x] 合并 all-banner limit/floor/RST/truncated 策略；
+- [ ] 在输出/文档中澄清 `banner idx` 与 `banner seqno`；
 - [ ] 收窄或实现通用 `AfterFirstReply` 响应语义；
-- [ ] 补 all-banner 边界和 payload 长度不一致回归测试；
-- [ ] 在不引入 per-target 状态的前提下抽离响应分类器。
+- [ ] 补 payload 长度不一致回归覆盖；
+- [x] 在不引入 per-target 状态的前提下抽离响应分类器；
+- [ ] 补 all-banner 的 pcap/lab 边界覆盖。
 
 ## Windows quic-state TODO
 

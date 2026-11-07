@@ -24,20 +24,21 @@ Possible fixes:
 - or add a bounded per-target one-shot marker;
 - or move fan-out into a connection-local plan when that exists.
 
-### 2. `all-banner-limit` truncation flag is off by one
+### 2. all-banner limit/floor boundaries were implicit
 
-The RST/truncated condition uses `repeats >= limit - 1`. With
-`--all-banner-limit 8`, the eighth allowed segment sets `truncated` even though
-no ninth segment has been dropped. With limit 1 the first segment is marked as
-truncated. The no-output threshold uses `repeats >= limit`, so the two checks
-disagree about the boundary.
+The previous code used `repeats >= limit - 1` for the RST/truncated trigger and
+`repeats >= limit` for no-output. The documentation defines `truncated: 1` on
+the segment that triggers the limit, so the old behavior was intentional, not
+an off-by-one bug. The risk was that the rules were spread across the branch and
+easy to change inconsistently.
 
-Desired semantics:
+This pass centralizes them in `zbanner-policy.c` and tests:
 
-- record `limit` segments (repeats 0..limit-1);
-- send RST when the scanner has enough segments;
-- set `truncated` only when a segment is actually discarded beyond the limit;
-- keep the limit/floor definitions in one helper.
+- record `limit` segments (ordinals 0..limit-1);
+- send RST on the limit-triggering segment;
+- set `truncated` on that segment (documented behavior);
+- suppress further segments and do not ACK them;
+- floor suppresses ordinals below the 1-based floor value.
 
 ### 3. `banner idx` is not a segment index
 
@@ -63,11 +64,11 @@ noted in the docs, but the code and tests should treat it as a documented
 accuracy limit, not a precise segment counter. Prefer `banner seqno` for
 ordering and add boundary tests.
 
-### 6. Minor: zero-length payload with `with-ack`
+### 6. `with-ack` and zero payload
 
-When `--with-ack` is enabled and the probe declares zero payload, the code can
-send an empty ACK and then another ACK with no data. The second packet is
-harmless but unnecessary. Gate the extra ACK on `payload_len > 0`.
+The code already only sends the extra handshake ACK when `payload_len > 0`; a
+zero-payload probe sends a single ACK. Keep this behavior and cover it in tests
+so a future change does not add a redundant packet.
 
 ### 7. Minor: declared versus actual payload length
 
@@ -77,11 +78,11 @@ banner/ACK uses the declared length, so the response may not validate. This is
 better treated as a probe contract error (or use the actual length consistently)
 than a warning-only mismatch.
 
-### 8. Setter validation is thin
+### 8. Setter validation was thin
 
-`--all-banner-limit` and `--all-banner-floor` are parsed as unsigned values with
-no upper bound or explicit relation check. Extremely large values make the
-boundary tests meaningless. Add bounded validation and document defaults.
+`--all-banner-limit` and `--all-banner-floor` are now bounded to
+`0..1000000`, and a nonzero floor greater than a nonzero limit is rejected at
+startup.
 
 ## What is already good
 
@@ -90,6 +91,26 @@ boundary tests meaningless. Add bounded validation and document defaults.
 - Separate RST/SYN-ACK/banner/ACK branches with explicit output reasons.
 - all-banner warnings for small TCP window, snaplen and max packet length.
 - Slot count/source-port capacity check at init.
+
+## Implemented in this pass
+
+- Response classification extracted into `zb_classify()`; `validate` and
+  `handle` use the same event table.
+- all-banner limit/floor/RST/ACK/truncated decisions extracted into
+  `zb_all_banner_decide()` with a policy self-test.
+- `AfterFirstReply` requires the first accepted banner (`repeats == 0`) before
+  fan-out, preventing duplicate slot bursts on repeated/multi-segment banners.
+- all-banner limit/floor bounds and floor<=limit validation added.
+- Existing `with-ack` zero-payload behavior documented and preserved.
+
+## Remaining work
+
+- `AfterFirstReply` still triggers only from banner/data; ACK-only/RST first
+  responses do not fan out. Decide whether to narrow the documented generic
+  semantics or add an accepted-response predicate.
+- `banner idx` remains approximate; use `banner seqno`.
+- Payload declared/actual mismatch is still warning-only.
+- Dedup pressure still makes limit/floor approximate.
 
 ## Suggested refactor
 

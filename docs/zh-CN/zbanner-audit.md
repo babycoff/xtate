@@ -22,18 +22,20 @@
 - 或增加有界的 per-target one-shot 标记；
 - 或等 connection-local plan 实现后移入其中。
 
-### 2. `all-banner-limit` 的 truncated 标记差一
+### 2. all-banner limit/floor 边界曾经是隐式的
 
-RST/truncated 使用 `repeats >= limit - 1`。`--all-banner-limit 8` 时第 8 个
-允许的段就会标记 `truncated`，但还没有第 9 段被丢弃；limit 1 时第一个段就被
-标记截断。no-output 使用 `repeats >= limit`，两个边界不一致。
+旧代码用 `repeats >= limit - 1` 触发 RST/truncated，用 `repeats >= limit`
+控制 no-output。文档定义的是“触发 limit 的那一段标记 `truncated: 1`”，所以
+旧行为是有意设计，不是差一 bug。真正的风险是规则分散在分支里，未来容易改得
+不一致。
 
-期望语义：
+本轮把规则集中到 `zbanner-policy.c` 并测试：
 
-- 记录 `limit` 个段（repeats 0..limit-1）；
-- 收够后发送 RST；
-- 只有真正丢弃超限段时才设置 `truncated`；
-- limit/floor 逻辑集中到一个 helper。
+- 记录 `limit` 个段（ordinal 0..limit-1）；
+- 在触发 limit 的段上发送 RST；
+- 该段标记 `truncated`（文档语义）；
+- 后续段不记录、不 ACK；
+- floor 抑制低于 1-based floor 的段。
 
 ### 3. `banner idx` 不是段序号
 
@@ -54,10 +56,10 @@ fan-out。首个响应是纯 ACK 或 RST 时不会触发后续 slot。对 JARM �
 因此 limit/floor 是近似的。文档已说明，但代码和测试应把它当作准确性限制，
 而不是精确段计数器；排序优先使用 `banner seqno`，并补边界测试。
 
-### 6. 小问题：`with-ack` 与零 payload
+### 6. `with-ack` 与零 payload
 
-启用 `--with-ack` 且探针声明零 payload 时，可能先发一个空 ACK，再发一个没有
-数据的 ACK。第二个包无害但多余。应以 `payload_len > 0` 控制额外 ACK。
+代码已经只在 `payload_len > 0` 时发送额外握手 ACK；零 payload 探针只发一个
+ACK。保留该行为并补测试，避免将来引入多余报文。
 
 ### 7. 小问题：声明长度与实际长度不一致
 
@@ -67,8 +69,8 @@ payload；banner/ACK 去重验证使用声明长度，响应可能无法通过�
 
 ### 8. 参数校验偏薄
 
-`--all-banner-limit`/`--all-banner-floor` 以 unsigned 解析，没有上界或关系检查；
-极大值会让边界测试失去意义。应加上有界校验并记录默认值。
+`--all-banner-limit`/`--all-banner-floor` 现在限制在 `0..1000000`，且非零
+floor 大于非零 limit 会在启动时拒绝。
 
 ## 已经做得好的地方
 
@@ -77,6 +79,24 @@ payload；banner/ACK 去重验证使用声明长度，响应可能无法通过�
 - RST/SYN-ACK/banner/ACK 分支和输出 reason 明确；
 - all-banner 对小 TCP 窗口、snaplen、max packet len 的告警；
 - init 时检查 slot 数和源端口容量。
+
+## 本轮已实现
+
+- 响应分类抽成 `zb_classify()`；`validate` 和 `handle` 共用同一事件表。
+- all-banner 的 limit/floor/RST/ACK/truncated 决策抽成
+  `zb_all_banner_decide()`，并有 policy 自检。
+- `AfterFirstReply` 只在首个被接受 banner（`repeats == 0`）后 fan-out，避免
+  重复/多段 banner 的重复 slot 突发。
+- 增加 all-banner limit/floor 边界和 floor<=limit 校验。
+- 记录并保留 `with-ack` 零 payload 行为。
+
+## 剩余工作
+
+- `AfterFirstReply` 仍只在 banner/data 分支触发；纯 ACK/RST 首响应不会 fan-out。
+  需要收窄文档或增加 accepted-response 判断。
+- `banner idx` 仍是近似值；排序用 `banner seqno`。
+- payload 声明/实际长度不一致仍是 warning-only。
+- 去重压力下 limit/floor 仍是近似值。
 
 ## 建议的重构
 

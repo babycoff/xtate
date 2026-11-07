@@ -242,6 +242,13 @@ run_case zbanner-http-match \
 grep -q "http_match: 1" /tmp/zbanner-http-match.log
 grep -q "http_match_scope: \"body\"" /tmp/zbanner-http-match.log
 
+run_case zbanner-http-alllimit \
+    -ip "$HTTP_IP" -p "$HTTP_PORT" -scan zbanner -probe http \
+    -src-port 41512-41767 -rate 100 --wait 3 --no-status -show info -show failed \
+    -scan-arg "--all-banner --all-banner-limit 2" --tcp-win 65535 --max-packet-len 65535 --snaplen 65535
+grep -q "banner idx: 1" /tmp/zbanner-http-alllimit.log
+grep -q "truncated: 1" /tmp/zbanner-http-alllimit.log
+
 run_case zbanner-record-ack \
     -ip "$HTTP_IP" -p "$HTTP_PORT,$CLOSED_PORT" -scan zbanner -probe http \
     -src-port 42000-42255 -scan-arg "--record-ack" -rate 100 --wait 2 --no-status -show info -show failed

@@ -11,6 +11,7 @@
 #include "../util-data/safe-string.h"
 #include "../util-misc/misc.h"
 #include "../util-out/logger.h"
+#include "zbanner-policy.h"
 
 #define ZBANNER_DEDUP_TYPE_PORT   0
 #define ZBANNER_DEDUP_TYPE_ACK    1
@@ -76,7 +77,12 @@ static ConfRes SET_all_banner_floor(void *conf, const char *name,
     UNUSEDPARM(conf);
     UNUSEDPARM(name);
 
-    zbanner_conf.all_banner_floor = conf_parse_int(value);
+    uint64_t v;
+    if (!conf_parse_int_checked(value, &v) || v > 1000000) {
+        LOG(LEVEL_ERROR, "zbanner: all-banner-floor must be 0..1000000\n");
+        return Conf_ERR;
+    }
+    zbanner_conf.all_banner_floor = (unsigned)v;
 
     return Conf_OK;
 }
@@ -86,7 +92,12 @@ static ConfRes SET_all_banner_limit(void *conf, const char *name,
     UNUSEDPARM(conf);
     UNUSEDPARM(name);
 
-    zbanner_conf.all_banner_limit = conf_parse_int(value);
+    uint64_t v;
+    if (!conf_parse_int_checked(value, &v) || v > 1000000) {
+        LOG(LEVEL_ERROR, "zbanner: all-banner-limit must be 0..1000000\n");
+        return Conf_ERR;
+    }
+    zbanner_conf.all_banner_limit = (unsigned)v;
 
     return Conf_OK;
 }
@@ -597,9 +608,123 @@ static ConfParam zbanner_parameters[] = {
  * Be careful to the source port range and probe num. Source port range is 256
  *in default and can be set with flag `--source-port`.
  */
+
 static unsigned src_port_start;
 
+typedef enum ZBEvent {
+    ZB_EV_IGNORE = 0,
+    ZB_EV_SYNACK,
+    ZB_EV_RST,
+    ZB_EV_BANNER,
+    ZB_EV_ACK,
+} ZBEvent;
+
+typedef struct ZBResponse {
+    ZBEvent  event;
+    unsigned index;
+    unsigned seqno_me;
+    unsigned seqno_them;
+    unsigned cookie;
+    unsigned declared_payload_len;
+    unsigned app_len;
+    uint16_t win;
+    uint8_t  flags;
+} ZBResponse;
+
+static ZBEvent zb_classify(uint64_t entropy, const Recved *recved,
+                           ZBResponse *out) {
+    memset(out, 0, sizeof(*out));
+    out->event = ZB_EV_IGNORE;
+
+    if (recved->parsed.found != FOUND_TCP || !recved->is_myip ||
+        !recved->is_myport)
+        return ZB_EV_IGNORE;
+
+    unsigned slot_count = probe_slot_count(ZBannerScan.probe);
+    unsigned index = recved->parsed.port_dst - src_port_start;
+    if (index >= slot_count)
+        return ZB_EV_IGNORE;
+
+    ProbeTarget ptarget = {
+        .target.ip_proto  = recved->parsed.ip_protocol,
+        .target.ip_them   = recved->parsed.src_ip,
+        .target.ip_me     = recved->parsed.dst_ip,
+        .target.port_them = recved->parsed.port_src,
+        .target.port_me   = recved->parsed.port_dst,
+        .cookie           = 0,
+        .index            = index,
+    };
+
+    out->index              = index;
+    out->flags              = TCP_FLAGS(recved->packet, recved->parsed.transport_offset);
+    out->seqno_me           = TCP_ACKNO(recved->packet, recved->parsed.transport_offset);
+    out->seqno_them         = TCP_SEQNO(recved->packet, recved->parsed.transport_offset);
+    out->app_len            = recved->parsed.app_length;
+    out->win                = TCP_WIN(recved->packet, recved->parsed.transport_offset);
+    out->cookie             = get_cookie(recved->parsed.src_ip,
+                                         recved->parsed.port_src,
+                                         recved->parsed.dst_ip,
+                                         recved->parsed.port_dst, entropy);
+    out->declared_payload_len =
+        (unsigned)ZBannerScan.probe->get_payload_length_cb(&ptarget);
+
+    if (TCP_FLAG_HAS(out->flags, TCP_FLAG_RST)) {
+        if (out->seqno_me == out->cookie + 1 || out->seqno_me == out->cookie) {
+            out->event = ZB_EV_RST;
+            return out->event;
+        }
+        return ZB_EV_IGNORE;
+    }
+
+    if (TCP_FLAG_HAS(out->flags, TCP_FLAG_SYN | TCP_FLAG_ACK)) {
+        if (out->seqno_me == (unsigned)(out->cookie + 1)) {
+            out->event = ZB_EV_SYNACK;
+            return out->event;
+        }
+        return ZB_EV_IGNORE;
+    }
+
+    if (TCP_FLAG_HAS(out->flags, TCP_FLAG_ACK) &&
+        !TCP_FLAG_HAS(out->flags, TCP_FLAG_RST) && out->app_len) {
+        uint64_t expect =
+            (uint64_t)out->cookie + out->declared_payload_len + 1;
+        if ((uint64_t)out->seqno_me == expect) {
+            out->event = ZB_EV_BANNER;
+            return out->event;
+        }
+        return ZB_EV_IGNORE;
+    }
+
+    if (TCP_FLAG_HAS(out->flags, TCP_FLAG_ACK) &&
+        !TCP_FLAG_HAS(out->flags, TCP_FLAG_RST) && !out->app_len &&
+        zbanner_conf.record_ack) {
+        uint64_t expect =
+            (uint64_t)out->cookie + out->declared_payload_len + 1;
+        if ((uint64_t)out->seqno_me == expect) {
+            out->event = ZB_EV_ACK;
+            return out->event;
+        }
+    }
+
+    return ZB_EV_IGNORE;
+}
+
+
+
 static bool zbanner_init(const XConf *xconf) {
+    if (!zbanner_policy_selftest()) {
+        LOG(LEVEL_ERROR, "zbanner: all-banner policy self-test failed\n");
+        return false;
+    }
+    if (zbanner_conf.all_banner_limit && zbanner_conf.all_banner_floor &&
+        zbanner_conf.all_banner_floor > zbanner_conf.all_banner_limit) {
+        LOG(LEVEL_ERROR,
+            "zbanner: all-banner-floor (%u) cannot exceed all-banner-limit "
+            "(%u)\n",
+            zbanner_conf.all_banner_floor, zbanner_conf.all_banner_limit);
+        return false;
+    }
+
     bench_trace = getenv("XTATE_BENCH_TRACE") != NULL;
     if (bench_trace) {
         trace_tx = trace_synack = trace_data = trace_ack = 0;
@@ -700,113 +825,45 @@ static bool zbanner_transmit(uint64_t entropy, ScanTarget *target,
     return false;
 }
 
-static void zbanner_validate(uint64_t entropy, Recved *recved, PreHandle *pre) {
-    if (recved->parsed.found == FOUND_TCP && recved->is_myip &&
-        recved->is_myport)
-        pre->go_record = 1;
-    else
+static void zbanner_validate(uint64_t entropy, Recved *recved,
+                             PreHandle *pre) {
+    ZBResponse r;
+    ZBEvent    event = zb_classify(entropy, recved, &r);
+    if (event == ZB_EV_IGNORE)
         return;
 
-    uint8_t trace_flags =
-        TCP_FLAGS(recved->packet, recved->parsed.transport_offset);
+    pre->go_record = 1;
+
     if (bench_trace) {
         trace_last_rx = pixie_gettime();
-        if (TCP_FLAG_HAS(trace_flags, TCP_FLAG_SYN | TCP_FLAG_ACK))
+        if (event == ZB_EV_SYNACK)
             trace_synack++;
-        else if (TCP_FLAG_HAS(trace_flags, TCP_FLAG_ACK) &&
-                 recved->parsed.app_length)
+        else if (event == ZB_EV_BANNER)
             trace_data++;
-        else if (TCP_FLAG_HAS(trace_flags, TCP_FLAG_ACK))
+        else if (event == ZB_EV_ACK)
             trace_ack++;
     }
 
-    unsigned seqno_me =
-        TCP_ACKNO(recved->packet, recved->parsed.transport_offset);
-    unsigned cookie =
-        get_cookie(recved->parsed.src_ip, recved->parsed.port_src,
-                   recved->parsed.dst_ip, recved->parsed.port_dst, entropy);
-    uint8_t flags_them =
-        TCP_FLAGS(recved->packet, recved->parsed.transport_offset);
-
-    /* A response is only meaningful for a probe slot we actually used. The
-     * source-port range is wider than the probe slot count, so reject out-of-range
-     * slots before handing an index to a probe. */
-    unsigned index = recved->parsed.port_dst - src_port_start;
-    if (index >= probe_slot_count(ZBannerScan.probe)) {
-        pre->go_record = 0;
-        return;
-    }
-
-    /*rst for syn (a little different)*/
-    if (TCP_FLAG_HAS(flags_them, TCP_FLAG_RST)) {
-        if (seqno_me == cookie + 1 || seqno_me == cookie) {
-            pre->go_dedup   = 1;
+    pre->go_dedup = 1;
+    switch (event) {
+        case ZB_EV_RST:
             pre->dedup_type = ZBANNER_DEDUP_TYPE_PORT;
             pre->no_dedup   = zbanner_conf.no_dedup_rst;
-        }
-    }
-    /*syn-ack*/
-    else if (TCP_FLAG_HAS(flags_them, TCP_FLAG_SYN | TCP_FLAG_ACK)) {
-        if (cookie == seqno_me - 1) {
-            pre->go_dedup   = 1;
+            break;
+        case ZB_EV_SYNACK:
             pre->dedup_type = ZBANNER_DEDUP_TYPE_PORT;
             pre->no_dedup   = zbanner_conf.no_dedup_synack;
-        }
-    }
-    /*
-    * First packet with reponsed banner data.
-
-    * We could recv Response DATA with some combinations of TCP flags
-    * 1.[ACK]: maybe more data
-    * 2.[PSH, ACK]: no more data
-    * 3.[FIN, PSH, ACK]: no more data and disconnecting
-    */
-    else if (TCP_FLAG_HAS(flags_them, TCP_FLAG_ACK) &&
-             !TCP_FLAG_HAS(flags_them, TCP_FLAG_RST) &&
-             recved->parsed.app_length) {
-        ProbeTarget ptarget = {
-            .target.ip_proto  = recved->parsed.ip_protocol,
-            .target.ip_them   = recved->parsed.src_ip,
-            .target.ip_me     = recved->parsed.dst_ip,
-            .target.port_them = recved->parsed.port_src,
-            .target.port_me   = recved->parsed.port_dst,
-            .cookie           = 0, /*zbanner can recognize reponse by itself*/
-            .index            = index,
-        };
-
-        size_t payload_len;
-        payload_len = ZBannerScan.probe->get_payload_length_cb(&ptarget);
-
-        if (seqno_me == cookie + payload_len + 1) {
-            pre->go_dedup   = 1;
+            break;
+        case ZB_EV_BANNER:
             pre->dedup_type = ZBANNER_DEDUP_TYPE_BANNER;
             pre->no_dedup   = zbanner_conf.no_dedup_banner;
-        }
-    }
-    /*
-     * ACK for our probe without payload.
-     */
-    else if (TCP_FLAG_HAS(flags_them, TCP_FLAG_ACK) &&
-             !TCP_FLAG_HAS(flags_them, TCP_FLAG_RST) &&
-             !recved->parsed.app_length && zbanner_conf.record_ack) {
-        ProbeTarget ptarget = {
-            .target.ip_proto  = recved->parsed.ip_protocol,
-            .target.ip_them   = recved->parsed.src_ip,
-            .target.ip_me     = recved->parsed.dst_ip,
-            .target.port_them = recved->parsed.port_src,
-            .target.port_me   = recved->parsed.port_dst,
-            .cookie           = 0, /*zbanner can recognize reponse by itself*/
-            .index            = index,
-        };
-
-        size_t payload_len;
-        payload_len = ZBannerScan.probe->get_payload_length_cb(&ptarget);
-
-        if (seqno_me == cookie + payload_len + 1) {
-            pre->go_dedup   = 1;
+            break;
+        case ZB_EV_ACK:
             pre->dedup_type = ZBANNER_DEDUP_TYPE_ACK;
             pre->no_dedup   = zbanner_conf.no_dedup_ack;
-        }
+            break;
+        default:
+            break;
     }
 }
 
@@ -818,6 +875,11 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
 
     Recved *recved = &valid_pkt->recved;
 
+    ZBResponse zr;
+    ZBEvent    event = zb_classify(entropy, recved, &zr);
+    if (event == ZB_EV_IGNORE)
+        return;
+
     unsigned mss_them;
     bool     mss_found;
     uint16_t win_them;
@@ -826,17 +888,12 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
         TCP_ACKNO(recved->packet, recved->parsed.transport_offset);
     unsigned seqno_them =
         TCP_SEQNO(recved->packet, recved->parsed.transport_offset);
-    uint8_t flags_them =
-        TCP_FLAGS(recved->packet, recved->parsed.transport_offset);
-
     /* Defense in depth: validate() normally drops out-of-range slots. */
     unsigned slot_count = probe_slot_count(ZBannerScan.probe);
-    unsigned index = recved->parsed.port_dst - src_port_start;
-    if (index >= slot_count)
-        return;
+    unsigned index = zr.index;
 
     /*SYNACK*/
-    if (TCP_FLAG_HAS(flags_them, TCP_FLAG_SYN | TCP_FLAG_ACK)) {
+    if (event == ZB_EV_SYNACK) {
 
         if (!zbanner_conf.repeat_synack && valid_pkt->repeats) {
             item->no_output = 1;
@@ -898,8 +955,7 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
 
             unsigned char payload[PM_PAYLOAD_SIZE];
             size_t        payload_len = 0;
-            size_t        declared_len =
-                ZBannerScan.probe->get_payload_length_cb(&ptarget);
+            size_t        declared_len = zr.declared_payload_len;
 
             if (declared_len > ZBANNER_PAYLOAD_MAX) {
                 LOG(LEVEL_WARN,
@@ -959,7 +1015,7 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
         }
     }
     /*RST*/
-    else if (TCP_FLAG_HAS(flags_them, TCP_FLAG_RST)) {
+    else if (event == ZB_EV_RST) {
 
         if (!zbanner_conf.repeat_rst && valid_pkt->repeats) {
             item->no_output = 1;
@@ -991,7 +1047,7 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
         }
     }
     /*Banner*/
-    else if (recved->parsed.app_length) {
+    else if (event == ZB_EV_BANNER) {
 
         if (!zbanner_conf.repeat_banner && !zbanner_conf.all_banner &&
             valid_pkt->repeats) {
@@ -1006,13 +1062,14 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
             dach_set_int(&item->scan_report, "banner seqno", seqno_them);
         }
 
-        if (!zbanner_conf.no_rst &&
-            (!zbanner_conf.all_banner ||
-             (zbanner_conf.all_banner && zbanner_conf.all_banner_limit &&
-              valid_pkt->repeats >= zbanner_conf.all_banner_limit - 1))) {
-            if (zbanner_conf.all_banner && zbanner_conf.all_banner_limit)
-                dach_set_int(&item->scan_report, "truncated", 1);
+        ZBAllBannerDecision bb = {0};
+        if (zbanner_conf.all_banner)
+            bb = zb_all_banner_decide(valid_pkt->repeats,
+                                      zbanner_conf.all_banner_limit,
+                                      zbanner_conf.all_banner_floor);
 
+        if (!zbanner_conf.no_rst &&
+            (!zbanner_conf.all_banner || bb.send_rst)) {
             PktBuf *pkt_buffer = stack_get_pktbuf(stack);
 
             pkt_buffer->length = tcp_create_packet(
@@ -1024,20 +1081,16 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
             stack_transmit_pktbuf(stack, pkt_buffer);
         }
 
-        if (zbanner_conf.all_banner && zbanner_conf.all_banner_limit &&
-            valid_pkt->repeats >= zbanner_conf.all_banner_limit) {
-            item->no_output = 1;
-            return;
-        }
+        if (bb.truncated)
+            dach_set_int(&item->scan_report, "truncated", 1);
 
-        if (zbanner_conf.all_banner && zbanner_conf.all_banner_floor &&
-            valid_pkt->repeats < zbanner_conf.all_banner_floor - 1) {
+        if (zbanner_conf.all_banner && !bb.record) {
             item->no_output = 1;
             return;
         }
 
         /*acknowledge data if set all-banner*/
-        if (zbanner_conf.all_banner) {
+        if (zbanner_conf.all_banner && bb.send_ack) {
             PktBuf *pkt_buffer = stack_get_pktbuf(stack);
 
             pkt_buffer->length = tcp_create_packet(
@@ -1092,10 +1145,12 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
                                recved->parsed.app_length);
 
         /* ProbeSlotPlan: JARM sends its remaining slots only after the first
-         * slot produced an accepted TLS response.  No group state is kept. */
+         * slot produced an accepted TLS response. No per-target group state is
+         * kept; the repeats counter is the one-shot guard. */
         if (ZBannerScan.probe->slots.trigger ==
                 ProbeSlot_AfterFirstReply &&
-            recved->parsed.port_dst == src_port_start &&
+            valid_pkt->repeats == 0 &&
+            index == 0 &&
             slot_count > 1) {
             bool proceed = true;
             if (ZBannerScan.probe->slots.continue_cb)

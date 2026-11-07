@@ -191,12 +191,13 @@ ZBanner is the largest and most complex stateless path. The audit and
 acceptance criteria are in [ZBanner audit](./zbanner-audit.md). Priority:
 after the current protocol work, before new ZBanner features.
 
-- [ ] one-shot guard for `AfterFirstReply`;
-- [ ] fix all-banner limit/truncated boundary and consolidate limit/floor logic;
-- [ ] clarify `banner idx` versus `banner seqno`;
+- [x] one-shot guard for `AfterFirstReply`;
+- [x] consolidate all-banner limit/floor/RST/truncated policy;
+- [ ] clarify `banner idx` versus `banner seqno` in output/docs;
 - [ ] narrow or implement generic `AfterFirstReply` response semantics;
-- [ ] add boundary/regression tests for all-banner and payload-length mismatch;
-- [ ] extract response classification without adding per-target state.
+- [ ] add payload-length mismatch regression coverage;
+- [x] extract response classification without adding per-target state;
+- [ ] add pcap/lab boundary coverage for all-banner.
 
 ## Windows quic-state TODO
 
