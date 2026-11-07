@@ -195,7 +195,7 @@ void help_probe_module(Probe *module) {
            module->hello_wait);
     printf("\n");
     printf("  %s", i18n_tr("Description:\n"));
-    xprint(i18n_tr_module_desc(module->name, module->desc), 6, 80);
+    xprint(i18n_tr_module_help_desc(module->name, module->desc), 6, 80);
     printf("\n");
     printf("\n");
     if (module->params) {

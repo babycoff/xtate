@@ -465,7 +465,7 @@ static ConfParam zbanner_parameters[] = {
      SET_with_ack,
      Type_FLAG,
      {0},
-     "Send an seperate ACK segment after receiving non-zerowin SYNACK segment "
+     "Send a separate ACK segment after receiving non-zerowin SYNACK segment "
      "from target port. This makes a complete standard TCP 3-way handshake "
      "before sending segment with data(probe) and spends more bandwidth while "
      "scanning. But some servers(not very sure) may only accept this kind of "
@@ -1191,7 +1191,7 @@ Scanner ZBannerScan = {
     .short_desc = "Stateless TCP scan with specified ProbeModule.",
     .desc =
         "ZBannerScan tries to contruct TCP conn with target port and send data "
-        "from specified ProbeModule. Data in first reponse packet will be "
+        "from specified ProbeModule. Data in first response packet will be "
         "handled by specified ProbeModule.\n"
         "What important is the whole process was done in completely stateless. "
         "So ZBannerScan is very fast for large-scale probing like banner "

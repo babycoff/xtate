@@ -483,7 +483,7 @@ Probe LuaUdpProbe = {
     "`" LUA_PROBE_FUNC_HANDLE_RESPONSE "`\n"
     "NOTE: This is an experimental function and does not support more than "
     "one tx thread or rx-handle thread well. Even through, it is mandatory "
-    "to implement functions thread-seperately. However, we had 3 essential"
+    "to implement functions thread-separately. However, we had 3 essential"
     " threads at least and should be careful to thread-safe problems.\n"
     "Dependencies: lua5.3/5.4.",
 

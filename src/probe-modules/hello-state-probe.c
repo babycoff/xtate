@@ -529,7 +529,7 @@ Probe HelloStateProbe = {
         " a regex to match the the first response(banner) or whole response "
         " as successed.\n"
         "NOTE: If no hello data was specified, HelloStateProbe would just wait "
-        "banner(first packet with reponse).\n"
+        "banner (first packet with response).\n"
         "Dependencies: PCRE2 for regex.",
 
     .init_cb           = &hellostate_init,

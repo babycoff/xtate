@@ -57,6 +57,12 @@ if command -v python3 >/dev/null 2>&1; then
         echo "FAIL: help coverage" >&2
         fail=$((fail + 1))
     fi
+    if XTATE_BIN="$BIN" python3 "$ROOT/tests/i18n/check_parity.py"; then
+        :
+    else
+        echo "FAIL: help parity" >&2
+        fail=$((fail + 1))
+    fi
 fi
 
 if [[ "$fail" -ne 0 ]]; then

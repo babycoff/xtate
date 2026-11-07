@@ -241,7 +241,7 @@ static ConfParam tlshello_parameters[] = {
      "NOTE: I suggest using default payload as probe if we don't care if the "
      "server supports TLSv1.3. However, most of the servers which support "
      "TLSv1.3 will also support TLSv1.2 so that we can get more info from the "
-     "reponsed banner."},
+     "response banner."},
 
 #ifndef NOT_FOUND_PCRE2
     {"regex",

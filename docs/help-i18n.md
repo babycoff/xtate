@@ -114,3 +114,12 @@ sets the code page itself, but the terminal font still needs CJK glyphs.
   machine/operations interface.
 - A partial catalog is expected. Missing entries are safe English fallbacks,
   not errors.
+
+## Parity rule
+
+English help is the source of truth. Every change to a module description or
+parameter help must update the Chinese entry in the same commit.  Chinese
+module help uses the detailed `i18n_tr_module_help_desc()` table, not the short
+list description. `tests/i18n/check_parity.py` enforces that every module and
+parameter has Chinese text and rejects suspiciously short transitions; it is a
+structural guard, not a substitute for human translation review.

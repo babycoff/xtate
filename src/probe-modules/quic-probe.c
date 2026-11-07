@@ -200,15 +200,15 @@ Probe QuicProbe = {
         "QuicProbe sends one QUIC v1 Initial packet with a TLS 1.3 ClientHello "
         "and ALPN h3, using a unique client connection ID derived from the "
         "stateless UDP cookie. It classifies Version Negotiation, Retry, "
-        "Initial, Handshake or an invalid/non-QUIC response.\\n\\n"
+        "Initial, Handshake or an invalid/non-QUIC response.\n\n"
         "This is a QUIC capability probe. It does not complete a QUIC/TLS "
         "handshake, does not send an HTTP/3 request, and must not be reported "
         "as HTTP/3. A response containing a Handshake packet only proves that "
-        "the server replied with QUIC transport bytes.\\n\\n"
+        "the server replied with QUIC transport bytes.\n\n"
         "Output: quic_response, quic_version, quic_dcid, quic_scid, "
         "quic_token_len, quic_payload_len, quic_versions_count and "
         "quic_version_<n> for Version Negotiation. --record-raw keeps the "
-        "entire UDP response for offline analysis.\\n\\n"
+        "entire UDP response for offline analysis.\n\n"
         "Requires OpenSSL for HKDF-SHA256, AES-128-GCM and header protection.",
 
     .init_cb              = &quic_init,

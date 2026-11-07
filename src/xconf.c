@@ -1612,7 +1612,7 @@ static ConfRes SET_adapter_snaplen(void *conf, const char *name,
 
     xconf->nic.snaplen = (unsigned)conf_parse_int(value);
     if (xconf->nic.snaplen > 65535) {
-        LOG(LEVEL_ERROR, "snaplen must be less than 65535.\n");
+        LOG(LEVEL_ERROR, "snaplen must be at most 65535.\n");
         return Conf_ERR;
     }
 
@@ -3119,8 +3119,8 @@ ConfParam config_parameters[] = {
      "Set the maximum packet capture len of pcap or pfring. It means we can "
      "just got snaplen size at most for any packet even just like a kind of "
      "truncation. This is a non-commonly used switch for some special "
-     "experimental tests. Default snaplen is 65535 and must be less than "
-     "65535.\n"
+     "experimental tests. Default snaplen is 65535; values above 65535 are "
+     "rejected.\n"
      "NOTE: Be cared to the interaction with --tcp-win and --max-packet-len.",
      "Set the maximum packet capture len of pcap or pfring."},
     {"lan-mode",
@@ -3155,7 +3155,7 @@ ConfParam config_parameters[] = {
      "Completely bypass the OS protocol stack. This means we can set a proper"
      " `--src-ip`(in the local subnet) and `--src-mac` different from the OS "
      "to scan. Because " XTATE_NAME_TITLE_CASE
-     " will do reponse to special ARP "
+     " will respond to special ARP "
      "& NDP request for our new IP as if we are real member of the local "
      "subnet.\n"
      "NOTE1: There's no need to set some firewall rules for Linux while we are"

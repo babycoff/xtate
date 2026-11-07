@@ -36,6 +36,7 @@ const char *i18n_tr_global_param(const char *name, const char *english);
 const char *i18n_tr_module_param(const char *module, const char *name,
                                   const char *english);
 const char *i18n_tr_module_desc(const char *module, const char *english);
+const char *i18n_tr_module_help_desc(const char *module, const char *english);
 const char *i18n_tr_interactive_cmd(const char *cmd, const char *english);
 const char *i18n_interactive_help(void);
 

@@ -42,7 +42,7 @@ Probe EchoProbe = {
         "EchoProbe sends 4 bytes of random data to target udp port and expects "
         "response that contains our random data.\n"
         "EchoProbe could be used for finding UDP echo service or alive hosts "
-        "by icmp port unreachable messages. Its `validate_reponsed_cb` cannot "
+        "by icmp port unreachable messages. Its `validate_response_cb` cannot "
         "be used when making a ScanModule if you like.",
 
     .init_cb              = &probe_init_nothing,

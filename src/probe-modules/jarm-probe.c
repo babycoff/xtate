@@ -270,7 +270,7 @@ Probe JarmProbe = {
         "Default first request is standard probe 1: TLS 1.2, all ciphers in "
         "forward order, all ALPN protocols, supported_versions (TLS 1.2) and "
         "reverse extension order. With --first-probe N the first request is N "
-        "and the burst order is N..10,1..N-1. All ten probes are still sent; "
+        "and the remaining burst order is N+1..10,1..N-1. All ten probes are still sent; "
         "the fuzzy hash and aggregation are unaffected.\n\n"
         "--probe-index N sends only probe N and therefore produces an "
         "incomplete fingerprint; it is a debugging aid, not a JARM scan.\n\n"
