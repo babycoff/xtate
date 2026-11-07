@@ -403,6 +403,17 @@ grep -q "\"http3\"" /tmp/http3-state.log
 grep -q "http3_status: 200" /tmp/http3-state.log
 grep -q "http3_body_len: 27" /tmp/http3-state.log
 grep -q "hello from xtate http3 lab" /tmp/http3-state.log
+grep -q "http3_server: \"xtate-http3-lab\"" /tmp/http3-state.log
+grep -q "http3_content_type: \"text/plain\"" /tmp/http3-state.log
+grep -q "http3_header_count: 3" /tmp/http3-state.log
+
+run_case http3-post \
+    -ip "$HTTP3_IP" -p U:"$HTTP3_PORT" -scan quic-state -probe http3-state \
+    -scan-arg "--alpn h3 --handshake-timeout 5" \
+    -probe-arg "--method POST --data hello-body --content-type text/plain --header x-test:42 --path /submit" \
+    -rate 100 --wait 6 --no-status -show info -show failed
+grep -q "\"http3\"" /tmp/http3-post.log
+grep -q "http3_status: 200" /tmp/http3-post.log
 
 run_case udp-quic-retry \
     -ip "$QUIC_RETRY_IP" -p U:"$QUIC_RETRY_PORT" -scan udp -probe quic \

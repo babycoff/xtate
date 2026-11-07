@@ -34,7 +34,7 @@ xtate --help-gen blackrock
 | `tcp-state` | state | HLTCP 用户态 TCP；为 TLS/HTTP 状态探测模块提供完整会话。 |
 | `udp` | udp | 携带探测载荷的单包 UDP 扫描；ICMP port-unreachable 表示 closed。 |
 | `quic-state` | state | 原始 UDP + ngtcp2/GnuTLS 的有状态 QUIC 握手；输出版本、TLS/ALPN、证书字段并运行 state 子探测。可选构建。 |
-| `http3-state` | state | `quic-state` 之上的最小 HTTP/3 GET；client control/QPACK 流、static QPACK/literal name、status/header/body 输出。可选构建。 |
+| `http3-state` | state | `quic-state` 之上的 HTTP/3 请求；方法/header/body、Huffman QPACK 字符串、完整 static table、结构化响应 header。可选构建。 |
 | `icmp-echo` | - | ICMP echo 主机发现；可记录 TTL 和 IPID。 |
 | `icmp-time` | - | ICMP 时间戳发现，仅 IPv4。 |
 | `sctp-init` | - | SCTP INIT 扫描；INIT-ACK 为 open，ABORT 为 closed。 |

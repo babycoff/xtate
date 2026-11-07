@@ -106,8 +106,9 @@ Xtate v2.33.0 围绕一个刻意的取舍构建：极高的报文速率与低廉
   `quic-state`/`http3-state`，而不是产出坏二进制。
 - Windows 支持需要 ngtcp2 OpenSSL backend 以及 vcpkg/CMake 发现逻辑；已列入
   roadmap TODO。
-- HTTP/3 只是最小 GET：static QPACK/literal name，不使用 dynamic table、不支持
-  Huffman literal、push 或 server-initiated stream。不支持的 QPACK 头编码会输出
+- HTTP/3 支持方法、请求 header/body、Huffman QPACK 字符串和完整 QPACK static
+  table。
+- 不支持 dynamic QPACK、push 或 server-initiated stream；dynamic QPACK 引用会输出
   `http3_qpack_partial`，不会假装完整解码。
 
 ## 用好 v2.33.0

@@ -9,7 +9,7 @@ budgets, timers and output.
 
 It is not a browser QUIC client. The transport milestone completes the
 QUIC/TLS handshake, emits certificate/version/ALPN evidence and runs a state
-application probe. A minimal HTTP/3 GET probe (`http3-state`) is included as the
+application probe. An HTTP/3 request probe (`http3-state`) is included as the
 first real child; DoQ remains a later application probe.
 
 ## Build
@@ -64,7 +64,7 @@ flush.
 ## Minimal use
 
 ```bash
-# Minimal HTTP/3 GET
+# HTTP/3 request
 xtate -ip 192.0.2.10 -p U:443 -scan quic-state -probe http3-state \
   -scan-arg "--alpn h3" --wait 5 --no-status -show info
 
@@ -115,9 +115,11 @@ evidence, not a trust decision.
 - QUIC v1 only.
 - No 0-RTT, session resumption, migration, multipath or connection migration.
 - Single connection per target; no long-lived sessions.
-- HTTP/3 is a minimal GET: static QPACK/literal names only, no dynamic table,
-  no push, no server-initiated streams, no Huffman literals, no HTTP/3 CONNECT.
-  QPACK partial decoding is marked with `http3_qpack_partial`.
+- HTTP/3 supports configurable methods, request headers/body, Huffman QPACK
+  string literals and the full QPACK static table.
+- Dynamic QPACK, push, server-initiated streams and HTTP/3 CONNECT are not
+  supported. Dynamic QPACK references are rejected and marked with
+  `http3_qpack_partial` rather than guessed.
 - DoQ is not implemented in this milestone.
 - No cross-connection follow-up; use `close-state` or a future application probe.
 - Flow table is global, hash-bucketed and mutex-protected in this milestone; do
@@ -128,18 +130,23 @@ evidence, not a trust decision.
 
 ## HTTP/3 child probe
 
-`http3-state` opens the client control and QPACK streams, sends one GET on a
-client bidirectional stream, and parses response HEADERS/DATA. Output uses
+`http3-state` opens the client control and QPACK streams, sends one request on
+a client bidirectional stream, and parses response HEADERS/DATA. Output uses
 classification `http3` and includes `http3_status`, `http3_header_count`,
-`http3_body_len`, optional `http3_body`, and `http3_qpack_partial` when an
-unsupported QPACK encoding (for example a Huffman literal) was skipped. The
-same item also carries the transport evidence: `quic_version`,
-`quic_tls_version`, `quic_alpn` and the certificate fields.
+`http3_body_len`, `http3_body_total`, optional `http3_body`, and structured
+`http3_header_<n>_name` / `http3_header_<n>_value` fields (plus
+`http3_content_type`, `http3_server`, `http3_location` shortcuts). The same
+item also carries `quic_version`, `quic_tls_version`, `quic_alpn` and the
+certificate fields.
 
-The first implementation deliberately does not use a dynamic QPACK table. A
-server that answers with only static-table headers is decoded fully; a server
-that Huffman-encodes a non-status header yields a successful response with
-`http3_qpack_partial: 1`.
+Supported request options: `--path`, `--authority`, `--method`,
+`--header`, `--content-type`, `--data`, `--data-file`, `--max-body`,
+`--max-headers`, `--record-body`, `--record-headers`.
+
+Huffman string literals and the full QPACK static table are decoded. Dynamic
+QPACK is deliberately disabled: the client advertises a zero-capacity QPACK
+table, and a server reply that still requires a dynamic insertion is reported
+as `http3_qpack_partial: 1` rather than being treated as fully decoded.
 
 ## Validation
 

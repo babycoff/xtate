@@ -42,7 +42,7 @@ xtate --help-gen blackrock
 | `tcp-state` | state | HLTCP user-space TCP; full conversations for TLS/HTTP state probes. |
 | `udp` | udp | Single-packet UDP scan with a probe payload; ICMP port-unreachable means closed. |
 | `quic-state` | state | Raw-UDP stateful QUIC handshake with ngtcp2/GnuTLS; reports version, TLS/ALPN and certificate fields, then runs a state sub-probe. Optional build. |
-| `http3-state` | state | Minimal HTTP/3 GET over `quic-state`; client control/QPACK streams, static QPACK/literal names, status/header/body output. Optional build. |
+| `http3-state` | state | HTTP/3 request over `quic-state`; methods/headers/body, Huffman QPACK strings, full static table, structured response headers. Optional build. |
 | `icmp-echo` | - | ICMP echo host discovery; can record TTL and IPID. |
 | `icmp-time` | - | ICMP timestamp discovery, IPv4 only. |
 | `sctp-init` | - | SCTP INIT scan; INIT-ACK is open, ABORT is closed. |

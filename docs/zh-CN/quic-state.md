@@ -7,7 +7,7 @@ IPv4/IPv6 UDP 报文；ngtcp2 负责 QUIC 包状态，GnuTLS 负责 TLS 1.3。Xt
 控制源端口、L3/L4 头、发送节奏、flow 预算、定时器和输出。
 
 它不是浏览器 QUIC 客户端。传输层里程碑完成 QUIC/TLS 握手、输出版本/ALPN/证书
-证据，并运行 state 应用探测。已包含最小 HTTP/3 GET 探针 `http3-state` 作为第一个
+证据，并运行 state 应用探测。已包含 HTTP/3 请求探针 `http3-state` 作为第一个
 实质子探针；DoQ 仍是后续应用探测。
 
 ## 构建
@@ -60,7 +60,7 @@ CMake 开关：
 ## 最小用法
 
 ```bash
-# 最小 HTTP/3 GET
+# HTTP/3 请求
 xtate -ip 192.0.2.10 -p U:443 -scan quic-state -probe http3-state \
   -scan-arg "--alpn h3" --wait 5 --no-status -show info
 
@@ -110,9 +110,10 @@ xtate --list-scan | grep quic-state
 - 仅 QUIC v1。
 - 不做 0-RTT、session resumption、migration、multipath。
 - 每目标单连接，不做长连接。
-- HTTP/3 只是最小 GET：仅 static QPACK/literal name，不含 dynamic table、push、
-  server-initiated stream、Huffman literal 和 HTTP/3 CONNECT；QPACK 部分解码用
-  `http3_qpack_partial` 标记。
+- HTTP/3 支持配置方法、请求 header/body、Huffman QPACK 字符串和完整 QPACK
+  static table。
+- 不含 dynamic QPACK、push、server-initiated stream 和 HTTP/3 CONNECT；dynamic
+  QPACK 引用会被拒绝并用 `http3_qpack_partial` 标记，不做猜测。
 - 第一里程碑不实现 DoQ。
 - 不做跨连接 follow-up；使用 `close-state` 或后续应用探测。
 - 当前 flow 表是全局哈希分桶且受互斥锁保护，不要把它当作高吞吐基准。
@@ -123,15 +124,20 @@ xtate --list-scan | grep quic-state
 ## HTTP/3 子探针
 
 `http3-state` 打开 client control/QPACK 流，在一个 client bidirectional stream
-上发送 GET，并解析响应 HEADERS/DATA。输出 classification 为 `http3`，包含
-`http3_status`、`http3_header_count`、`http3_body_len`、可选 `http3_body`，
-以及不支持的 QPACK 编码（例如 Huffman literal）被跳过时的
-`http3_qpack_partial`；同一条结果还带 `quic_version`、`quic_tls_version`、
-`quic_alpn` 和证书字段。
+上发送一个请求，并解析响应 HEADERS/DATA。输出 classification 为 `http3`，包含
+`http3_status`、`http3_header_count`、`http3_body_len`、`http3_body_total`、
+可选 `http3_body`，以及结构化 `http3_header_<n>_name` /
+`http3_header_<n>_value`（另有 `http3_content_type`、`http3_server`、
+`http3_location` 快捷字段）。同一条结果还带 `quic_version`、
+`quic_tls_version`、`quic_alpn` 和证书字段。
 
-第一版刻意不使用 dynamic QPACK table。只用 static table 响应的服务器可以完整
-解码；对非 status 头使用 Huffman 的服务器仍算成功响应，但会带
-`http3_qpack_partial: 1`。
+请求选项：`--path`、`--authority`、`--method`、`--header`、
+`--content-type`、`--data`、`--data-file`、`--max-body`、
+`--max-headers`、`--record-body`、`--record-headers`。
+
+已支持 Huffman 字符串和完整 QPACK static table。Dynamic QPACK 被刻意关闭：
+client 通告零容量 QPACK table；如果服务端仍要求 dynamic insertion，结果会标记
+`http3_qpack_partial: 1`，不会假装完整解码。
 
 ## 验证
 

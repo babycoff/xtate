@@ -111,9 +111,10 @@ Applies to `quic-state` and `http3-state`:
   creating a broken binary.
 - Windows support requires an ngtcp2 OpenSSL backend plus vcpkg/CMake
   discovery; this is tracked in the roadmap TODO.
-- HTTP/3 is a minimal GET: static QPACK/literal names, no dynamic table, no
-  Huffman literals, no push and no server-initiated streams. Unsupported QPACK
-  header encodings are reported as `http3_qpack_partial`, not silently treated
+- HTTP/3 supports methods, request headers/body, Huffman QPACK strings and the
+  full QPACK static table.
+- Dynamic QPACK, push and server-initiated streams are not supported; dynamic
+  QPACK references are reported as `http3_qpack_partial`, not silently treated
   as fully decoded.
 
 ## Getting the most out of v2.33.0
