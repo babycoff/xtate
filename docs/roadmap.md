@@ -11,9 +11,6 @@ the next change does not silently regress it.
 - QUIC capability probe (`quic`): valid QUIC v1 Initial, Version
   Negotiation/Retry/Initial/Handshake classification, local aioquic lab.
 - Module count: 27 probes.
-
-## Done in 2.33.0
-
 - Salesforce JARM 1.0 comparison on a local target; fixed TLS 1.3 extension
   offset in `jarm`.
 - `jarm --first-probe N` rotation and standard-slot-preserving aggregation.
@@ -37,8 +34,9 @@ the next change does not silently regress it.
 
 The current priorities are:
 
-1. **QUIC and HTTP/3 feasibility** — start with a capability probe and a
-   library decision; see [P3/P4 feasibility](./feasibility.md#quic-probe-and-http3-exploration).
+1. **QUIC/HTTP3 next step** — the capability probe is done; decide whether a
+   real HTTP/3 client is required and select a QUIC library before building a
+   new transport scanner. See [P3/P4 feasibility](./feasibility.md#quic-probe-and-http3-exploration).
 2. **Xtate-native YAML templates** — read-only matcher/schema first; do not
    copy Nuclei.
 3. **Protocol coverage expansion** — use the zgrab2 matrix in
@@ -168,20 +166,17 @@ state are deferred. See [HTTP probe audit](./http-probes-audit.md).
 
 ## Recommended next order
 
-1. JARM failure modes: scanner-level alert/non-TLS/missing-slot lab cases and
-   an external retry manifest; no scanner-side group state.
-2. SSH deep exchange: actual KEX packet exchange and host-key fingerprints.
-3. Full HTTP/2 (`h2`): HPACK Huffman/dynamic table, SETTINGS ACK, stream/window
-   state and stronger ALPN checks.
-4. HLTCP slot planning: connection-local `AfterFirstReply`, then independent
-   parallel connections.
-5. TLS variant fingerprints: ClientHello variants, extension order, GREASE,
-   ALPN ordering.
-6. P3 external two-pass target selection (lowest-risk scan-control change).
-7. Opt-in adaptive rate controller.
-8. QUIC/HTTP3 research prototype outside the scanner hot path.
-9. HLTCP stateless -> stateful handoff.
-10. YAML templates / traffic randomization (P4, research-gated).
+1. YAML template schema and read-only matcher (10A).
+2. QUIC/HTTP3 library decision; if real HTTP/3 is required, build the separate
+   QUIC transport scanner (8B). Otherwise stop at the capability probe.
+3. Protocol coverage Batch A: Redis, Memcached, MQTT, Telnet, SOCKS5, NTP.
+4. Traffic randomization research as an opt-in, fixed-seed lab feature (10B).
+5. JARM failure modes and external retry manifest.
+6. SSH deep KEX/host-key, full HTTP/2 HPACK/streams.
+7. HLTCP slot planning (connection-local AfterFirstReply, then parallel flows).
+8. TLS variant fingerprints.
+9. P3 external two-pass target selection, opt-in adaptive rate.
+10. HLTCP stateless -> stateful handoff.
 
 ## Release policy
 

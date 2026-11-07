@@ -10,9 +10,6 @@
 - QUIC 能力探测（`quic`）：合法 QUIC v1 Initial，识别 Version
   Negotiation/Retry/Initial/Handshake；本地 aioquic lab。
 - 模块数量：27 个探测。
-
-## 2.33.0 已完成
-
 - 本机目标上的 Salesforce JARM 1.0 对比；修复 `jarm` TLS 1.3 扩展解析偏移。
 - `jarm --first-probe N` 轮换；`jarm_slot` 保留标准编号，聚合与顺序无关。
 - `tls-state` 的 SMTP/IMAP/POP3/FTP STARTTLS；升级后输出证书并可运行子探测。
@@ -33,7 +30,8 @@
 
 当前优先级：
 
-1. **QUIC / HTTP3 可行性**——先做能力探测和库选型；见
+1. **QUIC/HTTP3 下一步**——能力探测已完成；先确认是否真的需要 HTTP/3
+   客户端，再选库并做独立传输扫描器；见
    [P3/P4 可行性](./feasibility.md#quic-探针与-http3-探索)。
 2. **Xtate 原生 YAML 模板**——先做只读 matcher/schema，不复制 Nuclei。
 3. **协议覆盖扩展**——按[协议覆盖计划](./protocol-coverage.md)的 zgrab2
@@ -133,16 +131,17 @@ P3/P4 可行性见[P3/P4 可行性](./feasibility.md)。
 
 ## 建议后续顺序
 
-1. JARM 失败模式：scanner-level alert/非 TLS/缺 slot lab，外部 retry manifest。
-2. SSH 深度交换：实际 KEX 包交换和 host-key 指纹。
-3. 完整 HTTP/2：HPACK Huffman/动态表、SETTINGS ACK、流/窗口和 ALPN 校验。
-4. HLTCP slot：连接内 `AfterFirstReply`，再考虑并行连接。
-5. TLS 变体指纹：ClientHello、扩展顺序、GREASE、ALPN 顺序。
-6. P3 外部两阶段目标选择（风险最低）。
-7. opt-in 自适应速率。
-8. QUIC/HTTP3 原型。
-9. stateless -> stateful handoff。
-10. YAML 模板 / 流量随机化（P4，研究开关）。
+1. YAML 模板 schema 与只读 matcher（10A）。
+2. QUIC/HTTP3 库选型；确需真实 HTTP/3 时再做独立的 QUIC 传输扫描器（8B），
+   否则停在能力探测。
+3. 协议覆盖 Batch A：Redis、Memcached、MQTT、Telnet、SOCKS5、NTP。
+4. 流量随机化研究：opt-in、固定 seed、只在 lab（10B）。
+5. JARM 失败模式与外部 retry manifest。
+6. SSH 深度 KEX/host-key、完整 HTTP/2 HPACK/流管理。
+7. HLTCP slot：连接内 AfterFirstReply，再考虑并行 flow。
+8. TLS 变体指纹。
+9. P3 外部两阶段目标选择、opt-in 自适应速率。
+10. stateless -> stateful handoff。
 
 ## 发布策略
 
