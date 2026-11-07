@@ -340,7 +340,7 @@ pwsh -File .\scripts\clean-windows.ps1 -IncludeStage  # 同时删除 %LOCALAPPDA
 xtate --usage                 # short usage and examples
 xtate --help                  # every global parameter
 xtate --intro                 # the architecture tour
-xtate --list-scan             # 11 scan modules
+xtate --list-scan             # 11，若有 quic-state 则为 12
 xtate --list-probe            # 27 probe modules
 xtate --list-out              # 7 output modules
 xtate --list-gen              # 5 generate modules
