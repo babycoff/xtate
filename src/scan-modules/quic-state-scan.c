@@ -26,6 +26,7 @@
 
 #include "../xconf.h"
 #include "../probe-modules/probe-modules.h"
+#include "quic-state-api.h"
 #include "../stack/stack-queue.h"
 #include "../templ/templ-udp.h"
 #include "../util-data/safe-string.h"
@@ -63,6 +64,8 @@ struct QuicFlow {
     unsigned      closing : 1;
     unsigned      probe_inited : 1;
     ProbeState    substate;
+    OutItem      *current_item;
+    OutConf      *out;
     uint8_t      *send_buf;
     size_t        send_buf_len;
 };
@@ -87,11 +90,15 @@ static struct QuicConf {
              .max_data = 1024 * 1024, .max_stream_data = 128 * 1024,
              .max_streams = 3, .idle_timeout_ms = 30000, .cc_algo = 0};
 
+static ProbeTarget qs_probe_target(struct QuicFlow *flow);
+static void qs_emit_cert(struct QuicFlow *flow, OutItem *item);
+
 static struct QuicFlow *qs_flows[QS_BUCKETS];
 static unsigned         qs_flow_count;
 static unsigned         qs_flow_dropped;
 static pthread_mutex_t  qs_lock = PTHREAD_MUTEX_INITIALIZER;
 static NetStack        *qs_stack;
+static OutConf         *qs_out;
 static Probe           *qs_probe;
 static unsigned         qs_src_port_start;
 static unsigned char   *qs_tx_px;
@@ -379,6 +386,41 @@ static int qs_handshake_completed(ngtcp2_conn *conn, void *user_data) {
     return 0;
 }
 
+static int qs_recv_stream_data(ngtcp2_conn *conn, uint32_t flags,
+                               int64_t stream_id, uint64_t offset,
+                               const uint8_t *data, size_t datalen,
+                               void *user_data, void *stream_user_data) {
+    UNUSEDPARM(conn);
+    UNUSEDPARM(offset);
+    UNUSEDPARM(stream_user_data);
+    struct QuicFlow *flow = user_data;
+    if (flow->probe_inited && qs_probe && qs_probe->stream_data_cb &&
+        flow->current_item) {
+        ProbeTarget pt = qs_probe_target(flow);
+        qs_probe->stream_data_cb(&flow->substate, qs_out, &pt,
+                                 (uint64_t)stream_id, data, (unsigned)datalen,
+                                 (flags & NGTCP2_STREAM_DATA_FLAG_FIN) != 0,
+                                 flow->current_item);
+        if (!flow->current_item->no_output) {
+            dach_set_int(&flow->current_item->probe_report, "quic_version",
+                         NGTCP2_PROTO_VER_V1);
+            const char *proto = gnutls_protocol_get_name(
+                gnutls_protocol_get_version(flow->session));
+            if (proto)
+                dach_append_str(&flow->current_item->probe_report,
+                                "quic_tls_version", proto, strlen(proto));
+            gnutls_datum_t alpn = {0};
+            if (gnutls_alpn_get_selected_protocol(flow->session, &alpn) == 0 &&
+                alpn.size)
+                dach_append_str(&flow->current_item->probe_report, "quic_alpn",
+                                (const char *)alpn.data, alpn.size);
+            if (!qs_conf.no_cert)
+                qs_emit_cert(flow, flow->current_item);
+        }
+    }
+    return 0;
+}
+
 static const uint8_t *qs_alpn_token(const char *list, size_t *len) {
     const char *p = list && *list ? list : "h3";
     while (*p == ',' || *p == ' ' || *p == '\t')
@@ -490,7 +532,7 @@ static int qs_quic_init(struct QuicFlow *flow) {
         ngtcp2_crypto_encrypt_cb,
         ngtcp2_crypto_decrypt_cb,
         ngtcp2_crypto_hp_mask_cb,
-        NULL,
+        qs_recv_stream_data,
         NULL,
         NULL,
         NULL,
@@ -566,6 +608,111 @@ static int qs_quic_init(struct QuicFlow *flow) {
 }
 
 static int qs_send_payload(struct QuicFlow *flow, const uint8_t *payload,
+                           size_t payload_len);
+
+static size_t qs_put_varint(uint8_t *p, uint64_t v) {
+    if (v < 64) {
+        p[0] = (uint8_t)v;
+        return 1;
+    } else if (v < 16384) {
+        uint16_t x = (uint16_t)(v | 0x4000);
+        p[0] = (uint8_t)(x >> 8);
+        p[1] = (uint8_t)x;
+        return 2;
+    } else if (v < 1073741824ULL) {
+        uint32_t x = (uint32_t)(v | 0x80000000ULL);
+        p[0] = (uint8_t)(x >> 24);
+        p[1] = (uint8_t)(x >> 16);
+        p[2] = (uint8_t)(x >> 8);
+        p[3] = (uint8_t)x;
+        return 4;
+    }
+    p[0] = (uint8_t)((v >> 56) | 0xC0);
+    p[1] = (uint8_t)(v >> 48);
+    p[2] = (uint8_t)(v >> 40);
+    p[3] = (uint8_t)(v >> 32);
+    p[4] = (uint8_t)(v >> 24);
+    p[5] = (uint8_t)(v >> 16);
+    p[6] = (uint8_t)(v >> 8);
+    p[7] = (uint8_t)v;
+    return 8;
+}
+
+static int qs_write_stream(struct QuicFlow *flow, uint64_t stream_id,
+                           const uint8_t *data, size_t len, bool fin) {
+    uint8_t buf[2048];
+    ngtcp2_path_storage ps;
+    ngtcp2_pkt_info pi;
+    ngtcp2_vec vec;
+    uint32_t flags;
+
+    for (;;) {
+        ngtcp2_path_storage_zero(&ps);
+        vec.base = (uint8_t *)data;
+        vec.len = len;
+        flags = fin ? NGTCP2_WRITE_STREAM_FLAG_FIN : 0;
+        ngtcp2_ssize wdatalen = 0;
+        ngtcp2_ssize nwrite = ngtcp2_conn_writev_stream(
+            flow->conn, &ps.path, &pi, buf, sizeof(buf), &wdatalen, flags,
+            (int64_t)stream_id, &vec, 1, qs_timestamp());
+        if (nwrite == NGTCP2_ERR_WRITE_MORE) {
+            data += wdatalen;
+            len -= (size_t)wdatalen;
+            continue;
+        }
+        if (nwrite < 0)
+            return -1;
+        if (nwrite == 0)
+            return 0;
+        if (qs_send_payload(flow, buf, (size_t)nwrite) != 0)
+            return -1;
+        if (wdatalen > 0) {
+            data += (size_t)wdatalen;
+            len -= (size_t)wdatalen;
+        }
+        if (len == 0)
+            return 0;
+    }
+}
+
+bool quic_state_open_uni(ProbeState *state, uint64_t stream_type,
+                         uint64_t *stream_id) {
+    struct QuicFlow *flow = state ? state->transport_data : NULL;
+    int64_t id;
+    uint8_t typebuf[8];
+    if (!flow || !flow->conn)
+        return false;
+    if (ngtcp2_conn_open_uni_stream(flow->conn, &id, NULL) != 0)
+        return false;
+    size_t n = qs_put_varint(typebuf, stream_type);
+    if (!quic_state_send_stream(state, (uint64_t)id, typebuf, n, false))
+        return false;
+    if (stream_id)
+        *stream_id = (uint64_t)id;
+    return true;
+}
+
+bool quic_state_open_bidi(ProbeState *state, uint64_t *stream_id) {
+    struct QuicFlow *flow = state ? state->transport_data : NULL;
+    int64_t id;
+    if (!flow || !flow->conn)
+        return false;
+    if (ngtcp2_conn_open_bidi_stream(flow->conn, &id, NULL) != 0)
+        return false;
+    if (stream_id)
+        *stream_id = (uint64_t)id;
+    return true;
+}
+
+bool quic_state_send_stream(ProbeState *state, uint64_t stream_id,
+                            const void *data, size_t len, bool fin) {
+    struct QuicFlow *flow = state ? state->transport_data : NULL;
+    if (!flow || !flow->conn)
+        return false;
+    return qs_write_stream(flow, stream_id, data, len, fin) == 0;
+}
+
+static int qs_send_payload(struct QuicFlow *flow, const uint8_t *payload,
                            size_t payload_len) {
     if (!payload_len)
         return -1;
@@ -622,9 +769,21 @@ static int qs_flow_write(struct QuicFlow *flow) {
     return 0;
 }
 
+static ProbeTarget qs_probe_target(struct QuicFlow *flow) {
+    ProbeTarget pt = {0};
+    pt.target.ip_proto  = flow->ip_them.version;
+    pt.target.ip_them   = flow->ip_them;
+    pt.target.ip_me     = flow->ip_me;
+    pt.target.port_them = flow->port_them;
+    pt.target.port_me   = flow->port_me;
+    return pt;
+}
+
 static void qs_flow_free(struct QuicFlow *flow) {
-    if (flow->probe_inited && qs_probe)
-        qs_probe->conn_close_cb(&flow->substate, NULL);
+    if (flow->probe_inited && qs_probe) {
+        ProbeTarget pt = qs_probe_target(flow);
+        qs_probe->conn_close_cb(&flow->substate, &pt);
+    }
     if (flow->conn)
         ngtcp2_conn_del(flow->conn);
     if (flow->session)
@@ -757,6 +916,7 @@ static void qs_emit(struct QuicFlow *flow, OutItem *item) {
 
 static bool qs_init(const XConf *xconf) {
     qs_stack = xconf->stack;
+    qs_out = (OutConf *)&xconf->out_conf;
     qs_probe = xconf->probe;
     qs_src_port_start = xconf->nic.src.port.first;
     if (!qs_conf.alpn)
@@ -821,6 +981,9 @@ static void qs_handle(unsigned th_idx, uint64_t entropy, ValidPacket *valid_pkt,
         return;
     }
     flow->last_ts = qs_timestamp();
+    flow->out = qs_out;
+    flow->substate.transport_data = flow;
+    flow->current_item = item;
     ngtcp2_path_storage ps;
     ngtcp2_path_storage_zero(&ps);
     ps.path.local.addr = (struct sockaddr *)&flow->local;
@@ -832,6 +995,7 @@ static void qs_handle(unsigned th_idx, uint64_t entropy, ValidPacket *valid_pkt,
     unsigned payload_len = r->parsed.app_length;
     int rv = ngtcp2_conn_read_pkt(flow->conn, &ps.path, &pi, payload,
                                   payload_len, qs_timestamp());
+    flow->current_item = NULL;
     if (rv != 0) {
         if (!flow->handshake_done && !flow->output_done) {
             item->no_output = 0;
@@ -845,18 +1009,23 @@ static void qs_handle(unsigned th_idx, uint64_t entropy, ValidPacket *valid_pkt,
         return;
     }
     if (flow->handshake_done && !flow->output_done) {
-        qs_emit(flow, item);
+        bool app_probe = qs_probe && qs_probe->stream_data_cb;
+        if (!app_probe)
+            qs_emit(flow, item);
         if (qs_probe && !flow->probe_inited) {
-            if (qs_probe->conn_init_cb(&flow->substate, NULL)) {
+            ProbeTarget pt = qs_probe_target(flow);
+            if (qs_probe->conn_init_cb(&flow->substate, &pt)) {
                 flow->probe_inited = 1;
                 DataPass pass = {0};
-                qs_probe->make_hello_cb(&pass, &flow->substate, NULL);
+                qs_probe->make_hello_cb(&pass, &flow->substate, &pt);
                 if (pass.is_close)
                     flow->closing = 1;
             } else {
                 flow->closing = 1;
             }
         }
+        if (app_probe)
+            flow->output_done = 1;
     }
     if (!flow->closing)
         qs_flow_write(flow);

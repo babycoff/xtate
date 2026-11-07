@@ -27,6 +27,7 @@ HTTP2_TARGET="xtate-lab-http2-$$"
 H2_TARGET="xtate-lab-h2-$$"
 QUIC_TARGET="xtate-lab-quic-$$"
 QUIC_RETRY_TARGET="xtate-lab-quic-retry-$$"
+HTTP3_TARGET="xtate-lab-http3-$$"
 STARTTLS_TARGET="xtate-lab-starttls-$$"
 HTTP_PORT=8080
 CLOSED_PORT=9
@@ -37,13 +38,14 @@ HTTP2_PORT=8084
 H2_PORT=8445
 QUIC_PORT=4433
 QUIC_RETRY_PORT=4434
+HTTP3_PORT=4435
 STARTTLS_SMTP_PORT=2525
 STARTTLS_IMAP_PORT=2143
 STARTTLS_POP3_PORT=2110
 STARTTLS_FTP_PORT=2121
 
 cleanup() {
-    docker rm -f "$HTTP_TARGET" "$TLS_TARGET" "$JARM_TARGET" "$UDP_ECHO_TARGET" "$SSH_TARGET" "$HTTP2_TARGET" "$H2_TARGET" "$STARTTLS_TARGET" "$QUIC_TARGET" "$QUIC_RETRY_TARGET" >/dev/null 2>&1 || true
+    docker rm -f "$HTTP_TARGET" "$TLS_TARGET" "$JARM_TARGET" "$UDP_ECHO_TARGET" "$SSH_TARGET" "$HTTP2_TARGET" "$H2_TARGET" "$STARTTLS_TARGET" "$QUIC_TARGET" "$QUIC_RETRY_TARGET" "$HTTP3_TARGET" >/dev/null 2>&1 || true
     docker network rm "$NET" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
@@ -141,6 +143,13 @@ MSYS_NO_PATHCONV=1 docker run -d --name "$QUIC_RETRY_TARGET" --network "$NET" \
        -out /tmp/quic-cert.pem -subj '/CN=quic.test' -days 1 >/dev/null 2>&1 && \
      python3 -u /src/tests/lab/quic_server.py /tmp/quic-cert.pem /tmp/quic-key.pem $QUIC_RETRY_PORT retry" >/dev/null
 
+echo "==> starting HTTP/3 target"
+MSYS_NO_PATHCONV=1 docker run -d --name "$HTTP3_TARGET" --network "$NET" \
+    -v "$ROOT:/src:ro" "$IMAGE" bash -lc \
+    "openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/h3-key.pem \
+       -out /tmp/h3-cert.pem -subj '/CN=quic.test' -days 1 >/dev/null 2>&1 && \
+     python3 -u /src/tests/lab/http3_server.py /tmp/h3-cert.pem /tmp/h3-key.pem $HTTP3_PORT" >/dev/null
+
 echo "==> starting TLS HTTP/2 target"
 MSYS_NO_PATHCONV=1 docker run -d --name "$H2_TARGET" --network "$NET" \
     -v "$ROOT:/src:ro" "$IMAGE" bash -lc \
@@ -170,21 +179,23 @@ H2_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{e
 STARTTLS_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$STARTTLS_TARGET")"
 QUIC_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$QUIC_TARGET")"
 QUIC_RETRY_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$QUIC_RETRY_TARGET")"
+HTTP3_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$HTTP3_TARGET")"
 echo "HTTP target: $HTTP_IP:$HTTP_PORT (closed test port $CLOSED_PORT)"
 echo "TLS  target: $TLS_IP:$TLS_PORT"
 echo "JARM target: $JARM_IP:$JARM_PORT"
 echo "UDP echo:   $UDP_ECHO_IP:8082"
 echo "SSH banner:  $SSH_IP:$SSH_PORT"
 echo "HTTP/2:      $HTTP2_IP:$HTTP2_PORT"
+echo "HTTP/3:      $HTTP3_IP:$HTTP3_PORT"
 echo "TLS h2:      $H2_IP:$H2_PORT"
 
 docker run --rm \
     --cap-add NET_RAW --cap-add NET_ADMIN \
     --network "$NET" \
-    -e HTTP_IP="$HTTP_IP" -e TLS_IP="$TLS_IP" -e JARM_IP="$JARM_IP" -e UDP_ECHO_IP="$UDP_ECHO_IP" -e SSH_IP="$SSH_IP" -e HTTP2_IP="$HTTP2_IP" -e H2_IP="$H2_IP" -e STARTTLS_IP="$STARTTLS_IP" -e QUIC_IP="$QUIC_IP" -e QUIC_RETRY_IP="$QUIC_RETRY_IP" \
+    -e HTTP_IP="$HTTP_IP" -e TLS_IP="$TLS_IP" -e JARM_IP="$JARM_IP" -e UDP_ECHO_IP="$UDP_ECHO_IP" -e SSH_IP="$SSH_IP" -e HTTP2_IP="$HTTP2_IP" -e H2_IP="$H2_IP" -e STARTTLS_IP="$STARTTLS_IP" -e QUIC_IP="$QUIC_IP" -e QUIC_RETRY_IP="$QUIC_RETRY_IP" -e HTTP3_IP="$HTTP3_IP" \
     -e HTTP_PORT="$HTTP_PORT" -e CLOSED_PORT="$CLOSED_PORT" \
     -e TLS_PORT="$TLS_PORT" -e JARM_PORT="$JARM_PORT" -e SSH_PORT="$SSH_PORT" -e HTTP2_PORT="$HTTP2_PORT" -e H2_PORT="$H2_PORT" \
-    -e STARTTLS_SMTP_PORT="$STARTTLS_SMTP_PORT" -e STARTTLS_IMAP_PORT="$STARTTLS_IMAP_PORT" -e STARTTLS_POP3_PORT="$STARTTLS_POP3_PORT" -e STARTTLS_FTP_PORT="$STARTTLS_FTP_PORT" -e QUIC_PORT="$QUIC_PORT" -e QUIC_RETRY_PORT="$QUIC_RETRY_PORT" \
+    -e STARTTLS_SMTP_PORT="$STARTTLS_SMTP_PORT" -e STARTTLS_IMAP_PORT="$STARTTLS_IMAP_PORT" -e STARTTLS_POP3_PORT="$STARTTLS_POP3_PORT" -e STARTTLS_FTP_PORT="$STARTTLS_FTP_PORT" -e QUIC_PORT="$QUIC_PORT" -e QUIC_RETRY_PORT="$QUIC_RETRY_PORT" -e HTTP3_PORT="$HTTP3_PORT" \
     -v "$ROOT:/src:ro" -v "$BIN:/xtate:ro" \
     "$IMAGE" bash -lc '
 set -euo pipefail
@@ -383,6 +394,15 @@ grep -q "quic_alpn: \"h3\"" /tmp/quic-state.log
 grep -q "quic_tls_version: \"TLS1.3\"" /tmp/quic-state.log
 grep -q "quic_cert_subject" /tmp/quic-state.log
 grep -q "quic_cert_sha256" /tmp/quic-state.log
+
+run_case http3-state \
+    -ip "$HTTP3_IP" -p U:"$HTTP3_PORT" -scan quic-state -probe http3-state \
+    -scan-arg "--alpn h3 --handshake-timeout 5" \
+    -rate 100 --wait 6 --no-status -show info -show failed
+grep -q "\"http3\"" /tmp/http3-state.log
+grep -q "http3_status: 200" /tmp/http3-state.log
+grep -q "http3_body_len: 27" /tmp/http3-state.log
+grep -q "hello from xtate http3 lab" /tmp/http3-state.log
 
 run_case udp-quic-retry \
     -ip "$QUIC_RETRY_IP" -p U:"$QUIC_RETRY_PORT" -scan udp -probe quic \

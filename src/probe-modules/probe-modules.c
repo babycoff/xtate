@@ -40,6 +40,9 @@ extern Probe SshProbe;
 extern Probe H2cProbe;
 extern Probe H2Probe;
 extern Probe QuicProbe;
+#ifdef HAVE_NGTCP2
+extern Probe Http3StateProbe;
+#endif
 extern Probe SlotTestUdpProbe;
 //! ADD YOUR PROBE MODULE HERE
 
@@ -55,6 +58,10 @@ Probe *probe_modules_list[] = {
     &JarmProbe,
     &TlsStateProbe,
     &QuicProbe,
+#endif
+
+#ifdef HAVE_NGTCP2
+    &Http3StateProbe,
 #endif
 
     &DnsProbe,

@@ -126,6 +126,8 @@ typedef struct StateOfProbe {
     unsigned state;
     /*defined by probe itself in need*/
     void    *data;
+    /*opaque lower-layer transport context (used by quic-state) */
+    void    *transport_data;
 } ProbeState;
 
 /**
@@ -179,6 +181,15 @@ typedef void (*probe_modules_make_hello)(DataPass *pass, ProbeState *state,
 typedef unsigned (*probe_modules_parse_response)(
     DataPass *pass, ProbeState *state, OutConf *out, ProbeTarget *target,
     const unsigned char *px, unsigned sizeof_px);
+
+/**
+ * Optional application-stream callback for datagram/QUIC transports.
+ * |stream_id| is transport-defined (QUIC stream id). The callee owns |px|
+ * only for the duration of the call.
+ */
+typedef unsigned (*probe_modules_stream_data)(
+    ProbeState *state, OutConf *out, ProbeTarget *target, uint64_t stream_id,
+    const unsigned char *px, unsigned sizeof_px, unsigned fin, OutItem *item);
 
 /**
  * !Happens in Rx Handle Thread,
@@ -247,6 +258,7 @@ typedef struct ProbeModule {
     probe_modules_conn_init          conn_init_cb;
     probe_modules_make_hello         make_hello_cb;
     probe_modules_parse_response     parse_response_cb;
+    probe_modules_stream_data        stream_data_cb;
     probe_modules_conn_close         conn_close_cb;
     /*for close*/
     probe_modules_close              close_cb;

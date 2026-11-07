@@ -54,7 +54,7 @@ Most fast scanners stop at "port open"; most service scanners give up at Interne
 - 🛰 **QUIC capability** — sends a real QUIC v1 Initial and classifies Version Negotiation/Retry/Initial/Handshake without claiming a completed HTTP/3 handshake.
 - 🔐 **TLS evidence** — a full handshake plus structured certificate details (subject, issuer, SAN, validity, serial, key, signature, ALPN), including SMTP/IMAP/POP3/FTP STARTTLS upgrades.
 - 🧪 **JARM** — the ten standard Salesforce probes, with `--first-probe` to rotate which standard probe is sent first and burst-ordered follow-ups; output stays order-independent.
-- 🧩 **Modules** — 11 base scan / 27 probe / 7 output / 5 generate modules, plus optional `quic-state` when ngtcp2/GnuTLS is available. Four interfaces, one pipeline, no runtime plugin magic.
+- 🧩 **Modules** — 11 base scan / 27 probe / 7 output / 5 generate modules, plus optional `quic-state` and `http3-state` when ngtcp2/GnuTLS is available. Four interfaces, one pipeline, no runtime plugin magic.
 - 🌐 **Chinese help** — `--lang zh` or `XTATE_LANG=zh` localizes human-facing help, with UTF-8-aware wrapping and safe English fallback for untranslated strings.
 - 🎯 **Sparse target patterns** — component ranges such as `132.80-88.90.15` or `2001:db8:1-5::1`; up to four ranges form a Cartesian product (1,048,576-address cap per token) while large continuous spaces still use CIDR/ranges.
 
@@ -240,6 +240,7 @@ The README is the landing page. The manual lives in [`docs/`](docs/README.md):
 - [Architecture](docs/architecture.md) · [ZBanner](docs/zbanner.md) · [HLTCP](docs/hltcp.md)
 - [Chinese help and i18n](docs/help-i18n.md) — `--lang`, catalog fallback and UTF-8 layout
 - [QUIC state](docs/quic-state.md) — optional ngtcp2/GnuTLS handshake, certificate and sub-probe
+- [HTTP/3 child probe](docs/quic-state.md#http3-child-probe) — minimal GET over quic-state
 - [Interactive mode](docs/interactive-mode.md) — TTY/script mode, completion, history and Chinese help
 - [Platform support](docs/platform-support.md) — CMake 3.13, old distros, Ninja and musl builds
 - [Build artifacts](docs/build-artifacts.md) — aliases, exact toolchain names, Debug/DLL layout

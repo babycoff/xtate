@@ -4,8 +4,8 @@
 
 Xtate is assembled from four kinds of module. Each is a C struct plus one line in a
 `NULL`-terminated registry; there is no runtime plugin loading. A full build registers
-**11 base Scan + 27 Probe + 7 Output + 5 Generate** modules, plus optional `quic-state`
-when ngtcp2/GnuTLS is available. Modules whose optional library is missing simply disappear
+**11 base Scan + 27 Probe + 7 Output + 5 Generate** modules, plus optional
+`quic-state` and `http3-state` when ngtcp2/GnuTLS is available. Modules whose optional library is missing simply disappear
 from the build (and from `--list-*`).
 
 | Kind | Responsibility | Parameter | Registry |
@@ -42,6 +42,7 @@ xtate --help-gen blackrock
 | `tcp-state` | state | HLTCP user-space TCP; full conversations for TLS/HTTP state probes. |
 | `udp` | udp | Single-packet UDP scan with a probe payload; ICMP port-unreachable means closed. |
 | `quic-state` | state | Raw-UDP stateful QUIC handshake with ngtcp2/GnuTLS; reports version, TLS/ALPN and certificate fields, then runs a state sub-probe. Optional build. |
+| `http3-state` | state | Minimal HTTP/3 GET over `quic-state`; client control/QPACK streams, static QPACK/literal names, status/header/body output. Optional build. |
 | `icmp-echo` | - | ICMP echo host discovery; can record TTL and IPID. |
 | `icmp-time` | - | ICMP timestamp discovery, IPv4 only. |
 | `sctp-init` | - | SCTP INIT scan; INIT-ACK is open, ABORT is closed. |
@@ -54,7 +55,7 @@ Every scan module exposes `--help-scan <name>` with its own options (record TTL/
 repeat/dedup switches, TTL overrides, ...). Which mode to pick, and which of them needs
 firewall rules, is covered in [Scanning modes](./scanning-modes.md).
 
-## Probe modules (27)
+## Probe modules (27, plus optional `http3-state`)
 
 A probe declares a **type** that must match the scan module: `tcp` for `zbanner`, `udp` for
 `udp`, `state` for `tcp-state`. It may declare a `ProbeSlotPlan` (JARM and the `slot-test` examples); see

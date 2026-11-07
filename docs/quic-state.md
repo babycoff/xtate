@@ -7,10 +7,10 @@ raw IPv4/IPv6 UDP packets itself; ngtcp2 owns QUIC packet state and GnuTLS owns
 TLS 1.3. Xtate retains control of source ports, L3/L4 headers, pacing, flow
 budgets, timers and output.
 
-It is not a browser QUIC client and it is not HTTP/3 yet. The first milestone
-completes the QUIC/TLS handshake, emits certificate/version/ALPN evidence and
-runs a state sub-probe. HTTP/3 and DoQ are application probes layered above this
-transport.
+It is not a browser QUIC client. The transport milestone completes the
+QUIC/TLS handshake, emits certificate/version/ALPN evidence and runs a state
+application probe. A minimal HTTP/3 GET probe (`http3-state`) is included as the
+first real child; DoQ remains a later application probe.
 
 ## Build
 
@@ -51,6 +51,10 @@ flush.
 ## Minimal use
 
 ```bash
+# Minimal HTTP/3 GET
+xtate -ip 192.0.2.10 -p U:443 -scan quic-state -probe http3-state \
+  -scan-arg "--alpn h3" --wait 5 --no-status -show info
+
 # Certificate/version evidence only
 xtate -ip 192.0.2.10 -p U:443 -scan quic-state -probe close-state \
   -scan-arg "--alpn h3 --sni example.test" --wait 5 --no-status -show info
@@ -98,11 +102,27 @@ evidence, not a trust decision.
 - QUIC v1 only.
 - No 0-RTT, session resumption, migration, multipath or connection migration.
 - Single connection per target; no long-lived sessions.
-- HTTP/3/QPACK and DoQ are not implemented in this first milestone.
+- HTTP/3 is a minimal GET: static QPACK/literal names only, no dynamic table,
+  no push, no server-initiated streams, no Huffman literals, no HTTP/3 CONNECT.
+  QPACK partial decoding is marked with `http3_qpack_partial`.
+- DoQ is not implemented in this milestone.
 - No cross-connection follow-up; use `close-state` or a future application probe.
 - Flow table is global, hash-bucketed and mutex-protected in this milestone; do
   not use it as a high-rate benchmark yet.
 - The scanner does not claim HTTP/3 merely because ALPN is `h3`.
+
+## HTTP/3 child probe
+
+`http3-state` opens the client control and QPACK streams, sends one GET on a
+client bidirectional stream, and parses response HEADERS/DATA. Output uses
+classification `http3` and includes `http3_status`, `http3_header_count`,
+`http3_body_len`, optional `http3_body`, and `http3_qpack_partial` when an
+unsupported QPACK encoding (for example a Huffman literal) was skipped.
+
+The first implementation deliberately does not use a dynamic QPACK table. A
+server that answers with only static-table headers is decoded fully; a server
+that Huffman-encodes a non-status header yields a successful response with
+`http3_qpack_partial: 1`.
 
 ## Validation
 

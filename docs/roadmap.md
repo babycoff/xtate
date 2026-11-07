@@ -10,6 +10,8 @@ the next change does not silently regress it.
 
 - Optional `quic-state`: raw-UDP QUIC handshake with ngtcp2/GnuTLS, certificate/ALPN
   output and a state sub-probe; HTTP/3 is still a later application probe.
+- Optional `http3-state`: minimal HTTP/3 GET over `quic-state`; status/header/body
+  output, static QPACK/literal names, partial QPACK decoding reported explicitly.
 
 - QUIC capability probe (`quic`): valid QUIC v1 Initial, Version
   Negotiation/Retry/Initial/Handshake classification, local aioquic lab.
@@ -171,8 +173,8 @@ state are deferred. See [HTTP probe audit](./http-probes-audit.md).
 ## Recommended next order
 
 1. YAML template schema and read-only matcher (10A).
-2. HTTP/3/QPACK application probe on top of `quic-state`; keep the transport
-   scanner and application probe separate.
+2. Extend HTTP/3 beyond the minimal GET: dynamic QPACK/Huffman, more header
+   handling and DoQ; keep the transport scanner and application probe separate.
 3. Protocol coverage Batch A: Redis, Memcached, MQTT, Telnet, SOCKS5, NTP.
 4. Traffic randomization research as an opt-in, fixed-seed lab feature (10B).
 5. JARM failure modes and external retry manifest.

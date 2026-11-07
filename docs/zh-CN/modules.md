@@ -2,7 +2,7 @@
 
 [English](../modules.md) · **中文**
 
-Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上以 `NULL` 结尾的注册表里的一行；没有运行期插件加载。完整构建会注册 **11 个基础扫描 + 27 个探测 + 7 个输出 + 5 个生成**模块；另有可选的 `quic-state`（需要 ngtcp2/GnuTLS）。缺少可选库的模块会直接从构建中消失（也从 `--list-*` 中消失）。
+Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上以 `NULL` 结尾的注册表里的一行；没有运行期插件加载。完整构建会注册 **11 个基础扫描 + 27 个探测 + 7 个输出 + 5 个生成**模块；另有可选的 `quic-state` 和 `http3-state`（需要 ngtcp2/GnuTLS）。缺少可选库的模块会直接从构建中消失（也从 `--list-*` 中消失）。
 
 | 类别 | 职责 | 参数 | 注册表 |
 |:---|:---|:---|:---|
@@ -34,6 +34,7 @@ xtate --help-gen blackrock
 | `tcp-state` | state | HLTCP 用户态 TCP；为 TLS/HTTP 状态探测模块提供完整会话。 |
 | `udp` | udp | 携带探测载荷的单包 UDP 扫描；ICMP port-unreachable 表示 closed。 |
 | `quic-state` | state | 原始 UDP + ngtcp2/GnuTLS 的有状态 QUIC 握手；输出版本、TLS/ALPN、证书字段并运行 state 子探测。可选构建。 |
+| `http3-state` | state | `quic-state` 之上的最小 HTTP/3 GET；client control/QPACK 流、static QPACK/literal name、status/header/body 输出。可选构建。 |
 | `icmp-echo` | - | ICMP echo 主机发现；可记录 TTL 和 IPID。 |
 | `icmp-time` | - | ICMP 时间戳发现，仅 IPv4。 |
 | `sctp-init` | - | SCTP INIT 扫描；INIT-ACK 为 open，ABORT 为 closed。 |
@@ -44,7 +45,7 @@ xtate --help-gen blackrock
 
 每个扫描模块都通过 `--help-scan <name>` 暴露自己的选项（记录 TTL/IPID/窗口、重复/去重开关、TTL 覆盖等）。如何选择模式、哪些模式需要防火墙规则，见[扫描模式](./scanning-modes.md)。
 
-## 探测模块（27）
+## 探测模块（27，另有可选 `http3-state`）
 
 探测模块会声明一个**类型**，必须与扫描模块匹配：`zbanner` 用 `tcp`，`udp` 用 `udp`，`tcp-state` 用 `state`。它可以声明 `ProbeSlotPlan`（JARM 和 `slot-test` 示例）；见[扫描模式](./scanning-modes.md#探测-slot)。
 

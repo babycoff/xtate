@@ -9,6 +9,8 @@
 
 - 可选 `quic-state`：原始 UDP + ngtcp2/GnuTLS 的 QUIC 握手，输出证书/ALPN，并
   支持 state 子探测；HTTP/3 仍是后续应用探测。
+- 可选 `http3-state`：`quic-state` 之上的最小 HTTP/3 GET，输出 status/header/body；
+  static QPACK/literal name，QPACK 部分解码会显式标记。
 
 - QUIC 能力探测（`quic`）：合法 QUIC v1 Initial，识别 Version
   Negotiation/Retry/Initial/Handshake；本地 aioquic lab。
@@ -135,8 +137,8 @@ P3/P4 可行性见[P3/P4 可行性](./feasibility.md)。
 ## 建议后续顺序
 
 1. YAML 模板 schema 与只读 matcher（10A）。
-2. 在 `quic-state` 之上实现 HTTP/3/QPACK 应用探测；保持传输扫描器与应用探测
-   分离。
+2. 扩展 HTTP/3：dynamic QPACK/Huffman、更多 header 处理与 DoQ；保持传输扫描器与
+   应用探测分离。
 3. 协议覆盖 Batch A：Redis、Memcached、MQTT、Telnet、SOCKS5、NTP。
 4. 流量随机化研究：opt-in、固定 seed、只在 lab（10B）。
 5. JARM 失败模式与外部 retry manifest。
