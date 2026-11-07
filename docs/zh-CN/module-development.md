@@ -196,7 +196,8 @@ typedef enum ProbeSlotTrigger {
   以此类推。
 - `ProbeSlot_AfterFirstReply`：先正常发送 slot 0；收到响应后调用
   `continue_cb(target, px, sizeof_px)`，返回 true 才发送 slot 1..count-1。
-- `AfterFirstReply` 的 `continue_cb` 可以为 `NULL`，表示收到第一个响应后继续。
+- `AfterFirstReply` 的 `continue_cb` 可以为 `NULL`；ZBanner 执行器仍只在首个
+  banner/数据段触发，不会在每个响应上触发。
 
 slot `i` 在 ZBanner/TCP 和 UDP 中都映射到 `source_port_start + i`，因此
 源端口范围必须至少覆盖 `count`。引擎不保存目标 group，也不做聚合；每个

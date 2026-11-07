@@ -78,8 +78,10 @@ typedef struct ProbeSlotPlan {
   the zero-based slot.
 - `Always`: every slot is sent from the first scan iteration.
 - `AfterFirstReply`: slot 0 is sent normally; the remaining slots are sent
-  only if `continue_cb()`, or the slot is unconditional when no callback is
-  supplied, accepts the first response.
+  only after the first accepted response. In ZBanner this specifically means
+  the first banner/data segment: an ACK-only or RST first response does not
+  trigger fan-out. This is intentional ZBanner semantics, not a generic
+  connection-local workflow.
 - The source-port range must be at least the plan's `count`; startup rejects
   a smaller range.
 - The engine keeps **no group state** and does not aggregate. Every slot emits

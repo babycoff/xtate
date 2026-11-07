@@ -205,7 +205,8 @@ are rebuilt from `(target, distance)` in post-processing.
 JARM is the only shipped multi-slot probe. It declares a `ProbeSlotPlan` with
 `count = 10` and `trigger = after first reply`: slot 0 is sent normally, and
 the remaining nine slots are sent only when the first slot's response is an
-accepted TLS record.
+accepted TLS record. In the ZBanner executor this means the first banner/data
+segment; ACK-only and RST first responses do not trigger fan-out.
 
 `ProbeSlot_Always` is the other trigger: ZBanner/TCP and UDP send every slot
 from the first iteration. UDP has no handshake, so it rejects

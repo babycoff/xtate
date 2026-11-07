@@ -70,13 +70,14 @@ The code already only sends the extra handshake ACK when `payload_len > 0`; a
 zero-payload probe sends a single ACK. Keep this behavior and cover it in tests
 so a future change does not add a redundant packet.
 
-### 7. Minor: declared versus actual payload length
+### 7. Declared versus actual payload length
 
-The code warns when `make_payload_cb` returns a different length from
-`get_payload_length_cb`, but still sends the actual payload. Dedup validation for
-banner/ACK uses the declared length, so the response may not validate. This is
-better treated as a probe contract error (or use the actual length consistently)
-than a warning-only mismatch.
+The code now computes the actual `make_payload_cb()` length during validation
+and uses it for banner/ACK acknowledgement checks, so a declared/actual mismatch
+no longer silently invalidates the response. The SYN-ACK path still warns and
+emits `payload_len_declared` / `payload_len_actual` on mismatch. The probe
+contract remains "declared length must equal actual"; a future probe/test should
+reject inconsistent probes rather than only diagnosing them.
 
 ### 8. Setter validation was thin
 
@@ -105,6 +106,8 @@ startup.
   A bounded one-shot table remains future work if that mode needs it.
 - all-banner limit/floor bounds and floor<=limit validation added.
 - Existing `with-ack` zero-payload behavior documented and preserved.
+- Banner/ACK validation now uses the actual generated payload length; mismatch
+  diagnostics are attached to the SYN-ACK result.
 
 ## Remaining work
 
@@ -112,7 +115,8 @@ startup.
   responses do not fan out. Decide whether to narrow the documented generic
   semantics or add an accepted-response predicate.
 - `banner idx` remains approximate; use `banner seqno`.
-- Payload declared/actual mismatch is still warning-only.
+- Payload declared/actual mismatch is diagnosed and no longer silently breaks
+  validation, but a probe contract violation is still not a hard startup error.
 - Dedup pressure still makes limit/floor approximate.
 
 ## Suggested refactor

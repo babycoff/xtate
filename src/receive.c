@@ -360,6 +360,7 @@ void receive_thread(void *v) {
         };
 
         scan_module->validate_cb(entropy, &valid_pkt->recved, &pre);
+        valid_pkt->probe_payload_len = pre.probe_payload_len;
 
         if (!pre.go_record) {
             FREE(valid_pkt->recved.packet);

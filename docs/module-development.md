@@ -201,11 +201,12 @@ typedef enum ProbeSlotTrigger {
 - `ProbeSlot_Always`: execute all slots from the first iteration. A scan
   transmitter returns `true` to ask for the next slot; the next call receives
   `ProbeTarget.index == 1`, and so on.
-- `ProbeSlot_AfterFirstReply`: send slot 0 normally; after a response, call
-  `continue_cb(target, px, sizeof_px)`; if it returns true, send slots
-  1..count-1.
-- `continue_cb` may be `NULL` for `AfterFirstReply`, which means continue after
-  the first response.
+- `ProbeSlot_AfterFirstReply`: send slot 0 normally; after an accepted
+  response, call `continue_cb(target, px, sizeof_px)`; if it returns true,
+  send slots 1..count-1. In the ZBanner executor "accepted response" means the
+  first banner/data segment; ACK-only and RST first responses do not fan out.
+- `continue_cb` may be `NULL` for `AfterFirstReply`; the ZBanner executor still
+  triggers only from the first banner/data segment, not from every response.
 
 Slot `i` is mapped to `source_port_start + i` by ZBanner/TCP and UDP. The
 source-port range must therefore have at least `count` ports. The engine stores

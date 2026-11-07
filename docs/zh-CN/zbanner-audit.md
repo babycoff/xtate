@@ -61,11 +61,12 @@ fan-out。首个响应是纯 ACK 或 RST 时不会触发后续 slot。对 JARM �
 代码已经只在 `payload_len > 0` 时发送额外握手 ACK；零 payload 探针只发一个
 ACK。保留该行为并补测试，避免将来引入多余报文。
 
-### 7. 小问题：声明长度与实际长度不一致
+### 7. 声明长度与实际长度不一致
 
-`make_payload_cb` 返回值与 `get_payload_length_cb` 不一致时仅告警但仍发送实际
-payload；banner/ACK 去重验证使用声明长度，响应可能无法通过验证。更合理的
-处理是把它当作 probe 契约错误，或统一使用实际长度。
+现在验证阶段会调用 `make_payload_cb` 得到实际长度，并用实际长度做 banner/ACK
+ACK 号校验；声明/实际不一致不再静默导致响应验证失败。SYN-ACK 路径仍会告警，
+并在结果中输出 `payload_len_declared` / `payload_len_actual`。Probe 契约仍应
+要求两者相等，后续应在测试或 probe 初始化时拒绝不一致。
 
 ### 8. 参数校验偏薄
 
@@ -91,13 +92,15 @@ floor 大于非零 limit 会在启动时拒绝。
   若该模式需要严格 one-shot，后续应加有界 one-shot 表。
 - 增加 all-banner limit/floor 边界和 floor<=limit 校验。
 - 记录并保留 `with-ack` 零 payload 行为。
+- banner/ACK 验证使用实际生成 payload 长度；不一致诊断附在 SYN-ACK 结果上。
 
 ## 剩余工作
 
 - `AfterFirstReply` 仍只在 banner/data 分支触发；纯 ACK/RST 首响应不会 fan-out。
   需要收窄文档或增加 accepted-response 判断。
 - `banner idx` 仍是近似值；排序用 `banner seqno`。
-- payload 声明/实际长度不一致仍是 warning-only。
+- payload 声明/实际长度不一致已有诊断且不再静默破坏验证，但 probe 契约错误
+  还不是启动期硬错误。
 - 去重压力下 limit/floor 仍是近似值。
 
 ## 建议的重构

@@ -161,7 +161,8 @@ sudo ./bin/xtate -ip 198.51.100.7 -p o:1-20 -scan yarrp-udp \
 
 JARM 是目前唯一内置的多 slot 探针。它声明 `ProbeSlotPlan`：
 `count = 10`、`trigger = after first reply`。slot 0 正常发送；只有第一个
-slot 的响应被判定为 TLS 记录后，才发送剩余九个 slot。
+slot 的响应被判定为 TLS 记录后，才发送剩余九个 slot。在 ZBanner 执行器中这特指
+首个 banner/数据段；纯 ACK 或 RST 首响应不会触发 fan-out。
 
 `ProbeSlot_Always` 是另一种触发方式：ZBanner/TCP 和 UDP 从第一次迭代就发送
 全部 slot。UDP 没有握手，所以启动时会拒绝 `ProbeSlot_AfterFirstReply`；

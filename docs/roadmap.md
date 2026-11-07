@@ -195,7 +195,7 @@ after the current protocol work, before new ZBanner features.
 - [x] consolidate all-banner limit/floor/RST/truncated policy;
 - [ ] clarify `banner idx` versus `banner seqno` in output/docs;
 - [ ] narrow or implement generic `AfterFirstReply` response semantics;
-- [ ] add payload-length mismatch regression coverage;
+- [ ] add payload-length mismatch regression coverage (diagnostics implemented);
 - [x] extract response classification without adding per-target state;
 - [ ] add pcap/lab boundary coverage for all-banner.
 

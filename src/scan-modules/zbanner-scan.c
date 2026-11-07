@@ -626,12 +626,14 @@ typedef struct ZBResponse {
     unsigned seqno_them;
     unsigned cookie;
     unsigned declared_payload_len;
+    unsigned actual_payload_len;
     unsigned app_len;
     uint16_t win;
     uint8_t  flags;
 } ZBResponse;
 
 static ZBEvent zb_classify(uint64_t entropy, const Recved *recved,
+                           unsigned known_payload_len, bool have_known_len,
                            ZBResponse *out) {
     memset(out, 0, sizeof(*out));
     out->event = ZB_EV_IGNORE;
@@ -686,8 +688,16 @@ static ZBEvent zb_classify(uint64_t entropy, const Recved *recved,
 
     if (TCP_FLAG_HAS(out->flags, TCP_FLAG_ACK) &&
         !TCP_FLAG_HAS(out->flags, TCP_FLAG_RST) && out->app_len) {
+        if (have_known_len) {
+            out->actual_payload_len = known_payload_len;
+        } else {
+            unsigned char payload[PM_PAYLOAD_SIZE];
+            out->actual_payload_len = (unsigned)
+                ZBannerScan.probe->make_payload_cb(&ptarget, payload);
+        }
+
         uint64_t expect =
-            (uint64_t)out->cookie + out->declared_payload_len + 1;
+            (uint64_t)out->cookie + out->actual_payload_len + 1;
         if ((uint64_t)out->seqno_me == expect) {
             out->event = ZB_EV_BANNER;
             return out->event;
@@ -698,8 +708,16 @@ static ZBEvent zb_classify(uint64_t entropy, const Recved *recved,
     if (TCP_FLAG_HAS(out->flags, TCP_FLAG_ACK) &&
         !TCP_FLAG_HAS(out->flags, TCP_FLAG_RST) && !out->app_len &&
         zbanner_conf.record_ack) {
+        if (have_known_len) {
+            out->actual_payload_len = known_payload_len;
+        } else {
+            unsigned char payload[PM_PAYLOAD_SIZE];
+            out->actual_payload_len = (unsigned)
+                ZBannerScan.probe->make_payload_cb(&ptarget, payload);
+        }
+
         uint64_t expect =
-            (uint64_t)out->cookie + out->declared_payload_len + 1;
+            (uint64_t)out->cookie + out->actual_payload_len + 1;
         if ((uint64_t)out->seqno_me == expect) {
             out->event = ZB_EV_ACK;
             return out->event;
@@ -828,11 +846,12 @@ static bool zbanner_transmit(uint64_t entropy, ScanTarget *target,
 static void zbanner_validate(uint64_t entropy, Recved *recved,
                              PreHandle *pre) {
     ZBResponse r;
-    ZBEvent    event = zb_classify(entropy, recved, &r);
+    ZBEvent    event = zb_classify(entropy, recved, 0, false, &r);
     if (event == ZB_EV_IGNORE)
         return;
 
     pre->go_record = 1;
+    pre->probe_payload_len = r.actual_payload_len;
 
     if (bench_trace) {
         trace_last_rx = pixie_gettime();
@@ -876,7 +895,8 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
     Recved *recved = &valid_pkt->recved;
 
     ZBResponse zr;
-    ZBEvent    event = zb_classify(entropy, recved, &zr);
+    ZBEvent    event =
+        zb_classify(entropy, recved, valid_pkt->probe_payload_len, true, &zr);
     if (event == ZB_EV_IGNORE)
         return;
 
@@ -975,8 +995,13 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
                 } else if (payload_len != declared_len) {
                     LOG(LEVEL_WARN,
                         "zbanner: probe payload length mismatch (make=%u, "
-                        "declared=%u); banner acknowledgement checks may fail\n",
+                        "declared=%u); using actual make length for banner "
+                        "acknowledgement checks\n",
                         (unsigned)payload_len, (unsigned)declared_len);
+                    dach_set_int(&item->scan_report, "payload_len_declared",
+                                 (uint64_t)declared_len);
+                    dach_set_int(&item->scan_report, "payload_len_actual",
+                                 (uint64_t)payload_len);
                 }
             }
 

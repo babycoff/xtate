@@ -157,7 +157,7 @@ ZBanner 是最大、最复杂的无状态链路。审计和验收条件见
 - [x] 合并 all-banner limit/floor/RST/truncated 策略；
 - [ ] 在输出/文档中澄清 `banner idx` 与 `banner seqno`；
 - [ ] 收窄或实现通用 `AfterFirstReply` 响应语义；
-- [ ] 补 payload 长度不一致回归覆盖；
+- [ ] 补 payload 长度不一致回归覆盖（诊断已实现）；
 - [x] 在不引入 per-target 状态的前提下抽离响应分类器；
 - [ ] 补 all-banner 的 pcap/lab 边界覆盖。
 

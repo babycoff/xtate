@@ -32,6 +32,9 @@ typedef struct PacketReceived {
 typedef struct PacketValidated {
     Recved   recved;
     unsigned repeats;
+    /* Cached probe payload length computed by validate_cb, for scan modules
+     * that must keep payload generation and response validation consistent. */
+    unsigned probe_payload_len;
 } ValidPacket;
 
 /* Pre-handle decisions: record and/or deduplicate a received packet. */
@@ -45,6 +48,7 @@ typedef struct PacketPreHandle {
     ipaddress dedup_ip_me;
     unsigned  dedup_port_me;
     unsigned  dedup_type;
+    unsigned  probe_payload_len;
 } PreHandle;
 
 #endif
