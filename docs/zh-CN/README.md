@@ -57,6 +57,7 @@
 - [HLTCP](./hltcp.md)——混合状态 TCP 协议栈、TLS 与嵌套探测
 - [QUIC state](./quic-state.md)——可选的 ngtcp2/GnuTLS QUIC 握手扫描器与子探测
 - [HTTP 响应匹配](./matching.md)——HTTP/1、h2、http3 的 keyword/regex 与 header/body/all 范围
+- [ZBanner 审计](./zbanner-audit.md)——状态机问题、边界与重构计划
 
 ### 出问题时
 

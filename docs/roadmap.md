@@ -185,6 +185,19 @@ state are deferred. See [HTTP probe audit](./http-probes-audit.md).
 9. P3 external two-pass target selection, opt-in adaptive rate.
 10. HLTCP stateless -> stateful handoff.
 
+## ZBanner audit and simplification
+
+ZBanner is the largest and most complex stateless path. The audit and
+acceptance criteria are in [ZBanner audit](./zbanner-audit.md). Priority:
+after the current protocol work, before new ZBanner features.
+
+- [ ] one-shot guard for `AfterFirstReply`;
+- [ ] fix all-banner limit/truncated boundary and consolidate limit/floor logic;
+- [ ] clarify `banner idx` versus `banner seqno`;
+- [ ] narrow or implement generic `AfterFirstReply` response semantics;
+- [ ] add boundary/regression tests for all-banner and payload-length mismatch;
+- [ ] extract response classification without adding per-target state.
+
 ## Windows quic-state TODO
 
 - [ ] Add an ngtcp2 OpenSSL backend for the Windows MSVC build.

@@ -62,6 +62,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 - [HLTCP](./hltcp.md) — the hybrid-state TCP stack, TLS, and nested probes
 - [QUIC state](./quic-state.md) — optional ngtcp2/GnuTLS QUIC handshake scanner and sub-probes
 - [HTTP response matching](./matching.md) — keyword/regex and header/body/all scopes for HTTP/1, h2 and http3
+- [ZBanner audit](./zbanner-audit.md) — state-machine findings, boundaries and refactor plan
 
 ### When things go wrong
 
