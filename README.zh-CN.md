@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.33.0-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.34.0-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -50,9 +50,10 @@ Xtate 是一款面向大规模主动测量的网络扫描器。它把扫描栈�
 - ⚡ **ZBanner**——无需为每个目标维护连接表，也能拿到真实的 TCP 响应。状态由对端的 TCP 协议栈保存，一个 SipHash cookie 就能证明这条回应是给你的。
 - 🧬 **HLTCP**——按需创建的混合状态用户态 TCP 协议栈。它能完成 TLS 握手，并在握手之上直接讲 HTTP。
 - 🛰 **QUIC 能力探测**——发送真实 QUIC v1 Initial，识别 Version Negotiation/Retry/Initial/Handshake；不声称完成 HTTP/3 握手。
+- 🔄 **QUIC state**——可选 ngtcp2/GnuTLS 有状态 QUIC 握手，输出版本、TLS/ALPN、证书字段并支持 state 子探测；原始 UDP 与源端口仍由 Xtate 控制。
 - 🔐 **TLS 证据**——完整握手后可输出结构化证书细节（subject、issuer、SAN、有效期、序列号、公钥、签名、ALPN），并支持 SMTP/IMAP/POP3/FTP STARTTLS 升级。
 - 🧪 **JARM**——十个标准 Salesforce 探针，可用 `--first-probe` 轮换首个标准探针；后续探针批量发送，输出与顺序无关。
-- 🧩 **模块**——11 个扫描模块 / 27 个探测模块 / 7 个输出模块 / 5 个生成模块。四套接口，一条流水线，没有运行时的插件魔法。
+- 🧩 **模块**——11 个基础扫描模块（有 ngtcp2/GnuTLS 时另有 `quic-state`）/ 27 个探测模块 / 7 个输出模块 / 5 个生成模块。四套接口，一条流水线，没有运行时的插件魔法。
 - 🌐 **中文帮助**——`--lang zh` 或 `XTATE_LANG=zh` 可切换人类可读帮助；支持 UTF-8 宽度换行，未翻译内容安全回退英文。
 - 🎯 **稀疏目标模式**——支持 `132.80-88.90.15`、`2001:db8:1-5::1` 这类分量范围；单个 token 最多 4 个范围组成笛卡尔积（上限 1,048,576 个地址），大范围连续空间仍用 CIDR/区间。
 
@@ -249,7 +250,8 @@ README 是落地页，手册在 [`docs/`](docs/zh-CN/README.md) 目录下：
 
 ```bash
 sudo apt install build-essential cmake pkg-config libpcap-dev \
-  libssl-dev libpcre2-dev libxml2-dev libbson-dev libmongoc-dev
+  libssl-dev libpcre2-dev libxml2-dev libbson-dev libmongoc-dev \
+  libngtcp2-dev libngtcp2-crypto-gnutls-dev libgnutls28-dev
 ./build.sh                                  # 交互：选择编译器和配置
 ./build.sh --compiler gcc --config release  # 显式指定
 ./build.sh --compiler clang --config debug  # 显式 Debug

@@ -8,6 +8,9 @@ the next change does not silently regress it.
 
 ## Done in 2.33.0
 
+- Optional `quic-state`: raw-UDP QUIC handshake with ngtcp2/GnuTLS, certificate/ALPN
+  output and a state sub-probe; HTTP/3 is still a later application probe.
+
 - QUIC capability probe (`quic`): valid QUIC v1 Initial, Version
   Negotiation/Retry/Initial/Handshake classification, local aioquic lab.
 - Module count: 27 probes.
@@ -34,9 +37,10 @@ the next change does not silently regress it.
 
 The current priorities are:
 
-1. **QUIC/HTTP3 next step** — the capability probe is done; decide whether a
-   real HTTP/3 client is required and select a QUIC library before building a
-   new transport scanner. See [P3/P4 feasibility](./feasibility.md#quic-probe-and-http3-exploration).
+1. **QUIC/HTTP3 next step** — the capability probe and the optional
+   `quic-state` handshake transport are done; HTTP/3/QPACK and DoQ application
+   probes are the next layer. See
+   [QUIC state](./quic-state.md).
 2. **Xtate-native YAML templates** — read-only matcher/schema first; do not
    copy Nuclei.
 3. **Protocol coverage expansion** — use the zgrab2 matrix in
@@ -167,8 +171,8 @@ state are deferred. See [HTTP probe audit](./http-probes-audit.md).
 ## Recommended next order
 
 1. YAML template schema and read-only matcher (10A).
-2. QUIC/HTTP3 library decision; if real HTTP/3 is required, build the separate
-   QUIC transport scanner (8B). Otherwise stop at the capability probe.
+2. HTTP/3/QPACK application probe on top of `quic-state`; keep the transport
+   scanner and application probe separate.
 3. Protocol coverage Batch A: Redis, Memcached, MQTT, Telnet, SOCKS5, NTP.
 4. Traffic randomization research as an opt-in, fixed-seed lab feature (10B).
 5. JARM failure modes and external retry manifest.

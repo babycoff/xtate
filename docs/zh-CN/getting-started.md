@@ -24,8 +24,8 @@ Xtate 是一款面向大规模主动测量的模块化全栈网络扫描器。�
 
 | 平台 | 编译器 | 状态 | 可选依赖 |
 |:---|:---|:---|:---|
-| Ubuntu 24.04 | GCC 13.3 | 构建 + `--selftest` 通过，模块 11/21/7/5 | OpenSSL、PCRE2、LibXml2、BSON、mongoc |
-| Ubuntu 24.04 | Clang 18.1 | 构建 + `--selftest` 通过，模块 11/21/7/5 | OpenSSL、PCRE2、LibXml2、BSON、mongoc |
+| Ubuntu 24.04 | GCC 13.3 | 构建 + `--selftest` 通过，模块 12/27/7/5 | OpenSSL、PCRE2、LibXml2、BSON、mongoc、ngtcp2/GnuTLS |
+| Ubuntu 24.04 | Clang 18.1 | 构建 + `--selftest` 通过，模块 12/27/7/5 | OpenSSL、PCRE2、LibXml2、BSON、mongoc、ngtcp2/GnuTLS |
 | Windows 10/11 | MSVC 19.5x（Visual Studio 2022/2026） | 构建 + `--selftest` 通过；探测模块数量取决于可选库 | 通过 Scoop 装 OpenSSL；未装 PCRE2/BSON/mongoc |
 | Windows 10/11 | Clang 23（clang-cl） | 构建 + `--selftest` 通过；探测模块数量取决于可选库 | 通过 Scoop 装 OpenSSL；未装 PCRE2/BSON/mongoc |
 | Windows 10/11 | MinGW-w64 GCC 16 | 构建 + `--selftest` 通过；探测模块数量取决于可选库 | 无 OpenSSL（Scoop 包是 MSVC ABI） |
@@ -39,7 +39,8 @@ Xtate 是一款面向大规模主动测量的模块化全栈网络扫描器。�
 ```bash
 sudo apt update
 sudo apt install build-essential cmake pkg-config libpcap-dev \
-  libssl-dev libpcre2-dev libxml2-dev libbson-dev libmongoc-dev
+  libssl-dev libpcre2-dev libxml2-dev libbson-dev libmongoc-dev \
+  libngtcp2-dev libngtcp2-crypto-gnutls-dev libgnutls28-dev
 
 git clone https://github.com/babycoff/xtate.git
 cd xtate

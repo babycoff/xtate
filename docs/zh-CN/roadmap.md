@@ -7,6 +7,9 @@
 
 ## 2.33.0 已完成
 
+- 可选 `quic-state`：原始 UDP + ngtcp2/GnuTLS 的 QUIC 握手，输出证书/ALPN，并
+  支持 state 子探测；HTTP/3 仍是后续应用探测。
+
 - QUIC 能力探测（`quic`）：合法 QUIC v1 Initial，识别 Version
   Negotiation/Retry/Initial/Handshake；本地 aioquic lab。
 - 模块数量：27 个探测。
@@ -30,9 +33,9 @@
 
 当前优先级：
 
-1. **QUIC/HTTP3 下一步**——能力探测已完成；先确认是否真的需要 HTTP/3
-   客户端，再选库并做独立传输扫描器；见
-   [P3/P4 可行性](./feasibility.md#quic-探针与-http3-探索)。
+1. **QUIC/HTTP3 下一步**——能力探测和可选的 `quic-state` 握手传输已完成；
+   下一层是 HTTP/3/QPACK 与 DoQ 应用探测；见
+   [QUIC state](./quic-state.md)。
 2. **Xtate 原生 YAML 模板**——先做只读 matcher/schema，不复制 Nuclei。
 3. **协议覆盖扩展**——按[协议覆盖计划](./protocol-coverage.md)的 zgrab2
    矩阵，先做 Batch A。
@@ -132,8 +135,8 @@ P3/P4 可行性见[P3/P4 可行性](./feasibility.md)。
 ## 建议后续顺序
 
 1. YAML 模板 schema 与只读 matcher（10A）。
-2. QUIC/HTTP3 库选型；确需真实 HTTP/3 时再做独立的 QUIC 传输扫描器（8B），
-   否则停在能力探测。
+2. 在 `quic-state` 之上实现 HTTP/3/QPACK 应用探测；保持传输扫描器与应用探测
+   分离。
 3. 协议覆盖 Batch A：Redis、Memcached、MQTT、Telnet、SOCKS5、NTP。
 4. 流量随机化研究：opt-in、固定 seed、只在 lab（10B）。
 5. JARM 失败模式与外部 retry manifest。

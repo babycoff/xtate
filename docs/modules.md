@@ -4,8 +4,9 @@
 
 Xtate is assembled from four kinds of module. Each is a C struct plus one line in a
 `NULL`-terminated registry; there is no runtime plugin loading. A full build registers
-**11 Scan + 27 Probe + 7 Output + 5 Generate** modules, and modules whose optional library
-is missing simply disappear from the build (and from `--list-*`).
+**11 base Scan + 27 Probe + 7 Output + 5 Generate** modules, plus optional `quic-state`
+when ngtcp2/GnuTLS is available. Modules whose optional library is missing simply disappear
+from the build (and from `--list-*`).
 
 | Kind | Responsibility | Parameter | Registry |
 |:---|:---|:---|:---|
@@ -21,7 +22,7 @@ sub-parameters travel as one quoted string through `-scan-arg`, `-probe-arg`,
 `-output-module-args`, `-generate-module-args`).
 
 ```bash
-xtate --list-scan      # 11 scan modules
+xtate --list-scan      # 11, or 12 with quic-state
 xtate --list-probe     # 27 probe modules
 xtate --list-out       # 7 output modules
 xtate --list-gen       # 5 generate modules
@@ -32,7 +33,7 @@ xtate --help-output mongodb
 xtate --help-gen blackrock
 ```
 
-## Scan modules (11)
+## Scan modules (11, plus optional `quic-state`)
 
 | Module | Probe | What it does |
 |:---|:---:|:---|
@@ -40,6 +41,7 @@ xtate --help-gen blackrock
 | `zbanner` | tcp | Stateless TCP handshake; payload rides on the third ACK; first banner is parsed by the probe. |
 | `tcp-state` | state | HLTCP user-space TCP; full conversations for TLS/HTTP state probes. |
 | `udp` | udp | Single-packet UDP scan with a probe payload; ICMP port-unreachable means closed. |
+| `quic-state` | state | Raw-UDP stateful QUIC handshake with ngtcp2/GnuTLS; reports version, TLS/ALPN and certificate fields, then runs a state sub-probe. Optional build. |
 | `icmp-echo` | - | ICMP echo host discovery; can record TTL and IPID. |
 | `icmp-time` | - | ICMP timestamp discovery, IPv4 only. |
 | `sctp-init` | - | SCTP INIT scan; INIT-ACK is open, ABORT is closed. |

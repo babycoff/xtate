@@ -22,6 +22,9 @@ extern Scanner UdpScan;
 extern Scanner TcpStateScan;
 extern Scanner YarrpEchoScan;
 extern Scanner YarrpUdpScan;
+#ifdef HAVE_NGTCP2
+extern Scanner QuicStateScan;
+#endif
 //! ADD YOUR SCAN MODULE HERE
 
 
@@ -37,6 +40,9 @@ Scanner *scan_modules_list[] = {
     &TcpStateScan,
     &YarrpEchoScan,
     &YarrpUdpScan,
+#ifdef HAVE_NGTCP2
+    &QuicStateScan,
+#endif
     //! REGISTER YOUR SCAN MODULE HERE
 
     NULL /*keep the null tail*/

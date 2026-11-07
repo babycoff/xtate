@@ -2,7 +2,7 @@
 
 [English](../modules.md) · **中文**
 
-Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上以 `NULL` 结尾的注册表里的一行；没有运行期插件加载。完整构建会注册 **11 个扫描 + 27 个探测 + 7 个输出 + 5 个生成**模块，而缺少可选库的模块会直接从构建中消失（也从 `--list-*` 中消失）。
+Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上以 `NULL` 结尾的注册表里的一行；没有运行期插件加载。完整构建会注册 **11 个基础扫描 + 27 个探测 + 7 个输出 + 5 个生成**模块；另有可选的 `quic-state`（需要 ngtcp2/GnuTLS）。缺少可选库的模块会直接从构建中消失（也从 `--list-*` 中消失）。
 
 | 类别 | 职责 | 参数 | 注册表 |
 |:---|:---|:---|:---|
@@ -14,8 +14,8 @@ Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上�
 扫描模块是必需的，生成模块默认是 `blackrock`，探测模块只在扫描模块声明需要时才必需（并会做类型检查）。模块子参数以单个带引号字符串的形式，通过 `-scan-arg`、`-probe-arg`、`-output-arg` 和 `-gen-arg` 传递（主名分别为 `-scan-module-args`、`-probe-module-args`、`-output-module-args`、`-generate-module-args`）。
 
 ```bash
-xtate --list-scan      # 11 个扫描模块
-xtate --list-probe     # 23 个探测模块
+xtate --list-scan      # 11，若有 quic-state 则为 12
+xtate --list-probe     # 27 个探测模块
 xtate --list-out       # 7 个输出模块
 xtate --list-gen       # 5 个生成模块
 
@@ -25,7 +25,7 @@ xtate --help-output mongodb
 xtate --help-gen blackrock
 ```
 
-## 扫描模块（11）
+## 扫描模块（11，另有可选 `quic-state`）
 
 | 模块 | 探测 | 功能 |
 |:---|:---:|:---|
@@ -33,6 +33,7 @@ xtate --help-gen blackrock
 | `zbanner` | tcp | 无状态 TCP 握手；载荷搭在第三个 ACK 上；首个 banner 由探测模块解析。 |
 | `tcp-state` | state | HLTCP 用户态 TCP；为 TLS/HTTP 状态探测模块提供完整会话。 |
 | `udp` | udp | 携带探测载荷的单包 UDP 扫描；ICMP port-unreachable 表示 closed。 |
+| `quic-state` | state | 原始 UDP + ngtcp2/GnuTLS 的有状态 QUIC 握手；输出版本、TLS/ALPN、证书字段并运行 state 子探测。可选构建。 |
 | `icmp-echo` | - | ICMP echo 主机发现；可记录 TTL 和 IPID。 |
 | `icmp-time` | - | ICMP 时间戳发现，仅 IPv4。 |
 | `sctp-init` | - | SCTP INIT 扫描；INIT-ACK 为 open，ABORT 为 closed。 |

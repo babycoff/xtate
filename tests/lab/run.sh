@@ -374,6 +374,16 @@ grep -q "quic_version: 1" /tmp/udp-quic.log
 grep -q "quic_scid" /tmp/udp-quic.log
 grep -q "quic_raw" /tmp/udp-quic.log
 
+run_case quic-state \
+    -ip "$QUIC_IP" -p U:"$QUIC_PORT" -scan quic-state -probe close-state \
+    -scan-arg "--alpn h3 --max-udp-payload 1200 --handshake-timeout 5" \
+    -rate 100 --wait 5 --no-status -show info -show failed
+grep -q "quic handshake" /tmp/quic-state.log
+grep -q "quic_alpn: \"h3\"" /tmp/quic-state.log
+grep -q "quic_tls_version: \"TLS1.3\"" /tmp/quic-state.log
+grep -q "quic_cert_subject" /tmp/quic-state.log
+grep -q "quic_cert_sha256" /tmp/quic-state.log
+
 run_case udp-quic-retry \
     -ip "$QUIC_RETRY_IP" -p U:"$QUIC_RETRY_PORT" -scan udp -probe quic \
     -rate 100 --wait 3 --no-status -show info -show failed

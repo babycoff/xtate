@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.33.0-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.34.0-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -54,7 +54,7 @@ Most fast scanners stop at "port open"; most service scanners give up at Interne
 - 🛰 **QUIC capability** — sends a real QUIC v1 Initial and classifies Version Negotiation/Retry/Initial/Handshake without claiming a completed HTTP/3 handshake.
 - 🔐 **TLS evidence** — a full handshake plus structured certificate details (subject, issuer, SAN, validity, serial, key, signature, ALPN), including SMTP/IMAP/POP3/FTP STARTTLS upgrades.
 - 🧪 **JARM** — the ten standard Salesforce probes, with `--first-probe` to rotate which standard probe is sent first and burst-ordered follow-ups; output stays order-independent.
-- 🧩 **Modules** — 11 scan / 27 probe / 7 output / 5 generate modules. Four interfaces, one pipeline, no runtime plugin magic.
+- 🧩 **Modules** — 11 base scan / 27 probe / 7 output / 5 generate modules, plus optional `quic-state` when ngtcp2/GnuTLS is available. Four interfaces, one pipeline, no runtime plugin magic.
 - 🌐 **Chinese help** — `--lang zh` or `XTATE_LANG=zh` localizes human-facing help, with UTF-8-aware wrapping and safe English fallback for untranslated strings.
 - 🎯 **Sparse target patterns** — component ranges such as `132.80-88.90.15` or `2001:db8:1-5::1`; up to four ranges form a Cartesian product (1,048,576-address cap per token) while large continuous spaces still use CIDR/ranges.
 
@@ -239,6 +239,7 @@ The README is the landing page. The manual lives in [`docs/`](docs/README.md):
 - [Module development](docs/module-development.md) — C interfaces, registration and slot-plan examples
 - [Architecture](docs/architecture.md) · [ZBanner](docs/zbanner.md) · [HLTCP](docs/hltcp.md)
 - [Chinese help and i18n](docs/help-i18n.md) — `--lang`, catalog fallback and UTF-8 layout
+- [QUIC state](docs/quic-state.md) — optional ngtcp2/GnuTLS handshake, certificate and sub-probe
 - [Interactive mode](docs/interactive-mode.md) — TTY/script mode, completion, history and Chinese help
 - [Platform support](docs/platform-support.md) — CMake 3.13, old distros, Ninja and musl builds
 - [Build artifacts](docs/build-artifacts.md) — aliases, exact toolchain names, Debug/DLL layout
@@ -255,7 +256,8 @@ See [Testing policy](docs/testing.md) for the required build/test matrix after a
 
 ```bash
 sudo apt install build-essential cmake pkg-config libpcap-dev \
-  libssl-dev libpcre2-dev libxml2-dev libbson-dev libmongoc-dev
+  libssl-dev libpcre2-dev libxml2-dev libbson-dev libmongoc-dev \
+  libngtcp2-dev libngtcp2-crypto-gnutls-dev libgnutls28-dev
 ./build.sh                                  # interactive: compiler + config
 ./build.sh --compiler gcc --config release  # explicit
 ./build.sh --compiler clang --config debug  # explicit debug
@@ -343,6 +345,7 @@ pwsh -File .\scripts\clean-windows.ps1 -IncludeStage  # also remove %LOCALAPPDAT
 | libpcap / Npcap | packet I/O (runtime) | loaded dynamically |
 | PF_RING | zero-copy packet I/O on Linux (runtime) | optional |
 | Lua 5.3/5.4 | `lua-tcp`, `lua-udp` (runtime) | optional |
+| ngtcp2 + GnuTLS | `quic-state` QUIC transport scanner | `-DWITH_NGTCP2=OFF` |
 
 Missing optional libraries simply remove the corresponding modules at compile time — the core scanner still builds. On Windows, CMake may warn about a found-but-incomplete PCRE2 from Conda, or about LibXml2/libbson/libmongoc not being installed; those are optional. Install a matching vcpkg triplet (for example `vcpkg install pcre2 libxml2 mongo-c-driver --triplet x64-windows`; see [Windows optional dependencies](docs/windows-dependencies.md) for MinGW/MSYS2 and full setup) if you need those modules.
 </details>
@@ -356,7 +359,7 @@ Missing optional libraries simply remove the corresponding modules at compile ti
 xtate --usage                 # short usage and examples
 xtate --help                  # every global parameter
 xtate --intro                 # the architecture tour
-xtate --list-scan             # 11 scan modules
+xtate --list-scan             # 11, or 12 with quic-state
 xtate --list-probe            # 27 probe modules
 xtate --list-out              # 7 output modules
 xtate --list-gen              # 5 generate modules

@@ -55,6 +55,7 @@
 - [架构](./architecture.md)——线程、队列、扫描流水线
 - [ZBanner](./zbanner.md)——无状态 TCP 响应与 banner 抓取
 - [HLTCP](./hltcp.md)——混合状态 TCP 协议栈、TLS 与嵌套探测
+- [QUIC state](./quic-state.md)——可选的 ngtcp2/GnuTLS QUIC 握手扫描器与子探测
 
 ### 出问题时
 

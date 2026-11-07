@@ -25,15 +25,15 @@ dependencies are present, so the complete module set is compiled in.
 
 | Platform | Compiler | Status | Optional dependencies |
 |:---|:---|:---|:---|
-| Ubuntu 24.04 | GCC 13.3 | build + `--selftest` pass, 11/21/7/5 modules | OpenSSL, PCRE2, LibXml2, BSON, mongoc |
-| Ubuntu 24.04 | Clang 18.1 | build + `--selftest` pass, 11/21/7/5 modules | OpenSSL, PCRE2, LibXml2, BSON, mongoc |
+| Ubuntu 24.04 | GCC 13.3 | build + `--selftest` pass, 12/27/7/5 modules | OpenSSL, PCRE2, LibXml2, BSON, mongoc, ngtcp2/GnuTLS |
+| Ubuntu 24.04 | Clang 18.1 | build + `--selftest` pass, 12/27/7/5 modules | OpenSSL, PCRE2, LibXml2, BSON, mongoc, ngtcp2/GnuTLS |
 | Windows 10/11 | MSVC 19.5x (Visual Studio 2022/2026) | build + `--selftest` pass; probe count depends on optional libs | OpenSSL via Scoop; PCRE2/BSON/mongoc not installed |
 | Windows 10/11 | Clang 23 (clang-cl) | build + `--selftest` pass; probe count depends on optional libs | OpenSSL via Scoop; PCRE2/BSON/mongoc not installed |
 | Windows 10/11 | MinGW-w64 GCC 16 | build + `--selftest` pass; probe count depends on optional libs | no OpenSSL (Scoop build is MSVC-only) |
 
-The module counts are a quick way to verify your dependencies: 27 probes and 7
-output modules means everything was found; fewer means at least one optional
-library was not discovered.
+The module counts are a quick way to verify your dependencies: 27 probes, 7
+output modules and 12 scans (including `quic-state`) means everything was found;
+fewer means at least one optional library was not discovered.
 
 ## Build on Linux
 
@@ -42,7 +42,8 @@ Install the full dependency set on Debian/Ubuntu:
 ```bash
 sudo apt update
 sudo apt install build-essential cmake pkg-config libpcap-dev \
-  libssl-dev libpcre2-dev libxml2-dev libbson-dev libmongoc-dev
+  libssl-dev libpcre2-dev libxml2-dev libbson-dev libmongoc-dev \
+  libngtcp2-dev libngtcp2-crypto-gnutls-dev libgnutls28-dev
 
 git clone https://github.com/babycoff/xtate.git
 cd xtate

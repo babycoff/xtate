@@ -7,7 +7,7 @@
 #define XTATE_NAME             "xtate"
 #define XTATE_NAME_ALL_CAPS    "XTATE"
 #define XTATE_NAME_TITLE_CASE  "Xtate"
-#define XTATE_VERSION          "2.33.0"
+#define XTATE_VERSION          "2.34.0"
 #define XTATE_VERSION_MAJOR    2
 #define XTATE_VERSION_MINOR    33
 #define XTATE_VERSION_PATCH    0

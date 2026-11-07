@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.13)
 project(
     xtate
     LANGUAGES               C
-    VERSION                 2.33.0
+    VERSION                 2.34.0
     DESCRIPTION             "A modular all-stack network scanner for next-generation internet surveys."
     HOMEPAGE_URL            "https://github.com/babycoff/xtate"
     )
@@ -21,6 +21,7 @@ option(WITH_PCRE2          "Build with PCRE2 library"                     ON)
 option(WITH_LIBXML2        "Build with LibXml2 library"                   ON)
 option(WITH_BSON           "Build with libbson library"                   ON)
 option(WITH_MONGOC         "Build with libmongoc library"                 ON)
+option(WITH_NGTCP2         "Build with ngtcp2/GnuTLS QUIC transport"          ON)
 # option(WITH_FANN           "Build with Fann library"                      ON)
 
 
@@ -250,6 +251,22 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     target_link_libraries(${exe_name} IPHLPAPI.lib)
 endif ()
 
+
+# --------------------ngtcp2 (optional QUIC transport)
+if (WITH_NGTCP2)
+    find_package(PkgConfig QUIET)
+    if (PkgConfig_FOUND)
+        pkg_check_modules(NGTCP2 QUIET IMPORTED_TARGET
+            libngtcp2 libngtcp2_crypto_gnutls gnutls)
+        if (NGTCP2_FOUND)
+            add_compile_definitions(HAVE_NGTCP2)
+            target_link_libraries(${exe_name} PkgConfig::NGTCP2)
+            message(STATUS "Found ngtcp2: ${NGTCP2_VERSION}")
+        else()
+            message(STATUS "ngtcp2/GnuTLS not found; quic-state disabled")
+        endif()
+    endif()
+endif ()
 
 # --------------------openssl
 if (WITH_OPENSSL)

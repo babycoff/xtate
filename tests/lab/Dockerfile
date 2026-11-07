@@ -6,6 +6,7 @@ RUN sed -i 's|http://archive.ubuntu.com/ubuntu|http://mirrors.aliyun.com/ubuntu|
  && apt-get install -y --no-install-recommends \
       python3 python3-pip openssl iptables ca-certificates \
       libxml2 libbson-1.0-0 libmongoc-1.0-0 libpcap0.8 \
+      libngtcp2-dev libngtcp2-crypto-gnutls-dev libgnutls28-dev \
  && pip3 install --break-system-packages --no-cache-dir \
       -i https://pypi.tuna.tsinghua.edu.cn/simple aioquic \
  && rm -rf /var/lib/apt/lists/*

@@ -60,6 +60,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 - [Architecture](./architecture.md) — threads, queues, the scan pipeline
 - [ZBanner](./zbanner.md) — stateless TCP responses and banner grabbing
 - [HLTCP](./hltcp.md) — the hybrid-state TCP stack, TLS, and nested probes
+- [QUIC state](./quic-state.md) — optional ngtcp2/GnuTLS QUIC handshake scanner and sub-probes
 
 ### When things go wrong
 
