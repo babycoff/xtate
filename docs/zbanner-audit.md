@@ -42,19 +42,21 @@ This pass centralizes them in `zbanner-policy.c` and tests:
 
 ### 3. `banner idx` is not a segment index
 
-`banner idx` is the dedup `repeats` counter, not the TCP segment index or the
-sequence-number-derived position. Under dedup pressure it can be wrong.
-`banner seqno` is the exact TCP sequence number and should be the field used
-for offline segment ordering. Rename or document `banner idx` as an
-approximate dedup count; do not use it as the primary segment index.
+`banner idx` is the zero-based dedup repeat counter for the banner key: the
+first banner packet seen for the flow/type after the entry is created is 0;
+every later matching packet increments it, including retransmissions and new
+segments. It is not the TCP segment ordinal and can restart at 0 after dedup
+eviction; with dedup disabled it stays 0. The docs now state this exactly.
+`banner seqno` is the exact TCP sequence number and is the field for offline
+ordering/deduplication. `banner idx` is retained for compatibility and as an
+approximate all-banner counter, not as the primary segment index.
 
 ### 4. `AfterFirstReply` is limited to the banner branch
 
-The generic slot plan says "after a response", but the implementation only
-fans out from the banner-with-data branch. A first response that is ACK-only or
-RST does not trigger slots. This is reasonable for JARM (TLS ServerHello), but
-it is not the documented generic semantics. Either narrow the docs to "after
-first banner/data" or add an explicit accepted-response predicate.
+The implementation fans out only from the banner-with-data branch; ACK-only and
+RST first responses do not trigger slots. This is correct for JARM, and the
+generic slot-plan docs now explicitly narrow the ZBanner meaning to the first
+banner/data segment. No accepted-response predicate is planned.
 
 ### 5. `all-banner-limit/floor` depend on approximate dedup
 
@@ -111,13 +113,16 @@ startup.
 
 ## Remaining work
 
-- `AfterFirstReply` still triggers only from banner/data; ACK-only/RST first
-  responses do not fan out. Decide whether to narrow the documented generic
-  semantics or add an accepted-response predicate.
-- `banner idx` remains approximate; use `banner seqno`.
+- `AfterFirstReply` is intentionally narrowed to the first banner/data segment;
+  ACK-only/RST first responses do not fan out. The docs now state this ZBanner
+  semantics explicitly.
+- `banner idx` is now documented as the zero-based dedup repeat counter, not a
+  TCP segment ordinal; use `banner seqno` for offline ordering.
 - Payload declared/actual mismatch is diagnosed and no longer silently breaks
-  validation, but a probe contract violation is still not a hard startup error.
+  validation; a probe contract violation is still not a hard startup error.
 - Dedup pressure still makes limit/floor approximate.
+- The pcap matrix in `tests/zbanner/` covers SYNACK/RST, banner, retransmit,
+  all-banner limit, wrong ACK and the Lua payload-mismatch fixture.
 
 ## Suggested refactor
 

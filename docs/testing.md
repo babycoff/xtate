@@ -146,5 +146,6 @@ and RSS are noisy on shared runners. See `tests/bench/README.md`.
 | module templates | `tests/module-examples/test.sh` | compile all four module interface examples |
 | parameter parser | `tests/config/test.sh` | unknown/missing/help/CLI parser basics |
 | slot-plan lab | `tests/lab/run.sh` | real TCP/UDP `ProbeSlot_Always`, JARM `AfterFirstReply`, SSH banner/KEX, h2c/h2 framing, TLS certificate details |
+| ZBanner pcap matrix | `tests/zbanner/run.sh` | offline `file:` replay: SYNACK/RST, banner, retransmit, all-banner limit, wrong ACK, Lua payload mismatch |
 | PTY | `tests/interactive/tty.sh` | terminal restore + completion |
 | large batch | `tests/large-batch/` | replay/RSS/output failure |

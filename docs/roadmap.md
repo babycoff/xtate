@@ -193,11 +193,11 @@ after the current protocol work, before new ZBanner features.
 
 - [x] one-shot guard for `AfterFirstReply`;
 - [x] consolidate all-banner limit/floor/RST/truncated policy;
-- [ ] clarify `banner idx` versus `banner seqno` in output/docs;
-- [ ] narrow or implement generic `AfterFirstReply` response semantics;
-- [ ] add payload-length mismatch regression coverage (diagnostics implemented);
+- [x] clarify `banner idx` versus `banner seqno` in output/docs;
+- [x] narrow generic `AfterFirstReply` response semantics to banner/data;
+- [x] add payload-length mismatch regression coverage;
 - [x] extract response classification without adding per-target state;
-- [ ] add pcap/lab boundary coverage for all-banner.
+- [x] add pcap/lab boundary coverage for all-banner.
 
 ## Windows quic-state TODO
 

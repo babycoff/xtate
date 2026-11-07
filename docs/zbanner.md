@@ -20,9 +20,12 @@ ZBanner is deliberately a **stateless event scanner**, not a per-target connecti
   banner segment produces no result for that target; recovery is a re-run (`--repeat` or
   another pass), not an in-scanner retry state machine.
 - The deduplication table is an approximate, bounded cache used for duplicate suppression
-  and counters, not a reliability mechanism. Its repeat counter can be evicted under high
-  fan-out, so `banner idx` and the all-banner limit/floor are approximate; `banner seqno` is
-  the exact per-segment field.
+  and counters, not a reliability mechanism. `banner idx` is its zero-based repeat counter
+  for the banner key: the first banner packet seen for that flow/type after the entry is
+  created is 0, and every later packet matching the same tuple/type increments it, whether
+  it carries new bytes or is a retransmission. It is therefore not a TCP segment ordinal;
+  under eviction it can restart at 0, and with dedup disabled it stays 0. The all-banner
+  limit/floor use this approximate counter; `banner seqno` is the exact per-segment field.
 - Results are an **event stream** (open, closed, ack, banner segment, ...), not one row per
   target. Per-target aggregation is left to downstream processing; adding an in-scanner
   target map would reintroduce the memory cost this design avoids.
@@ -116,11 +119,12 @@ useful for a census.
 `--all-banner` is the other direction: instead of closing after one segment, ZBanner
 acknowledges each data segment (`ack = seqno_them + app_length`) and keeps reading.
 `--all-banner-limit` caps the number of segments, `--all-banner-floor` suppresses results
-from segments below a threshold. The `banner idx` field is still based on the dedup repeat
-counter and remains approximate; `banner seqno` reports the exact TCP sequence number of
-the segment and is the reliable field for ordering/deduplicating banner data. The limit and
-floor knobs still use the approximate index; the segment that triggers the limit is marked
-`truncated: 1`.
+from segments below a threshold. `banner idx` is the zero-based dedup repeat count described
+above: loosely, the Nth banner-classified packet received for the flow since the dedup entry
+was created, not the Nth distinct data segment. `banner seqno` reports the exact TCP
+sequence number of the segment and is the field to use for offline ordering/deduplication.
+The limit and floor knobs still use the approximate counter; the segment that triggers the
+limit is marked `truncated: 1`.
 
 For multi-segment data, the defaults are too small. A practical preset is:
 
@@ -130,6 +134,11 @@ For multi-segment data, the defaults are too small. A practical preset is:
 
 Startup warns when `--all-banner` is combined with a small window, packet length or snaplen,
 and when it is combined with a multi-slot probe such as JARM.
+
+`AfterFirstReply` fan-out is one-shot only through the dedup repeat counter: it fires when
+`repeats == 0`. If you disable banner dedup (`--no-dedup-banner` or global `-nodedup`), the
+counter stays 0 and every banner segment can fan out the remaining slots again. This is an
+intentional dependency on the dedup table, not a per-target one-shot guarantee.
 
 ## Rate accounting
 

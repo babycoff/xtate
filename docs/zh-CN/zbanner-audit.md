@@ -39,16 +39,17 @@
 
 ### 3. `banner idx` 不是段序号
 
-`banner idx` 来自去重 `repeats`，不是 TCP 段序号，也不是由序列号推导的位置；
-去重压力下会不准。`banner seqno` 才是精确 TCP 序列号，离线排序应使用它。
-应把 `banner idx` 重命名或明确标注为近似去重计数，不要当主段序号。
+`banner idx` 是 banner 去重键的零基重复计数：该 flow/type 的 entry 创建后，
+收到的第一个 banner 包为 0；之后每个匹配包递增，包括重传和新数据段。它不是
+TCP 段序号；去重 entry 被淘汰后可能从 0 重新开始，关闭去重时恒为 0。文档已
+按此精确说明。`banner seqno` 才是精确 TCP 序列号，离线排序/去重应使用它。
+`banner idx` 仅为兼容和近似 all-banner 计数保留，不作为主段序号。
 
 ### 4. `AfterFirstReply` 只覆盖 banner 分支
 
-通用 slot 计划文档写的是“after a response”，但实现只在带数据 banner 分支
-fan-out。首个响应是纯 ACK 或 RST 时不会触发后续 slot。对 JARM 是合理的，
-但不是文档所述的通用语义。要么把文档收窄为“首个 banner/数据”，要么增加
-明确的 accepted-response 判断。
+实现只在带数据 banner 分支 fan-out；纯 ACK 或 RST 首响应不会触发后续 slot。
+这对 JARM 是正确的，通用 slot 计划文档现已明确收窄 ZBanner 语义为首个
+banner/数据段；不计划增加 accepted-response 判断。
 
 ### 5. `all-banner-limit/floor` 依赖近似去重
 
@@ -96,12 +97,15 @@ floor 大于非零 limit 会在启动时拒绝。
 
 ## 剩余工作
 
-- `AfterFirstReply` 仍只在 banner/data 分支触发；纯 ACK/RST 首响应不会 fan-out。
-  需要收窄文档或增加 accepted-response 判断。
-- `banner idx` 仍是近似值；排序用 `banner seqno`。
+- `AfterFirstReply` 已明确收窄为首个 banner/数据段；纯 ACK/RST 首响应不会
+  fan-out。文档已按 ZBanner 语义写清楚。
+- `banner idx` 已明确为零基去重重复计数，不是 TCP 段序号；离线排序用
+  `banner seqno`。
 - payload 声明/实际长度不一致已有诊断且不再静默破坏验证，但 probe 契约错误
   还不是启动期硬错误。
 - 去重压力下 limit/floor 仍是近似值。
+- `tests/zbanner/` 的 pcap 矩阵覆盖 SYNACK/RST、banner、重传、all-banner
+  limit、错误 ACK 和 Lua payload mismatch。
 
 ## 建议的重构
 

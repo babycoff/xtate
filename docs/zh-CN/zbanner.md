@@ -11,7 +11,7 @@ ZBanner 能从真实服务拿到真实的 TCP 响应，**却不保留任何每�
 ZBanner 有意定位为**无状态事件扫描器**，不是每目标连接跟踪器：
 
 - 没有 TCB、没有每目标定时器、没有重传队列。SYN、SYN-ACK 或 banner 段丢失，该目标就没有结果；恢复方式是重跑（`--repeat` 或再扫一遍），而不是在扫描器内维护重试状态机。
-- 去重表是一张有界的近似缓存，用于抑制重复和计数，不是可靠性机制。高扇出时 entry 会被淘汰，因此 `banner idx` 和 all-banner 的 limit/floor 都是近似值；`banner seqno` 才是精确的段字段。
+- 去重表是一张有界的近似缓存，用于抑制重复和计数，不是可靠性机制。`banner idx` 是 banner 去重键的零基重复计数：该 flow/type 的去重 entry 创建后，收到的第一个 banner 包为 0；之后每个匹配同一四元组/type 的包都会递增，无论它带的是新数据还是重传。因此它不是 TCP 段序号；entry 被淘汰时可能从 0 重新开始，关闭去重时恒为 0。all-banner 的 limit/floor 使用这个近似计数；`banner seqno` 才是精确段字段。
 - 结果是**事件流**（open、closed、ack、banner segment……），不是每目标一条记录。按目标聚合留给下游后处理；在扫描器里加 target map 会重新引入这个设计刻意避免的内存开销。
 - 这些是取舍，不是缺失功能：目标部署保持内存有界，把可靠性和聚合交给操作者或后处理器。
 
@@ -65,7 +65,7 @@ TCP 的 ACK 允许携带数据。把 `ACK + 载荷` 放进同一个报文，意�
 
 `--no-rst` 抑制 RST，让服务器一直握着这条连接直到超时。它是研究开关：适合观察目标在 banner 之后的行为，不适合做普查。
 
-`--all-banner` 是另一个方向：不在一个数据段后关闭，而是逐个确认到达的数据段（`ack = seqno_them + app_length`）并继续读。`--all-banner-limit` 限制段数，`--all-banner-floor` 抑制低于阈值的段的结果。`banner idx` 仍来自去重表的重复计数，只是近似值；`banner seqno` 是该段精确的 TCP 序号，是排序/去重 banner 数据的可靠字段。limit/floor 仍然使用近似 index；触发 limit 的那一段会标记 `truncated: 1`。
+`--all-banner` 是另一个方向：不在一个数据段后关闭，而是逐个确认到达的数据段（`ack = seqno_them + app_length`）并继续读。`--all-banner-limit` 限制段数，`--all-banner-floor` 抑制低于阈值的段的结果。`banner idx` 就是上面的零基去重重复计数：近似地说，是该 flow 自去重 entry 建立以来收到的第 N 个“被归类为 banner 的包”，不是第 N 个不同的 TCP 数据段。`banner seqno` 是该段精确的 TCP 序号，离线排序/去重应使用它。limit/floor 仍然使用近似计数；触发 limit 的那一段会标记 `truncated: 1`。
 
 多段数据建议使用：
 
@@ -74,6 +74,10 @@ TCP 的 ACK 允许携带数据。把 `ACK + 载荷` 放进同一个报文，意�
 ```
 
 启动时如果 `--all-banner` 搭配过小的窗口、包长或 snaplen，或搭配 JARM 这类多 slot 探测，会给出警告。
+
+`AfterFirstReply` 的 one-shot 只依赖去重重复计数：仅当 `repeats == 0` 时 fan-out。如果关闭
+banner 去重（`--no-dedup-banner` 或全局 `-nodedup`），该计数恒为 0，每个 banner 段都可能
+再次发送剩余 slot。这是对去重表的有意依赖，不是 per-target 的严格 one-shot 保证。
 
 ## 速率计算
 

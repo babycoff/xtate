@@ -1078,9 +1078,10 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
             valid_pkt->repeats) {
             item->no_output = 1;
             return;
-        } else if (zbanner_conf.repeat_banner) {
+        }
+        if (zbanner_conf.repeat_banner)
             dach_set_int(&item->scan_report, "repeats", valid_pkt->repeats);
-        } else if (zbanner_conf.all_banner) {
+        if (zbanner_conf.all_banner) {
             dach_set_int(&item->scan_report, "banner idx", valid_pkt->repeats);
             /* Exact TCP sequence number of this segment; unlike banner idx it
              * does not depend on the approximate dedup counter. */
