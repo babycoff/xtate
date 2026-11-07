@@ -2,7 +2,7 @@
 
 **English** · [中文](zh-CN/README.md)
 
-This directory is the user manual for **Xtate v2.32.0** — a modular all-stack network scanner for Internet-scale surveys.
+This directory is the user manual for **Xtate v2.33.0** — a modular all-stack network scanner for Internet-scale surveys.
 
 The [README](../README.md) is the landing page. Start here if you want to use Xtate rather than skim its feature list.
 
@@ -18,6 +18,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 | Planned work | [Roadmap](./roadmap.md) → [P3/P4 feasibility](./feasibility.md) |
 | HTTP probe quality | [HTTP probe audit](./http-probes-audit.md) |
 | Parser testing | [Parameter parser plan](./parser-test-plan.md) |
+| Protocol expansion | [Protocol coverage plan](./protocol-coverage.md) |
 | Curious how it works | [Architecture](./architecture.md) → [ZBanner](./zbanner.md) / [HLTCP](./hltcp.md) |
 | Stuck | [Troubleshooting](./troubleshooting.md) → [Known limitations](./known-limitations.md) |
 | Chinese help / localization | [Help i18n](./help-i18n.md) |
@@ -43,6 +44,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 - [Roadmap](./roadmap.md) — completed work and planned P2/P3 changes
 - [HTTP probe audit](./http-probes-audit.md) — current gaps and rewrite plan
 - [Parameter parser plan](./parser-test-plan.md) — coverage and harness design
+- [Protocol coverage plan](./protocol-coverage.md) — zgrab2-referenced protocol matrix and batches
 - [P3/P4 feasibility](./feasibility.md) — target selection, adaptive rate, templates and traffic randomization
 - [Chinese help and i18n](./help-i18n.md) — `--lang`, catalog fallback and UTF-8 help layout
 - [Windows quick start](./windows-quickstart.md) — beginner install, Npcap, build, first scan and troubleshooting
@@ -74,7 +76,7 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-The docs are written against the v2.32.0 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
+The docs are written against the v2.33.0 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
 
 ## Planned
 

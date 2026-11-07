@@ -39,6 +39,7 @@ extern Probe SlotTestProbe;
 extern Probe SshProbe;
 extern Probe H2cProbe;
 extern Probe H2Probe;
+extern Probe QuicProbe;
 extern Probe SlotTestUdpProbe;
 //! ADD YOUR PROBE MODULE HERE
 
@@ -53,6 +54,7 @@ Probe *probe_modules_list[] = {
 #ifndef NOT_FOUND_OPENSSL
     &JarmProbe,
     &TlsStateProbe,
+    &QuicProbe,
 #endif
 
     &DnsProbe,

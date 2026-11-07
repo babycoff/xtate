@@ -2,11 +2,17 @@
 
 **English** · [中文](zh-CN/roadmap.md)
 
-This page records the planned work after Xtate 2.32.0. It is not a promise of
+This page records the planned work after Xtate 2.33.0. It is not a promise of
 dates; it is a priority and acceptance-criteria list. Completed work is noted so
 the next change does not silently regress it.
 
-## Done in 2.32.0
+## Done in 2.33.0
+
+- QUIC capability probe (`quic`): valid QUIC v1 Initial, Version
+  Negotiation/Retry/Initial/Handshake classification, local aioquic lab.
+- Module count: 27 probes.
+
+## Done in 2.33.0
 
 - Salesforce JARM 1.0 comparison on a local target; fixed TLS 1.3 extension
   offset in `jarm`.
@@ -27,6 +33,22 @@ the next change does not silently regress it.
 - Module development guide for all four module types.
 - Compile-checked module templates for probe/state/output/generate.
 
+## Priority reset (current direction)
+
+The current priorities are:
+
+1. **QUIC and HTTP/3 feasibility** — start with a capability probe and a
+   library decision; see [P3/P4 feasibility](./feasibility.md#quic-probe-and-http3-exploration).
+2. **Xtate-native YAML templates** — read-only matcher/schema first; do not
+   copy Nuclei.
+3. **Protocol coverage expansion** — use the zgrab2 matrix in
+   [Protocol coverage plan](./protocol-coverage.md); start with Batch A.
+4. **Traffic randomization research** — opt-in, fixed seed, lab-only; keep it
+   separate from the default scanner.
+
+The older backlog below remains valid but is lower priority unless a concrete
+measurement requirement changes it.
+
 ## P1 — module examples (completed)
 
 - [`examples/modules/`](../examples/modules/) has one compile-checked template
@@ -34,7 +56,7 @@ the next change does not silently regress it.
 - `tests/module-examples/test.sh` is part of Linux CI.
 - Runtime slot examples remain `slot-test` and `slot-test-udp`.
 
-## Parameter parser coverage (completed in 2.31.0/2.32.0)
+## Parameter parser coverage (completed in 2.31.0/2.33.0)
 
 - `tests/config/test.sh` covers flags, argument forms, unknown/missing options,
   long names, bare `--`, positional tokens and nested `-probe-arg`.
@@ -163,6 +185,6 @@ state are deferred. See [HTTP probe audit](./http-probes-audit.md).
 
 ## Release policy
 
-Functional changes take a minor version (`2.29.x` → `2.32.0`); fixes take a
+Functional changes take a minor version (`2.29.x` → `2.33.0`); fixes take a
 patch version. A release is not complete until the tag is pushed, the GitHub
 release exists, and the build/test evidence is recorded.

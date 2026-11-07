@@ -50,6 +50,9 @@ $env:XTATE_LAB_IMAGE = "xtate-builder:24.04"
   reports `slot_test_slot` 1..3.
 - UDP `ProbeSlot_Always`: `slot-test-udp` sends three datagrams to the UDP echo
   target and reports `slot_test_slot` 1..3.
+- QUIC: a local `aioquic` server receives a real v1 Initial; the probe reports
+  `quic_response: initial`. A second server runs with Retry enabled and must
+  produce `retry` with a token. This is capability only, not HTTP/3.
 - ZBanner JARM: ten slots against a dedicated local TLS target on port 9443;
   output contains `jarm_slot`, `jarm_slots` and `jarm_part`. The lab compares
   the aggregated hash with the vendored Salesforce `tests/reference/jarm.py`
@@ -65,6 +68,13 @@ $env:XTATE_LAB_IMAGE = "xtate-builder:24.04"
 The scanner runs at 100 pps. Firewall RST suppression is installed only inside
 the throwaway scanner container. Containers, network and rules are removed by a
 trap on exit.
+
+## QUIC
+
+The lab starts a local **aioquic** QUIC server. The `udp` + `quic` probe
+must build a valid v1 Initial and classify the response. A second server uses
+`retry=True` so the probe must report a Retry with a token. Neither test claims
+HTTP/3.
 
 ## STARTTLS
 

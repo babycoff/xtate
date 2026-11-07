@@ -2,7 +2,7 @@
 
 [English](../README.md) · **中文**
 
-本目录是 **Xtate v2.32.0** 的用户手册——一款面向互联网级测量的模块化全栈网络扫描器。
+本目录是 **Xtate v2.33.0** 的用户手册——一款面向互联网级测量的模块化全栈网络扫描器。
 
 项目 [README](../../README.zh-CN.md) 是落地页。如果你想上手使用 Xtate，而不是只扫一眼功能列表，就从这里开始。
 
@@ -18,6 +18,7 @@
 | 计划中的工作 | [路线图](./roadmap.md) → [P3/P4 可行性](./feasibility.md) |
 | HTTP 探针质量 | [HTTP 探针审计](./http-probes-audit.md) |
 | 参数解析测试 | [参数解析器计划](./parser-test-plan.md) |
+| 协议扩展 | [协议覆盖计划](./protocol-coverage.md) |
 | 想了解内部原理 | [架构](./architecture.md) → [ZBanner](./zbanner.md) / [HLTCP](./hltcp.md) |
 | 卡住了 | [故障排查](./troubleshooting.md) → [已知限制](./known-limitations.md) |
 | 中文帮助 / 本地化 | [帮助 i18n](./help-i18n.md) |
@@ -43,6 +44,7 @@
 - [路线图](./roadmap.md)——已完成工作与 P2/P3 计划
 - [HTTP 探针审计](./http-probes-audit.md)——现状问题与重写计划
 - [参数解析器计划](./parser-test-plan.md)——覆盖范围与测试框架
+- [协议覆盖计划](./protocol-coverage.md)——zgrab2 参考协议矩阵与批次
 - [P3/P4 可行性](./feasibility.md)——目标选择、自适应速率、模板与流量随机化
 - [中文帮助与 i18n](./help-i18n.md)——`--lang`、catalog 回退与 UTF-8 帮助排版
 - [Windows 快速上手](./windows-quickstart.md)——新手安装、Npcap、构建、首次扫描与排查
@@ -69,7 +71,7 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-本文档基于 v2.32.0 的代码树编写。如果你在更新的 commit 上发现内容有出入，请以二进制为准，也欢迎提 issue。
+本文档基于 v2.33.0 的代码树编写。如果你在更新的 commit 上发现内容有出入，请以二进制为准，也欢迎提 issue。
 
 ## 计划中
 

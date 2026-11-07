@@ -4,7 +4,7 @@
 
 Xtate is assembled from four kinds of module. Each is a C struct plus one line in a
 `NULL`-terminated registry; there is no runtime plugin loading. A full build registers
-**11 Scan + 26 Probe + 7 Output + 5 Generate** modules, and modules whose optional library
+**11 Scan + 27 Probe + 7 Output + 5 Generate** modules, and modules whose optional library
 is missing simply disappear from the build (and from `--list-*`).
 
 | Kind | Responsibility | Parameter | Registry |
@@ -22,7 +22,7 @@ sub-parameters travel as one quoted string through `-scan-arg`, `-probe-arg`,
 
 ```bash
 xtate --list-scan      # 11 scan modules
-xtate --list-probe     # 26 probe modules
+xtate --list-probe     # 27 probe modules
 xtate --list-out       # 7 output modules
 xtate --list-gen       # 5 generate modules
 
@@ -52,7 +52,7 @@ Every scan module exposes `--help-scan <name>` with its own options (record TTL/
 repeat/dedup switches, TTL overrides, ...). Which mode to pick, and which of them needs
 firewall rules, is covered in [Scanning modes](./scanning-modes.md).
 
-## Probe modules (26)
+## Probe modules (27)
 
 A probe declares a **type** that must match the scan module: `tcp` for `zbanner`, `udp` for
 `udp`, `state` for `tcp-state`. It may declare a `ProbeSlotPlan` (JARM and the `slot-test` examples); see
@@ -114,6 +114,34 @@ xtate -ip 203.0.113.10 -p 443 -scan zbanner -probe jarm \
 - `--probe-index N` sends only one probe; this is a debugging aid and cannot
   produce a complete JARM fingerprint.
 
+### QUIC capability probe
+
+`quic` is a **transport capability** UDP probe. It builds one valid QUIC v1
+Initial datagram (at least 1200 bytes) with a TLS 1.3 ClientHello and ALPN
+`h3`, then classifies the first long-header response:
+
+```bash
+xtate -ip 203.0.113.10 -p U:4433 -scan udp -probe quic --show info
+```
+
+Output fields:
+
+```text
+quic_response          initial | handshake | retry | version-negotiation
+quic_version           32-bit QUIC version
+quic_dcid / quic_scid  hex connection IDs
+quic_token_len         Retry/Initial token length
+quic_payload_len       long-header payload length
+quic_versions_count    Version Negotiation count
+quic_version_<n>       each Version Negotiation version
+quic_raw               optional --record-raw bytes
+```
+
+The probe matches responses by a client SCID derived from the stateless UDP
+cookie; it does not keep per-target state. A successful result proves QUIC
+transport bytes, **not** a completed TLS handshake and **not** HTTP/3. Do not
+label `quic_response: initial` as `http3`.
+
 ### TLS evidence, certificate details and STARTTLS
 
 `tls-state` is an HLTCP middle layer and requires a `state` sub-probe. Certificate
@@ -160,7 +188,7 @@ STARTTLS is emitted as `starttls error`. `--dump-cert-details` outputs
 `cert_serial`, `cert_signature_algorithm`, `cert_public_key`,
 `cert_public_key_bits`, `cert_san`, `tls_version`, `tls_cipher` and `tls_alpn`.
 
-### General (14)
+### General (15)
 
 | Probe | Type | What it does |
 |:---|:---:|:---|
@@ -174,6 +202,7 @@ STARTTLS is emitted as `starttls error`. `--dump-cert-details` outputs
 | `ssh` | tcp | Configurable SSH banner plus KEX/host-key and cipher/MAC/compression lists. |
 | `h2c` | tcp | Cleartext h2c preface, configurable SETTINGS/PING fingerprint, frame/settings parsing. Not HTTP/2 over TLS. |
 | `h2` | state | TLS/ALPN h2 HTTP/2 via HLTCP; preface, SETTINGS, minimal HPACK request, frames/HEADERS/DATA. |
+| `quic` | udp | QUIC v1 Initial capability probe; classifies Version Negotiation/Retry/Initial/Handshake; no QUIC handshake or HTTP/3 claim. |
 | `jarm` | tcp | JARM via 10 ClientHello slots; emits `jarm_part`, aggregated by `tools/jarm_aggregate.py`. |
 | `dns` | udp | DNS record request with configurable name/type/recursion. |
 | `snmp` | udp | SNMP (v1/v2c) request and MIB-guided host info extraction. |

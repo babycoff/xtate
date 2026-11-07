@@ -3,29 +3,102 @@
 **English** · [中文](zh-CN/feasibility.md)
 
 This is an engineering feasibility assessment, not an implementation promise.
-It assumes the 2.32.0 architecture: stateless ZBanner/UDP, HLTCP for stateful
+It assumes the 2.33.0 architecture: stateless ZBanner/UDP, HLTCP for stateful
 TCP, and output-side aggregation.
 
 ## QUIC probe and HTTP/3 exploration
 
-**Verdict: research; high complexity; a separate transport project.**
+**Verdict: the capability probe is implemented; a real HTTP/3 scanner is a
+separate transport project and should be gated behind a library decision.**
 
-QUIC is not HTTP/2 over UDP. A real HTTP/3 probe needs:
+QUIC is not HTTP/2 over UDP. The protocol combines TLS 1.3, loss recovery,
+packet-number spaces, connection IDs and a 1200-byte padded Initial packet.
+Sending an arbitrary UDP payload with `ALPN=h3` is not a QUIC or HTTP/3 probe.
 
-- a QUIC Initial packet with a valid header protection/encryption path;
-- TLS 1.3 handshake integrated into QUIC, with ALPN `h3`;
-- QUIC connection IDs, packet number spaces, loss detection and timers;
-- HTTP/3 control streams/QPACK if actual requests are required.
+### Option A — QUIC capability probe (recommended first)
 
-Options:
+A stateless `quic`/`quic-hello` UDP probe can:
 
-1. optional `libngtcp2`/`libnghttp3`, `quiche` or `msquic` integration;
-2. a deliberately capability-only QUIC/Initial probe without HTTP/3 requests;
-3. no new dependency and a documented non-goal.
+- build a valid QUIC v1 Initial packet with a random DCID/SCID and a TLS 1.3
+  ClientHello (ALPN `h3`);
+- derive Initial keys and apply header protection with AES-128-GCM;
+- match the response to the unique DCID and classify:
+  - Version Negotiation;
+  - Retry (with token);
+  - Initial/Handshake response;
+  - connection close / stateless reset;
+  - no response;
+- report QUIC version, source/destination CID and response type.
 
-Recommendation: first write a QUIC/HTTP/3 research prototype outside the
-scanner hot path; do not add a fake "HTTP/3" UDP payload probe. Any optional
-library must remain optional and must not change the default build.
+What it **cannot** do:
+
+- prove that HTTP/3 is usable;
+- complete a TLS handshake or send an HTTP/3 request;
+- report QPACK/control-stream behavior.
+
+Cost: medium. It fits the existing stateless ZBanner/UDP model if the DCID is
+unique per target and no connection state is retained. It still needs a
+well-tested QUIC packet builder and local test servers (`aioquic`, `quiche` or
+`ngtcp2`), plus version/retry/token edge cases.
+
+### Option B — library-backed QUIC handshake and HTTP/3
+
+A real HTTP/3 probe needs:
+
+- UDP socket/event loop and per-connection state;
+- QUIC handshake with TLS 1.3 and transport parameters;
+- ACK/loss detection/timers, Retry/token and connection close;
+- HTTP/3 control streams, QPACK, request/response and GOAWAY.
+
+This cannot live inside the current stateless `udp` scan or `tcp-state` HLTCP.
+It requires a new `quic-state`-style scanner (or a separate helper process), a
+new probe type, and a concurrency/resource model. An optional library such as
+`ngtcp2`/`nghttp3`, `quiche` or `msquic` could supply the transport, but the
+scanner still owns flow scheduling, retries, output and limits.
+
+Cost: high. It also changes the default build/CI and dependency story, so it
+must remain optional and must not silently degrade.
+
+### Option C — external sidecar
+
+A separate QUIC/HTTP3 helper invoked per target or batch keeps the core scanner
+small, but adds process/IPC overhead and makes rate/connection accounting harder.
+It is a reasonable research prototype, not the first production integration.
+
+### Option D — documented non-goal
+
+If the measurement need is only "is this UDP port QUIC?", stop at Option A and
+explicitly do not claim HTTP/3. This is safer than a fake HTTP/3 result.
+
+### Recommendation and decision gate
+
+1. Build a local QUIC/HTTP3 research prototype outside the hot path; compare at
+   least one client library with a local `aioquic`/`quiche` server.
+2. Implement **Option A** as `quic-hello` (or `quic`) only if the lab proves
+   response attribution and retry/version behavior are deterministic.
+3. Gate Option B on a concrete requirement for HTTP/3 responses and a library
+   choice. Do not add a default dependency just because QUIC is fashionable.
+4. Keep an explicit output distinction:
+   - `quic`: QUIC transport observed;
+   - `http3`: HTTP/3 handshake/request completed.
+
+Acceptance for Option A:
+
+- local QUIC server receives a valid Initial;
+- Version Negotiation and Retry are classified;
+- unique DCID matching prevents cross-target attribution;
+- no per-target table and no unbounded retry state;
+- lab tests do not need public Internet.
+
+OpenSSL's QUIC API is not available across the whole supported OpenSSL range
+(the project supports older 1.1.1 builds), so a QUIC implementation should not
+silently require an OpenSSL version that breaks the normal build.
+
+## Protocol coverage expansion
+
+See [Protocol coverage plan](./protocol-coverage.md) for the zgrab2-referenced
+protocol matrix and tiered implementation plan. It is a separate workstream from
+QUIC and does not require new transport machinery for most protocols.
 
 ## P3 — scan control
 
@@ -140,12 +213,16 @@ only in the local lab.
 
 ## Recommended order
 
-1. Finish P2 protocol coverage and JARM/live comparisons.
-2. External target-aware selection (P3, lowest risk).
-3. Opt-in adaptive rate controller (P3).
-4. Read-only YAML templates (P4).
-5. Traffic randomization (P4, research only).
-6. Two-stage handoff after HLTCP slot work is decided.
+Current direction prioritizes QUIC/HTTP3 and templates/traffic; the rest remains
+backlog:
+
+1. QUIC capability probe and HTTP/3 library decision.
+2. Read-only Xtate-native YAML templates.
+3. Protocol coverage Batch A (see [protocol coverage](./protocol-coverage.md)).
+4. Traffic randomization research (opt-in, fixed seed, lab-only).
+5. JARM failure modes and external retry manifest.
+6. SSH deep KEX/host-key, full HTTP/2, HLTCP slots.
+7. External target-aware selection, adaptive rate, two-stage handoff.
 
 ## Non-goals for the first pass
 

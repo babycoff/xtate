@@ -5,12 +5,12 @@
   <h3>Xtate —— 面向互联网级测量的模块化全栈网络扫描器</h3>
 
   <p>
-    <b>无状态 TCP banner。</b> <b>混合状态 TCP/TLS。</b> <b>49 个已注册模块。</b><br>
+    <b>无状态 TCP banner。</b> <b>混合状态 TCP/TLS。</b> <b>50 个已注册模块。</b><br>
     <sub>C99 · Linux glibc/musl &amp; Windows · GCC/Clang/MSVC/MinGW · Make/Ninja · IPv4 &amp; IPv6</sub>
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.32.0-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.33.0-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -49,9 +49,10 @@ Xtate 是一款面向大规模主动测量的网络扫描器。它把扫描栈�
 
 - ⚡ **ZBanner**——无需为每个目标维护连接表，也能拿到真实的 TCP 响应。状态由对端的 TCP 协议栈保存，一个 SipHash cookie 就能证明这条回应是给你的。
 - 🧬 **HLTCP**——按需创建的混合状态用户态 TCP 协议栈。它能完成 TLS 握手，并在握手之上直接讲 HTTP。
+- 🛰 **QUIC 能力探测**——发送真实 QUIC v1 Initial，识别 Version Negotiation/Retry/Initial/Handshake；不声称完成 HTTP/3 握手。
 - 🔐 **TLS 证据**——完整握手后可输出结构化证书细节（subject、issuer、SAN、有效期、序列号、公钥、签名、ALPN），并支持 SMTP/IMAP/POP3/FTP STARTTLS 升级。
 - 🧪 **JARM**——十个标准 Salesforce 探针，可用 `--first-probe` 轮换首个标准探针；后续探针批量发送，输出与顺序无关。
-- 🧩 **模块**——11 个扫描模块 / 26 个探测模块 / 7 个输出模块 / 5 个生成模块。四套接口，一条流水线，没有运行时的插件魔法。
+- 🧩 **模块**——11 个扫描模块 / 27 个探测模块 / 7 个输出模块 / 5 个生成模块。四套接口，一条流水线，没有运行时的插件魔法。
 - 🌐 **中文帮助**——`--lang zh` 或 `XTATE_LANG=zh` 可切换人类可读帮助；支持 UTF-8 宽度换行，未翻译内容安全回退英文。
 - 🎯 **稀疏目标模式**——支持 `132.80-88.90.15`、`2001:db8:1-5::1` 这类分量范围；单个 token 最多 4 个范围组成笛卡尔积（上限 1,048,576 个地址），大范围连续空间仍用 CIDR/区间。
 
@@ -205,7 +206,7 @@ sudo ./bin/xtate -ip 10.0.0.0/24 -p s:38412 -scan sctp-init -show info
 | `yarrp-echo` | — | 用 ICMP echo 做无状态拓扑探测。 |
 | `yarrp-udp` | — | 用 UDP + ICMP 错误包做无状态拓扑探测。 |
 
-### 探测模块（26）
+### 探测模块（27）
 
 - **通用：** `http`（+ 状态）、`hello`（+ UDP/状态）、`tls-hello`、`tls-state`、`dns`、`snmp`、`echo`、`ssh`、`jarm`、`h2c`、`h2`。
 - **指纹识别：** `recog`（+ UDP/状态，Recog XML）、`nmap`（+ UDP，nmap-service-probes）。
@@ -338,7 +339,7 @@ xtate --usage                 # short usage and examples
 xtate --help                  # every global parameter
 xtate --intro                 # the architecture tour
 xtate --list-scan             # 11 scan modules
-xtate --list-probe            # 26 probe modules
+xtate --list-probe            # 27 probe modules
 xtate --list-out              # 7 output modules
 xtate --list-gen              # 5 generate modules
 xtate --help-scan zbanner     # module-specific parameters

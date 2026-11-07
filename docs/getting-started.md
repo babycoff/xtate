@@ -6,7 +6,7 @@ Xtate is a modular all-stack network scanner for large-scale active measurement.
 
 This page takes you from a source checkout to your first scan on Linux or Windows. It assumes you are comfortable with a shell, `sudo`, and basic TCP/IP; it is not a tutorial on scanning itself.
 
-> Documented against Xtate v2.32.0. If your build behaves differently, `--help` and the module help are authoritative.
+> Documented against Xtate v2.33.0. If your build behaves differently, `--help` and the module help are authoritative.
 
 ## Requirements
 
@@ -31,7 +31,7 @@ dependencies are present, so the complete module set is compiled in.
 | Windows 10/11 | Clang 23 (clang-cl) | build + `--selftest` pass; probe count depends on optional libs | OpenSSL via Scoop; PCRE2/BSON/mongoc not installed |
 | Windows 10/11 | MinGW-w64 GCC 16 | build + `--selftest` pass; probe count depends on optional libs | no OpenSSL (Scoop build is MSVC-only) |
 
-The module counts are a quick way to verify your dependencies: 26 probes and 7
+The module counts are a quick way to verify your dependencies: 27 probes and 7
 output modules means everything was found; fewer means at least one optional
 library was not discovered.
 

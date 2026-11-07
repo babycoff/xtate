@@ -5,12 +5,12 @@
   <h3>Xtate — a modular all-stack network scanner for Internet-scale surveys</h3>
 
   <p>
-    <b>Stateless TCP banners.</b> <b>Hybrid-state TCP/TLS.</b> <b>49 registered modules.</b><br>
+    <b>Stateless TCP banners.</b> <b>Hybrid-state TCP/TLS.</b> <b>50 registered modules.</b><br>
     <sub>C99 · Linux glibc/musl &amp; Windows · GCC/Clang/MSVC/MinGW · Make/Ninja · IPv4 &amp; IPv6</sub>
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.32.0-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.33.0-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -51,9 +51,10 @@ Most fast scanners stop at "port open"; most service scanners give up at Interne
 
 - ⚡ **ZBanner** — real TCP responses without a per-target connection table. The peer's TCP stack holds the state; a SipHash cookie proves the reply is yours.
 - 🧬 **HLTCP** — a hybrid-state user-space TCP stack, created only where needed. It completes TLS handshakes and speaks HTTP inside them.
+- 🛰 **QUIC capability** — sends a real QUIC v1 Initial and classifies Version Negotiation/Retry/Initial/Handshake without claiming a completed HTTP/3 handshake.
 - 🔐 **TLS evidence** — a full handshake plus structured certificate details (subject, issuer, SAN, validity, serial, key, signature, ALPN), including SMTP/IMAP/POP3/FTP STARTTLS upgrades.
 - 🧪 **JARM** — the ten standard Salesforce probes, with `--first-probe` to rotate which standard probe is sent first and burst-ordered follow-ups; output stays order-independent.
-- 🧩 **Modules** — 11 scan / 26 probe / 7 output / 5 generate modules. Four interfaces, one pipeline, no runtime plugin magic.
+- 🧩 **Modules** — 11 scan / 27 probe / 7 output / 5 generate modules. Four interfaces, one pipeline, no runtime plugin magic.
 - 🌐 **Chinese help** — `--lang zh` or `XTATE_LANG=zh` localizes human-facing help, with UTF-8-aware wrapping and safe English fallback for untranslated strings.
 - 🎯 **Sparse target patterns** — component ranges such as `132.80-88.90.15` or `2001:db8:1-5::1`; up to four ranges form a Cartesian product (1,048,576-address cap per token) while large continuous spaces still use CIDR/ranges.
 
@@ -211,7 +212,7 @@ Counts below assume a full build with all optional dependencies enabled; modules
 | `yarrp-echo` | — | Stateless topology probing with ICMP echo. |
 | `yarrp-udp` | — | Stateless topology probing with UDP + ICMP errors. |
 
-### Probe modules (26)
+### Probe modules (27)
 
 - **General:** `http` (+ state), `hello` (+ UDP/state), `tls-hello`, `tls-state`, `dns`, `snmp`, `echo`, `ssh`, `jarm`, `h2c`, `h2`.
 - **Fingerprinting:** `recog` (+ UDP/state, Recog XML), `nmap` (+ UDP, nmap-service-probes).
@@ -356,7 +357,7 @@ xtate --usage                 # short usage and examples
 xtate --help                  # every global parameter
 xtate --intro                 # the architecture tour
 xtate --list-scan             # 11 scan modules
-xtate --list-probe            # 26 probe modules
+xtate --list-probe            # 27 probe modules
 xtate --list-out              # 7 output modules
 xtate --list-gen              # 5 generate modules
 xtate --help-scan zbanner     # module-specific parameters

@@ -118,7 +118,7 @@ if [[ -n "${XTATE_BIN:-}" ]]; then
     grep -q -- "--first-probe" <<<"$help"
     ! grep -q 'lzr' <<<"$("$XTATE_BIN" --list-probe)"
     count="$("$XTATE_BIN" --list-probe | grep -cE '^[[:space:]]*[0-9]+\.[A-Za-z]')"
-    [[ "$count" -eq 26 ]]
-    echo "PASS: JARM slot plan help and 26-probe inventory"
+    [[ "$count" -eq 27 ]]
+    echo "PASS: JARM slot plan help and 27-probe inventory"
 fi
 

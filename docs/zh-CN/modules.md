@@ -2,7 +2,7 @@
 
 [English](../modules.md) · **中文**
 
-Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上以 `NULL` 结尾的注册表里的一行；没有运行期插件加载。完整构建会注册 **11 个扫描 + 26 个探测 + 7 个输出 + 5 个生成**模块，而缺少可选库的模块会直接从构建中消失（也从 `--list-*` 中消失）。
+Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上以 `NULL` 结尾的注册表里的一行；没有运行期插件加载。完整构建会注册 **11 个扫描 + 27 个探测 + 7 个输出 + 5 个生成**模块，而缺少可选库的模块会直接从构建中消失（也从 `--list-*` 中消失）。
 
 | 类别 | 职责 | 参数 | 注册表 |
 |:---|:---|:---|:---|
@@ -43,7 +43,7 @@ xtate --help-gen blackrock
 
 每个扫描模块都通过 `--help-scan <name>` 暴露自己的选项（记录 TTL/IPID/窗口、重复/去重开关、TTL 覆盖等）。如何选择模式、哪些模式需要防火墙规则，见[扫描模式](./scanning-modes.md)。
 
-## 探测模块（26）
+## 探测模块（27）
 
 探测模块会声明一个**类型**，必须与扫描模块匹配：`zbanner` 用 `tcp`，`udp` 用 `udp`，`tcp-state` 用 `state`。它可以声明 `ProbeSlotPlan`（JARM 和 `slot-test` 示例）；见[扫描模式](./scanning-modes.md#探测-slot)。
 
@@ -96,6 +96,33 @@ xtate -ip 203.0.113.10 -p 443 -scan zbanner -probe jarm \
 - `jarm_slot` 始终记录标准探针编号，不是发送位置，因此聚合与顺序无关。
 - `--probe-index N` 只发一个探针，是调试用途，不能产生完整 JARM 指纹。
 
+### QUIC 能力探测
+
+`quic` 是 **transport 能力** UDP 探针。它构造一个合法 QUIC v1 Initial
+（至少 1200 字节），带 TLS 1.3 ClientHello 和 ALPN `h3`，然后分类第一个
+long-header 响应：
+
+```bash
+xtate -ip 203.0.113.10 -p U:4433 -scan udp -probe quic --show info
+```
+
+输出：
+
+```text
+quic_response          initial | handshake | retry | version-negotiation
+quic_version           32-bit QUIC 版本
+quic_dcid / quic_scid  十六进制 connection ID
+quic_token_len         Retry/Initial token 长度
+quic_payload_len       long-header payload 长度
+quic_versions_count    Version Negotiation 版本数
+quic_version_<n>       每个 Version Negotiation 版本
+quic_raw               可选 --record-raw 原始字节
+```
+
+响应通过由无状态 UDP cookie 派生的 client SCID 匹配；不保存 per-target 状态。
+成功结果只证明 QUIC transport 响应，**不证明** TLS 握手完成，也**不证明**
+HTTP/3。不要把 `quic_response: initial` 标成 `http3`。
+
 ### TLS 证据、证书细节与 STARTTLS
 
 `tls-state` 是 HLTCP 中间层，必须指定一个 `state` 子探测。证书和 TLS 字段在
@@ -140,7 +167,7 @@ STARTTLS 失败输出 `starttls error`。`--dump-cert-details` 输出
 `cert_serial`、`cert_signature_algorithm`、`cert_public_key`、
 `cert_public_key_bits`、`cert_san`、`tls_version`、`tls_cipher` 和 `tls_alpn`。
 
-### 通用（14）
+### 通用（15）
 
 | 探测 | 类型 | 功能 |
 |:---|:---:|:---|

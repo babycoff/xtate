@@ -25,6 +25,8 @@ UDP_ECHO_TARGET="xtate-lab-udp-echo-$$"
 SSH_TARGET="xtate-lab-ssh-$$"
 HTTP2_TARGET="xtate-lab-http2-$$"
 H2_TARGET="xtate-lab-h2-$$"
+QUIC_TARGET="xtate-lab-quic-$$"
+QUIC_RETRY_TARGET="xtate-lab-quic-retry-$$"
 STARTTLS_TARGET="xtate-lab-starttls-$$"
 HTTP_PORT=8080
 CLOSED_PORT=9
@@ -33,13 +35,15 @@ JARM_PORT=9443
 SSH_PORT=2222
 HTTP2_PORT=8084
 H2_PORT=8445
+QUIC_PORT=4433
+QUIC_RETRY_PORT=4434
 STARTTLS_SMTP_PORT=2525
 STARTTLS_IMAP_PORT=2143
 STARTTLS_POP3_PORT=2110
 STARTTLS_FTP_PORT=2121
 
 cleanup() {
-    docker rm -f "$HTTP_TARGET" "$TLS_TARGET" "$JARM_TARGET" "$UDP_ECHO_TARGET" "$SSH_TARGET" "$HTTP2_TARGET" "$H2_TARGET" "$STARTTLS_TARGET" >/dev/null 2>&1 || true
+    docker rm -f "$HTTP_TARGET" "$TLS_TARGET" "$JARM_TARGET" "$UDP_ECHO_TARGET" "$SSH_TARGET" "$HTTP2_TARGET" "$H2_TARGET" "$STARTTLS_TARGET" "$QUIC_TARGET" "$QUIC_RETRY_TARGET" >/dev/null 2>&1 || true
     docker network rm "$NET" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
@@ -123,6 +127,20 @@ MSYS_NO_PATHCONV=1 docker run -d --name "$STARTTLS_TARGET" --network "$NET" \
        -out /tmp/st-cert.pem -subj '/CN=starttls.test' -days 1 >/dev/null 2>&1 && \
      python3 -u /src/tests/lab/starttls_server.py /tmp/st-cert.pem /tmp/st-key.pem" >/dev/null
 
+echo "==> starting QUIC target"
+MSYS_NO_PATHCONV=1 docker run -d --name "$QUIC_TARGET" --network "$NET" \
+    -v "$ROOT:/src:ro" "$IMAGE" bash -lc \
+    "openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/quic-key.pem \
+       -out /tmp/quic-cert.pem -subj '/CN=quic.test' -days 1 >/dev/null 2>&1 && \
+     python3 -u /src/tests/lab/quic_server.py /tmp/quic-cert.pem /tmp/quic-key.pem $QUIC_PORT" >/dev/null
+
+echo "==> starting QUIC Retry target"
+MSYS_NO_PATHCONV=1 docker run -d --name "$QUIC_RETRY_TARGET" --network "$NET" \
+    -v "$ROOT:/src:ro" "$IMAGE" bash -lc \
+    "openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/quic-key.pem \
+       -out /tmp/quic-cert.pem -subj '/CN=quic.test' -days 1 >/dev/null 2>&1 && \
+     python3 -u /src/tests/lab/quic_server.py /tmp/quic-cert.pem /tmp/quic-key.pem $QUIC_RETRY_PORT retry" >/dev/null
+
 echo "==> starting TLS HTTP/2 target"
 MSYS_NO_PATHCONV=1 docker run -d --name "$H2_TARGET" --network "$NET" \
     -v "$ROOT:/src:ro" "$IMAGE" bash -lc \
@@ -140,6 +158,7 @@ wait_tcp "$STARTTLS_TARGET" "$STARTTLS_SMTP_PORT"
 wait_tcp "$STARTTLS_TARGET" "$STARTTLS_IMAP_PORT"
 wait_tcp "$STARTTLS_TARGET" "$STARTTLS_POP3_PORT"
 wait_tcp "$STARTTLS_TARGET" "$STARTTLS_FTP_PORT"
+sleep 2
 
 HTTP_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$HTTP_TARGET")"
 TLS_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$TLS_TARGET")"
@@ -149,6 +168,8 @@ SSH_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{
 HTTP2_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$HTTP2_TARGET")"
 H2_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$H2_TARGET")"
 STARTTLS_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$STARTTLS_TARGET")"
+QUIC_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$QUIC_TARGET")"
+QUIC_RETRY_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$QUIC_RETRY_TARGET")"
 echo "HTTP target: $HTTP_IP:$HTTP_PORT (closed test port $CLOSED_PORT)"
 echo "TLS  target: $TLS_IP:$TLS_PORT"
 echo "JARM target: $JARM_IP:$JARM_PORT"
@@ -160,10 +181,10 @@ echo "TLS h2:      $H2_IP:$H2_PORT"
 docker run --rm \
     --cap-add NET_RAW --cap-add NET_ADMIN \
     --network "$NET" \
-    -e HTTP_IP="$HTTP_IP" -e TLS_IP="$TLS_IP" -e JARM_IP="$JARM_IP" -e UDP_ECHO_IP="$UDP_ECHO_IP" -e SSH_IP="$SSH_IP" -e HTTP2_IP="$HTTP2_IP" -e H2_IP="$H2_IP" -e STARTTLS_IP="$STARTTLS_IP" \
+    -e HTTP_IP="$HTTP_IP" -e TLS_IP="$TLS_IP" -e JARM_IP="$JARM_IP" -e UDP_ECHO_IP="$UDP_ECHO_IP" -e SSH_IP="$SSH_IP" -e HTTP2_IP="$HTTP2_IP" -e H2_IP="$H2_IP" -e STARTTLS_IP="$STARTTLS_IP" -e QUIC_IP="$QUIC_IP" -e QUIC_RETRY_IP="$QUIC_RETRY_IP" \
     -e HTTP_PORT="$HTTP_PORT" -e CLOSED_PORT="$CLOSED_PORT" \
     -e TLS_PORT="$TLS_PORT" -e JARM_PORT="$JARM_PORT" -e SSH_PORT="$SSH_PORT" -e HTTP2_PORT="$HTTP2_PORT" -e H2_PORT="$H2_PORT" \
-    -e STARTTLS_SMTP_PORT="$STARTTLS_SMTP_PORT" -e STARTTLS_IMAP_PORT="$STARTTLS_IMAP_PORT" -e STARTTLS_POP3_PORT="$STARTTLS_POP3_PORT" -e STARTTLS_FTP_PORT="$STARTTLS_FTP_PORT" \
+    -e STARTTLS_SMTP_PORT="$STARTTLS_SMTP_PORT" -e STARTTLS_IMAP_PORT="$STARTTLS_IMAP_PORT" -e STARTTLS_POP3_PORT="$STARTTLS_POP3_PORT" -e STARTTLS_FTP_PORT="$STARTTLS_FTP_PORT" -e QUIC_PORT="$QUIC_PORT" -e QUIC_RETRY_PORT="$QUIC_RETRY_PORT" \
     -v "$ROOT:/src:ro" -v "$BIN:/xtate:ro" \
     "$IMAGE" bash -lc '
 set -euo pipefail
@@ -343,6 +364,22 @@ run_case hltcp-starttls-ftp \
     -src-port 51368-51623 -rate 100 --wait 3 --no-status -show info -show failed
 grep -q "cert_subject" /tmp/hltcp-starttls-ftp.log
 grep -q "CN=starttls.test" /tmp/hltcp-starttls-ftp.log
+
+run_case udp-quic \
+    -ip "$QUIC_IP" -p U:"$QUIC_PORT" -scan udp -probe quic \
+    -probe-arg "--record-raw" -rate 100 --wait 3 --no-status -show info -show failed
+grep -q "quic_response" /tmp/udp-quic.log
+grep -q "initial" /tmp/udp-quic.log
+grep -q "quic_version: 1" /tmp/udp-quic.log
+grep -q "quic_scid" /tmp/udp-quic.log
+grep -q "quic_raw" /tmp/udp-quic.log
+
+run_case udp-quic-retry \
+    -ip "$QUIC_RETRY_IP" -p U:"$QUIC_RETRY_PORT" -scan udp -probe quic \
+    -rate 100 --wait 3 --no-status -show info -show failed
+grep -q "quic_response" /tmp/udp-quic-retry.log
+grep -q "retry" /tmp/udp-quic-retry.log
+grep -q "quic_token_len" /tmp/udp-quic-retry.log
 
 run_case hltcp-h2 \
     -ip "$H2_IP" -p "$H2_PORT" -scan tcp-state -probe tls-state \

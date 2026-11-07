@@ -2,10 +2,16 @@
 
 **中文** · [English](../roadmap.md)
 
-本页记录 Xtate 2.32.0 之后的计划。它不是日期承诺，而是优先级和验收条件；
+本页记录 Xtate 2.33.0 之后的计划。它不是日期承诺，而是优先级和验收条件；
 已完成项也会保留，避免后续修改悄悄回退。
 
-## 2.32.0 已完成
+## 2.33.0 已完成
+
+- QUIC 能力探测（`quic`）：合法 QUIC v1 Initial，识别 Version
+  Negotiation/Retry/Initial/Handshake；本地 aioquic lab。
+- 模块数量：27 个探测。
+
+## 2.33.0 已完成
 
 - 本机目标上的 Salesforce JARM 1.0 对比；修复 `jarm` TLS 1.3 扩展解析偏移。
 - `jarm --first-probe N` 轮换；`jarm_slot` 保留标准编号，聚合与顺序无关。
@@ -23,13 +29,26 @@
 - 四类模块开发文档。
 - 可编译检查的 probe/state/output/generate 模板。
 
+## 当前优先级调整
+
+当前优先级：
+
+1. **QUIC / HTTP3 可行性**——先做能力探测和库选型；见
+   [P3/P4 可行性](./feasibility.md#quic-探针与-http3-探索)。
+2. **Xtate 原生 YAML 模板**——先做只读 matcher/schema，不复制 Nuclei。
+3. **协议覆盖扩展**——按[协议覆盖计划](./protocol-coverage.md)的 zgrab2
+   矩阵，先做 Batch A。
+4. **流量随机化研究**——opt-in、固定 seed、只在 lab；与默认扫描器分离。
+
+下面的旧计划仍然有效，但除非有具体测量需求，优先级较低。
+
 ## P1 — 模块示例（已完成）
 
 - [`examples/modules/`](../../examples/modules/) 每种模块类型一个编译检查模板。
 - `tests/module-examples/test.sh` 已接入 Linux CI。
 - 运行期 slot 示例仍是 `slot-test` / `slot-test-udp`。
 
-## 参数解析覆盖（2.31.0/2.32.0 已完成）
+## 参数解析覆盖（2.31.0/2.33.0 已完成）
 
 - `tests/config/test.sh` 覆盖 flag、参数形式、未知/缺失、长名称、裸 `--`、
   位置 token 和嵌套 `-probe-arg`。
@@ -127,5 +146,5 @@ P3/P4 可行性见[P3/P4 可行性](./feasibility.md)。
 
 ## 发布策略
 
-功能变化使用中版本（`2.29.x` → `2.32.0`），修复使用补丁版本。标签推送、
+功能变化使用中版本（`2.29.x` → `2.33.0`），修复使用补丁版本。标签推送、
 GitHub Release 和构建/测试证据齐全才算发布完成。
