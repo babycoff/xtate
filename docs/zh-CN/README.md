@@ -56,6 +56,7 @@
 - [ZBanner](./zbanner.md)——无状态 TCP 响应与 banner 抓取
 - [HLTCP](./hltcp.md)——混合状态 TCP 协议栈、TLS 与嵌套探测
 - [QUIC state](./quic-state.md)——可选的 ngtcp2/GnuTLS QUIC 握手扫描器与子探测
+- [HTTP 响应匹配](./matching.md)——HTTP/1、h2、http3 的 keyword/regex 与 header/body/all 范围
 
 ### 出问题时
 

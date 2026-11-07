@@ -21,6 +21,7 @@
 #include "../util-data/fine-malloc.h"
 #include "../util-out/logger.h"
 #include "../util-misc/misc.h"
+#include "../proto/proto-match.h"
 #include "http3-qpack-tables.h"
 
 extern Probe Http3StateProbe;
@@ -78,6 +79,7 @@ static struct Http3Conf {
     unsigned max_headers;
     unsigned record_body : 1;
     unsigned record_headers : 1;
+    MatchSpec match;
     struct H3RequestHeader *headers;
 } h3_conf = {.path = NULL, .authority = NULL, .method = NULL,
              .content_type = NULL, .data = NULL, .data_file = NULL,
@@ -244,6 +246,41 @@ static ConfRes SET_h3_header(void *conf, const char *name, const char *value) {
     return Conf_OK;
 }
 
+static ConfRes SET_keyword(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+    return match_spec_set_keyword(&h3_conf.match, value) ? Conf_OK : Conf_ERR;
+}
+
+#ifndef NOT_FOUND_PCRE2
+static ConfRes SET_regex(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+    return match_spec_set_regex(&h3_conf.match, value) ? Conf_OK : Conf_ERR;
+}
+#endif
+
+static ConfRes SET_scope(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+    return match_spec_set_scope(&h3_conf.match, value) ? Conf_OK : Conf_ERR;
+}
+
+static ConfRes SET_insensitive(void *conf, const char *name,
+                               const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+    match_spec_set_case_insensitive(&h3_conf.match, conf_parse_bool(value));
+    return Conf_OK;
+}
+
+static ConfRes SET_newlines(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+    match_spec_set_include_newlines(&h3_conf.match, conf_parse_bool(value));
+    return Conf_OK;
+}
+
 static ConfParam h3_parameters[] = {
     {"path", SET_h3_path, Type_ARG, {"url", 0},
      "HTTP/3 request :path. Default /."},
@@ -272,6 +309,21 @@ static ConfParam h3_parameters[] = {
      "Include retained response body bytes in output; default on."},
     {"record-headers", SET_h3_record_headers, Type_FLAG, {"headers", 0},
      "Emit structured response header fields; default on."},
+    {"keyword", SET_keyword, Type_ARG, {0},
+     "Literal keyword to search in the selected response scope. Mutually "
+     "exclusive with --regex."},
+#ifndef NOT_FOUND_PCRE2
+    {"regex", SET_regex, Type_ARG, {0},
+     "PCRE2 regex to search in the selected response scope. Mutually exclusive "
+     "with --keyword."},
+#endif
+    {"match-scope", SET_scope, Type_ARG, {"scope", 0},
+     "Where to match: all, headers or body. Default all."},
+    {"case-insensitive", SET_insensitive, Type_FLAG, {"insensitive", 0},
+     "Case-insensitive keyword/regex matching."},
+    {"include-newlines", SET_newlines, Type_FLAG,
+     {"include-newline", "newline", "newlines", 0},
+     "Let PCRE2 dot match newlines (DOTALL)."},
     {0}};
 
 static void h3_put_varint(unsigned char *p, size_t *off, uint64_t v) {
@@ -449,7 +501,7 @@ static void h3_add_header(struct Http3State *h, const char *name,
     if (strcmp(name, ":status") == 0)
         h->status = atoi(value);
     h->header_count++;
-    if (!h3_conf.record_headers || h->stored_headers >= h->max_headers)
+    if (h->stored_headers >= h->max_headers)
         return;
     struct H3Header *dst = &h->headers[h->stored_headers++];
     snprintf(dst->name, sizeof(dst->name), "%s", name);
@@ -537,6 +589,52 @@ static void h3_report(struct Http3State *h, OutItem *item) {
         dach_set_int(&item->probe_report, "http3_body_truncated", 1);
     if (h->qpack_partial)
         dach_set_int(&item->probe_report, "http3_qpack_partial", 1);
+    if (h3_conf.match.configured) {
+        size_t hlen = 0;
+        for (unsigned i = 0; i < h->stored_headers; i++)
+            hlen += strlen(h->headers[i].name) + strlen(h->headers[i].value) + 4;
+        hlen += 2;
+        size_t all_len = hlen + h->body_len;
+        char  *headers = MALLOC(hlen + 1);
+        char  *all = MALLOC(all_len + 1);
+        if (headers && all) {
+            size_t off = 0;
+            for (unsigned i = 0; i < h->stored_headers; i++) {
+                int n = snprintf(headers + off, hlen + 1 - off, "%s: %s\r\n",
+                                 h->headers[i].name, h->headers[i].value);
+                if (n > 0)
+                    off += (size_t)n;
+            }
+            headers[off] = '\0';
+            memcpy(all, headers, off);
+            all[off] = '\r';
+            all[off + 1] = '\n';
+            memcpy(all + off + 2, h->body, h->body_len);
+            size_t alen = off + 2 + h->body_len;
+            MatchResult mr;
+            match_spec_apply(&h3_conf.match, all, alen, headers, off, h->body,
+                             h->body_len, &mr);
+            dach_set_int(&item->probe_report, "http3_match", mr.matched ? 1 : 0);
+            dach_append_str(&item->probe_report, "http3_match_kind", mr.kind,
+                            strlen(mr.kind));
+            dach_append_str(&item->probe_report, "http3_match_scope",
+                            match_scope_name(mr.scope),
+                            strlen(match_scope_name(mr.scope)));
+            if (mr.text[0])
+                dach_append_str(&item->probe_report, "http3_match_text", mr.text,
+                                strlen(mr.text));
+            if (!mr.matched) {
+                item->level = OUT_FAILURE;
+                safe_strcpy(item->classification, OUT_CLS_SIZE, "not matched");
+                safe_strcpy(item->reason, OUT_RSN_SIZE, "no match");
+            } else {
+                item->level = OUT_SUCCESS;
+                safe_strcpy(item->classification, OUT_CLS_SIZE, "matched");
+            }
+        }
+        FREE(headers);
+        FREE(all);
+    }
     if (h3_conf.record_body && h->body_len)
         dach_append_str(&item->probe_report, "http3_body", h->body, h->body_len);
 
@@ -636,6 +734,8 @@ static bool h3_init(const struct XtateConf *xconf) {
         LOG(LEVEL_ERROR, "http3: --data and --data-file are mutually exclusive\n");
         return false;
     }
+    if (!match_spec_finalize(&h3_conf.match))
+        return false;
     if (h3_conf.data_file) {
         FILE *fp = fopen(h3_conf.data_file, "rb");
         if (!fp) {
@@ -846,6 +946,7 @@ static void h3_close(void) {
         FREE(h3_conf.headers);
         h3_conf.headers = n;
     }
+    match_spec_free(&h3_conf.match);
 }
 
 Probe Http3StateProbe = {
@@ -858,8 +959,9 @@ Probe Http3StateProbe = {
         "Http3StateProbe sends one HTTP/3 request on the QUIC stream opened by "
         "quic-state. It implements client control/QPACK streams, static/literal "
         "QPACK field names including Huffman literals, the full QPACK static "
-        "table, configurable methods/headers/body, and bounded response "
-        "HEADERS/DATA parsing with structured header output. Dynamic QPACK, "
+        "table, configurable methods/headers/body, bounded response "
+        "HEADERS/DATA parsing with structured header output, and "
+        "--keyword/--regex matching over all/headers/body. Dynamic QPACK, "
         "push, server-initiated streams, HTTP/3 CONNECT and WebTransport are "
         "not supported in this milestone. Use it only with `-scan quic-state`.",
     .init_cb           = &h3_init,

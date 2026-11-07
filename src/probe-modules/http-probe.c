@@ -12,6 +12,7 @@
 #include "../version.h"
 #include "../proto/proto-http-maker.h"
 #include "../proto/proto-http-result.h"
+#include "../proto/proto-match.h"
 #include "../util-data/fine-malloc.h"
 #include "../util-data/safe-string.h"
 #include "../util-misc/misc.h"
@@ -81,14 +82,7 @@ struct HttpConf {
     } remove[16];
     size_t remove_count;
 
-#ifndef NOT_FOUND_PCRE2
-    char                *regex;
-    size_t               regex_len;
-    pcre2_code          *compiled_re;
-    pcre2_match_context *match_ctx;
-    unsigned             re_case_insensitive : 1;
-    unsigned             re_include_newlines : 1;
-#endif
+    MatchSpec match;
     /*dynamic set ip:port as Host field*/
     unsigned dynamic_host : 1;
     unsigned report_status : 1;
@@ -104,79 +98,40 @@ static struct HttpConf http_conf = {
     .max_body = 4096,
 };
 
-#ifndef NOT_FOUND_PCRE2
-
-static ConfRes SET_newlines(void *conf, const char *name, const char *value) {
+static ConfRes SET_keyword(void *conf, const char *name, const char *value) {
     UNUSEDPARM(conf);
     UNUSEDPARM(name);
+    return match_spec_set_keyword(&http_conf.match, value) ? Conf_OK : Conf_ERR;
+}
 
-    http_conf.re_include_newlines = conf_parse_bool(value);
+#ifndef NOT_FOUND_PCRE2
+static ConfRes SET_regex(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+    return match_spec_set_regex(&http_conf.match, value) ? Conf_OK : Conf_ERR;
+}
+#endif
 
-    return Conf_OK;
+static ConfRes SET_scope(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+    return match_spec_set_scope(&http_conf.match, value) ? Conf_OK : Conf_ERR;
 }
 
 static ConfRes SET_insensitive(void *conf, const char *name,
                                const char *value) {
     UNUSEDPARM(conf);
     UNUSEDPARM(name);
-
-    http_conf.re_case_insensitive = conf_parse_bool(value);
-
+    match_spec_set_case_insensitive(&http_conf.match, conf_parse_bool(value));
     return Conf_OK;
 }
 
-static ConfRes SET_regex(void *conf, const char *name, const char *value) {
+static ConfRes SET_newlines(void *conf, const char *name, const char *value) {
     UNUSEDPARM(conf);
     UNUSEDPARM(name);
-
-    if (http_conf.compiled_re)
-        pcre2_code_free(http_conf.compiled_re);
-    if (http_conf.match_ctx)
-        pcre2_match_context_free(http_conf.match_ctx);
-
-    http_conf.regex_len = strlen(value);
-    if (http_conf.regex_len == 0) {
-        LOG(LEVEL_ERROR, "invalid regex.\n");
-        return Conf_ERR;
-    }
-
-    int        pcre2_errcode;
-    PCRE2_SIZE pcre2_erroffset;
-    FREE(http_conf.regex);
-    http_conf.regex = STRDUP(value);
-    http_conf.compiled_re =
-        pcre2_compile((PCRE2_SPTR)http_conf.regex, PCRE2_ZERO_TERMINATED,
-                      (http_conf.re_case_insensitive ? PCRE2_CASELESS : 0) |
-                          (http_conf.re_include_newlines ? PCRE2_DOTALL : 0),
-                      &pcre2_errcode, &pcre2_erroffset, NULL);
-
-    if (!http_conf.compiled_re) {
-        LOG(LEVEL_ERROR, "regex compiled failed.\n");
-        FREE(http_conf.regex);
-        return Conf_ERR;
-    }
-
-    http_conf.match_ctx = pcre2_match_context_create(NULL);
-    if (!http_conf.match_ctx) {
-        LOG(LEVEL_ERROR, "regex allocates match_ctx failed.\n");
-        FREE(http_conf.regex);
-        return Conf_ERR;
-    }
-
-    pcre2_set_match_limit(http_conf.match_ctx, 100000);
-
-#ifdef pcre2_set_depth_limit
-    // Changed name in PCRE2 10.30. PCRE2 uses macro definitions for function
-    // names, so we don't have to add this to configure.ac.
-    pcre2_set_depth_limit(http_conf.match_ctx, 10000);
-#else
-    pcre2_set_recursion_limit(http_conf.match_ctx, 10000);
-#endif
-
+    match_spec_set_include_newlines(&http_conf.match, conf_parse_bool(value));
     return Conf_OK;
 }
-
-#endif
 
 static ConfRes SET_method(void *conf, const char *name, const char *value) {
     UNUSEDPARM(conf);
@@ -484,24 +439,35 @@ static ConfParam http_parameters[] = {
      "Removes the first field from the header that matches. We may need "
      "multiple times for fields like `Cookie` that can exist multiple times."},
 
+    {"keyword",
+     SET_keyword,
+     Type_ARG,
+     {0},
+     "Literal keyword to search in the selected response scope. Mutually "
+     "exclusive with --regex."},
 #ifndef NOT_FOUND_PCRE2
     {"regex",
      SET_regex,
      Type_ARG,
      {0},
-     "Specifies a regex and sets matched response data as successed instead of"
-     " reporting all results."},
+     "PCRE2 regex to search in the selected response scope. Mutually exclusive "
+     "with --keyword."},
+#endif
+    {"match-scope",
+     SET_scope,
+     Type_ARG,
+     {"scope", 0},
+     "Where to match: all, headers or body. Default all."},
     {"case-insensitive",
      SET_insensitive,
      Type_FLAG,
      {"insensitive", 0},
-     "Whether the specified regex is case-insensitive or not."},
+     "Case-insensitive keyword/regex matching."},
     {"include-newlines",
      SET_newlines,
      Type_FLAG,
      {"include-newline", "newline", "newlines", 0},
-     "Whether the specified regex contains newlines."},
-#endif
+     "Let PCRE2 dot match newlines (DOTALL)."},
 
     {0}};
 
@@ -652,6 +618,8 @@ static bool http_init(const XConf *xconf) {
             http_conf.remove[i].name, NULL, 0, http_field_remove);
     }
 
+    if (!match_spec_finalize(&http_conf.match))
+        return false;
     return true;
 }
 
@@ -728,60 +696,43 @@ static unsigned http_handle_response(unsigned th_idx, ProbeTarget *target,
 
     http_report_result(item, px, sizeof_px);
 
-#ifndef NOT_FOUND_PCRE2
-
-    if (http_conf.compiled_re) {
-        pcre2_match_data *match_data;
-        int               rc;
-
-        match_data =
-            pcre2_match_data_create_from_pattern(http_conf.compiled_re, NULL);
-        if (!match_data) {
-            LOG(LEVEL_ERROR, "cannot allocate match_data when matching.\n");
-            item->no_output = 1;
-            return 0;
+    if (http_conf.match.configured) {
+        HttpResult     result;
+        const unsigned char *headers = px;
+        size_t         headers_len = sizeof_px;
+        const unsigned char *body = NULL;
+        size_t         body_len = 0;
+        if (http_result_parse(px, sizeof_px, &result) == 0) {
+            headers_len = result.body_offset;
+            body = px + result.body_offset;
+            body_len = result.body_len;
         }
-
-        rc = pcre2_match(http_conf.compiled_re, (PCRE2_SPTR8)px, (int)sizeof_px,
-                         0, 0, match_data, http_conf.match_ctx);
-
-        /*matched one. ps: "offset is too small" means successful, too*/
-        if (rc >= 0) {
-            item->level = OUT_SUCCESS;
-            safe_strcpy(item->classification, OUT_CLS_SIZE, "matched");
-        } else {
-            item->level = OUT_FAILURE;
-            safe_strcpy(item->classification, OUT_CLS_SIZE, "not matched");
-        }
-
-        pcre2_match_data_free(match_data);
+        MatchResult mr;
+        match_spec_apply(&http_conf.match, px, sizeof_px, headers, headers_len,
+                         body, body_len, &mr);
+        dach_set_int(&item->probe_report, "http_match", mr.matched ? 1 : 0);
+        dach_append_str(&item->probe_report, "http_match_kind", mr.kind,
+                        strlen(mr.kind));
+        dach_append_str(&item->probe_report, "http_match_scope",
+                        match_scope_name(mr.scope),
+                        strlen(match_scope_name(mr.scope)));
+        if (mr.text[0])
+            dach_append_str(&item->probe_report, "http_match_text", mr.text,
+                            strlen(mr.text));
+        item->level = mr.matched ? OUT_SUCCESS : OUT_FAILURE;
+        safe_strcpy(item->classification, OUT_CLS_SIZE,
+                    mr.matched ? "matched" : "not matched");
+        if (!mr.matched)
+            safe_strcpy(item->reason, OUT_RSN_SIZE, "no match");
     } else {
-#endif
-
         item->level = OUT_SUCCESS;
-
-#ifndef NOT_FOUND_PCRE2
     }
-#endif
 
     return 0;
 }
 
 static void http_close() {
-#ifndef NOT_FOUND_PCRE2
-    FREE(http_conf.regex);
-    http_conf.regex_len = 0;
-
-    if (http_conf.compiled_re) {
-        pcre2_code_free(http_conf.compiled_re);
-        http_conf.compiled_re = NULL;
-    }
-
-    if (http_conf.match_ctx) {
-        pcre2_match_context_free(http_conf.match_ctx);
-        http_conf.match_ctx = NULL;
-    }
-#endif
+    match_spec_free(&http_conf.match);
 }
 
 Probe HttpProbe = {
@@ -796,8 +747,8 @@ Probe HttpProbe = {
         "      `GET / HTTP/1.0`\n"
         "      `User-Agent: " XTATE_WITH_VERSION " " XTATE_GITHUB_URL "`\n"
         "      `Accept: */*`\n\n"
-        "We can use various args to change the default request and set a regex "
-        "to match the response as successed.\n"
+        "We can use various args to change the default request and match the "
+        "response by --keyword or --regex in an all/headers/body scope.\n"
         "Dependencies: PCRE2 for regex.",
 
     .init_cb               = &http_init,

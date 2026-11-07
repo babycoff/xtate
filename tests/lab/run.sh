@@ -235,6 +235,13 @@ grep -q "\"closed\" because \"rst\"" /tmp/zbanner-default.log
 grep -q "http_status" /tmp/zbanner-default.log
 grep -q "http_header_count" /tmp/zbanner-default.log
 
+run_case zbanner-http-match \
+    -ip "$HTTP_IP" -p "$HTTP_PORT" -scan zbanner -probe http \
+    -src-port 41256-41511 -rate 100 --wait 2 --no-status -show info -show failed \
+    -probe-arg "--keyword=Directory --match-scope=body"
+grep -q "http_match: 1" /tmp/zbanner-http-match.log
+grep -q "http_match_scope: \"body\"" /tmp/zbanner-http-match.log
+
 run_case zbanner-record-ack \
     -ip "$HTTP_IP" -p "$HTTP_PORT,$CLOSED_PORT" -scan zbanner -probe http \
     -src-port 42000-42255 -scan-arg "--record-ack" -rate 100 --wait 2 --no-status -show info -show failed
@@ -248,6 +255,13 @@ grep -q "\"open\" because \"syn-ack\"" /tmp/hltcp-http.log
 grep -q "\"closed\" because \"rst\"" /tmp/hltcp-http.log
 grep -q "http_status" /tmp/hltcp-http.log
 grep -q "http_header_count" /tmp/hltcp-http.log
+
+run_case hltcp-http-match \
+    -ip "$HTTP_IP" -p "$HTTP_PORT" -scan tcp-state -probe http-state \
+    -src-port 43256-43511 -rate 100 --wait 2 --no-status -show info -show failed \
+    -probe-arg "--keyword=Directory --match-scope=body"
+grep -q "http_match: 1" /tmp/hltcp-http-match.log
+grep -q "http_match_scope: \"body\"" /tmp/hltcp-http-match.log
 
 run_case hltcp-tls \
     -ip "$TLS_IP" -p "$TLS_PORT" -scan tcp-state -probe tls-state \
@@ -407,6 +421,14 @@ grep -q "http3_server: \"xtate-http3-lab\"" /tmp/http3-state.log
 grep -q "http3_content_type: \"text/plain\"" /tmp/http3-state.log
 grep -q "http3_header_count: 3" /tmp/http3-state.log
 
+run_case http3-match \
+    -ip "$HTTP3_IP" -p U:"$HTTP3_PORT" -scan quic-state -probe http3-state \
+    -scan-arg "--alpn h3 --handshake-timeout 5" \
+    -probe-arg "--keyword=hello --match-scope=body" \
+    -rate 100 --wait 6 --no-status -show info -show failed
+grep -q "http3_match: 1" /tmp/http3-match.log
+grep -q "http3_match_scope: \"body\"" /tmp/http3-match.log
+
 run_case http3-post \
     -ip "$HTTP3_IP" -p U:"$HTTP3_PORT" -scan quic-state -probe http3-state \
     -scan-arg "--alpn h3 --handshake-timeout 5" \
@@ -430,6 +452,13 @@ grep -q "h2_status" /tmp/hltcp-h2.log
     grep -q "200" /tmp/hltcp-h2.log
 grep -q "h2_frame_count" /tmp/hltcp-h2.log
 grep -q "http/2" /tmp/hltcp-h2.log
+
+run_case hltcp-h2-match \
+    -ip "$H2_IP" -p "$H2_PORT" -scan tcp-state -probe tls-state \
+    -probe-arg "-subprobe h2 -sni example.test -alpn h2 -subprobe-arg --keyword=hello" \
+    -src-port 52000-52255 -rate 100 --wait 3 --no-status -show info -show failed
+grep -q "h2_match: 1" /tmp/hltcp-h2-match.log
+grep -q "h2_match_kind: \"keyword\"" /tmp/hltcp-h2-match.log
 
 run_case hltcp-h2-params \
     -ip "$H2_IP" -p "$H2_PORT" -scan tcp-state -probe tls-state \

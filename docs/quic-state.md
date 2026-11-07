@@ -143,7 +143,9 @@ Supported request options: `--path`, `--authority`, `--method`,
 `--header`, `--content-type`, `--data`, `--data-file`, `--max-body`,
 `--max-headers`, `--record-body`, `--record-headers`.
 
-Huffman string literals and the full QPACK static table are decoded. Dynamic
+Response matching uses `--keyword`/`--regex` with `--match-scope all|headers|body`;
+see [HTTP response matching](./matching.md). Huffman string literals and the full
+QPACK static table are decoded. Dynamic
 QPACK is deliberately disabled: the client advertises a zero-capacity QPACK
 table, and a server reply that still requires a dynamic insertion is reported
 as `http3_qpack_partial: 1` rather than being treated as fully decoded.

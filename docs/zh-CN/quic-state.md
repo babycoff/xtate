@@ -135,7 +135,8 @@ xtate --list-scan | grep quic-state
 `--content-type`、`--data`、`--data-file`、`--max-body`、
 `--max-headers`、`--record-body`、`--record-headers`。
 
-已支持 Huffman 字符串和完整 QPACK static table。Dynamic QPACK 被刻意关闭：
+响应匹配使用 `--keyword`/`--regex` 与 `--match-scope all|headers|body`，见
+[HTTP 响应匹配](./matching.md)。已支持 Huffman 字符串和完整 QPACK static table。Dynamic QPACK 被刻意关闭：
 client 通告零容量 QPACK table；如果服务端仍要求 dynamic insertion，结果会标记
 `http3_qpack_partial: 1`，不会假装完整解码。
 

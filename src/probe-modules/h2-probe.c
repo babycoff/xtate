@@ -8,6 +8,7 @@
 #include "../util-data/fine-malloc.h"
 #include "../util-data/safe-string.h"
 #include "../util-misc/misc.h"
+#include "../proto/proto-match.h"
 #include "../version.h"
 
 #define H2_PREFACE "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
@@ -26,6 +27,7 @@ struct H2Conf {
     unsigned      decode_headers : 1;
     unsigned      max_frames;
     unsigned      max_data;
+    MatchSpec     match;
 };
 
 static struct H2Conf h2_conf = {
@@ -50,6 +52,10 @@ struct H2State {
     unsigned       data_len;
     unsigned       headers_sent;
     unsigned       reported;
+    char           headers[8192];
+    size_t         headers_len;
+    unsigned char  body[4096];
+    size_t         body_len;
 };
 
 static ConfRes SET_path(void *conf, const char *name, const char *value) {
@@ -163,6 +169,41 @@ static ConfRes SET_no_decode_headers(void *conf, const char *name,
     return Conf_OK;
 }
 
+static ConfRes SET_keyword(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+    return match_spec_set_keyword(&h2_conf.match, value) ? Conf_OK : Conf_ERR;
+}
+
+#ifndef NOT_FOUND_PCRE2
+static ConfRes SET_regex(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+    return match_spec_set_regex(&h2_conf.match, value) ? Conf_OK : Conf_ERR;
+}
+#endif
+
+static ConfRes SET_scope(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+    return match_spec_set_scope(&h2_conf.match, value) ? Conf_OK : Conf_ERR;
+}
+
+static ConfRes SET_insensitive(void *conf, const char *name,
+                               const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+    match_spec_set_case_insensitive(&h2_conf.match, conf_parse_bool(value));
+    return Conf_OK;
+}
+
+static ConfRes SET_newlines(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+    match_spec_set_include_newlines(&h2_conf.match, conf_parse_bool(value));
+    return Conf_OK;
+}
+
 static ConfParam h2_parameters[] = {
     {"path",
      SET_path,
@@ -210,6 +251,35 @@ static ConfParam h2_parameters[] = {
      Type_FLAG,
      {0},
      "Do not HPACK-decode response HEADERS; report raw HEADERS only."},
+    {"keyword",
+     SET_keyword,
+     Type_ARG,
+     {0},
+     "Literal keyword to search in the selected response scope. Mutually "
+     "exclusive with --regex."},
+#ifndef NOT_FOUND_PCRE2
+    {"regex",
+     SET_regex,
+     Type_ARG,
+     {0},
+     "PCRE2 regex to search in the selected response scope. Mutually exclusive "
+     "with --keyword."},
+#endif
+    {"match-scope",
+     SET_scope,
+     Type_ARG,
+     {"scope", 0},
+     "Where to match: all, headers or body. Default all."},
+    {"case-insensitive",
+     SET_insensitive,
+     Type_FLAG,
+     {"insensitive", 0},
+     "Case-insensitive keyword/regex matching."},
+    {"include-newlines",
+     SET_newlines,
+     Type_FLAG,
+     {"include-newline", "newline", "newlines", 0},
+     "Let PCRE2 dot match newlines (DOTALL)."},
     {0}};
 
 static size_t h2_put_indexed(unsigned char *buf, size_t cap, size_t off,
@@ -297,6 +367,15 @@ static size_t h2_frame_header(unsigned char *buf, unsigned length,
     buf[7] = (unsigned char)(stream >> 8);
     buf[8] = (unsigned char)stream;
     return 9;
+}
+
+static bool h2_init(const struct XtateConf *xconf) {
+    UNUSEDPARM(xconf);
+    return match_spec_finalize(&h2_conf.match);
+}
+
+static void h2_close(void) {
+    match_spec_free(&h2_conf.match);
 }
 
 static bool h2_conn_init(ProbeState *state, ProbeTarget *target) {
@@ -449,6 +528,14 @@ static void h2_emit_header(OutItem *item, struct H2State *hs, const char *name,
     snprintf(pair, sizeof(pair), "%s: %s", name, value);
     snprintf(field, sizeof(field), "h2_hdr_%u", hs->header_count);
     dach_append_str(&item->probe_report, field, pair, strlen(pair));
+    if (hs->headers_len + strlen(name) + strlen(value) + 4 <
+        sizeof(hs->headers)) {
+        int n = snprintf(hs->headers + hs->headers_len,
+                         sizeof(hs->headers) - hs->headers_len, "%s: %s\r\n",
+                         name, value);
+        if (n > 0)
+            hs->headers_len += (size_t)n;
+    }
     if (strcmp(name, ":status") == 0)
         dach_append_str(&item->probe_report, "h2_status", value, strlen(value));
     hs->header_count++;
@@ -574,6 +661,12 @@ static bool h2_handle_response(DataPass *pass, ProbeState *state, OutConf *out,
             if (take) {
                 dach_append_bin(&item.probe_report, "h2_data",
                                 hs->rx + off + 9, take);
+                size_t bspace = sizeof(hs->body) - hs->body_len;
+                size_t bcopy = take < bspace ? take : bspace;
+                if (bcopy) {
+                    memcpy(hs->body + hs->body_len, hs->rx + off + 9, bcopy);
+                    hs->body_len += bcopy;
+                }
                 hs->data_len += take;
             }
             if (stream == 1 && (flags & 0x1)) {
@@ -597,9 +690,43 @@ static bool h2_handle_response(DataPass *pass, ProbeState *state, OutConf *out,
     if (h2_conf.record_raw)
         dach_append_bin(&item.probe_report, "h2_raw", px, sizeof_px);
 
+    if (h2_conf.match.configured) {
+        size_t all_len = hs->headers_len + hs->body_len + 3;
+        char  *all = MALLOC(all_len);
+        if (all) {
+            memcpy(all, hs->headers, hs->headers_len);
+            all[hs->headers_len] = '\r';
+            all[hs->headers_len + 1] = '\n';
+            memcpy(all + hs->headers_len + 2, hs->body, hs->body_len);
+            all_len = hs->headers_len + 2 + hs->body_len;
+            MatchResult mr;
+            match_spec_apply(&h2_conf.match, all, all_len, hs->headers,
+                             hs->headers_len, hs->body, hs->body_len, &mr);
+            FREE(all);
+            dach_set_int(&item.probe_report, "h2_match", mr.matched ? 1 : 0);
+            dach_append_str(&item.probe_report, "h2_match_kind", mr.kind,
+                            strlen(mr.kind));
+            dach_append_str(&item.probe_report, "h2_match_scope",
+                            match_scope_name(mr.scope),
+                            strlen(match_scope_name(mr.scope)));
+            if (mr.text[0])
+                dach_append_str(&item.probe_report, "h2_match_text", mr.text,
+                                strlen(mr.text));
+            item.level = mr.matched ? OUT_SUCCESS : OUT_FAILURE;
+            if (mr.matched)
+                safe_strcpy(item.classification, OUT_CLS_SIZE, "matched");
+            else {
+                safe_strcpy(item.classification, OUT_CLS_SIZE, "not matched");
+                safe_strcpy(item.reason, OUT_RSN_SIZE, "no match");
+            }
+        }
+    }
+
     if (!hs->reported) {
-        safe_strcpy(item.classification, OUT_CLS_SIZE, "http/2");
-        safe_strcpy(item.reason, OUT_RSN_SIZE, "response");
+        if (!h2_conf.match.configured) {
+            safe_strcpy(item.classification, OUT_CLS_SIZE, "http/2");
+            safe_strcpy(item.reason, OUT_RSN_SIZE, "response");
+        }
         hs->reported = 1;
         output_result(out, &item);
     }
@@ -634,13 +761,14 @@ Probe H2Probe = {
     .desc = "Stateful HTTP/2 client for -scan tcp-state -probe tls-state "
             "-alpn h2 -subprobe h2. Sends the HTTP/2 preface, SETTINGS and a "
             "minimal HPACK request, then parses SETTINGS, HEADERS (static/"
-            "literal HPACK, no Huffman) and DATA. It is not h2c; use the "
-            "separate h2c probe for cleartext prior knowledge.\n"
+            "literal HPACK, no Huffman) and DATA. Response matching supports "
+            "--keyword/--regex with all/headers/body scopes. It is not h2c; "
+            "use the separate h2c probe for cleartext prior knowledge.\n"
             "Dependencies: OpenSSL (for tls-state).",
-    .init_cb           = &probe_init_nothing,
+    .init_cb           = &h2_init,
     .conn_init_cb      = &h2_conn_init,
     .make_hello_cb     = &h2_make_hello,
     .parse_response_cb = &h2_parse_response,
     .conn_close_cb     = &h2_conn_close,
-    .close_cb          = &probe_close_nothing,
+    .close_cb          = &h2_close,
 };

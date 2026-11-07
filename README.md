@@ -241,6 +241,7 @@ The README is the landing page. The manual lives in [`docs/`](docs/README.md):
 - [Chinese help and i18n](docs/help-i18n.md) — `--lang`, catalog fallback and UTF-8 layout
 - [QUIC state](docs/quic-state.md) — optional ngtcp2/GnuTLS handshake, certificate and sub-probe
 - [HTTP/3 child probe](docs/quic-state.md#http3-child-probe) — methods/headers/body, Huffman QPACK over quic-state
+- [HTTP response matching](docs/matching.md) — keyword/regex scopes for HTTP/1, h2 and http3
 - [Interactive mode](docs/interactive-mode.md) — TTY/script mode, completion, history and Chinese help
 - [Platform support](docs/platform-support.md) — CMake 3.13, old distros, Ninja and musl builds
 - [Build artifacts](docs/build-artifacts.md) — aliases, exact toolchain names, Debug/DLL layout
