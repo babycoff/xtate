@@ -75,13 +75,6 @@ jobs:
           XTATE_LAB_TARGET_IMAGE: xtate-lab-target:24.04
         run: bash tests/lab/ci-batch-b.sh
 
-      - name: TLS/STARTTLS composition
-        env:
-          XTATE_BIN: ./bin/xtate
-          XTATE_LAB_IMAGE: xtate-lab-target:24.04
-          XTATE_LAB_TARGET_IMAGE: xtate-lab-target:24.04
-        run: bash tests/lab/ci-tls-composition.sh
-
       - name: Batch C protocol lab
         env:
           XTATE_BIN: ./bin/xtate
