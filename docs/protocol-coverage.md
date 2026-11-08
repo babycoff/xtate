@@ -15,6 +15,12 @@ test reference, not copy its code or promise output compatibility.
 | JARM | `jarm` | Salesforce 1.0 hash, official-reference comparison, `--first-probe`. |
 | SSH | `ssh` | Banner/software and KEXINIT lists; real KEX exchange is future work. |
 | TLS | `tls-state`, `tls-hello` | Certificates/details, ALPN, SNI and JARM; STARTTLS adapters exist. |
+| Redis | `redis` | Read-only INFO server identification. |
+| Memcached | `memcached` | Version-line identification. |
+| NTP | `ntp` | Mode-3 request with structured fields. |
+| MQTT | `mqtt` | CONNECT/CONNACK. |
+| SOCKS5 | `socks5` | Greeting/method selection. |
+| Telnet | `telnet` | Banner and initial IAC options. |
 | SMTP | STARTTLS only | `tls-state --starttls smtp`; no full SMTP command probe yet. |
 | IMAP | STARTTLS only | `tls-state --starttls imap`; no full IMAP probe yet. |
 | POP3 | STARTTLS only | `tls-state --starttls pop3`; no full POP3 probe yet. |
@@ -42,24 +48,24 @@ test reference, not copy its code or promise output compatibility.
 | IPP | yes | absent | 2 | state |
 | JARM | yes | done | - | tcp slots |
 | ManageSieve | yes | absent | 2 | state |
-| Memcached | yes | absent | 1 | tcp |
+| Memcached | yes | `memcached` | 1 | tcp |
 | Modbus | yes | absent | 3 | state |
 | MongoDB | yes | output only | 2 | state |
-| MQTT | yes | absent | 1 | tcp/state |
+| MQTT | yes | `mqtt` | 1 | tcp |
 | MSSQL | yes | absent | 2 | state |
 | MySQL | yes | absent | 2 | state |
-| NTP | yes | absent | 1 | UDP |
+| NTP | yes | `ntp` | 1 | UDP |
 | Oracle | yes | absent | 2 | state |
 | POP3 | yes | STARTTLS only | 2 | state |
 | PostgreSQL | yes | absent | 2 | state |
 | PPTP | yes | absent | 2 | state |
-| Redis | yes | absent | 1 | tcp |
+| Redis | yes | `redis` | 1 | tcp |
 | Siemens S7 | yes | absent | 3 | state |
 | SMB | yes | absent | 2 | state |
 | SMTP | yes | STARTTLS only | 2 | state |
-| SOCKS5 | yes | absent | 1 | tcp |
+| SOCKS5 | yes | `socks5` | 1 | state |
 | SSH | yes | partial | 2 | state |
-| Telnet | yes | absent | 1 | tcp |
+| Telnet | yes | `telnet` | 1 | state |
 | TLS | yes | done/partial | - | state/tcp |
 
 ## Implementation rules

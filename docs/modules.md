@@ -4,7 +4,7 @@
 
 Xtate is assembled from four kinds of module. Each is a C struct plus one line in a
 `NULL`-terminated registry; there is no runtime plugin loading. A full build registers
-**11 base Scan + 27 Probe + 7 Output + 5 Generate** modules, plus optional
+**11 base Scan + 33 Probe + 7 Output + 5 Generate** modules, plus optional
 `quic-state` and `http3-state` when ngtcp2/GnuTLS is available. Modules whose optional library is missing simply disappear
 from the build (and from `--list-*`).
 
@@ -193,7 +193,7 @@ STARTTLS is emitted as `starttls error`. `--dump-cert-details` outputs
 `cert_serial`, `cert_signature_algorithm`, `cert_public_key`,
 `cert_public_key_bits`, `cert_san`, `tls_version`, `tls_cipher` and `tls_alpn`.
 
-### General (15)
+### General (21)
 
 | Probe | Type | What it does |
 |:---|:---:|:---|
@@ -207,6 +207,12 @@ STARTTLS is emitted as `starttls error`. `--dump-cert-details` outputs
 | `ssh` | tcp | Configurable SSH banner plus KEX/host-key and cipher/MAC/compression lists. |
 | `h2c` | tcp | Cleartext h2c preface, configurable SETTINGS/PING fingerprint, frame/settings parsing. Not HTTP/2 over TLS. |
 | `h2` | state | TLS/ALPN h2 HTTP/2 via HLTCP; preface, SETTINGS, minimal HPACK request, frames/HEADERS/DATA. |
+| `redis` | tcp | Read-only `INFO server` Redis identification and structured version/mode/os/role. |
+| `memcached` | tcp | `version` command and version-line parse. |
+| `ntp` | udp | NTP v4 mode-3 request, cookie validation, leap/stratum/refid/root fields. |
+| `mqtt` | tcp | MQTT 3.1.1 CONNECT and CONNACK return-code parse. |
+| `socks5` | state | SOCKS5 greeting and method selection. |
+| `telnet` | state | Initial Telnet banner and IAC option parse. |
 | `quic` | udp | QUIC v1 Initial capability probe; classifies Version Negotiation/Retry/Initial/Handshake; no QUIC handshake or HTTP/3 claim. |
 | `jarm` | tcp | JARM via 10 ClientHello slots; emits `jarm_part`, aggregated by `tools/jarm_aggregate.py`. |
 | `dns` | udp | DNS record request with configurable name/type/recursion. |

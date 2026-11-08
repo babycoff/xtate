@@ -14,6 +14,12 @@
 | JARM | `jarm` | Salesforce 1.0、官方实现对比、`--first-probe`。 |
 | SSH | `ssh` | banner/software/KEXINIT 列表；真实 KEX 交换待做。 |
 | TLS | `tls-state`、`tls-hello` | 证书/细节、ALPN、SNI、JARM；有 STARTTLS 适配。 |
+| Redis | `redis` | 只读 INFO server 识别。 |
+| Memcached | `memcached` | 版本行识别。 |
+| NTP | `ntp` | mode-3 请求与结构化字段。 |
+| MQTT | `mqtt` | CONNECT/CONNACK。 |
+| SOCKS5 | `socks5` | greeting/方法选择。 |
+| Telnet | `telnet` | banner 和初始 IAC 选项。 |
 | SMTP | 仅 STARTTLS | `tls-state --starttls smtp`；还没有完整 SMTP 命令探针。 |
 | IMAP | 仅 STARTTLS | `tls-state --starttls imap`；还没有完整 IMAP 探针。 |
 | POP3 | 仅 STARTTLS | `tls-state --starttls pop3`；还没有完整 POP3 探针。 |
@@ -41,24 +47,24 @@
 | IPP | 有 | 未实现 | 2 | state |
 | JARM | 有 | 完成 | - | tcp slots |
 | ManageSieve | 有 | 未实现 | 2 | state |
-| Memcached | 有 | 未实现 | 1 | tcp |
+| Memcached | 有 | `memcached` | 1 | tcp |
 | Modbus | 有 | 未实现 | 3 | state |
 | MongoDB | 有 | 仅输出 | 2 | state |
-| MQTT | 有 | 未实现 | 1 | tcp/state |
+| MQTT | 有 | `mqtt` | 1 | tcp |
 | MSSQL | 有 | 未实现 | 2 | state |
 | MySQL | 有 | 未实现 | 2 | state |
-| NTP | 有 | 未实现 | 1 | UDP |
+| NTP | 有 | `ntp` | 1 | UDP |
 | Oracle | 有 | 未实现 | 2 | state |
 | POP3 | 有 | 仅 STARTTLS | 2 | state |
 | PostgreSQL | 有 | 未实现 | 2 | state |
 | PPTP | 有 | 未实现 | 2 | state |
-| Redis | 有 | 未实现 | 1 | tcp |
+| Redis | 有 | `redis` | 1 | tcp |
 | Siemens S7 | 有 | 未实现 | 3 | state |
 | SMB | 有 | 未实现 | 2 | state |
 | SMTP | 有 | 仅 STARTTLS | 2 | state |
-| SOCKS5 | 有 | 未实现 | 1 | tcp |
+| SOCKS5 | 有 | `socks5` | 1 | state |
 | SSH | 有 | 部分 | 2 | state |
-| Telnet | 有 | 未实现 | 1 | tcp |
+| Telnet | 有 | `telnet` | 1 | state |
 | TLS | 有 | 完成/部分 | - | state/tcp |
 
 ## 实现规则

@@ -2,7 +2,7 @@
 
 [English](../modules.md) · **中文**
 
-Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上以 `NULL` 结尾的注册表里的一行；没有运行期插件加载。完整构建会注册 **11 个基础扫描 + 27 个探测 + 7 个输出 + 5 个生成**模块；另有可选的 `quic-state` 和 `http3-state`（需要 ngtcp2/GnuTLS）。缺少可选库的模块会直接从构建中消失（也从 `--list-*` 中消失）。
+Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上以 `NULL` 结尾的注册表里的一行；没有运行期插件加载。完整构建会注册 **11 个基础扫描 + 33 个探测 + 7 个输出 + 5 个生成**模块；另有可选的 `quic-state` 和 `http3-state`（需要 ngtcp2/GnuTLS）。缺少可选库的模块会直接从构建中消失（也从 `--list-*` 中消失）。
 
 | 类别 | 职责 | 参数 | 注册表 |
 |:---|:---|:---|:---|
@@ -15,7 +15,7 @@ Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上�
 
 ```bash
 xtate --list-scan      # 11，若有 quic-state 则为 12
-xtate --list-probe     # 27 个探测模块
+xtate --list-probe     # 33 个探测模块
 xtate --list-out       # 7 个输出模块
 xtate --list-gen       # 5 个生成模块
 
@@ -169,7 +169,7 @@ STARTTLS 失败输出 `starttls error`。`--dump-cert-details` 输出
 `cert_serial`、`cert_signature_algorithm`、`cert_public_key`、
 `cert_public_key_bits`、`cert_san`、`tls_version`、`tls_cipher` 和 `tls_alpn`。
 
-### 通用（15）
+### 通用（21）
 
 | 探测 | 类型 | 功能 |
 |:---|:---:|:---|
@@ -183,6 +183,12 @@ STARTTLS 失败输出 `starttls error`。`--dump-cert-details` 输出
 | `ssh` | tcp | 可配置 SSH banner，以及 KEX/host-key、cipher/MAC/压缩算法列表。 |
 | `h2c` | tcp | cleartext h2c preface、可配置 SETTINGS/PING 指纹、帧/settings 解析；不是 TLS 上的 HTTP/2。 |
 | `h2` | state | 通过 HLTCP + TLS ALPN h2 的 HTTP/2：preface、SETTINGS、最小 HPACK 请求、帧/HEADERS/DATA。 |
+| `redis` | tcp | 只读 `INFO server` 识别 Redis，输出 version/mode/os/role。 |
+| `memcached` | tcp | `version` 命令和版本行解析。 |
+| `ntp` | udp | NTP v4 mode-3 请求、cookie 校验、leap/stratum/refid/root 字段。 |
+| `mqtt` | tcp | MQTT 3.1.1 CONNECT 与 CONNACK return-code。 |
+| `socks5` | state | SOCKS5 greeting 和方法选择。 |
+| `telnet` | state | 初始 Telnet banner 和 IAC 选项解析。 |
 | `jarm` | tcp | 通过 10 个 ClientHello slot 做 JARM；`--first-probe 1..10` 轮换哪个标准探针先发，`jarm_slot` 保留标准编号；`--probe-index` 只发一个；`jarm_part` 由 `tools/jarm_aggregate.py` 聚合。 |
 | `dns` | udp | DNS 记录请求，可配置名称/类型/递归。 |
 | `snmp` | udp | SNMP（v1/v2c）请求，并按 MIB 提取主机信息。 |

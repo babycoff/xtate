@@ -119,4 +119,5 @@ Depth matrices:
 - `ci-h2-depth.sh` — status 404, empty DATA, extra header, matcher;
 - `ci-quic-depth.sh` — body/header matching, no-match, status 404, empty body,
   extra header;
-- `ci-h2c-depth.sh` — H2C settings/ping and frame parsing.
+- `ci-h2c-depth.sh` — H2C settings/ping and frame parsing;
+- `ci-probes.sh` — Redis, Memcached, NTP, MQTT, SOCKS5, Telnet fake-server lab.

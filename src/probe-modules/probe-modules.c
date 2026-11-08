@@ -44,6 +44,12 @@ extern Probe QuicProbe;
 extern Probe Http3StateProbe;
 #endif
 extern Probe SlotTestUdpProbe;
+extern Probe RedisProbe;
+extern Probe MemcachedProbe;
+extern Probe NtpProbe;
+extern Probe MqttProbe;
+extern Probe Socks5Probe;
+extern Probe TelnetProbe;
 //! ADD YOUR PROBE MODULE HERE
 
 
@@ -93,6 +99,12 @@ Probe *probe_modules_list[] = {
     &SshProbe,
     &H2cProbe,
     &H2Probe,
+    &RedisProbe,
+    &MemcachedProbe,
+    &NtpProbe,
+    &MqttProbe,
+    &Socks5Probe,
+    &TelnetProbe,
 
     /* Developer examples / test fixtures for ProbeSlot_Always. */
     &SlotTestProbe,
