@@ -29,6 +29,10 @@ docker ps --format '{{.Names}}' | grep -qx "$TARGET" || { docker logs "$TARGET" 
 run() {
     local name="$1" port="$2" extra="$3" pattern="$4"
     local cmd="
+      apt-get update -qq >/dev/null 2>&1
+      apt-get install -y -qq iptables >/dev/null 2>&1
+      sed 's/\\r$//;s/sudo //g' /src/firewall/add_rules.sh >/tmp/fw
+      bash /tmp/fw >/dev/null
       IP=\$(hostname -I | cut -d' ' -f1)
       /xtate -ip $IP -p $port -scan tcp-state -probe tls-state \
         -probe-arg \"-subprobe smtp-state $extra -sni example.test\" \
