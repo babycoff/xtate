@@ -149,5 +149,6 @@ and RSS are noisy on shared runners. See `tests/bench/README.md`.
 | ZBanner pcap matrix | `tests/zbanner/run.sh` | offline `file:` replay: SYNACK/RST, banner, retransmit, all-banner limit/floor, wrong ACK, IPv6, zero-window, Lua payload mismatch |
 | HTTP pcap matrix | `tests/http-pcap/run.sh` | offline keyword/regex/header/body/no-match checks |
 | tcp-syn pcap matrix | `tests/tcp-syn-pcap/run.sh` | offline SYN-ACK/RST basics |
+| HTTP-state pcap matrix | `tests/http-state-pcap/run.sh` | recorded plaintext stateful HTTP replay + header/no-match |
 | PTY | `tests/interactive/tty.sh` | terminal restore + completion |
 | large batch | `tests/large-batch/` | replay/RSS/output failure |

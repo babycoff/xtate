@@ -81,6 +81,7 @@ jobs:
           XTATE_BIN="$BIN" bash tests/zbanner/run.sh
           XTATE_BIN="$BIN" bash tests/http-pcap/run.sh
           XTATE_BIN="$BIN" bash tests/tcp-syn-pcap/run.sh
+          XTATE_BIN="$BIN" bash tests/http-state-pcap/run.sh
 
       - name: Restore fuzz corpus
         if: matrix.compiler == 'clang' && matrix.config == 'release'

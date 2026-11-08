@@ -138,5 +138,6 @@ Windows 构建在 `.github/workflows/windows.yml` 中运行，覆盖 MSVC、Clan
 | ZBanner pcap 矩阵 | `tests/zbanner/run.sh` | 离线 `file:` 回放：SYNACK/RST、banner、重传、all-banner limit/floor、错误 ACK、IPv6、zero-window、Lua payload mismatch |
 | HTTP pcap 矩阵 | `tests/http-pcap/run.sh` | 离线 keyword/regex/header/body/no-match |
 | tcp-syn pcap 矩阵 | `tests/tcp-syn-pcap/run.sh` | 离线 SYN-ACK/RST 基础 |
+| HTTP-state pcap 矩阵 | `tests/http-state-pcap/run.sh` | 录制明文状态化 HTTP 回放 + header/no-match |
 | PTY | `tests/interactive/tty.sh` | 终端恢复 + 补全 |
 | large batch | `tests/large-batch/` | replay/RSS/输出失败 |
