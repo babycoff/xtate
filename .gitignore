@@ -9,3 +9,4 @@ __pycache__/
 tests/fuzz/build/
 tests/fuzz/artifacts/
 tests/fuzz/corpus-working/
+tests/lab/ci-*.log

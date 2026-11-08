@@ -12,6 +12,7 @@ jobs:
   encrypted-protocols:
     name: TLS/H2 + QUIC/HTTP3 local lab
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -27,8 +28,17 @@ jobs:
       - name: Build release
         run: ./build.sh --compiler gcc --config release --generator ninja
 
+      - uses: docker/setup-buildx-action@v3
+
       - name: Build local target image
-        run: docker build -t xtate-lab-target:24.04 tests/lab
+        uses: docker/build-push-action@v6
+        with:
+          context: tests/lab
+          file: tests/lab/Dockerfile
+          tags: xtate-lab-target:24.04
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: TLS + H2 local CI
         env:
@@ -43,3 +53,11 @@ jobs:
           XTATE_LAB_IMAGE: xtate-lab-target:24.04
           XTATE_LAB_TARGET_IMAGE: xtate-lab-target:24.04
         run: bash tests/lab/ci-quic.sh
+
+      - name: Upload lab logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lab-encrypted-logs
+          path: tests/lab/ci-*.log
+          if-no-files-found: ignore

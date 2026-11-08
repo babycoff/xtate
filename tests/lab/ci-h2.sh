@@ -13,12 +13,17 @@ TARGET_IMAGE="${XTATE_LAB_TARGET_IMAGE:-$IMAGE}"
 NET="xtate-ci-h2-$$"
 TARGET="xtate-ci-h2-target-$$"
 PORT=8445
-LOG="${TMPDIR:-/tmp}/xtate-ci-h2.$$.log"
+LOG="${XTATE_CI_LOG:-$ROOT/tests/lab/ci-h2.log}"
 
 cleanup() {
+    local rc=$?
     docker rm -f "$TARGET" >/dev/null 2>&1 || true
     docker network rm "$NET" >/dev/null 2>&1 || true
-    rm -f "$LOG"
+    if [[ $rc -eq 0 ]]; then
+        rm -f "$LOG"
+    else
+        echo "CI log preserved: $LOG" >&2
+    fi
 }
 trap cleanup EXIT
 
@@ -44,18 +49,25 @@ MSYS_NO_PATHCONV=1 docker run -d --name "$TARGET" --network "$NET" \
       exec python3 -u /src/tests/lab/h2_tls_server.py" >/dev/null
 TARGET_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$TARGET")"
 
+ready=0
 for _ in $(seq 1 60); do
     if docker exec "$TARGET" bash -c "timeout 1 bash -c '</dev/tcp/127.0.0.1/$PORT'" >/dev/null 2>&1; then
+        ready=1
         break
     fi
     sleep 1
 done
+if [[ $ready -ne 1 ]]; then
+    echo "H2 target did not become ready" >&2
+    docker logs "$TARGET" >&2 || true
+    exit 1
+fi
 
 cmd='
   apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq iptables >/dev/null 2>&1
   sed "s/\\r$//;s/sudo //g" /src/firewall/add_rules.sh >/tmp/fw
   bash /tmp/fw >/dev/null
-  IP=$(hostname -I | awk "{print \\$1}")
+  IP=$(hostname -I | cut -d" " -f1)
   /xtate -ip '"$TARGET_IP"' -p '"$PORT"' -scan tcp-state -probe tls-state \
     -probe-arg "-subprobe h2 -sni example.test -alpn h2" \
     --source-ip "$IP" -source-port 40000-40255 -seed 123 \
@@ -64,12 +76,13 @@ cmd='
 
 # The -probe-arg above intentionally keeps the nested h2 args as one token.
 set +e
-docker run --rm --cap-add NET_RAW --cap-add NET_ADMIN --network "$NET" \
+timeout 240 docker run --rm --cap-add NET_RAW --cap-add NET_ADMIN --network "$NET" \
     -v "$BIN:/xtate:ro" -v "$ROOT:/src:ro" "$IMAGE" bash -lc "$cmd" >"$LOG" 2>&1
 rc=$?
 set -e
 if [[ $rc -ne 0 ]]; then
     cat "$LOG" >&2
+    docker logs "$TARGET" >&2 || true
     exit 1
 fi
 grep -q 'h2_status: 200' "$LOG" || { cat "$LOG" >&2; exit 1; }

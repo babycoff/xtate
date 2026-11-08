@@ -13,12 +13,17 @@ TARGET_IMAGE="${XTATE_LAB_TARGET_IMAGE:-$IMAGE}"
 NET="xtate-ci-quic-$$"
 TARGET="xtate-ci-quic-target-$$"
 PORT=4435
-LOG="${TMPDIR:-/tmp}/xtate-ci-quic.$$.log"
+LOG="${XTATE_CI_LOG:-$ROOT/tests/lab/ci-quic.log}"
 
 cleanup() {
+    local rc=$?
     docker rm -f "$TARGET" >/dev/null 2>&1 || true
     docker network rm "$NET" >/dev/null 2>&1 || true
-    rm -f "$LOG"
+    if [[ $rc -eq 0 ]]; then
+        rm -f "$LOG"
+    else
+        echo "CI log preserved: $LOG" >&2
+    fi
 }
 trap cleanup EXIT
 
@@ -50,16 +55,22 @@ MSYS_NO_PATHCONV=1 docker run -d --name "$TARGET" --network "$NET" \
       exec python3 -u /src/tests/lab/http3_server.py /tmp/cert.pem /tmp/key.pem $PORT" >/dev/null
 TARGET_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$TARGET")"
 sleep 3
+if ! docker ps --format '{{.Names}}' | grep -qx "$TARGET"; then
+    echo "HTTP/3 target failed to start" >&2
+    docker logs "$TARGET" >&2 || true
+    exit 1
+fi
 
 cmd="/xtate -ip $TARGET_IP -p U:$PORT -scan quic-state -probe http3-state \
   -probe-arg '--keyword=hello --match-scope=body' \
   --no-resume-file --wait 8 --no-status -show info -show failed"
 set +e
-docker run --rm --network "$NET" -v "$BIN:/xtate:ro" "$IMAGE" bash -lc "$cmd" >"$LOG" 2>&1
+timeout 240 docker run --rm --network "$NET" -v "$BIN:/xtate:ro" "$IMAGE" bash -lc "$cmd" >"$LOG" 2>&1
 rc=$?
 set -e
 if [[ $rc -ne 0 ]]; then
     cat "$LOG" >&2
+    docker logs "$TARGET" >&2 || true
     exit 1
 fi
 grep -q 'http3_status: 200' "$LOG" || { cat "$LOG" >&2; exit 1; }
