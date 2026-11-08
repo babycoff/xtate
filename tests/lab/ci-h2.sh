@@ -57,7 +57,7 @@ cmd='
   bash /tmp/fw >/dev/null
   IP=$(hostname -I | awk "{print \\$1}")
   /xtate -ip '"$TARGET_IP"' -p '"$PORT"' -scan tcp-state -probe tls-state \
-    -probe-arg " -subprobe h2 -sni example.test -alpn h2" \
+    -probe-arg "-subprobe h2 -sni example.test -alpn h2" \
     --source-ip "$IP" -source-port 40000-40255 -seed 123 \
     --no-resume-file --wait 5 --no-status -show info -show failed
 '
