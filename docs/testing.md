@@ -158,6 +158,7 @@ and RSS are noisy on shared runners. See `tests/bench/README.md`.
 | Protocol probe lab | `tests/lab/ci-probes.sh` | Redis/Memcached/NTP/MQTT/SOCKS5/Telnet fake servers |
 | Batch B protocol lab | `tests/lab/ci-batch-b.sh` | MySQL/PostgreSQL/MongoDB/SMTP/IMAP/POP3/FTP/ManageSieve tcp+state |
 | Batch C protocol lab | `tests/lab/ci-batch-c.sh` | IPP/AMQP/PPTP tcp+state |
+| TLS/STARTTLS composition | `tests/lab/ci-tls-composition.sh` | SMTP state in implicit TLS / STARTTLS |
 | QUIC/HTTP3 local CI | `tests/lab/ci-quic.sh` | local aioquic HTTP/3 target; body/match |
 | QUIC/HTTP3 depth | `tests/lab/ci-quic-depth.sh` | body/header/no-match, status 404, empty body, extra header |
 | HTTP3 frame fixture | `tests/http3-frame/` | decrypted HEADERS/DATA QPACK selftest |

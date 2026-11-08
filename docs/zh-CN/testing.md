@@ -147,6 +147,7 @@ Windows 构建在 `.github/workflows/windows.yml` 中运行，覆盖 MSVC、Clan
 | 协议探针 lab | `tests/lab/ci-probes.sh` | Redis/Memcached/NTP/MQTT/SOCKS5/Telnet fake server |
 | Batch B 协议 lab | `tests/lab/ci-batch-b.sh` | MySQL/PostgreSQL/MongoDB/SMTP/IMAP/POP3/FTP/ManageSieve tcp+state |
 | Batch C 协议 lab | `tests/lab/ci-batch-c.sh` | IPP/AMQP/PPTP tcp+state |
+| TLS/STARTTLS 组合 | `tests/lab/ci-tls-composition.sh` | 隐式 TLS / STARTTLS 后的 SMTP state |
 | QUIC/HTTP3 本地 CI | `tests/lab/ci-quic.sh` | 本地 aioquic HTTP/3 目标；body/match |
 | QUIC/HTTP3 深度 | `tests/lab/ci-quic-depth.sh` | body/header/no-match、status 404、空 body、额外 header |
 | HTTP3 帧 fixture | `tests/http3-frame/` | 解密 HEADERS/DATA QPACK selftest |

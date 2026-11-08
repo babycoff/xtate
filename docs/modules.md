@@ -4,7 +4,7 @@
 
 Xtate is assembled from four kinds of module. Each is a C struct plus one line in a
 `NULL`-terminated registry; there is no runtime plugin loading. A full build registers
-**11 base Scan + 54 Probe + 7 Output + 5 Generate** modules, plus optional
+**11 base Scan + 55 Probe + 7 Output + 5 Generate** modules, plus optional
 `quic-state` and `http3-state` when ngtcp2/GnuTLS is available. Modules whose optional library is missing simply disappear
 from the build (and from `--list-*`).
 

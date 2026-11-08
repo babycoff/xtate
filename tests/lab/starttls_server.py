@@ -60,7 +60,15 @@ def serve(proto, port, greeting):
             tls.settimeout(3)
             tls.do_handshake()
             try:
-                tls.recv(1)
+                tls.recv(1024)
+                if proto == "smtp":
+                    tls.sendall(b"250-tls\r\n250 STARTTLS\r\n")
+                elif proto == "imap":
+                    tls.sendall(b"* CAPABILITY IMAP4rev1 STARTTLS\r\na1 OK\r\n")
+                elif proto == "pop3":
+                    tls.sendall(b"+OK\r\nUSER\r\nSTLS\r\n.\r\n")
+                else:
+                    tls.sendall(b"211-Features:\r\n AUTH TLS\r\n211 End\r\n")
             except Exception:
                 pass
             tls.close()
