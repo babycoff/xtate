@@ -1,0 +1,45 @@
+name: lab-encrypted
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * 0'
+
+permissions:
+  contents: read
+
+jobs:
+  encrypted-protocols:
+    name: TLS/H2 + QUIC/HTTP3 local lab
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake ninja-build pkg-config \
+            libpcap-dev libssl-dev libpcre2-dev libxml2-dev \
+            libbson-dev libmongoc-dev \
+            libngtcp2-dev libngtcp2-crypto-gnutls-dev libgnutls28-dev
+
+      - name: Build release
+        run: ./build.sh --compiler gcc --config release --generator ninja
+
+      - name: Build local target image
+        run: docker build -t xtate-lab-target:24.04 tests/lab
+
+      - name: TLS + H2 local CI
+        env:
+          XTATE_BIN: ./bin/xtate
+          XTATE_LAB_IMAGE: xtate-lab-target:24.04
+          XTATE_LAB_TARGET_IMAGE: xtate-lab-target:24.04
+        run: bash tests/lab/ci-h2.sh
+
+      - name: QUIC + HTTP3 local CI
+        env:
+          XTATE_BIN: ./bin/xtate
+          XTATE_LAB_IMAGE: xtate-lab-target:24.04
+          XTATE_LAB_TARGET_IMAGE: xtate-lab-target:24.04
+        run: bash tests/lab/ci-quic.sh
