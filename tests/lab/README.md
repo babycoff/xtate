@@ -121,4 +121,5 @@ Depth matrices:
   extra header;
 - `ci-h2c-depth.sh` — H2C settings/ping and frame parsing;
 - `ci-probes.sh` — Redis, Memcached, NTP, MQTT, SOCKS5, Telnet fake-server lab;
-- `ci-batch-b.sh` — MySQL/PostgreSQL/MongoDB/SMTP/IMAP/POP3/FTP/ManageSieve tcp/state lab.
+- `ci-batch-b.sh` — MySQL/PostgreSQL/MongoDB/SMTP/IMAP/POP3/FTP/ManageSieve tcp/state lab;
+- `ci-batch-c.sh` — IPP/AMQP/PPTP tcp/state lab.

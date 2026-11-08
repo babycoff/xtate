@@ -32,6 +32,9 @@
 | POP3 | `pop3`、`pop3-state` | banner / CAPA。 |
 | FTP | `ftp`、`ftp-state` | banner / FEAT。 |
 | ManageSieve | `managesieve`、`managesieve-state` | capability greeting。 |
+| IPP | `ipp`、`ipp-state` | Get-Printer-Attributes。 |
+| AMQP | `amqp`、`amqp-state` | protocol header/Connection.Start。 |
+| PPTP | `pptp`、`pptp-state` | Start-Control-Connection。 |
 | Banner | `null`/`hello` | 通用抓取，不是协议感知。 |
 | 其它 | 未实现 | 见下表。 |
 
@@ -43,7 +46,7 @@
 
 | 协议 | zgrab2 | Xtate 状态 | 计划层级 | 引擎 |
 |:---|:---:|:---|:---:|:---|
-| AMQP | 有 | 未实现 | 2 | state |
+| AMQP | 有 | `amqp`/`amqp-state` | 1/2 | tcp/state |
 | BACnet | 有 | 未实现 | 3 | UDP/state |
 | Banner | 有 | 仅通用 | 1 | tcp/udp |
 | DNP3 | 有 | 未实现 | 3 | state |
@@ -51,7 +54,7 @@
 | FTP | 有 | `ftp`/`ftp-state` | 1/2 | tcp/state |
 | HTTP | 有 | 部分/冻结 | - | tcp/state |
 | IMAP | 有 | `imap`/`imap-state` | 1/2 | tcp/state |
-| IPP | 有 | 未实现 | 2 | state |
+| IPP | 有 | `ipp`/`ipp-state` | 1/2 | tcp/state |
 | JARM | 有 | 完成 | - | tcp slots |
 | ManageSieve | 有 | `managesieve`/`managesieve-state` | 1/2 | tcp/state |
 | Memcached | 有 | `memcached` | 1 | tcp |
@@ -64,7 +67,7 @@
 | Oracle | 有 | 未实现 | 2 | state |
 | POP3 | 有 | `pop3`/`pop3-state` | 1/2 | tcp/state |
 | PostgreSQL | 有 | `postgres`/`postgres-state` | 1/2 | tcp/state |
-| PPTP | 有 | 未实现 | 2 | state |
+| PPTP | 有 | `pptp`/`pptp-state` | 1/2 | tcp/state |
 | Redis | 有 | `redis` | 1 | tcp |
 | Siemens S7 | 有 | 未实现 | 3 | state |
 | SMB | 有 | 未实现 | 2 | state |

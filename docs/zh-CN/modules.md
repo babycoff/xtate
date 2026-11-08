@@ -2,7 +2,7 @@
 
 [English](../modules.md) · **中文**
 
-Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上以 `NULL` 结尾的注册表里的一行；没有运行期插件加载。完整构建会注册 **11 个基础扫描 + 48 个探测 + 7 个输出 + 5 个生成**模块；另有可选的 `quic-state` 和 `http3-state`（需要 ngtcp2/GnuTLS）。缺少可选库的模块会直接从构建中消失（也从 `--list-*` 中消失）。
+Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上以 `NULL` 结尾的注册表里的一行；没有运行期插件加载。完整构建会注册 **11 个基础扫描 + 54 个探测 + 7 个输出 + 5 个生成**模块；另有可选的 `quic-state` 和 `http3-state`（需要 ngtcp2/GnuTLS）。缺少可选库的模块会直接从构建中消失（也从 `--list-*` 中消失）。
 
 | 类别 | 职责 | 参数 | 注册表 |
 |:---|:---|:---|:---|
@@ -15,7 +15,7 @@ Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上�
 
 ```bash
 xtate --list-scan      # 11，若有 quic-state 则为 12
-xtate --list-probe     # 48 个探测模块
+xtate --list-probe     # 54 个探测模块
 xtate --list-out       # 7 个输出模块
 xtate --list-gen       # 5 个生成模块
 
@@ -213,6 +213,17 @@ STARTTLS 失败输出 `starttls error`。`--dump-cert-details` 输出
 | `ftp-state` | state | FTP FEAT/AUTH TLS。 |
 | `managesieve` | tcp | 读取 ManageSieve capability greeting。 |
 | `managesieve-state` | state | ManageSieve 能力/STARTTLS/SASL。 |
+
+### Batch C 第一批（6）
+
+| Probe | Type | What it does |
+|:---|:---:|:---|
+| `ipp` | tcp | IPP Get-Printer-Attributes over HTTP。 |
+| `ipp-state` | state | IPP over tcp-state/TLS。 |
+| `amqp` | tcp | AMQP 0-9-1 protocol header/Connection.Start。 |
+| `amqp-state` | state | AMQP over tcp-state/TLS。 |
+| `pptp` | tcp | PPTP SCCRQ/SCCRP。 |
+| `pptp-state` | state | PPTP 控制连接。 |
 
 ### 指纹识别（5）
 

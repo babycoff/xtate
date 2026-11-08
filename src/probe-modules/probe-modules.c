@@ -55,6 +55,7 @@ extern Probe MysqlStateProbe;
 extern Probe PostgresProbe;
 extern Probe PostgresStateProbe;
 extern Probe MongodbProbe;
+extern Probe MongodbStateProbe;
 extern Probe SmtpProbe;
 extern Probe SmtpStateProbe;
 extern Probe ImapProbe;
@@ -65,6 +66,12 @@ extern Probe FtpProbe;
 extern Probe FtpStateProbe;
 extern Probe ManageSieveProbe;
 extern Probe ManageSieveStateProbe;
+extern Probe IppProbe;
+extern Probe IppStateProbe;
+extern Probe AmqpProbe;
+extern Probe AmqpStateProbe;
+extern Probe PptpProbe;
+extern Probe PptpStateProbe;
 //! ADD YOUR PROBE MODULE HERE
 
 
@@ -125,6 +132,7 @@ Probe *probe_modules_list[] = {
     &PostgresProbe,
     &PostgresStateProbe,
     &MongodbProbe,
+    &MongodbStateProbe,
     &SmtpProbe,
     &SmtpStateProbe,
     &ImapProbe,
@@ -135,6 +143,18 @@ Probe *probe_modules_list[] = {
     &FtpStateProbe,
     &ManageSieveProbe,
     &ManageSieveStateProbe,
+
+    &IppProbe,
+
+    &IppStateProbe,
+
+    &AmqpProbe,
+
+    &AmqpStateProbe,
+
+    &PptpProbe,
+
+    &PptpStateProbe,
 
     /* Developer examples / test fixtures for ProbeSlot_Always. */
     &SlotTestProbe,

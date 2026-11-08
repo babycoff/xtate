@@ -33,6 +33,9 @@ test reference, not copy its code or promise output compatibility.
 | POP3 | `pop3`, `pop3-state` | Banner / CAPA. |
 | FTP | `ftp`, `ftp-state` | Banner / FEAT. |
 | ManageSieve | `managesieve`, `managesieve-state` | Capability greeting. |
+| IPP | `ipp`, `ipp-state` | Get-Printer-Attributes. |
+| AMQP | `amqp`, `amqp-state` | Protocol header/Connection.Start. |
+| PPTP | `pptp`, `pptp-state` | Start-Control-Connection. |
 | Banner | `null` / `hello` | Generic capture, not protocol-aware. |
 | Everything else | absent | See the matrix below. |
 
@@ -44,7 +47,7 @@ test reference, not copy its code or promise output compatibility.
 
 | Protocol | zgrab2 module | Xtate status | Planned tier | Suggested engine |
 |:---|:---:|:---|:---:|:---|
-| AMQP | yes | absent | 2 | state |
+| AMQP | yes | `amqp`/`amqp-state` | 1/2 | tcp/state |
 | BACnet | yes | absent | 3 | UDP/state |
 | Banner | yes | generic only | 1 | tcp/udp |
 | DNP3 | yes | absent | 3 | state |
@@ -52,7 +55,7 @@ test reference, not copy its code or promise output compatibility.
 | FTP | yes | `ftp`/`ftp-state` | 1/2 | tcp/state |
 | HTTP | yes | partial/frozen | - | tcp/state |
 | IMAP | yes | `imap`/`imap-state` | 1/2 | tcp/state |
-| IPP | yes | absent | 2 | state |
+| IPP | yes | `ipp`/`ipp-state` | 1/2 | tcp/state |
 | JARM | yes | done | - | tcp slots |
 | ManageSieve | yes | `managesieve`/`managesieve-state` | 1/2 | tcp/state |
 | Memcached | yes | `memcached` | 1 | tcp |
@@ -65,7 +68,7 @@ test reference, not copy its code or promise output compatibility.
 | Oracle | yes | absent | 2 | state |
 | POP3 | yes | `pop3`/`pop3-state` | 1/2 | tcp/state |
 | PostgreSQL | yes | `postgres`/`postgres-state` | 1/2 | tcp/state |
-| PPTP | yes | absent | 2 | state |
+| PPTP | yes | `pptp`/`pptp-state` | 1/2 | tcp/state |
 | Redis | yes | `redis` | 1 | tcp |
 | Siemens S7 | yes | absent | 3 | state |
 | SMB | yes | absent | 2 | state |

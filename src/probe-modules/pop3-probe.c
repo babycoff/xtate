@@ -11,6 +11,17 @@
 extern Probe Pop3Probe;
 extern Probe Pop3StateProbe;
 
+static bool pop3_after_tls;
+static ConfRes SET_pop3_after_tls(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf); UNUSEDPARM(name);
+    pop3_after_tls = conf_parse_bool(value);
+    return Conf_OK;
+}
+static ConfParam pop3_state_parameters[] = {
+    {"after-tls", SET_pop3_after_tls, Type_FLAG, {"post-tls", 0},
+     "Run inside an already-established TLS/STARTTLS stream: skip the greeting and send the capability command immediately."},
+    {0}};
+
 static bool pop3_starts(const unsigned char *px, unsigned len, const char *s) {
     unsigned n = (unsigned)strlen(s);
     return len >= n && memcmp(px, s, n) == 0;
@@ -52,9 +63,13 @@ static void pop3_conn_close(ProbeState *state, ProbeTarget *target) {
 }
 
 static void pop3_hello(DataPass *pass, ProbeState *state, ProbeTarget *target) {
-    UNUSEDPARM(state);
     UNUSEDPARM(target);
-    datapass_set_data(pass, NULL, 0, false);
+    if (pop3_after_tls) {
+        state->state = 1;
+        datapass_set_data(pass, (unsigned char *)"CAPA\r\n", 8, false);
+    } else {
+        datapass_set_data(pass, NULL, 0, false);
+    }
 }
 
 static void pop3_append_caps(const unsigned char *px, unsigned len, char *caps,
@@ -140,6 +155,7 @@ Probe Pop3StateProbe = {
     .type       = ProbeType_STATE,
     .hello_wait = 0,
     .short_desc = "POP3 greeting and CAPA probe.",
+    .params     = pop3_state_parameters,
     .desc = "Read the POP3 +OK greeting, send `CAPA`, parse capabilities and "
             "report STLS availability. No USER/PASS or authentication. State "
             "probe.",

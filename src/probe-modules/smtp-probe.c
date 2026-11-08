@@ -11,6 +11,17 @@
 extern Probe SmtpProbe;
 extern Probe SmtpStateProbe;
 
+static bool smtp_after_tls;
+static ConfRes SET_smtp_after_tls(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf); UNUSEDPARM(name);
+    smtp_after_tls = conf_parse_bool(value);
+    return Conf_OK;
+}
+static ConfParam smtp_state_parameters[] = {
+    {"after-tls", SET_smtp_after_tls, Type_FLAG, {"post-tls", 0},
+     "Run inside an already-established TLS/STARTTLS stream: skip the greeting and send EHLO immediately."},
+    {0}};
+
 static bool smtp_starts(const unsigned char *px, unsigned len, const char *s) {
     unsigned n = (unsigned)strlen(s);
     return len >= n && memcmp(px, s, n) == 0;
@@ -57,9 +68,13 @@ static void smtp_conn_close(ProbeState *state, ProbeTarget *target) {
 
 static void smtp_state_hello(DataPass *pass, ProbeState *state,
                              ProbeTarget *target) {
-    UNUSEDPARM(state);
     UNUSEDPARM(target);
-    datapass_set_data(pass, NULL, 0, false);
+    if (smtp_after_tls) {
+        state->state = 1;
+        datapass_set_data(pass, (unsigned char *)"EHLO xtate\r\n", 12, false);
+    } else {
+        datapass_set_data(pass, NULL, 0, false);
+    }
 }
 
 static void smtp_append_caps(const unsigned char *px, unsigned len,
@@ -153,7 +168,9 @@ Probe SmtpStateProbe = {
     .short_desc = "SMTP greeting and EHLO capability probe.",
     .desc = "Read the 220 greeting, send `EHLO xtate`, parse multiline 250 "
             "capabilities and report STARTTLS/AUTH availability. No AUTH or "
-            "mail commands. State probe.",
+            "mail commands. Use --after-tls when composed inside tls-state "
+            "(implicit TLS or STARTTLS). State probe.",
+    .params     = smtp_state_parameters,
     .init_cb           = &probe_init_nothing,
     .conn_init_cb      = &smtp_conn_init,
     .make_hello_cb     = &smtp_state_hello,

@@ -10,6 +10,18 @@
 extern Probe PostgresProbe;
 extern Probe PostgresStateProbe;
 
+static bool postgres_after_tls;
+static ConfRes SET_postgres_after_tls(void *conf, const char *name,
+                                      const char *value) {
+    UNUSEDPARM(conf); UNUSEDPARM(name);
+    postgres_after_tls = conf_parse_bool(value);
+    return Conf_OK;
+}
+static ConfParam postgres_state_parameters[] = {
+    {"after-tls", SET_postgres_after_tls, Type_FLAG, {"post-tls", 0},
+     "Run inside an already-established TLS stream: skip SSLRequest and send StartupMessage directly."},
+    {0}};
+
 static const unsigned char pg_ssl_request[] = {
     0x00, 0x00, 0x00, 0x08, 0x04, 0xd2, 0x16, 0x2f};
 
@@ -58,10 +70,15 @@ static size_t pg_tcp_len(ProbeTarget *target) {
 
 static void pg_state_hello(DataPass *pass, ProbeState *state,
                            ProbeTarget *target) {
-    UNUSEDPARM(state);
     UNUSEDPARM(target);
-    datapass_set_data(pass, (unsigned char *)pg_ssl_request,
-                      sizeof(pg_ssl_request), false);
+    if (postgres_after_tls) {
+        state->state = 1;
+        datapass_set_data(pass, (unsigned char *)pg_startup,
+                          sizeof(pg_startup), false);
+    } else {
+        datapass_set_data(pass, (unsigned char *)pg_ssl_request,
+                          sizeof(pg_ssl_request), false);
+    }
 }
 
 static void pg_report_error(OutItem *item, const unsigned char *px,
@@ -159,6 +176,7 @@ Probe PostgresStateProbe = {
     .type       = ProbeType_STATE,
     .hello_wait = 0,
     .short_desc = "PostgreSQL SSLRequest and auth-boundary probe.",
+    .params     = postgres_state_parameters,
     .desc = "Send SSLRequest; if TLS is refused, send a StartupMessage with "
             "user/database `xtate` and report the authentication method or "
             "error code, then close. It never sends a password, query or "

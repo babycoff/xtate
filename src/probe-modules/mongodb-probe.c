@@ -172,6 +172,34 @@ static unsigned mongodb_handle(unsigned th_idx, ProbeTarget *target,
     return 0;
 }
 
+static void mongodb_state_hello(DataPass *pass, ProbeState *state,
+                                ProbeTarget *target) {
+    UNUSEDPARM(state);
+    UNUSEDPARM(target);
+    datapass_set_data(pass, (unsigned char *)mongodb_hello,
+                      sizeof(mongodb_hello), false);
+}
+
+static unsigned mongodb_state_parse(DataPass *pass, ProbeState *state,
+                                    OutConf *out, ProbeTarget *target,
+                                    const unsigned char *px,
+                                    unsigned sizeof_px) {
+    if (state->state)
+        return 0;
+    state->state = 1;
+    OutItem item = {
+        .target.ip_proto  = target->target.ip_proto,
+        .target.ip_them   = target->target.ip_them,
+        .target.ip_me     = target->target.ip_me,
+        .target.port_them = target->target.port_them,
+        .target.port_me   = target->target.port_me,
+    };
+    mongodb_handle(0, target, px, sizeof_px, &item);
+    output_result(out, &item);
+    pass->is_close = 1;
+    return 0;
+}
+
 Probe MongodbProbe = {
     .name       = "mongodb",
     .type       = ProbeType_TCP,
@@ -184,4 +212,20 @@ Probe MongodbProbe = {
     .get_payload_length_cb = &mongodb_len,
     .handle_response_cb    = &mongodb_handle,
     .close_cb              = &probe_close_nothing,
+};
+
+Probe MongodbStateProbe = {
+    .name       = "mongodb-state",
+    .type       = ProbeType_STATE,
+    .hello_wait = 0,
+    .short_desc = "MongoDB hello/BSON probe for tls-state composition.",
+    .desc = "Stateful MongoDB OP_MSG hello probe. It can run directly over "
+            "tcp-state or inside tls-state for implicit TLS. No authentication "
+            "or writes. State probe.",
+    .init_cb           = &probe_init_nothing,
+    .conn_init_cb      = &probe_conn_init_nothing,
+    .make_hello_cb     = &mongodb_state_hello,
+    .parse_response_cb = &mongodb_state_parse,
+    .conn_close_cb     = &probe_conn_close_nothing,
+    .close_cb          = &probe_close_nothing,
 };

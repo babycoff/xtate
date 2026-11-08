@@ -4,7 +4,7 @@
 
 Xtate is assembled from four kinds of module. Each is a C struct plus one line in a
 `NULL`-terminated registry; there is no runtime plugin loading. A full build registers
-**11 base Scan + 48 Probe + 7 Output + 5 Generate** modules, plus optional
+**11 base Scan + 54 Probe + 7 Output + 5 Generate** modules, plus optional
 `quic-state` and `http3-state` when ngtcp2/GnuTLS is available. Modules whose optional library is missing simply disappear
 from the build (and from `--list-*`).
 
@@ -238,6 +238,17 @@ STARTTLS is emitted as `starttls error`. `--dump-cert-details` outputs
 | `ftp-state` | state | FTP FEAT/AUTH TLS. |
 | `managesieve` | tcp | Read ManageSieve capability greeting. |
 | `managesieve-state` | state | ManageSieve capability/STARTTLS/SASL. |
+
+### Batch C first wave (6)
+
+| Probe | Type | What it does |
+|:---|:---:|:---|
+| `ipp` | tcp | IPP Get-Printer-Attributes over HTTP. |
+| `ipp-state` | state | IPP over tcp-state/TLS. |
+| `amqp` | tcp | AMQP 0-9-1 protocol header/Connection.Start. |
+| `amqp-state` | state | AMQP over tcp-state/TLS. |
+| `pptp` | tcp | PPTP Start-Control-Connection-Request/Reply. |
+| `pptp-state` | state | PPTP control connection over tcp-state. |
 
 ### Fingerprinting (5)
 

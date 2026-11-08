@@ -11,6 +11,17 @@
 extern Probe FtpProbe;
 extern Probe FtpStateProbe;
 
+static bool ftp_after_tls;
+static ConfRes SET_ftp_after_tls(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf); UNUSEDPARM(name);
+    ftp_after_tls = conf_parse_bool(value);
+    return Conf_OK;
+}
+static ConfParam ftp_state_parameters[] = {
+    {"after-tls", SET_ftp_after_tls, Type_FLAG, {"post-tls", 0},
+     "Run inside an already-established TLS/STARTTLS stream: skip the greeting and send the capability command immediately."},
+    {0}};
+
 static bool ftp_starts(const unsigned char *px, unsigned len, const char *s) {
     unsigned n = (unsigned)strlen(s);
     return len >= n && memcmp(px, s, n) == 0;
@@ -55,9 +66,13 @@ static void ftp_conn_close(ProbeState *state, ProbeTarget *target) {
 }
 
 static void ftp_hello(DataPass *pass, ProbeState *state, ProbeTarget *target) {
-    UNUSEDPARM(state);
     UNUSEDPARM(target);
-    datapass_set_data(pass, NULL, 0, false);
+    if (ftp_after_tls) {
+        state->state = 1;
+        datapass_set_data(pass, (unsigned char *)"FEAT\r\n", 8, false);
+    } else {
+        datapass_set_data(pass, NULL, 0, false);
+    }
 }
 
 static void ftp_append_caps(const unsigned char *px, unsigned len, char *caps,
@@ -144,6 +159,7 @@ Probe FtpStateProbe = {
     .type       = ProbeType_STATE,
     .hello_wait = 0,
     .short_desc = "FTP greeting and FEAT capability probe.",
+    .params     = ftp_state_parameters,
     .desc = "Read the 220 greeting, send `FEAT`, parse multiline 211 features "
             "and report AUTH TLS availability. No USER/PASS or authentication. "
             "State probe.",

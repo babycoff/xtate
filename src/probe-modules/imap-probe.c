@@ -11,6 +11,17 @@
 extern Probe ImapProbe;
 extern Probe ImapStateProbe;
 
+static bool imap_after_tls;
+static ConfRes SET_imap_after_tls(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf); UNUSEDPARM(name);
+    imap_after_tls = conf_parse_bool(value);
+    return Conf_OK;
+}
+static ConfParam imap_state_parameters[] = {
+    {"after-tls", SET_imap_after_tls, Type_FLAG, {"post-tls", 0},
+     "Run inside an already-established TLS/STARTTLS stream: skip the greeting and send the capability command immediately."},
+    {0}};
+
 static bool imap_starts(const unsigned char *px, unsigned len, const char *s) {
     unsigned n = (unsigned)strlen(s);
     return len >= n && memcmp(px, s, n) == 0;
@@ -52,9 +63,13 @@ static void imap_conn_close(ProbeState *state, ProbeTarget *target) {
 }
 
 static void imap_hello(DataPass *pass, ProbeState *state, ProbeTarget *target) {
-    UNUSEDPARM(state);
     UNUSEDPARM(target);
-    datapass_set_data(pass, NULL, 0, false);
+    if (imap_after_tls) {
+        state->state = 1;
+        datapass_set_data(pass, (unsigned char *)"a1 CAPABILITY\r\n", 15, false);
+    } else {
+        datapass_set_data(pass, NULL, 0, false);
+    }
 }
 
 static unsigned imap_parse(DataPass *pass, ProbeState *state, OutConf *out,
@@ -137,6 +152,7 @@ Probe ImapStateProbe = {
     .type       = ProbeType_STATE,
     .hello_wait = 0,
     .short_desc = "IMAP greeting and CAPABILITY probe.",
+    .params     = imap_state_parameters,
     .desc = "Read the IMAP greeting, send `a1 CAPABILITY`, parse the "
             "capability list and report STARTTLS availability. No LOGIN or "
             "authentication. State probe.",
