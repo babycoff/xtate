@@ -2,11 +2,11 @@
 
 **English** · [中文](zh-CN/README.md)
 
-This directory is the user manual for **Xtate v2.35.2** — a modular all-stack network scanner for Internet-scale surveys.
+This directory is the user manual for **Xtate v2.36.0** — a modular all-stack network scanner for Internet-scale surveys.
 
 The [README](../README.md) is the landing page. Start here if you want to use Xtate rather than skim its feature list.
 
-**Release notes:** [2.35.2](./release-notes/2.35.2.md) — pcap test infrastructure, ZBanner hardening and encrypted protocol lab.
+**Release notes:** [2.36.0](./release-notes/2.36.0.md) — Redis, Memcached, NTP, MQTT, SOCKS5 and Telnet probes.
 
 ## Where to start
 
@@ -81,7 +81,7 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-The docs are written against the v2.35.2 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
+The docs are written against the v2.36.0 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
 
 ## Planned
 
