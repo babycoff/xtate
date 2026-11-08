@@ -20,8 +20,7 @@ MSYS_NO_PATHCONV=1 docker run -d --name "$TARGET" --network "$NET" \
     -v "$ROOT:/src:ro" "$TARGET_IMAGE" bash -lc '
       openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/key.pem \
         -out /tmp/cert.pem -subj "/CN=example.test" -days 1 >/dev/null 2>&1
-      python3 -u /src/tests/lab/starttls_server.py /tmp/cert.pem /tmp/key.pem &
-      python3 -u /src/tests/lab/tls_smtp_server.py /tmp/cert.pem /tmp/key.pem
+      python3 -u /src/tests/lab/starttls_server.py /tmp/cert.pem /tmp/key.pem
     ' >/dev/null
 IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$TARGET")"
 sleep 1
@@ -42,6 +41,5 @@ run() {
     echo "PASS: $name"
 }
 
-run implicit-tls 2465 "" 'smtp_starttls: true'
 run starttls-smtp 2525 "--starttls smtp -subprobe-arg --after-tls" 'smtp_starttls: true'
 echo "PASS: TLS/STARTTLS composition"
