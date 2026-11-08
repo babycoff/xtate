@@ -113,3 +113,9 @@ body-scope matching; it skips cleanly when `quic-state` was not built.
 Both scripts are Docker-only local/nightly tests. They are deliberately not in
 the fast pull-request CI matrix because they need a target image with Python,
 OpenSSL, aioquic and the optional ngtcp2 runtime.
+
+Depth matrices:
+
+- `ci-h2-depth.sh` — status 404, empty DATA, extra header, matcher;
+- `ci-quic-depth.sh` — body/header matching, no-match, status 404, empty body,
+  extra header.

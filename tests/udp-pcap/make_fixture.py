@@ -13,6 +13,7 @@ import lib  # noqa: E402
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
+    ap.add_argument("--mode", choices=["echo", "icmp"], default="echo")
     ap.add_argument("--target", default="192.0.2.2")
     ap.add_argument("--target-port", type=int, default=8080)
     ap.add_argument("--ip-me", default="192.0.2.1")
@@ -23,12 +24,20 @@ def main():
     ck = lib.tcp_cookie(args.target, args.target_port, args.ip_me,
                         args.source_port, args.seed)
     good = struct.pack(">I", ck)
-    packets = [
-        lib.udp(args.target, args.target_port, args.ip_me, args.source_port,
-                good),
-        lib.udp(args.target, args.target_port, args.ip_me, args.source_port,
-                b"bad"),
-    ]
+    if args.mode == "icmp":
+        packets = [
+            lib.icmp_port_unreachable4(args.target, args.target_port,
+                                        args.ip_me, args.source_port),
+            lib.icmp_port_unreachable4(args.target, args.target_port,
+                                        args.ip_me, args.source_port + 1),
+        ]
+    else:
+        packets = [
+            lib.udp(args.target, args.target_port, args.ip_me,
+                    args.source_port, good),
+            lib.udp(args.target, args.target_port, args.ip_me,
+                    args.source_port, b"bad"),
+        ]
     with lib.PcapWriter(args.out) as out:
         for i, packet in enumerate(packets):
             out.add(packet, 1.0 + i * 0.1)

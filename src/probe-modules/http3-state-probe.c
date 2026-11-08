@@ -551,7 +551,7 @@ static int h3_qpack_headers(struct Http3State *h, const unsigned char *p,
                 return -1;
             if (nlen >= sizeof(name) || nlen > len - off)
                 return -1;
-            if (first & 0x10) {
+            if (first & 0x08) { /* QPACK literal-name H bit; N is 0x10 */
                 int d = h3_huffman_decode(p + off, (size_t)nlen, name,
                                           sizeof(name));
                 if (d < 0)

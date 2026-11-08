@@ -88,6 +88,25 @@ def tcp(ip_them, port_them, ip_me, port_me, seqno, ackno, flags,
                 payload, ident, window)
 
 
+def icmp_port_unreachable4(ip_them, port_them, ip_me, port_me, ident=0):
+    """ICMPv4 destination-unreachable/port-unreachable with embedded UDP."""
+    src = ipaddress.IPv4Address(ip_them).packed
+    dst = ipaddress.IPv4Address(ip_me).packed
+    inner_ip = struct.pack("!BBHHHBBH4s4s", 0x45, 0, 28, ident & 0xFFFF,
+                           0, 64, 17, 0, src, dst)
+    inner_ip = struct.pack("!BBHHHBBH4s4s", 0x45, 0, 28, ident & 0xFFFF,
+                           0, 64, 17, checksum(inner_ip), src, dst)
+    inner_udp = struct.pack("!HHHH", port_them, port_me, 8, 0)
+    icmp = struct.pack("!BBHI", 3, 3, 0, 0) + inner_ip + inner_udp
+    icmp = struct.pack("!BBHI", 3, 3, 0, checksum(icmp)) + inner_ip + inner_udp
+    total_len = 20 + len(icmp)
+    ip = struct.pack("!BBHHHBBH4s4s", 0x45, 0, total_len, ident & 0xFFFF,
+                     0, 64, 1, 0, src, dst)
+    ip = struct.pack("!BBHHHBBH4s4s", 0x45, 0, total_len, ident & 0xFFFF,
+                     0, 64, 1, checksum(ip), src, dst)
+    return struct.pack("!6s6sH", ETH_SRC, ETH_DST, 0x0800) + ip + icmp
+
+
 def udp4(ip_them, port_them, ip_me, port_me, payload=b"", ident=0):
     src = ipaddress.IPv4Address(ip_them).packed
     dst = ipaddress.IPv4Address(ip_me).packed

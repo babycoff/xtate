@@ -47,12 +47,26 @@ jobs:
           XTATE_LAB_TARGET_IMAGE: xtate-lab-target:24.04
         run: bash tests/lab/ci-h2.sh
 
+      - name: TLS + H2 semantic depth
+        env:
+          XTATE_BIN: ./bin/xtate
+          XTATE_LAB_IMAGE: xtate-lab-target:24.04
+          XTATE_LAB_TARGET_IMAGE: xtate-lab-target:24.04
+        run: bash tests/lab/ci-h2-depth.sh
+
       - name: QUIC + HTTP3 local CI
         env:
           XTATE_BIN: ./bin/xtate
           XTATE_LAB_IMAGE: xtate-lab-target:24.04
           XTATE_LAB_TARGET_IMAGE: xtate-lab-target:24.04
         run: bash tests/lab/ci-quic.sh
+
+      - name: QUIC + HTTP3 semantic depth
+        env:
+          XTATE_BIN: ./bin/xtate
+          XTATE_LAB_IMAGE: xtate-lab-target:24.04
+          XTATE_LAB_TARGET_IMAGE: xtate-lab-target:24.04
+        run: bash tests/lab/ci-quic-depth.sh
 
       - name: Upload lab logs on failure
         if: failure()

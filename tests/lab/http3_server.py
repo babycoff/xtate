@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Minimal aioquic HTTP/3 server for the http3-state probe."""
 import asyncio
+import os
 import sys
 
 from aioquic.asyncio import serve
@@ -9,7 +10,10 @@ from aioquic.h3.connection import H3Connection
 from aioquic.h3.events import DataReceived, HeadersReceived
 from aioquic.quic.configuration import QuicConfiguration
 
-BODY = b"hello from xtate http3 lab\n"
+BODY = os.environ.get("H3_BODY", "hello from xtate http3 lab\n").encode()
+STATUS = int(os.environ.get("H3_STATUS", "200"))
+EMPTY_DATA = os.environ.get("H3_EMPTY_DATA", "") not in ("", "0", "false")
+EXTRA = os.environ.get("H3_EXTRA_HEADER", "")
 
 
 class Http3Protocol(QuicConnectionProtocol):
@@ -25,13 +29,18 @@ class Http3Protocol(QuicConnectionProtocol):
                 if stream_id in self._request_streams:
                     continue
                 self._request_streams.add(stream_id)
-                self._http.send_headers(
-                    stream_id,
-                    [(b":status", b"200"),
-                     (b"content-type", b"text/plain"),
-                     (b"server", b"xtate-http3-lab")],
-                )
-                self._http.send_data(stream_id, BODY, end_stream=True)
+                headers = [(b":status", str(STATUS).encode()),
+                           (b"content-type", b"text/plain"),
+                           (b"server", b"xtate-http3-lab")]
+                if EXTRA and ":" in EXTRA:
+                    name, value = EXTRA.split(":", 1)
+                    headers.append((name.strip().encode(),
+                                    value.strip().encode()))
+                self._http.send_headers(stream_id, headers)
+                if EMPTY_DATA:
+                    self._http.send_data(stream_id, b"", end_stream=True)
+                else:
+                    self._http.send_data(stream_id, BODY, end_stream=True)
                 self.transmit()
 
 
