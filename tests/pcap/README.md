@@ -25,3 +25,12 @@ Suites using this library:
 - `tests/zbanner/` — full ZBanner matrix;
 - `tests/http-pcap/` — HTTP keyword/regex/scope matching;
 - `tests/tcp-syn-pcap/` — SYN-ACK/RST basics.
+
+## Synthetic and recorded fixtures
+
+Prefer synthetic fixtures for protocol invariants (flags, cookies, ACK numbers,
+malformed tails). For protocols where reproducing a full server flight is
+impractical, a small checked-in capture is acceptable: record it once with the
+server scoped to a test address, keep only the packets needed by the receive
+path, and replay it with fixed `--source-ip`, source port and seed. Do not
+commit captures containing public Internet peers or credentials.
