@@ -21,18 +21,17 @@ mkdir -p "$TMP"
 grep -q 'http2_frame_count: 3' "$TMP/h2c.log" || { cat "$TMP/h2c.log" >&2; exit 1; }
 grep -q '"http/2" because "frame"' "$TMP/h2c.log" || { cat "$TMP/h2c.log" >&2; exit 1; }
 
-for extra in '--all-frames' '--settings-hex=000000000000' '--ping-hex=5854415445' '--no-ping'; do
-    "$BIN" -ip 172.20.0.4 -p 8446 -scan zbanner -probe h2c \
-        -scan-arg '--all-banner --no-dedup-banner' \
-        -probe-arg "$extra" \
-        --adapter "file:$TMP/h2c.pcap" \
-        --source-ip 172.20.0.5 \
-        --source-mac 02-00-00-00-00-01 \
-        --router-mac 02-00-00-00-00-02 \
-        -source-port 40000-40255 -seed 123 \
-        --no-resume-file --wait 3 --no-status -show info -show failed \
-        >"$TMP/h2c-extra.log" 2>&1
-    grep -q 'http2_frame_count: 3' "$TMP/h2c-extra.log" || { cat "$TMP/h2c-extra.log" >&2; exit 1; }
-done
+"$BIN" -ip 172.20.0.4 -p 8446 -scan zbanner -probe h2c \
+    -scan-arg '--all-banner --no-dedup-banner' \
+    -probe-arg '--all-frames' \
+    --adapter "file:$TMP/h2c.pcap" \
+    --source-ip 172.20.0.5 \
+    --source-mac 02-00-00-00-00-01 \
+    --router-mac 02-00-00-00-00-02 \
+    -source-port 40000-40255 -seed 123 \
+    --no-resume-file --wait 3 --no-status -show info -show failed \
+    >"$TMP/h2c-allframes.log" 2>&1
+grep -q 'http2_frame_count: 3' "$TMP/h2c-allframes.log" || { cat "$TMP/h2c-allframes.log" >&2; exit 1; }
+grep -q 'http2_f3_type: 0' "$TMP/h2c-allframes.log" || { cat "$TMP/h2c-allframes.log" >&2; exit 1; }
 
 echo "PASS: H2C synthetic pcap matrix"

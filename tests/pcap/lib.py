@@ -92,11 +92,15 @@ def icmp_port_unreachable4(ip_them, port_them, ip_me, port_me, ident=0):
     """ICMPv4 destination-unreachable/port-unreachable with embedded UDP."""
     src = ipaddress.IPv4Address(ip_them).packed
     dst = ipaddress.IPv4Address(ip_me).packed
+    # The inner packet is the original outbound UDP packet: me -> them.
+    inner_src = dst
+    inner_dst = src
     inner_ip = struct.pack("!BBHHHBBH4s4s", 0x45, 0, 28, ident & 0xFFFF,
-                           0, 64, 17, 0, src, dst)
+                           0, 64, 17, 0, inner_src, inner_dst)
     inner_ip = struct.pack("!BBHHHBBH4s4s", 0x45, 0, 28, ident & 0xFFFF,
-                           0, 64, 17, checksum(inner_ip), src, dst)
-    inner_udp = struct.pack("!HHHH", port_them, port_me, 8, 0)
+                           0, 64, 17, checksum(inner_ip), inner_src,
+                           inner_dst)
+    inner_udp = struct.pack("!HHHH", port_me, port_them, 8, 0)
     icmp = struct.pack("!BBHI", 3, 3, 0, 0) + inner_ip + inner_udp
     icmp = struct.pack("!BBHI", 3, 3, 0, checksum(icmp)) + inner_ip + inner_udp
     total_len = 20 + len(icmp)
