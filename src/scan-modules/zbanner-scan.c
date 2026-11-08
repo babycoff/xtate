@@ -507,9 +507,10 @@ static ConfParam zbanner_parameters[] = {
      "NOTE2: This may get so many segments with banner data. We can use some "
      "global params to adjust it. (e.g. --tcp-win, --max-packet-len, "
      "--snaplen)\n"
-     "OUTPUT: banner seqno is the exact TCP sequence number. banner idx is the "
-     "approximate zero-based dedup repeat count for the banner flow, not a TCP "
-     "segment ordinal; use banner seqno for ordering."},
+     "OUTPUT: banner seqno is the exact TCP sequence number. banner idx (alias "
+     "banner dedup_repeat) is the approximate zero-based dedup repeat count "
+     "for the banner flow, not a TCP segment ordinal; use banner seqno for "
+     "ordering."},
     {"all-banner-limit",
      SET_all_banner_limit,
      Type_ARG,
@@ -853,7 +854,9 @@ static void zbanner_validate(uint64_t entropy, Recved *recved,
     if (event == ZB_EV_IGNORE)
         return;
 
-    pre->go_record = 1;
+    pre->go_record       = 1;
+    pre->scan_event      = (unsigned)event;
+    pre->scan_index      = r.index;
     pre->probe_payload_len = r.actual_payload_len;
 
     if (bench_trace) {
@@ -897,9 +900,7 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
 
     Recved *recved = &valid_pkt->recved;
 
-    ZBResponse zr;
-    ZBEvent    event =
-        zb_classify(entropy, recved, valid_pkt->probe_payload_len, true, &zr);
+    ZBEvent event = (ZBEvent)valid_pkt->scan_event;
     if (event == ZB_EV_IGNORE)
         return;
 
@@ -913,7 +914,7 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
         TCP_SEQNO(recved->packet, recved->parsed.transport_offset);
     /* Defense in depth: validate() normally drops out-of-range slots. */
     unsigned slot_count = probe_slot_count(ZBannerScan.probe);
-    unsigned index = zr.index;
+    unsigned index = valid_pkt->scan_index;
 
     /*SYNACK*/
     if (event == ZB_EV_SYNACK) {
@@ -978,7 +979,8 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
 
             unsigned char payload[PM_PAYLOAD_SIZE];
             size_t        payload_len = 0;
-            size_t        declared_len = zr.declared_payload_len;
+            size_t        declared_len =
+                ZBannerScan.probe->get_payload_length_cb(&ptarget);
 
             if (declared_len > ZBANNER_PAYLOAD_MAX) {
                 LOG(LEVEL_WARN,
@@ -1005,6 +1007,8 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
                                  (uint64_t)declared_len);
                     dach_set_int(&item->scan_report, "payload_len_actual",
                                  (uint64_t)payload_len);
+                    dach_set_int(&item->scan_report,
+                                 "payload_contract_error", 1);
                 }
             }
 
@@ -1086,6 +1090,10 @@ static void zbanner_handle(unsigned th_idx, uint64_t entropy,
             dach_set_int(&item->scan_report, "repeats", valid_pkt->repeats);
         if (zbanner_conf.all_banner) {
             dach_set_int(&item->scan_report, "banner idx", valid_pkt->repeats);
+            /* Same value as banner idx, but the name states exactly what the
+             * number is: a dedup repeat counter, not a segment ordinal. */
+            dach_set_int(&item->scan_report, "banner dedup_repeat",
+                         valid_pkt->repeats);
             /* Exact TCP sequence number of this segment; unlike banner idx it
              * does not depend on the approximate dedup counter. */
             dach_set_int(&item->scan_report, "banner seqno", seqno_them);

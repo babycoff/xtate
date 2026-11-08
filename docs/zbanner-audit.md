@@ -109,7 +109,11 @@ startup.
 - all-banner limit/floor bounds and floor<=limit validation added.
 - Existing `with-ack` zero-payload behavior documented and preserved.
 - Banner/ACK validation now uses the actual generated payload length; mismatch
-  diagnostics are attached to the SYN-ACK result.
+  diagnostics are attached to the SYN-ACK result, including
+  `payload_contract_error`.
+- `banner dedup_repeat` was added as an explicit alias of `banner idx`.
+- The validate-stage classification is cached in `ValidPacket`, so `handle`
+  does not classify the same packet a second time.
 
 ## Remaining work
 

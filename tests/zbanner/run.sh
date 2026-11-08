@@ -119,6 +119,7 @@ if "$BIN" --help-probe lua-tcp >/dev/null 2>&1; then
         -probe-arg "--script=$ROOT/tests/zbanner/lua-payload-mismatch.lua")
     expect_grep "$log" 'payload_len_declared: 1'
     expect_grep "$log" 'payload_len_actual: 4'
+    expect_grep "$log" 'payload_contract_error: 1'
     expect_grep "$log" '"lua-banner" because "matched"'
 else
     echo "SKIP: lua-tcp probe not built; payload mismatch fixture skipped"

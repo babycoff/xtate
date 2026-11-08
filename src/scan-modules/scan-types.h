@@ -32,6 +32,10 @@ typedef struct PacketReceived {
 typedef struct PacketValidated {
     Recved   recved;
     unsigned repeats;
+    /* Cached scan classification for scan modules that classify in
+     * validate_cb and must not parse the same packet again in handle_cb. */
+    unsigned scan_event;
+    unsigned scan_index;
     /* Cached probe payload length computed by validate_cb, for scan modules
      * that must keep payload generation and response validation consistent. */
     unsigned probe_payload_len;
@@ -48,6 +52,8 @@ typedef struct PacketPreHandle {
     ipaddress dedup_ip_me;
     unsigned  dedup_port_me;
     unsigned  dedup_type;
+    unsigned  scan_event;
+    unsigned  scan_index;
     unsigned  probe_payload_len;
 } PreHandle;
 

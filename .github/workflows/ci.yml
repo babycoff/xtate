@@ -70,7 +70,8 @@ jobs:
           XTATE_BIN="$BIN" python3 tests/config/fuzz.py
           XTATE_BIN="$BIN" bash tests/jarm/test.sh
 
-      - name: ZBanner pcap offline regression
+      - name: Offline pcap regression matrices
+        if: matrix.config == 'release'
         run: |
           if [[ "${{ matrix.config }}" == "debug" ]]; then
             BIN=./bin/xtate_debug
@@ -78,6 +79,8 @@ jobs:
             BIN=./bin/xtate
           fi
           XTATE_BIN="$BIN" bash tests/zbanner/run.sh
+          XTATE_BIN="$BIN" bash tests/http-pcap/run.sh
+          XTATE_BIN="$BIN" bash tests/tcp-syn-pcap/run.sh
 
       - name: Restore fuzz corpus
         if: matrix.compiler == 'clang' && matrix.config == 'release'

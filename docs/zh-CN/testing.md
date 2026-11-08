@@ -136,5 +136,7 @@ Windows 构建在 `.github/workflows/windows.yml` 中运行，覆盖 MSVC、Clan
 | 参数解析器 | `tests/config/test.sh` | 未知/缺失/help/CLI 解析基础 |
 | slot-plan lab | `tests/lab/run.sh` | 真实 TCP/UDP `ProbeSlot_Always`、JARM `AfterFirstReply`、SSH banner/KEX、h2c/h2 framing、TLS 证书细节 |
 | ZBanner pcap 矩阵 | `tests/zbanner/run.sh` | 离线 `file:` 回放：SYNACK/RST、banner、重传、all-banner limit/floor、错误 ACK、IPv6、zero-window、Lua payload mismatch |
+| HTTP pcap 矩阵 | `tests/http-pcap/run.sh` | 离线 keyword/regex/header/body/no-match |
+| tcp-syn pcap 矩阵 | `tests/tcp-syn-pcap/run.sh` | 离线 SYN-ACK/RST 基础 |
 | PTY | `tests/interactive/tty.sh` | 终端恢复 + 补全 |
 | large batch | `tests/large-batch/` | replay/RSS/输出失败 |

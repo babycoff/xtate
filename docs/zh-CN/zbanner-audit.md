@@ -93,7 +93,10 @@ floor 大于非零 limit 会在启动时拒绝。
   若该模式需要严格 one-shot，后续应加有界 one-shot 表。
 - 增加 all-banner limit/floor 边界和 floor<=limit 校验。
 - 记录并保留 `with-ack` 零 payload 行为。
-- banner/ACK 验证使用实际生成 payload 长度；不一致诊断附在 SYN-ACK 结果上。
+- banner/ACK 验证使用实际生成 payload 长度；不一致诊断附在 SYN-ACK 结果上，
+  并输出 `payload_contract_error`。
+- 增加 `banner dedup_repeat` 作为 `banner idx` 的显式别名。
+- validate 阶段的分类结果缓存到 `ValidPacket`，handle 不再重复分类。
 
 ## 剩余工作
 
