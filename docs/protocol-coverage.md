@@ -25,7 +25,14 @@ test reference, not copy its code or promise output compatibility.
 | IMAP | STARTTLS only | `tls-state --starttls imap`; no full IMAP probe yet. |
 | POP3 | STARTTLS only | `tls-state --starttls pop3`; no full POP3 probe yet. |
 | FTP | STARTTLS only | `tls-state --starttls ftp`; no full FTP probe yet. |
-| MongoDB | output only | The `mongodb` output module is not a MongoDB handshake probe. |
+| MongoDB | `mongodb` | OP_MSG hello/BSON identification. |
+| MySQL | `mysql`, `mysql-state` | Greeting identification; no auth. |
+| PostgreSQL | `postgres`, `postgres-state` | SSLRequest and auth-boundary probe. |
+| SMTP | `smtp`, `smtp-state` | Banner / EHLO capabilities. |
+| IMAP | `imap`, `imap-state` | Banner / CAPABILITY. |
+| POP3 | `pop3`, `pop3-state` | Banner / CAPA. |
+| FTP | `ftp`, `ftp-state` | Banner / FEAT. |
+| ManageSieve | `managesieve`, `managesieve-state` | Capability greeting. |
 | Banner | `null` / `hello` | Generic capture, not protocol-aware. |
 | Everything else | absent | See the matrix below. |
 
@@ -42,27 +49,27 @@ test reference, not copy its code or promise output compatibility.
 | Banner | yes | generic only | 1 | tcp/udp |
 | DNP3 | yes | absent | 3 | state |
 | Fox | yes | absent | 3 | state |
-| FTP | yes | STARTTLS only | 2 | state |
+| FTP | yes | `ftp`/`ftp-state` | 1/2 | tcp/state |
 | HTTP | yes | partial/frozen | - | tcp/state |
-| IMAP | yes | STARTTLS only | 2 | state |
+| IMAP | yes | `imap`/`imap-state` | 1/2 | tcp/state |
 | IPP | yes | absent | 2 | state |
 | JARM | yes | done | - | tcp slots |
-| ManageSieve | yes | absent | 2 | state |
+| ManageSieve | yes | `managesieve`/`managesieve-state` | 1/2 | tcp/state |
 | Memcached | yes | `memcached` | 1 | tcp |
 | Modbus | yes | absent | 3 | state |
-| MongoDB | yes | output only | 2 | state |
+| MongoDB | yes | `mongodb` | 1 | tcp |
 | MQTT | yes | `mqtt` | 1 | tcp |
 | MSSQL | yes | absent | 2 | state |
-| MySQL | yes | absent | 2 | state |
+| MySQL | yes | `mysql`/`mysql-state` | 1/2 | tcp/state |
 | NTP | yes | `ntp` | 1 | UDP |
 | Oracle | yes | absent | 2 | state |
-| POP3 | yes | STARTTLS only | 2 | state |
-| PostgreSQL | yes | absent | 2 | state |
+| POP3 | yes | `pop3`/`pop3-state` | 1/2 | tcp/state |
+| PostgreSQL | yes | `postgres`/`postgres-state` | 1/2 | tcp/state |
 | PPTP | yes | absent | 2 | state |
 | Redis | yes | `redis` | 1 | tcp |
 | Siemens S7 | yes | absent | 3 | state |
 | SMB | yes | absent | 2 | state |
-| SMTP | yes | STARTTLS only | 2 | state |
+| SMTP | yes | `smtp`/`smtp-state` | 1/2 | tcp/state |
 | SOCKS5 | yes | `socks5` | 1 | state |
 | SSH | yes | partial | 2 | state |
 | Telnet | yes | `telnet` | 1 | state |

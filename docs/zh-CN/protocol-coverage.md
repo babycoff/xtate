@@ -24,7 +24,14 @@
 | IMAP | 仅 STARTTLS | `tls-state --starttls imap`；还没有完整 IMAP 探针。 |
 | POP3 | 仅 STARTTLS | `tls-state --starttls pop3`；还没有完整 POP3 探针。 |
 | FTP | 仅 STARTTLS | `tls-state --starttls ftp`；还没有完整 FTP 探针。 |
-| MongoDB | 仅输出模块 | `mongodb` 输出不是 MongoDB 握手探针。 |
+| MongoDB | `mongodb` | OP_MSG hello/BSON 识别。 |
+| MySQL | `mysql`、`mysql-state` | greeting 识别；不认证。 |
+| PostgreSQL | `postgres`、`postgres-state` | SSLRequest 和认证边界。 |
+| SMTP | `smtp`、`smtp-state` | banner / EHLO 能力。 |
+| IMAP | `imap`、`imap-state` | banner / CAPABILITY。 |
+| POP3 | `pop3`、`pop3-state` | banner / CAPA。 |
+| FTP | `ftp`、`ftp-state` | banner / FEAT。 |
+| ManageSieve | `managesieve`、`managesieve-state` | capability greeting。 |
 | Banner | `null`/`hello` | 通用抓取，不是协议感知。 |
 | 其它 | 未实现 | 见下表。 |
 
@@ -41,27 +48,27 @@
 | Banner | 有 | 仅通用 | 1 | tcp/udp |
 | DNP3 | 有 | 未实现 | 3 | state |
 | Fox | 有 | 未实现 | 3 | state |
-| FTP | 有 | 仅 STARTTLS | 2 | state |
+| FTP | 有 | `ftp`/`ftp-state` | 1/2 | tcp/state |
 | HTTP | 有 | 部分/冻结 | - | tcp/state |
-| IMAP | 有 | 仅 STARTTLS | 2 | state |
+| IMAP | 有 | `imap`/`imap-state` | 1/2 | tcp/state |
 | IPP | 有 | 未实现 | 2 | state |
 | JARM | 有 | 完成 | - | tcp slots |
-| ManageSieve | 有 | 未实现 | 2 | state |
+| ManageSieve | 有 | `managesieve`/`managesieve-state` | 1/2 | tcp/state |
 | Memcached | 有 | `memcached` | 1 | tcp |
 | Modbus | 有 | 未实现 | 3 | state |
-| MongoDB | 有 | 仅输出 | 2 | state |
+| MongoDB | 有 | `mongodb` | 1 | tcp |
 | MQTT | 有 | `mqtt` | 1 | tcp |
 | MSSQL | 有 | 未实现 | 2 | state |
-| MySQL | 有 | 未实现 | 2 | state |
+| MySQL | 有 | `mysql`/`mysql-state` | 1/2 | tcp/state |
 | NTP | 有 | `ntp` | 1 | UDP |
 | Oracle | 有 | 未实现 | 2 | state |
-| POP3 | 有 | 仅 STARTTLS | 2 | state |
-| PostgreSQL | 有 | 未实现 | 2 | state |
+| POP3 | 有 | `pop3`/`pop3-state` | 1/2 | tcp/state |
+| PostgreSQL | 有 | `postgres`/`postgres-state` | 1/2 | tcp/state |
 | PPTP | 有 | 未实现 | 2 | state |
 | Redis | 有 | `redis` | 1 | tcp |
 | Siemens S7 | 有 | 未实现 | 3 | state |
 | SMB | 有 | 未实现 | 2 | state |
-| SMTP | 有 | 仅 STARTTLS | 2 | state |
+| SMTP | 有 | `smtp`/`smtp-state` | 1/2 | tcp/state |
 | SOCKS5 | 有 | `socks5` | 1 | state |
 | SSH | 有 | 部分 | 2 | state |
 | Telnet | 有 | `telnet` | 1 | state |

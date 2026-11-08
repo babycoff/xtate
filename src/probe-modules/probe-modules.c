@@ -50,6 +50,21 @@ extern Probe NtpProbe;
 extern Probe MqttProbe;
 extern Probe Socks5Probe;
 extern Probe TelnetProbe;
+extern Probe MysqlProbe;
+extern Probe MysqlStateProbe;
+extern Probe PostgresProbe;
+extern Probe PostgresStateProbe;
+extern Probe MongodbProbe;
+extern Probe SmtpProbe;
+extern Probe SmtpStateProbe;
+extern Probe ImapProbe;
+extern Probe ImapStateProbe;
+extern Probe Pop3Probe;
+extern Probe Pop3StateProbe;
+extern Probe FtpProbe;
+extern Probe FtpStateProbe;
+extern Probe ManageSieveProbe;
+extern Probe ManageSieveStateProbe;
 //! ADD YOUR PROBE MODULE HERE
 
 
@@ -105,6 +120,21 @@ Probe *probe_modules_list[] = {
     &MqttProbe,
     &Socks5Probe,
     &TelnetProbe,
+    &MysqlProbe,
+    &MysqlStateProbe,
+    &PostgresProbe,
+    &PostgresStateProbe,
+    &MongodbProbe,
+    &SmtpProbe,
+    &SmtpStateProbe,
+    &ImapProbe,
+    &ImapStateProbe,
+    &Pop3Probe,
+    &Pop3StateProbe,
+    &FtpProbe,
+    &FtpStateProbe,
+    &ManageSieveProbe,
+    &ManageSieveStateProbe,
 
     /* Developer examples / test fixtures for ProbeSlot_Always. */
     &SlotTestProbe,

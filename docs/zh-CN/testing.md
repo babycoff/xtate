@@ -145,6 +145,7 @@ Windows 构建在 `.github/workflows/windows.yml` 中运行，覆盖 MSVC、Clan
 | TLS+H2 深度 | `tests/lab/ci-h2-depth.sh` | status 404、空 DATA、额外 header、matcher |
 | H2C 深度 | `tests/lab/ci-h2c-depth.sh` | settings/ping、all-frames |
 | 协议探针 lab | `tests/lab/ci-probes.sh` | Redis/Memcached/NTP/MQTT/SOCKS5/Telnet fake server |
+| Batch B 协议 lab | `tests/lab/ci-batch-b.sh` | MySQL/PostgreSQL/MongoDB/SMTP/IMAP/POP3/FTP/ManageSieve tcp+state |
 | QUIC/HTTP3 本地 CI | `tests/lab/ci-quic.sh` | 本地 aioquic HTTP/3 目标；body/match |
 | QUIC/HTTP3 深度 | `tests/lab/ci-quic-depth.sh` | body/header/no-match、status 404、空 body、额外 header |
 | HTTP3 帧 fixture | `tests/http3-frame/` | 解密 HEADERS/DATA QPACK selftest |

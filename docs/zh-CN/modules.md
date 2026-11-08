@@ -2,7 +2,7 @@
 
 [English](../modules.md) · **中文**
 
-Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上以 `NULL` 结尾的注册表里的一行；没有运行期插件加载。完整构建会注册 **11 个基础扫描 + 33 个探测 + 7 个输出 + 5 个生成**模块；另有可选的 `quic-state` 和 `http3-state`（需要 ngtcp2/GnuTLS）。缺少可选库的模块会直接从构建中消失（也从 `--list-*` 中消失）。
+Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上以 `NULL` 结尾的注册表里的一行；没有运行期插件加载。完整构建会注册 **11 个基础扫描 + 48 个探测 + 7 个输出 + 5 个生成**模块；另有可选的 `quic-state` 和 `http3-state`（需要 ngtcp2/GnuTLS）。缺少可选库的模块会直接从构建中消失（也从 `--list-*` 中消失）。
 
 | 类别 | 职责 | 参数 | 注册表 |
 |:---|:---|:---|:---|
@@ -15,7 +15,7 @@ Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上�
 
 ```bash
 xtate --list-scan      # 11，若有 quic-state 则为 12
-xtate --list-probe     # 33 个探测模块
+xtate --list-probe     # 48 个探测模块
 xtate --list-out       # 7 个输出模块
 xtate --list-gen       # 5 个生成模块
 
@@ -193,6 +193,26 @@ STARTTLS 失败输出 `starttls error`。`--dump-cert-details` 输出
 | `dns` | udp | DNS 记录请求，可配置名称/类型/递归。 |
 | `snmp` | udp | SNMP（v1/v2c）请求，并按 MIB 提取主机信息。 |
 | `echo` | udp | 四个由 cookie 派生的字节；接受包含它们的回包。 |
+
+### Batch B 协议（15）
+
+| Probe | Type | What it does |
+|:---|:---:|:---|
+| `mysql` | tcp | 读取 MySQL greeting；protocol/version/capabilities/auth plugin。 |
+| `mysql-state` | state | 有状态 greeting；不认证。 |
+| `postgres` | tcp | PostgreSQL SSLRequest 能力检查。 |
+| `postgres-state` | state | SSLRequest + 认证边界 StartupMessage。 |
+| `mongodb` | tcp | OP_MSG `hello`/BSON 识别。 |
+| `smtp` | tcp | 读取 SMTP 220 banner。 |
+| `smtp-state` | state | SMTP greeting + EHLO 能力/STARTTLS。 |
+| `imap` | tcp | 读取 IMAP greeting。 |
+| `imap-state` | state | IMAP CAPABILITY/STARTTLS。 |
+| `pop3` | tcp | 读取 POP3 +OK banner。 |
+| `pop3-state` | state | POP3 CAPA/STLS。 |
+| `ftp` | tcp | 读取 FTP 220 banner。 |
+| `ftp-state` | state | FTP FEAT/AUTH TLS。 |
+| `managesieve` | tcp | 读取 ManageSieve capability greeting。 |
+| `managesieve-state` | state | ManageSieve 能力/STARTTLS/SASL。 |
 
 ### 指纹识别（5）
 

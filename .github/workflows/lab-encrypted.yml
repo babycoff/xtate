@@ -68,6 +68,13 @@ jobs:
           XTATE_LAB_TARGET_IMAGE: xtate-lab-target:24.04
         run: bash tests/lab/ci-probes.sh
 
+      - name: Batch B protocol lab
+        env:
+          XTATE_BIN: ./bin/xtate
+          XTATE_LAB_IMAGE: xtate-lab-target:24.04
+          XTATE_LAB_TARGET_IMAGE: xtate-lab-target:24.04
+        run: bash tests/lab/ci-batch-b.sh
+
       - name: QUIC + HTTP3 local CI
         env:
           XTATE_BIN: ./bin/xtate

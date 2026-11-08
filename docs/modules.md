@@ -4,7 +4,7 @@
 
 Xtate is assembled from four kinds of module. Each is a C struct plus one line in a
 `NULL`-terminated registry; there is no runtime plugin loading. A full build registers
-**11 base Scan + 33 Probe + 7 Output + 5 Generate** modules, plus optional
+**11 base Scan + 48 Probe + 7 Output + 5 Generate** modules, plus optional
 `quic-state` and `http3-state` when ngtcp2/GnuTLS is available. Modules whose optional library is missing simply disappear
 from the build (and from `--list-*`).
 
@@ -218,6 +218,26 @@ STARTTLS is emitted as `starttls error`. `--dump-cert-details` outputs
 | `dns` | udp | DNS record request with configurable name/type/recursion. |
 | `snmp` | udp | SNMP (v1/v2c) request and MIB-guided host info extraction. |
 | `echo` | udp | Four cookie-derived bytes; accepts a reply containing them. |
+
+### Batch B protocols (15)
+
+| Probe | Type | What it does |
+|:---|:---:|:---|
+| `mysql` | tcp | Read MySQL server greeting; protocol/version/capabilities/auth plugin. |
+| `mysql-state` | state | Same greeting over tcp-state; no authentication. |
+| `postgres` | tcp | PostgreSQL SSLRequest capability check. |
+| `postgres-state` | state | SSLRequest + auth-boundary StartupMessage. |
+| `mongodb` | tcp | OP_MSG `hello` and BSON identification. |
+| `smtp` | tcp | Read SMTP 220 banner. |
+| `smtp-state` | state | SMTP greeting + EHLO capabilities/STARTTLS. |
+| `imap` | tcp | Read IMAP greeting. |
+| `imap-state` | state | IMAP CAPABILITY/STARTTLS. |
+| `pop3` | tcp | Read POP3 +OK banner. |
+| `pop3-state` | state | POP3 CAPA/STLS. |
+| `ftp` | tcp | Read FTP 220 banner. |
+| `ftp-state` | state | FTP FEAT/AUTH TLS. |
+| `managesieve` | tcp | Read ManageSieve capability greeting. |
+| `managesieve-state` | state | ManageSieve capability/STARTTLS/SASL. |
 
 ### Fingerprinting (5)
 
