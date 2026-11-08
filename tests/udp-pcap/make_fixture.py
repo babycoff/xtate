@@ -14,6 +14,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
     ap.add_argument("--mode", choices=["echo", "icmp"], default="echo")
+    ap.add_argument("--ip-version", type=int, choices=[4, 6], default=4)
     ap.add_argument("--target", default="192.0.2.2")
     ap.add_argument("--target-port", type=int, default=8080)
     ap.add_argument("--ip-me", default="192.0.2.1")
@@ -21,22 +22,28 @@ def main():
     ap.add_argument("--seed", type=int, default=123)
     args = ap.parse_args()
 
-    ck = lib.tcp_cookie(args.target, args.target_port, args.ip_me,
-                        args.source_port, args.seed)
+    if args.ip_version == 6:
+        ck = lib.tcp_cookie6(args.target, args.target_port, args.ip_me,
+                             args.source_port, args.seed)
+    else:
+        ck = lib.tcp_cookie(args.target, args.target_port, args.ip_me,
+                            args.source_port, args.seed)
     good = struct.pack(">I", ck)
     if args.mode == "icmp":
+        builder = (lib.icmp_port_unreachable6 if args.ip_version == 6
+                   else lib.icmp_port_unreachable4)
         packets = [
-            lib.icmp_port_unreachable4(args.target, args.target_port,
-                                        args.ip_me, args.source_port),
-            lib.icmp_port_unreachable4(args.target, args.target_port,
-                                        args.ip_me, args.source_port + 1),
+            builder(args.target, args.target_port, args.ip_me,
+                    args.source_port),
+            builder(args.target, args.target_port, args.ip_me,
+                    args.source_port + 1),
         ]
     else:
         packets = [
             lib.udp(args.target, args.target_port, args.ip_me,
-                    args.source_port, good),
+                    args.source_port, good, ip_version=args.ip_version),
             lib.udp(args.target, args.target_port, args.ip_me,
-                    args.source_port, b"bad"),
+                    args.source_port, b"bad", ip_version=args.ip_version),
         ]
     with lib.PcapWriter(args.out) as out:
         for i, packet in enumerate(packets):

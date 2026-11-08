@@ -9,6 +9,7 @@ STATUS = int(os.environ.get("H2_STATUS", "200"))
 EMPTY_DATA = os.environ.get("H2_EMPTY_DATA", "") not in ("", "0", "false")
 DATA = os.environ.get("H2_DATA", "hello").encode()
 EXTRA = os.environ.get("H2_EXTRA_HEADER", "")
+SECOND_HEADER = os.environ.get("H2_SECOND_HEADER", "")
 
 STATUS_HPACK = {
     200: 0x88, 204: 0x89, 206: 0x8A, 304: 0x8B,
@@ -49,6 +50,10 @@ while True:
         tls.sendall(frame(4, 0, 0, b""))
         block = bytes([STATUS_HPACK.get(STATUS, 0x88)]) + hpack_extra(EXTRA)
         tls.sendall(frame(1, 0x04, 1, block))
+        if SECOND_HEADER:
+            second = hpack_extra(SECOND_HEADER)
+            if second:
+                tls.sendall(frame(1, 0x04, 1, second))
         if not EMPTY_DATA:
             tls.sendall(frame(0, 0x01, 1, DATA))
         tls.close()

@@ -751,6 +751,40 @@ static int h3_frame_selftest(void) {
             h.status, h.header_count, h.body_len);
         return 1;
     }
+
+    /*
+     * QPACK literal-name/literal-value Huffman fixture:
+     *   HEADERS: QPACK block 0000 d9 2e f2 b1 7c a6 c1 ff 84 ee 3a 2d 2f
+     *   d9 -> static :status 200
+     *   2e -> literal name, Huffman name (x-extra), Huffman value "value"
+     * This vector is produced by aioquic/pylsqpack and locks the H-bit (0x08)
+     * and Huffman-literal decode path.
+     */
+    static const unsigned char huff_frames[] = {
+        0x01, 0x0f, 0x00, 0x00, 0xd9, 0x2e, 0xf2, 0xb1, 0x7c,
+        0xa6, 0xc1, 0xff, 0x84, 0xee, 0x3a, 0x2d, 0x2f,
+    };
+    unsigned char huff_body[8] = {0};
+    struct Http3State hh = {0};
+    OutItem huff_item = {0};
+    hh.buf = (unsigned char *)huff_frames;
+    hh.buf_len = sizeof(huff_frames);
+    hh.body = (char *)huff_body;
+    hh.max_body = sizeof(huff_body) - 1;
+    hh.max_headers = 4;
+    h3_parse_frames(&hh, &huff_item);
+    bool found_extra = false;
+    for (unsigned i = 0; i < hh.stored_headers; i++)
+        if (strcmp(hh.headers[i].name, "x-extra") == 0 &&
+            strcmp(hh.headers[i].value, "value") == 0)
+            found_extra = true;
+    if (hh.status != 200 || hh.header_count != 2 || !found_extra) {
+        LOG(LEVEL_ERROR,
+            "http3: QPACK Huffman frame fixture failed (status=%d headers=%u "
+            "extra=%d)\n",
+            hh.status, hh.header_count, (int)found_extra);
+        return 1;
+    }
     return 0;
 }
 

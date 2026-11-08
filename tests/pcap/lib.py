@@ -111,6 +111,24 @@ def icmp_port_unreachable4(ip_them, port_them, ip_me, port_me, ident=0):
     return struct.pack("!6s6sH", ETH_SRC, ETH_DST, 0x0800) + ip + icmp
 
 
+def icmp_port_unreachable6(ip_them, port_them, ip_me, port_me, ident=0):
+    """ICMPv6 destination-unreachable/port-unreachable with embedded UDP."""
+    del ident
+    src = ipaddress.IPv6Address(ip_them).packed
+    dst = ipaddress.IPv6Address(ip_me).packed
+    inner_src = dst
+    inner_dst = src
+    inner_udp = struct.pack("!HHHH", port_me, port_them, 8, 0)
+    inner_ip6 = struct.pack("!IHBB16s16s", 0x60000000, len(inner_udp), 17,
+                            64, inner_src, inner_dst)
+    icmp = struct.pack("!BBHI", 1, 4, 0, 0) + inner_ip6 + inner_udp
+    pseudo = src + dst + struct.pack("!I", len(icmp)) + b"\x00\x00\x00\x3a"
+    icmp = struct.pack("!BBHI", 1, 4, checksum(pseudo + icmp), 0) + \
+        inner_ip6 + inner_udp
+    ip6 = struct.pack("!IHBB16s16s", 0x60000000, len(icmp), 58, 64, src, dst)
+    return struct.pack("!6s6sH", ETH_SRC, ETH_DST, 0x86DD) + ip6 + icmp
+
+
 def udp4(ip_them, port_them, ip_me, port_me, payload=b"", ident=0):
     src = ipaddress.IPv4Address(ip_them).packed
     dst = ipaddress.IPv4Address(ip_me).packed

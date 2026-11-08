@@ -154,6 +154,7 @@ and RSS are noisy on shared runners. See `tests/bench/README.md`.
 | UDP pcap matrix | `tests/udp-pcap/run.sh` | echo cookie response + invalid response |
 | TLS+H2 local CI | `tests/lab/ci-h2.sh` | local TLS HTTP/2 target; status/header/body |
 | TLS+H2 depth | `tests/lab/ci-h2-depth.sh` | status 404, empty DATA, extra header, matcher |
+| H2C depth | `tests/lab/ci-h2c-depth.sh` | settings/ping, all-frames |
 | QUIC/HTTP3 local CI | `tests/lab/ci-quic.sh` | local aioquic HTTP/3 target; body/match |
 | QUIC/HTTP3 depth | `tests/lab/ci-quic-depth.sh` | body/header/no-match, status 404, empty body, extra header |
 | HTTP3 frame fixture | `tests/http3-frame/` | decrypted HEADERS/DATA QPACK selftest |
