@@ -44,8 +44,8 @@ fi
 docker network create "$NET" >/dev/null
 MSYS_NO_PATHCONV=1 docker run -d --name "$TARGET" --network "$NET" \
     -v "$ROOT:/src:ro" "$TARGET_IMAGE" bash -lc "
-      openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/key.pem \
-        -out /tmp/cert.pem -subj '/CN=example.test' -days 1 >/dev/null 2>&1 &&
+      openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/h2-key.pem \
+        -out /tmp/h2-cert.pem -subj '/CN=example.test' -days 1 >/dev/null 2>&1 &&
       exec python3 -u /src/tests/lab/h2_tls_server.py" >/dev/null
 TARGET_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$TARGET")"
 
