@@ -491,13 +491,18 @@ static size_t h2_hpack_int(const unsigned char *data, size_t len, size_t *off,
     if (*off >= len)
         return (size_t)-1;
     unsigned mask = (1u << prefix) - 1;
-    unsigned value = data[(*off)++] & mask;
+    size_t   value = data[(*off)++] & mask;
     if (value < mask)
         return value;
     unsigned shift = 0;
     while (*off < len) {
         unsigned b = data[(*off)++];
-        value += (b & 0x7f) << shift;
+        if (shift >= sizeof(value) * 8)
+            return (size_t)-1;
+        size_t add = (size_t)(b & 0x7f) << shift;
+        if (value > ~(size_t)0 - add)
+            return (size_t)-1;
+        value += add;
         if (!(b & 0x80))
             return value;
         shift += 7;
@@ -521,6 +526,15 @@ static bool h2_hpack_str(const unsigned char *data, size_t len, size_t *off,
     return true;
 }
 
+#ifdef H2_FUZZ
+static void h2_emit_header(OutItem *item, struct H2State *hs, const char *name,
+                           const char *value) {
+    (void)item;
+    (void)name;
+    (void)value;
+    hs->header_count++;
+}
+#else
 static void h2_emit_header(OutItem *item, struct H2State *hs, const char *name,
                            const char *value) {
     char field[32];
@@ -540,6 +554,7 @@ static void h2_emit_header(OutItem *item, struct H2State *hs, const char *name,
         dach_append_str(&item->probe_report, "h2_status", value, strlen(value));
     hs->header_count++;
 }
+#endif /* H2_FUZZ */
 
 static bool h2_decode_headers(const unsigned char *data, size_t len,
                               OutItem *item, struct H2State *hs) {
@@ -752,6 +767,7 @@ static unsigned h2_parse_response(DataPass *pass, ProbeState *state,
     return 0;
 }
 
+#ifndef H2_FUZZ
 Probe H2Probe = {
     .name       = "h2",
     .type       = ProbeType_STATE,
@@ -772,3 +788,4 @@ Probe H2Probe = {
     .conn_close_cb     = &h2_conn_close,
     .close_cb          = &h2_close,
 };
+#endif /* H2_FUZZ */

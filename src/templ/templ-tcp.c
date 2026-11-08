@@ -1119,7 +1119,8 @@ size_t tcp_create_by_template(const TmplPkt *tmpl, ipaddress ip_them,
         }
 
         memcpy(px + 0, tmpl->ipv4.packet, tmpl->ipv4.length);
-        memcpy(px + offset_payload, payload, payload_length);
+        if (payload_length)
+            memcpy(px + offset_payload, payload, payload_length);
 
         /*
          * Fill in the empty fields in the IP header and then re-calculate
@@ -1185,7 +1186,8 @@ size_t tcp_create_by_template(const TmplPkt *tmpl, ipaddress ip_them,
 
         /* Replace the template's application-layer-payload with the new
          * app-payload */
-        memcpy(px + tmpl->ipv6.offset_app, payload, payload_length);
+        if (payload_length)
+            memcpy(px + tmpl->ipv6.offset_app, payload, payload_length);
 
         /* Fixup the "payload length" field in the IPv6 header. This is
          * everything after the IPv6 header. There may be additional headers

@@ -15,8 +15,10 @@ ARTIFACTS="$ROOT/tests/fuzz/artifacts"
 
 mkdir -p "$BUILD" "$ARTIFACTS" \
     "$CORPUS/preprocess" "$CORPUS/target-parse" "$CORPUS/targetset" "$CORPUS/targetfile" \
+    "$CORPUS/h3-qpack" "$CORPUS/h2-hpack" \
     "$WORK_CORPUS/preprocess" "$WORK_CORPUS/target-parse" \
-    "$WORK_CORPUS/targetset" "$WORK_CORPUS/targetfile"
+    "$WORK_CORPUS/targetset" "$WORK_CORPUS/targetfile" \
+    "$WORK_CORPUS/h3-qpack" "$WORK_CORPUS/h2-hpack"
 
 if ! command -v "$CC" >/dev/null 2>&1; then
     echo "SKIP: $CC not available (install clang to run the fuzzers)" >&2
@@ -54,6 +56,20 @@ TARGET_SRC=(
     "$ROOT/src/target/target-rangeport.c"
     "$ROOT/src/util-data/fine-malloc.c"
 )
+echo "==> building h3_qpack_fuzz"
+"$CC" "${COMMON[@]}" -ffunction-sections -fdata-sections \
+    -DHTTP3_FUZZ \
+    "$ROOT/tests/fuzz/h3_qpack_fuzz.c" \
+    -Wl,--gc-sections \
+    -o "$BUILD/h3_qpack_fuzz"
+
+echo "==> building h2_hpack_fuzz"
+"$CC" "${COMMON[@]}" -ffunction-sections -fdata-sections \
+    -DH2_FUZZ \
+    "$ROOT/tests/fuzz/h2_hpack_fuzz.c" \
+    -Wl,--gc-sections \
+    -o "$BUILD/h2_hpack_fuzz"
+
 echo "==> building targetfile_fuzz"
 "$CC" "${COMMON[@]}" \
     "$ROOT/tests/fuzz/targetfile_fuzz.c" \
@@ -92,6 +108,22 @@ echo "==> fuzzing target-set parser for ${FUZZ_TIME}s"
     -timeout=5 \
     -artifact_prefix="$ARTIFACTS/targetset-" \
     "$WORK_CORPUS/targetset" "$CORPUS/targetset"
+
+echo "==> fuzzing HTTP/3 QPACK frames for ${FUZZ_TIME}s"
+"$BUILD/h3_qpack_fuzz" \
+    -max_total_time="$FUZZ_TIME" \
+    -max_len=65536 \
+    -timeout=5 \
+    -artifact_prefix="$ARTIFACTS/h3-qpack-" \
+    "$WORK_CORPUS/h3-qpack" "$CORPUS/h3-qpack"
+
+echo "==> fuzzing HTTP/2 HPACK for ${FUZZ_TIME}s"
+"$BUILD/h2_hpack_fuzz" \
+    -max_total_time="$FUZZ_TIME" \
+    -max_len=65536 \
+    -timeout=5 \
+    -artifact_prefix="$ARTIFACTS/h2-hpack-" \
+    "$WORK_CORPUS/h2-hpack" "$CORPUS/h2-hpack"
 
 echo "==> fuzzing target-file parser for ${FUZZ_TIME}s"
 "$BUILD/targetfile_fuzz" \

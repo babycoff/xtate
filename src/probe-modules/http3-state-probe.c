@@ -1021,6 +1021,7 @@ static void h3_close(void) {
     match_spec_free(&h3_conf.match);
 }
 
+#ifndef HTTP3_FUZZ
 Probe Http3StateProbe = {
     .name       = "http3-state",
     .type       = ProbeType_STATE,
@@ -1044,5 +1045,6 @@ Probe Http3StateProbe = {
     .conn_close_cb     = &h3_conn_close,
     .close_cb          = &h3_close,
 };
+#endif /* HTTP3_FUZZ */
 
 #endif /* HAVE_NGTCP2 */

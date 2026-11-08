@@ -11,9 +11,13 @@ parser. They complement `--selftest` and the fixed target/parser tests.
 | `target_parse_fuzz` | `target_parse_range()` with arbitrary target-range text |
 | `targetset_fuzz` | `targetset_add_ip_str()` and `targetset_add_port_str()` |
 | `targetfile_fuzz` | `targetset_parse_file()` line/file tokenizer |
+| `h3_qpack_fuzz` | in-tree HTTP/3 frame and QPACK decoder |
+| `h2_hpack_fuzz` | in-tree HTTP/2 HPACK decoder |
 
-The harnesses stub `LOG` and link only the parser objects. They do not need
-Npcap/OpenSSL and do not open sockets or files.
+The H2/H3 harnesses include the probe translation unit with a test-only guard
+so the fuzzed code is the product parser, not a copy. The other harnesses stub
+`LOG` and link only their parser objects. No harness needs Npcap/OpenSSL or opens
+sockets/files.
 
 ## Requirements
 
@@ -64,7 +68,9 @@ The run stops on the first sanitizer finding, writes the reproducer under
 fuzz smoke passed
 ```
 
-The Linux CI runs the 10-second smoke only in the Clang Release job.
+The Linux CI runs the 10-second smoke only in the Clang Release job. The
+ASan/UBSan build job also runs the six pcap matrices; see
+`tests/sanitizers/run.sh`.
 
 ## Notes
 

@@ -17,11 +17,15 @@
 #define TCP_FLAG_FIN 0B00000001
 
 #define TCP_SEQNO(px, transport_offset)                                        \
-    ((px)[(transport_offset) + 4] << 24 | (px)[(transport_offset) + 5] << 16 | \
-     (px)[(transport_offset) + 6] << 8 | (px)[(transport_offset) + 7])
+    ((unsigned)(px)[(transport_offset) + 4] << 24 |                            \
+     (unsigned)(px)[(transport_offset) + 5] << 16 |                            \
+     (unsigned)(px)[(transport_offset) + 6] << 8 |                             \
+     (unsigned)(px)[(transport_offset) + 7])
 #define TCP_ACKNO(px, transport_offset)                                        \
-    ((px)[(transport_offset) + 8] << 24 | (px)[(transport_offset) + 9] << 16 | \
-     (px)[(transport_offset) + 10] << 8 | (px)[(transport_offset) + 11])
+    ((unsigned)(px)[(transport_offset) + 8] << 24 |                            \
+     (unsigned)(px)[(transport_offset) + 9] << 16 |                            \
+     (unsigned)(px)[(transport_offset) + 10] << 8 |                            \
+     (unsigned)(px)[(transport_offset) + 11])
 #define TCP_WIN(px, transport_offset)                                          \
     ((px)[(transport_offset) + 14] << 8 |                                      \
      (px)[(transport_offset) + 15]) /*calc TCP window size*/

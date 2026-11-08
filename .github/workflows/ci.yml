@@ -115,3 +115,22 @@ jobs:
           XTATE_BIN: ./bin/xtate
         run: |
           bash tests/interactive/tty.sh
+
+  sanitizers:
+    name: Linux clang ASan + UBSan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake ninja-build pkg-config clang \
+            libpcap-dev libssl-dev libpcre2-dev libxml2-dev \
+            libbson-dev libmongoc-dev \
+            libngtcp2-dev libngtcp2-crypto-gnutls-dev libgnutls28-dev
+
+      - name: ASan + UBSan build and pcap smoke
+        run: CC=clang bash tests/sanitizers/run.sh
+
