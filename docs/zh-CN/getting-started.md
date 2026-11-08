@@ -6,7 +6,7 @@ Xtate 是一款面向大规模主动测量的模块化全栈网络扫描器。�
 
 本页带你在 Linux 或 Windows 上从源码检出走到第一次扫描。阅读前你应当熟悉 shell、`sudo` 和 TCP/IP 基础；本页不是扫描方法本身的教程。
 
-> 本文档针对 Xtate v2.37.0 编写。若你的构建行为与此不同，以 `--help` 和模块帮助为准。
+> 本文档针对 Xtate v2.38.0 编写。若你的构建行为与此不同，以 `--help` 和模块帮助为准。
 
 ## 环境要求
 
@@ -273,9 +273,17 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 - TCP/UDP 扫描务必给出 `-p`。完全不给端口时 Xtate 会告警并替换成一个假的 `o:0` 端点，它不是 TCP/UDP 端口，扫描因此不会发出任何报文。
 - 按一次 `Ctrl-C` 即可停止：发送停止后，迟到的回包仍会在 `--wait` 秒内（默认 10）被继续收集。再按一次 `Ctrl-C` 会强制中止。
 
-## banner 扫描：阻止内核代为应答
+## banner 与 stateful 扫描：阻止内核代为应答
 
-`zbanner` 和 `tcp-state` 会完成真实的 TCP 握手。Linux 内核并不认识这些连接，会用 RST 回应收到的 SYN-ACK/数据，在 banner 到达前就把连接打断。扫描期间需要抑制这种行为：
+**在 Linux 上，这对 `zbanner`、`tcp-state`、`tls-state`、`http-state` 以及所有 state 子探针（H2/HTTP3/Batch B/Batch C）都是必需的。** 这些引擎用原始报文完成真实 TCP 握手；Linux 内核不认识这些连接，会用 RST 回应 SYN-ACK/数据，在 banner、TLS 握手或探针响应到达前打断连接。
+
+缺少规则是常见且代价很高的错误：
+
+- 输出 `open`，但没有 banner 或 TLS 证据；
+- `tls-state` / `h2` / `smtp-state` / `postgres-state` 没有任何结果；
+- Docker lab 里 `openssl s_client` 能握手，但 Xtate 只看到 `open`。
+
+扫描期间需要抑制内核 RST：
 
 ```bash
 ./firewall/add_rules.sh

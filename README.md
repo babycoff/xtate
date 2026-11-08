@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.37.0-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.38.0-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -112,6 +112,9 @@ For a real banner-grabbing handshake, stop the Linux kernel from resetting conne
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http -show info
 ./firewall/rm_rules.sh
 ```
+
+> [!WARNING]
+> **Linux firewall rules are mandatory for `zbanner` and every `tcp-state`/`tls-state`/state-probe scan.** They suppress the kernel RST that otherwise kills half-open connections. A missing rule often looks like `open` but no banner, no TLS output, or a state probe that times out — and is very hard to diagnose later. Run `./firewall/add_rules.sh` before the scan and `./firewall/rm_rules.sh` immediately afterwards. The rules are host-wide and drop every outgoing RST/ICMP-unreachable from the machine.
 
 > [!TIP]
 > Start at `-rate 1000`, not `-rate 1000000`. A lab subnet is not the Internet, and your switch will thank you.

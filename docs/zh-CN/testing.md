@@ -95,6 +95,10 @@ interactive + PTY: 通过
 
 ## 规则
 
+> [!IMPORTANT]
+> lab 扫描容器必须在 `zbanner`、`tcp-state`、`tls-state`、H2/H3 或任何 state 探针之前安装 `iptables` 并执行 `/src/firewall/add_rules.sh`。目标容器不需要。缺规则会表现为 `open` 但没有 banner/TLS 输出——TLS 组合 lab 的失败根因就是它。
+
+
 - **Warning 是缺陷。** Tier 0/1 出现新 warning 必须修复或明确记录抑制；
   不能悄悄提高 warning 数。
 - **可选依赖必须保持可选。** 缺少 PCRE2/LibXml2/bson/mongoc 不能导致基础构建失败。

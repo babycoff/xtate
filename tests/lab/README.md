@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> Every scanner container that runs `zbanner`, `tcp-state`, `tls-state`, H2/H3 or a state probe must install `iptables` and execute `/src/firewall/add_rules.sh` before scanning. A missing rule produces `open` but no banner/TLS/probe output and is very hard to diagnose. Target containers do not need the rules. See also `docs/getting-started.md`.
+
 # Local ZBanner / HLTCP lab
 
 This is an isolated regression lab for ZBanner and HLTCP. It does **not** scan the

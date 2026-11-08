@@ -6,7 +6,7 @@ Xtate is a modular all-stack network scanner for large-scale active measurement.
 
 This page takes you from a source checkout to your first scan on Linux or Windows. It assumes you are comfortable with a shell, `sudo`, and basic TCP/IP; it is not a tutorial on scanning itself.
 
-> Documented against Xtate v2.37.0. If your build behaves differently, `--help` and the module help are authoritative.
+> Documented against Xtate v2.38.0. If your build behaves differently, `--help` and the module help are authoritative.
 
 ## Requirements
 
@@ -315,9 +315,17 @@ What to expect:
 - Always give `-p` for TCP/UDP scans. Without any port Xtate warns and substitutes a fake `o:0` endpoint, which is not a TCP/UDP port, so the scan sends nothing at all.
 - Stop with a single `Ctrl-C`: transmission stops, late replies are still collected for `--wait` seconds (default 10). Pressing `Ctrl-C` again aborts.
 
-## Banner scans: stop the kernel from answering
+## Banner and stateful scans: stop the kernel from answering
 
-`zbanner` and `tcp-state` complete a real TCP handshake. The Linux kernel does not know about those connections and will answer incoming SYN-ACK/data with a RST, killing them before the banner arrives. Suppress that for the duration of the scan:
+**This is mandatory on Linux for `zbanner`, `tcp-state`, `tls-state`, `http-state`, and every state sub-probe (H2/HTTP3/Batch B/Batch C).** These engines complete a real TCP handshake with raw packets. The Linux kernel does not know about those connections and will answer incoming SYN-ACK/data with a RST, killing the flow before the banner/TLS handshake/probe response arrives.
+
+Missing rules are a common and expensive mistake:
+
+- `open` is printed, but no banner or TLS evidence follows;
+- `tls-state` / `h2` / `smtp-state` / `postgres-state` produce no result;
+- a Docker lab works with `openssl s_client` but the scanner sees only `open`.
+
+Suppress the kernel RST for the duration of the scan:
 
 ```bash
 ./firewall/add_rules.sh
@@ -327,6 +335,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http \
 ```
 
 - `add_rules.sh` appends `OUTPUT` DROP rules for TCP RST (IPv4 and IPv6) plus ICMP port-unreachable (ICMP 3/3, ICMPv6 1/4). `rm_rules.sh` removes them; `check_rules.sh` prints the current rules.
+- **Applies to stateful TLS too.** A Docker/GitHub Actions scanner container needs `iptables` plus `/src/firewall/add_rules.sh`; the target container does not. A missing rule in a TLS lab causes exactly the `open`-but-no-TLS-output symptom.
 - These rules are **host-wide**: while they are active, every outgoing RST from this machine is dropped, including those of unrelated SSH/browser sessions. Add them before a scan and remove them immediately afterwards — never leave them installed.
 - Module-specific options are passed as a quoted string through `-scan-arg` and `-probe-arg`; for example `-scan-arg "-banner -ttl"` passes `-banner` and `-ttl` to the scan module.
 - On Windows there is no bundled equivalent of these scripts. For `tcp-syn` use `-scan-arg "--send-rst"` to actively close the half-open connection after the SYN-ACK. `zbanner` sends its own RST after the banner (unless `--no-rst`); `tcp-state` sends RST when it closes. Windows still needs Npcap and Administrator access. Do not assume the Windows host stack always behaves the same: on a Windows 11 loopback target, the host stack emitted its own early RST before ZBanner could read a banner, while a non-loopback Kali VM target completed ZBanner and the banner was received. `--send-rst` adds Xtate's explicit RST with the correct acknowledgment in both cases. If a banner scan on Windows returns `open` without a banner, capture the loopback/WLAN traffic and check for an early host-stack RST.

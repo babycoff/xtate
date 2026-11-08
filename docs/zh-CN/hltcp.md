@@ -4,6 +4,9 @@
 
 ZBanner 每个目标只问一个问题，只读第一个答案。有些问题需要一段对话：完成 TLS 握手、读取证书链、在隧道里发一个 HTTP 请求、读回响应。这要求我们这侧有真正的 TCP 状态机，而每目标一份状态机正是大规模扫描负担不起的。
 
+> [!WARNING]
+> **HLTCP 在 Linux 上必须配置主机防火墙规则。** `tcp-state`、`tls-state`、HTTP/2 和所有 state 子探针都使用原始 TCP；不执行 `./firewall/add_rules.sh` 时，内核会 RST 半开连接，表现为 `open` 但没有 banner/TLS/探针输出。这不是 ZBanner 独有的问题。参见 [快速开始](./getting-started.md#banner-与-stateful-扫描阻止内核代为应答)。
+
 HLTCP 就是那个折中。它是一个用户态 TCP 栈——用源码自己的话说叫 “hybrid-state lightweight TCP”（混合状态轻量 TCP 栈）——**只在发 SYN 时完全不保留状态**，等目标证明自己会说话之后才分配连接控制块。你为真实存在的连接付内存，而不是为探测过的目标付内存。
 
 本栈所处的线程模型见 [architecture.md](./architecture.md)，无状态替代方案见 [zbanner.md](./zbanner.md)。

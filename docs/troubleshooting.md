@@ -32,6 +32,7 @@ A quick triage before reading further:
 
 Check in this order:
 
+0. **Linux firewall rules (check this first for `zbanner`/`tcp-state`/`tls-state`).** A missing `./firewall/add_rules.sh` is the most common cause of "open but no banner/TLS output". The kernel RST kills the half-open flow. Verify with `./firewall/check_rules.sh`, then install rules, scan, and immediately remove them. This applies to every state probe, not only ZBanner.
 1. **Module pairing.** Xtate refuses to start with `ScanModule <x> needs probe of <type> type.`; `tcp-syn` uses no probe, `zbanner` needs a TCP probe, `udp` a UDP probe, `tcp-state` a STATE probe. Confirm names with `--list-scan` / `--list-probe` and parameters with `--help-scan <module>`.
 2. **Targets and ports are non-empty.** No targets gives `target IP address list empty.` No ports gives a warning and a fake `o:0` endpoint, so a TCP scan quietly probes nothing. Always pass `-p`.
 3. **Interface and source address.** `sudo ./bin/xtate --list-if` lists adapters; auto-detection picks the first interface with a default gateway. Force one with `-if eth0` (on Windows, adapters also accept the numeric index from `--list-if`, e.g. `-if 3`). A wrong `-src-ip`/`-src-port` makes replies fail the `is_my_ip`/`is_my_port` check and they are dropped silently; source ranges must have a power-of-two size.
@@ -41,7 +42,7 @@ Check in this order:
 
 ## Open ports but no banner, or the connection dies immediately
 
-This is the classic kernel-RST symptom. The kernel sees replies for a TCP connection it knows nothing about and sends a RST; the server tears the connection down before the payload/banner exchange finishes.
+This is the classic kernel-RST symptom. It also explains `tls-state`/H2/HTTP3/state probes that print only `open` with no TLS/probe output. The kernel sees replies for a TCP connection it knows nothing about and sends a RST; the server tears the connection down before the payload/banner exchange finishes.
 
 Test and fix:
 
@@ -105,7 +106,7 @@ IPv6 has its own traps: a link-local source address must be given explicitly (`-
 - **`zbanner` grabs only the first banner segment** by default and then sends RST. Long banners, multi-segment TLS ServerHellos or large HTTP headers need `-scan-arg "-all-banner"` (optionally bounded with `-all-banner-limit <n>` inside the same string).
 - **TLS probes appear to return nothing.** `tls-state` reports a failed handshake at `info` level, and it sends no SNI or ALPN by default, so virtual hosts/CDNs may answer with their default certificate/site. Add `-show info`, use `-probe-arg "-sni <hostname> -alpn h2,http/1.1"` when the target IPs belong to one known vhost, or promote failures to `failed` with `-probe-arg "-fail-handshake"`; without an explicit SNI, treat stateful TLS evidence as the default virtual host, not as the requested hostname.
 
-These are design trade-offs in v2.37.0, not bugs; the full list with workarounds is in [Known limitations](./known-limitations.md).
+These are design trade-offs in v2.38.0, not bugs; the full list with workarounds is in [Known limitations](./known-limitations.md).
 
 ## Modules are missing or refuse to start
 

@@ -7,6 +7,9 @@ conversation: complete a TLS handshake, read the certificate chain, send an HTTP
 inside the tunnel, read the response. That requires a real TCP state machine on our side,
 and a state machine per target is exactly what large-scale scanning cannot afford.
 
+> [!WARNING]
+> **Linux host firewall rules are mandatory for HLTCP.** `tcp-state`, `tls-state`, HTTP/2 and all state sub-probes use raw TCP. Without `./firewall/add_rules.sh`, the kernel RSTs half-open connections and the probe reports `open` but no banner/TLS/probe output. This is not ZBanner-only. See [Getting started](./getting-started.md#banner-and-stateful-scans-stop-the-kernel-from-answering).
+
 HLTCP is the compromise. It is a user-space TCP stack — "hybrid-state lightweight TCP" in
 the source's own words — that **keeps no state while it is only sending SYNs**, and allocates
 a connection control block only after a target has proven it will talk. You pay memory for

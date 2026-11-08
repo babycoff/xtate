@@ -103,6 +103,10 @@ interactive + PTY: pass
 
 ## Rules
 
+> [!IMPORTANT]
+> Lab scanner containers must install `iptables` and run `/src/firewall/add_rules.sh` before `zbanner`, `tcp-state`, `tls-state`, H2/H3 or any state probe. Target containers do not need the rules. Missing rules produce `open` with no banner/TLS output — this was the root cause of the TLS composition lab failure.
+
+
 - **Warnings are defects.** New warnings in Tier 0/1 need a fix or an explicit,
   documented suppression; do not silently raise the warning count.
 - **Optional dependencies must stay optional.** A missing PCRE2/LibXml2/bson/

@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.37.0-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.38.0-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -108,6 +108,9 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http -show info
 ./firewall/rm_rules.sh
 ```
+
+> [!WARNING]
+> **Linux 防火墙规则对 `zbanner` 以及所有 `tcp-state`/`tls-state`/state 探针都是必需的。** 不加载规则时，内核会对这些半开连接回 RST，导致“端口 open 但没有 banner / 没有 TLS 输出 / state 探针超时”。这类问题事后很难排查。扫描前运行 `./firewall/add_rules.sh`，扫描结束立即运行 `./firewall/rm_rules.sh`；规则是主机级的，会丢弃本机所有出站 RST/ICMP unreachable。
 
 > [!TIP]
 > 从 `-rate 1000` 起步，而不是 `-rate 1000000`。实验室网段不是互联网，你的交换机会感谢你。
