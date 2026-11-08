@@ -584,6 +584,7 @@ static const I18nModuleParamOverride i18n_module_param_overrides[] = {
     {"http-state", "banner-floor", "all-banner 模式下少于该数量的带 banner ACK 段不记录，也不触发 slot 扩展。"},
     {"hello-state", "banner-floor", "all-banner 模式下少于该数量的带 banner ACK 段不记录，也不触发 slot 扩展。"},
     {"recog-state", "banner-floor", "all-banner 模式下少于该数量的带 banner ACK 段不记录，也不触发 slot 扩展。"},
+    {"zbanner", "all-banner", "通过确认所有带数据的接收段（按数据长度去重）来尽量获取完整多段 banner，而不是收到首段后 RST 关闭；可能产生大量结果，需配合窗口/包长/snaplen 限制。输出中 banner seqno 是精确 TCP 序号；banner idx 是该 banner flow 的近似零基去重重复计数，不是 TCP 段序号，排序请用 banner seqno。"},
     {"h2", "user-agent", "HTTP/2 请求的 user-agent 值；默认是带版本的明面 Xtate 标识，可用 --no-user-agent 关闭。"},
     {"h2", "max-frames", "最多解析的响应帧数，默认 16；通常配合 --all-frames。"},
     {"h2", "record-raw", "记录服务器 HTTP/2 原始帧字节（可能较大）。"},

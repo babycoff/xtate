@@ -65,7 +65,11 @@ TCP 的 ACK 允许携带数据。把 `ACK + 载荷` 放进同一个报文，意�
 
 `--no-rst` 抑制 RST，让服务器一直握着这条连接直到超时。它是研究开关：适合观察目标在 banner 之后的行为，不适合做普查。
 
-`--all-banner` 是另一个方向：不在一个数据段后关闭，而是逐个确认到达的数据段（`ack = seqno_them + app_length`）并继续读。`--all-banner-limit` 限制段数，`--all-banner-floor` 抑制低于阈值的段的结果。`banner idx` 就是上面的零基去重重复计数：近似地说，是该 flow 自去重 entry 建立以来收到的第 N 个“被归类为 banner 的包”，不是第 N 个不同的 TCP 数据段。`banner seqno` 是该段精确的 TCP 序号，离线排序/去重应使用它。limit/floor 仍然使用近似计数；触发 limit 的那一段会标记 `truncated: 1`。
+`--all-banner` 是另一个方向：不在一个数据段后关闭，而是逐个确认到达的数据段（`ack = seqno_them + app_length`）并继续读。`--all-banner-limit` 限制段数，`--all-banner-floor` 抑制低于阈值的段的结果。`banner idx` 就是上面的零基去重重复计数：近似地说，是该 flow 自去重 entry 建立以来收到的第 N 个“被归类为 banner 的包”，不是第 N 个不同的 TCP 数据段。`banner seqno` 是该段精确的 TCP 序号，离线排序/去重应使用它。
+
+上面的 ZBanner 字段位于扫描结果中。状态探针（`hello-state`、`http-state`、
+`recog-state`）也会输出名为 `banner idx` 的字段，但那是 probe report 中的状态
+步进序号，与 ZBanner 的去重计数无关。limit/floor 仍然使用近似计数；触发 limit 的那一段会标记 `truncated: 1`。
 
 多段数据建议使用：
 

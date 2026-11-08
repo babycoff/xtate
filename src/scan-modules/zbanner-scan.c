@@ -506,7 +506,10 @@ static ConfParam zbanner_parameters[] = {
      "multi-slot mode.\n"
      "NOTE2: This may get so many segments with banner data. We can use some "
      "global params to adjust it. (e.g. --tcp-win, --max-packet-len, "
-     "--snaplen)"},
+     "--snaplen)\n"
+     "OUTPUT: banner seqno is the exact TCP sequence number. banner idx is the "
+     "approximate zero-based dedup repeat count for the banner flow, not a TCP "
+     "segment ordinal; use banner seqno for ordering."},
     {"all-banner-limit",
      SET_all_banner_limit,
      Type_ARG,

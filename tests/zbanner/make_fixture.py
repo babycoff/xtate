@@ -16,14 +16,23 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tests" / "large-batch"))
-from make_pcap import cookie, checksum  # noqa: E402
+from make_pcap import cookie, checksum, siphash24  # noqa: E402
 
 ETH_SRC = b"\x02\x00\x00\x00\x00\x02"
 ETH_DST = b"\x02\x00\x00\x00\x00\x01"
 
 
-def tcp_packet(ip_them, port_them, ip_me, port_me, seqno, ackno, flags,
-               payload=b"", ident=0):
+def ipv6_cookie(ip_them, port_them, ip_me, port_me, seed):
+    hi, lo = struct.unpack(">QQ", ipaddress.IPv6Address(ip_them).packed)
+    hi_me, lo_me = struct.unpack(">QQ", ipaddress.IPv6Address(ip_me).packed)
+    data = struct.pack("<5Q", hi, lo, hi_me, lo_me,
+                       ((port_them & 0xFFFF) << 16) | (port_me & 0xFFFF))
+    key = struct.pack("<QQ", seed, seed)
+    return siphash24(data, key) & 0xFFFFFFFF
+
+
+def tcp_packet4(ip_them, port_them, ip_me, port_me, seqno, ackno, flags,
+                payload=b"", ident=0, window=65535):
     src = ipaddress.IPv4Address(ip_them).packed
     dst = ipaddress.IPv4Address(ip_me).packed
     total_len = 20 + 20 + len(payload)
@@ -32,13 +41,39 @@ def tcp_packet(ip_them, port_them, ip_me, port_me, seqno, ackno, flags,
     ip = struct.pack("!BBHHHBBH4s4s", 0x45, 0, total_len, ident & 0xFFFF,
                      0, 64, 6, checksum(ip), src, dst)
     tcp = struct.pack("!HHIIBBHHH", port_them, port_me, seqno & 0xFFFFFFFF,
-                      ackno & 0xFFFFFFFF, 0x50, flags, 65535, 0, 0)
+                      ackno & 0xFFFFFFFF, 0x50, flags, window, 0, 0)
     pseudo = struct.pack("!4s4sBBH", src, dst, 0, 6, len(tcp) + len(payload))
     csum = checksum(pseudo + tcp + payload)
     tcp = struct.pack("!HHIIBBHHH", port_them, port_me, seqno & 0xFFFFFFFF,
-                      ackno & 0xFFFFFFFF, 0x50, flags, 65535, csum, 0)
+                      ackno & 0xFFFFFFFF, 0x50, flags, window, csum, 0)
     eth = struct.pack("!6s6sH", ETH_SRC, ETH_DST, 0x0800)
     return eth + ip + tcp + payload
+
+
+def tcp_packet6(ip_them, port_them, ip_me, port_me, seqno, ackno, flags,
+                payload=b"", ident=0, window=65535):
+    del ident
+    src = ipaddress.IPv6Address(ip_them).packed
+    dst = ipaddress.IPv6Address(ip_me).packed
+    tcp = struct.pack("!HHIIBBHHH", port_them, port_me, seqno & 0xFFFFFFFF,
+                      ackno & 0xFFFFFFFF, 0x50, flags, window, 0, 0)
+    upper_len = len(tcp) + len(payload)
+    pseudo = src + dst + struct.pack("!I", upper_len) + b"\x00\x00\x00\x06"
+    csum = checksum(pseudo + tcp + payload)
+    tcp = struct.pack("!HHIIBBHHH", port_them, port_me, seqno & 0xFFFFFFFF,
+                      ackno & 0xFFFFFFFF, 0x50, flags, window, csum, 0)
+    ip6 = struct.pack("!IHBB16s16s", 0x60000000, upper_len, 6, 64, src, dst)
+    eth = struct.pack("!6s6sH", ETH_SRC, ETH_DST, 0x86DD)
+    return eth + ip6 + tcp + payload
+
+
+def tcp_packet(ip_them, port_them, ip_me, port_me, seqno, ackno, flags,
+               payload=b"", ident=0, window=65535, ip_version=4):
+    if ip_version == 6:
+        return tcp_packet6(ip_them, port_them, ip_me, port_me, seqno, ackno,
+                           flags, payload, ident, window)
+    return tcp_packet4(ip_them, port_them, ip_me, port_me, seqno, ackno,
+                       flags, payload, ident, window)
 
 
 def add_record(out, pkt, seconds):
@@ -55,6 +90,8 @@ def main():
     ap.add_argument("--target", default="192.0.2.2")
     ap.add_argument("--target-port", type=int, default=8080)
     ap.add_argument("--ip-me", default="192.0.2.1")
+    ap.add_argument("--ip-version", type=int, choices=[4, 6], default=4)
+    ap.add_argument("--window", type=int, default=65535)
     ap.add_argument("--source-port", type=int, default=40000)
     ap.add_argument("--seed", type=int, default=123)
     ap.add_argument("--payload-len", type=int, default=47,
@@ -65,10 +102,15 @@ def main():
     ap.add_argument("--retransmit", action="store_true")
     args = ap.parse_args()
 
-    ip_me = int(ipaddress.IPv4Address(args.ip_me))
-    ip_them = int(ipaddress.IPv4Address(args.target))
-    ck = cookie(ip_them, args.target_port, ip_me, args.source_port,
-                args.seed)
+    ip_me = int(ipaddress.IPv4Address(args.ip_me)) if args.ip_version == 4 else 0
+    ip_them = (int(ipaddress.IPv4Address(args.target)) if args.ip_version == 4
+               else 0)
+    if args.ip_version == 6:
+        ck = ipv6_cookie(args.target, args.target_port, args.ip_me,
+                         args.source_port, args.seed)
+    else:
+        ck = cookie(ip_them, args.target_port, ip_me, args.source_port,
+                    args.seed)
     server_seq = 1000
     ack = ck + 1
     packets = []
@@ -76,12 +118,14 @@ def main():
 
     if args.mode == "rst":
         packets.append((tcp_packet(args.target, args.target_port, args.ip_me,
-                                   args.source_port, server_seq, ck,
-                                   0x14), t))
+                                   args.source_port, server_seq, ck, 0x14,
+                                   window=args.window,
+                                   ip_version=args.ip_version), t))
     else:
         packets.append((tcp_packet(args.target, args.target_port, args.ip_me,
-                                   args.source_port, server_seq, ack,
-                                   0x12), t))
+                                   args.source_port, server_seq, ack, 0x12,
+                                   window=args.window,
+                                   ip_version=args.ip_version), t))
         if args.mode in ("banner", "wrong-ack"):
             data_ack = ck + args.payload_len + 1
             if args.mode == "wrong-ack":
@@ -92,18 +136,19 @@ def main():
                 packets.append((tcp_packet(
                     args.target, args.target_port, args.ip_me,
                     args.source_port, server_seq + 1 + i * len(payload),
-                    data_ack, 0x18, payload, ident=i + 1), t + 0.01 * (i + 1)))
+                    data_ack, 0x18, payload, ident=i + 1,
+                    ip_version=args.ip_version), t + 0.01 * (i + 1)))
             if args.retransmit and args.segments:
                 packets.append((tcp_packet(
                     args.target, args.target_port, args.ip_me,
                     args.source_port, server_seq + 1, data_ack, 0x18,
-                    payload, ident=99), t + 0.03))
+                    payload, ident=99, ip_version=args.ip_version), t + 0.03))
 
     # A deliberately invalid trailer gives the receive thread one more event
     # after the last useful record.
     packets.append((tcp_packet(args.target, args.target_port, args.ip_me,
                                args.source_port, server_seq, 0, 0x12,
-                               ident=1000), t + 0.2))
+                               ident=1000, ip_version=args.ip_version), t + 0.2))
 
     out_path = pathlib.Path(args.out)
     with out_path.open("wb") as out:

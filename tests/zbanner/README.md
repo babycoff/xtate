@@ -30,12 +30,17 @@ ship it.
 | `synack` | open / syn-ack |
 | `rst` | closed / rst |
 | `banner` | responsed / ack with data, HTTP 200 |
-| `retrans` | `banner idx: 0` then `banner idx: 1` with `--repeat-banner` |
+| `retrans` | `banner idx: 0` then `banner idx: 1` in all-banner mode |
 | `all2` | two results, second has `truncated: 1` |
 | `wrongack` | open only; wrong ACK number is not a banner |
 | `mismatch` | Lua declares 1 byte, emits 4; actual length validates the banner |
+| `ipv6` | IPv6 SYN-ACK and banner path |
+| `zerowin` | zero-window SYN-ACK -> fake-open |
+| `floor2` | all-banner floor 2 suppresses the first segment |
 
 `mismatch` requires the `lua-tcp` probe and is skipped when it is not built.
+`ipv6` uses `2001:db8::1`/`2001:db8::2`; the TCP cookie is the IPv6 SipHash
+variant. `zerowin` uses a zero TCP window; no banner ACK is exercised.
 
 Every fixture ends with an invalid trailer packet. A pcap savefile reaches EOF
 immediately after its last record; without the trailer the receive thread can

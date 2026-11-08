@@ -20,10 +20,9 @@ fi
 mkdir -p "$TMP"
 
 common=(
-    -ip 192.0.2.2 -p 8080
+    -p 8080
     -scan zbanner
     --adapter "file:$TMP/FIXTURE"
-    --source-ip 192.0.2.1
     --source-mac 02-00-00-00-00-01
     --router-mac 02-00-00-00-00-02
     -source-port 40000-40255
@@ -41,7 +40,16 @@ gen() {
 run_fixture() {
     local name="$1"; shift
     local log="$TMP/$name.log"
-    "$BIN" "${common[@]//FIXTURE/$name.pcap}" "$@" >"$log" 2>&1
+    "$BIN" -ip 192.0.2.2 --source-ip 192.0.2.1 \
+        "${common[@]//FIXTURE/$name.pcap}" "$@" >"$log" 2>&1
+    echo "$log"
+}
+
+run_fixture6() {
+    local name="$1"; shift
+    local log="$TMP/$name.log"
+    "$BIN" -ip 2001:db8::2 --source-ip 2001:db8::1 \
+        "${common[@]//FIXTURE/$name.pcap}" "$@" >"$log" 2>&1
     echo "$log"
 }
 
@@ -115,5 +123,26 @@ if "$BIN" --help-probe lua-tcp >/dev/null 2>&1; then
 else
     echo "SKIP: lua-tcp probe not built; payload mismatch fixture skipped"
 fi
+
+# 7. IPv6: SYN-ACK and banner must use the IPv6 cookie/packet path.
+gen ipv6 --mode banner --payload-len 47 --segments 1 \
+    --ip-version 6 --target 2001:db8::2 --ip-me 2001:db8::1
+log=$(run_fixture6 ipv6 -probe http -probe-arg '--user-agent=a')
+expect_grep "$log" '"open" because "syn-ack"'
+expect_grep "$log" '"responsed" because "ack with data"'
+
+# 8. Zero-window SYN-ACK -> fake-open; no banner ACK path is entered.
+gen zerowin --mode synack --window 0
+log=$(run_fixture zerowin -probe http -probe-arg '--user-agent=a')
+expect_grep "$log" '"fake-open" because "zerowin"'
+expect_no_grep "$log" 'banner idx:'
+
+# 9. all-banner floor 2: the first segment is suppressed, later segments are
+#    recorded with their approximate dedup indexes.
+gen floor2 --mode banner --payload-len 47 --segments 3
+log=$(run_fixture floor2 -probe http -probe-arg '--user-agent=a' -scan-arg '--all-banner --all-banner-floor 2')
+expect_no_grep "$log" 'banner idx: 0'
+expect_grep "$log" 'banner idx: 1'
+expect_grep "$log" 'banner idx: 2'
 
 echo "PASS: ZBanner pcap offline regression matrix"
