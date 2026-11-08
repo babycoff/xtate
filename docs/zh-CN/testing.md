@@ -139,5 +139,8 @@ Windows 构建在 `.github/workflows/windows.yml` 中运行，覆盖 MSVC、Clan
 | HTTP pcap 矩阵 | `tests/http-pcap/run.sh` | 离线 keyword/regex/header/body/no-match |
 | tcp-syn pcap 矩阵 | `tests/tcp-syn-pcap/run.sh` | 离线 SYN-ACK/RST 基础 |
 | HTTP-state pcap 矩阵 | `tests/http-state-pcap/run.sh` | 录制明文状态化 HTTP 回放 + header/no-match |
+| TLS+H2 本地 CI | `tests/lab/ci-h2.sh` | 本地 TLS HTTP/2 目标；status/header/body |
+| QUIC/HTTP3 本地 CI | `tests/lab/ci-quic.sh` | 本地 aioquic HTTP/3 目标；body/match |
+| HTTP3 帧 fixture | `tests/http3-frame/` | 解密 HEADERS/DATA QPACK selftest |
 | PTY | `tests/interactive/tty.sh` | 终端恢复 + 补全 |
 | large batch | `tests/large-batch/` | replay/RSS/输出失败 |

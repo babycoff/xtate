@@ -150,5 +150,8 @@ and RSS are noisy on shared runners. See `tests/bench/README.md`.
 | HTTP pcap matrix | `tests/http-pcap/run.sh` | offline keyword/regex/header/body/no-match checks |
 | tcp-syn pcap matrix | `tests/tcp-syn-pcap/run.sh` | offline SYN-ACK/RST basics |
 | HTTP-state pcap matrix | `tests/http-state-pcap/run.sh` | recorded plaintext stateful HTTP replay + header/no-match |
+| TLS+H2 local CI | `tests/lab/ci-h2.sh` | local TLS HTTP/2 target; status/header/body |
+| QUIC/HTTP3 local CI | `tests/lab/ci-quic.sh` | local aioquic HTTP/3 target; body/match |
+| HTTP3 frame fixture | `tests/http3-frame/` | decrypted HEADERS/DATA QPACK selftest |
 | PTY | `tests/interactive/tty.sh` | terminal restore + completion |
 | large batch | `tests/large-batch/` | replay/RSS/output failure |

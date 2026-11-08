@@ -1,0 +1,4 @@
+# HEADERS (type=1, len=3): QPACK RIC=0, base=0, indexed static :status 200
+01 03 00 00 d9
+# DATA (type=0, len=5): hello
+00 05 68 65 6c 6c 6f

@@ -89,3 +89,27 @@ plaintext upgrade and report the certificate subject.
 - The TLS target uses a self-signed certificate generated inside its container.
 - `--lan` is intentionally not part of the main regression: its broadcast path
   is environment-dependent and should be tested separately on a real LAN.
+
+## Focused CI scripts
+
+For release/nightly jobs that only need encrypted-protocol coverage:
+
+```bash
+XTATE_BIN=./bin/xtate \
+XTATE_LAB_IMAGE=xtate-builder:24.04 \
+XTATE_LAB_TARGET_IMAGE=xtate-lab-target:24.04 \
+bash tests/lab/ci-h2.sh
+
+XTATE_BIN=./bin/xtate \
+XTATE_LAB_IMAGE=xtate-builder:24.04 \
+XTATE_LAB_TARGET_IMAGE=xtate-lab-target:24.04 \
+bash tests/lab/ci-quic.sh
+```
+
+`ci-h2.sh` starts a local TLS HTTP/2 target and checks status, headers and body.
+`ci-quic.sh` starts a local aioquic HTTP/3 target and checks status, body and
+body-scope matching; it skips cleanly when `quic-state` was not built.
+
+Both scripts are Docker-only local/nightly tests. They are deliberately not in
+the fast pull-request CI matrix because they need a target image with Python,
+OpenSSL, aioquic and the optional ngtcp2 runtime.

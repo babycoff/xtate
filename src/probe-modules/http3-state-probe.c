@@ -718,12 +718,50 @@ static int h3_huffman_selftest(void) {
     return n == 15 && strcmp(out, "www.example.com") == 0;
 }
 
+static int h3_frame_selftest(void) {
+    /*
+     * Decrypted HTTP/3 frame fixture:
+     *   HEADERS type=1, length=3, QPACK RIC=0/base=0, indexed static :status 200
+     *   DATA type=0, length=5, "hello"
+     * This exercises frame parsing, QPACK static lookup and body accumulation
+     * without a QUIC/TLS handshake.
+     */
+    static const unsigned char frames[] = {
+        0x01, 0x03, 0x00, 0x00, 0xd9,
+        0x00, 0x05, 'h', 'e', 'l', 'l', 'o',
+    };
+    unsigned char body[16] = {0};
+    struct Http3State h = {0};
+    OutItem item = {0};
+
+    h.buf = (unsigned char *)frames;
+    h.buf_len = sizeof(frames);
+    h.body = (char *)body;
+    h.max_body = sizeof(body) - 1;
+    h.max_headers = 4;
+    h.record_body = 1;
+    h.record_headers = 1;
+    h3_parse_frames(&h, &item);
+
+    if (h.status != 200 || h.header_count != 1 || h.body_len != 5 ||
+        memcmp(h.body, "hello", 5) != 0) {
+        LOG(LEVEL_ERROR,
+            "http3: decrypted frame fixture failed (status=%d headers=%u "
+            "body=%u)\n",
+            h.status, h.header_count, h.body_len);
+        return 1;
+    }
+    return 0;
+}
+
 static bool h3_init(const struct XtateConf *xconf) {
     UNUSEDPARM(xconf);
     if (!h3_huffman_selftest()) {
         LOG(LEVEL_ERROR, "http3: HPACK Huffman self-test failed\n");
         return false;
     }
+    if (h3_frame_selftest() != 0)
+        return false;
     if (!h3_conf.method)
         h3_conf.method = STRDUP("GET");
     if (!h3_conf.path)
