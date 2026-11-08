@@ -85,7 +85,7 @@ if [[ $rc -ne 0 ]]; then
     docker logs "$TARGET" >&2 || true
     exit 1
 fi
-grep -q 'h2_status: 200' "$LOG" || { cat "$LOG" >&2; exit 1; }
+grep -q 'h2_status: "200"' "$LOG" || { cat "$LOG" >&2; exit 1; }
 grep -q 'h2_data' "$LOG" || { cat "$LOG" >&2; exit 1; }
 grep -q '"http/2"' "$LOG" || { cat "$LOG" >&2; exit 1; }
 echo "PASS: TLS + H2 local CI"
