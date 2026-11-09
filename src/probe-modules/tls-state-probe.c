@@ -1768,9 +1768,14 @@ static unsigned tlsstate_parse_response(DataPass *pass, ProbeState *state,
                  * Maybe no hello to say and just wait for response.
                  * Or maybe just close the conn*/
                 if (!subpass.data || !subpass.len) {
-                    pass->is_close = subpass.is_close;
-                    state->state   = TSP_STATE_RECV_DATA;
-                    is_continue    = false;
+                    if (subpass.is_close) {
+                        pass->is_close = 1;
+                        is_continue    = false;
+                    } else {
+                        /* No client hello: read already-buffered server-first
+                         * application data in this same callback. */
+                        state->state = TSP_STATE_RECV_DATA;
+                    }
                     break;
                 }
 

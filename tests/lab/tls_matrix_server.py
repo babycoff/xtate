@@ -60,15 +60,17 @@ def serve(port, handler):
     s.listen()
     while True:
         conn, _ = s.accept()
-        try:
-            tls = ctx.wrap_socket(conn, server_side=True)
-            handler(tls)
-            tls.close()
-        except Exception:
+        def one(c=conn, h=handler):
             try:
-                conn.close()
+                tls = ctx.wrap_socket(c, server_side=True)
+                h(tls)
+                tls.close()
             except Exception:
-                pass
+                try:
+                    c.close()
+                except Exception:
+                    pass
+        threading.Thread(target=one, daemon=True).start()
 
 
 for port, handler in [(2465, smtp), (3307, mysql),
