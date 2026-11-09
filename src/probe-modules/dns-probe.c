@@ -19,6 +19,8 @@ struct DnsConf {
     unsigned        print_all_ans     : 1;
     unsigned        print_all_auth    : 1;
     unsigned        print_all_add     : 1;
+    unsigned        dnssec            : 1;
+    unsigned        edns_size;
 };
 
 static struct DnsConf dns_conf = {0};
@@ -123,6 +125,21 @@ static ConfRes SET_req_type(void *conf, const char *name, const char *value) {
     return Conf_OK;
 }
 
+static ConfRes SET_dnssec(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf); UNUSEDPARM(name);
+    dns_conf.dnssec = conf_parse_bool(value);
+    return Conf_OK;
+}
+
+static ConfRes SET_edns_size(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf); UNUSEDPARM(name);
+    unsigned v = (unsigned)strtoul(value, NULL, 0);
+    if (v < 512 || v > 65535)
+        return Conf_ERR;
+    dns_conf.edns_size = v;
+    return Conf_OK;
+}
+
 static ConfParam dns_parameters[] = {
     {"req-name",
      SET_req_name,
@@ -156,6 +173,19 @@ static ConfParam dns_parameters[] = {
      Type_FLAG,
      {"all-auth", 0},
      "Print all authority records instead of only the first in default."},
+    {"dnssec",
+     SET_dnssec,
+     Type_FLAG,
+     {"do", 0},
+     "Send an EDNS0 OPT record with DO=1 and report DNSSEC evidence "
+     "(AD/DO, RRSIG/DNSKEY/DS/NSEC counts). This observes deployment; it does "
+     "not validate the DNSSEC chain."},
+    {"edns-size",
+     SET_edns_size,
+     Type_ARG,
+     {"udp-size", 0},
+     "EDNS0 UDP payload size, 512..65535; default 1232. A truncated response "
+     "is reported with dns_truncated=1."},
     {"all-additional",
      SET_print_all_add,
      Type_FLAG,
@@ -187,6 +217,18 @@ static size_t dns_make_payload(ProbeTarget   *target,
                             target->cookie & 0xFFFF);
     if (dns_conf.recursive_desired)
         dns_buf_set_rd(payload_buf, true);
+
+    if (dns_conf.dnssec && res_len > 0) {
+        unsigned char *p = payload_buf + res_len;
+        p[0] = 0;                    /* root */
+        p[1] = 0x00; p[2] = 0x29;    /* OPT */
+        unsigned sz = dns_conf.edns_size ? dns_conf.edns_size : 1232;
+        p[3] = (unsigned char)(sz >> 8); p[4] = (unsigned char)sz;
+        p[5] = 0; p[6] = 0; p[7] = 0x80; p[8] = 0; p[9] = 0; /* DO */
+        p[10] = 0; p[11] = 0;        /* RDLEN */
+        res_len += 11;
+        payload_buf[10] = 0; payload_buf[11] = 1; /* ARCOUNT */
+    }
 
     return (size_t)res_len;
 }
@@ -224,6 +266,36 @@ static unsigned dns_handle_response(unsigned th_idx, ProbeTarget *target,
         return 0;
     }
 
+    if (dns_conf.dnssec) {
+        unsigned flags = ((unsigned)px[2] << 8) | px[3];
+        dach_set_bool(&item->probe_report, "dns_ad", (flags & 0x0020) != 0);
+        dach_set_bool(&item->probe_report, "dns_truncated",
+                      (flags & 0x0200) != 0);
+        unsigned sig = 0, key = 0, ds = 0, nsec = 0;
+        for (unsigned i = 0; i < dns_pkt.head.header.ans_count +
+                                  dns_pkt.head.header.auth_count +
+                                  dns_pkt.head.header.add_count; i++) {
+            dns_record_t *r = NULL;
+            if (i < dns_pkt.head.header.ans_count)
+                r = &dns_pkt.body.ans[i];
+            else if (i < dns_pkt.head.header.ans_count +
+                            dns_pkt.head.header.auth_count)
+                r = &dns_pkt.body.auth[i - dns_pkt.head.header.ans_count];
+            else
+                r = &dns_pkt.body.add[i - dns_pkt.head.header.ans_count -
+                                       dns_pkt.head.header.auth_count];
+            if (r->type == 46) sig++;
+            else if (r->type == 48) key++;
+            else if (r->type == 43) ds++;
+            else if (r->type == 47 || r->type == 50) nsec++;
+        }
+        dach_set_int(&item->probe_report, "dns_rrsig_count", sig);
+        dach_set_int(&item->probe_report, "dns_dnskey_count", key);
+        dach_set_int(&item->probe_report, "dns_ds_count", ds);
+        dach_set_int(&item->probe_report, "dns_nsec_count", nsec);
+        dach_set_bool(&item->probe_report, "dns_dnssec_present",
+                      sig || key || ds || nsec);
+    }
     item->level = OUT_SUCCESS;
     safe_strcpy(item->classification, OUT_CLS_SIZE, "dns reply");
     safe_strcpy(item->reason, OUT_RSN_SIZE,

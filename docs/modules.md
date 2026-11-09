@@ -215,7 +215,7 @@ STARTTLS is emitted as `starttls error`. `--dump-cert-details` outputs
 | `telnet` | state | Initial Telnet banner and IAC option parse. |
 | `quic` | udp | QUIC v1 Initial capability probe; classifies Version Negotiation/Retry/Initial/Handshake; no QUIC handshake or HTTP/3 claim. |
 | `jarm` | tcp | JARM via 10 ClientHello slots; emits `jarm_part`, aggregated by `tools/jarm_aggregate.py`. |
-| `dns` | udp | DNS record request with configurable name/type/recursion. |
+| `dns` | udp | DNS record request with configurable name/type/recursion; `--dnssec` sends EDNS0 DO and reports DNSSEC evidence (not validation). |
 | `snmp` | udp | SNMP (v1/v2c) request and MIB-guided host info extraction. |
 | `echo` | udp | Four cookie-derived bytes; accepts a reply containing them. |
 
