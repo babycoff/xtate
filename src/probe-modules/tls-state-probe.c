@@ -138,8 +138,11 @@ static ConfRes SET_starttls(void *conf, const char *name, const char *value) {
         tlsstate_conf.starttls_proto = 3;
     else if (conf_equals(value, "ftp"))
         tlsstate_conf.starttls_proto = 4;
+    else if (conf_equals(value, "managesieve") || conf_equals(value, "sieve"))
+        tlsstate_conf.starttls_proto = 5;
     else {
-        LOG(LEVEL_ERROR, "starttls must be smtp, imap, pop3 or ftp\n");
+        LOG(LEVEL_ERROR,
+            "starttls must be smtp, imap, pop3, ftp or managesieve\n");
         return Conf_ERR;
     }
     return Conf_OK;
@@ -311,7 +314,7 @@ static ConfParam tlsstate_parameters[] = {
      SET_starttls,
      Type_ARG,
      {"start-tls", 0},
-     "Negotiate plaintext STARTTLS before TLS. Values: smtp, imap, pop3, ftp. "
+     "Negotiate plaintext STARTTLS before TLS. Values: smtp, imap, pop3, ftp, managesieve. "
      "The probe handles the server greeting, sends the upgrade command and "
      "only then starts TLS. Certificate/cipher/version output and -subprobe "
      "run after the upgrade, inside TLS. Failure emits a 'starttls error' "
@@ -1311,6 +1314,8 @@ static bool starttls_greeting_ok(unsigned proto, const char *line) {
             return strncmp(line, "* OK", 4) == 0;
         case 3:
             return strncmp(line, "+OK", 3) == 0;
+        case 5:
+            return line[0] == '"';
         default:
             return false;
     }
@@ -1326,6 +1331,9 @@ static bool starttls_ack_ok(unsigned proto, const char *line) {
             return strstr(line, "a001 OK") != NULL;
         case 3:
             return strncmp(line, "+OK", 3) == 0;
+        case 5:
+            return strncmp(line, "\"OK\"", 4) == 0 ||
+                   strncmp(line, "OK", 2) == 0;
         default:
             return false;
     }
@@ -1362,7 +1370,10 @@ static void starttls_parse_response(DataPass *pass, ProbeState *state,
             }
             if (tlsstate_conf.starttls_proto == 1)
                 ts->starttls_phase = TSP_ST_EHLO;
-            else
+            else if (tlsstate_conf.starttls_proto == 5) {
+                starttls_send(pass, "STARTTLS\r\n");
+                ts->starttls_phase = TSP_ST_ACK;
+            } else
                 ts->starttls_phase = TSP_ST_ACK;
         } else if (ts->starttls_phase == TSP_ST_GREETING) {
             if (!starttls_greeting_ok(tlsstate_conf.starttls_proto, start)) {

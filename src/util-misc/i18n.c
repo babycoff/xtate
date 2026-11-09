@@ -478,7 +478,7 @@ static const I18nModuleParamEntry i18n_module_param_help[] = {
     {"whole-page", "在连接超时前获取整个页面，而不只取第一段 banner。"},
     {"probe-index", "只发送指定的一个 JARM 探针（1..10）。这是调试用途：结果只有一个 part，不是完整 JARM 指纹。"},
     {"first-probe", "轮换十个 JARM 探针，使标准探针 N（1..10）最先发送；仍发送全部十个。首个 SYN 是 N，收到可接受回复后其余九个按 N+1..10,1..N-1 批量发送。jarm_slot 保留标准编号，因此聚合与发送顺序无关。默认 1；例如 --first-probe 7 的发送顺序是 7,8,9,10,1,2,3,4,5,6。"},
-    {"starttls", "在 TLS 前完成明文 STARTTLS 升级：smtp（EHLO/STARTTLS）、imap（a001 STARTTLS）、pop3（STLS）或 ftp（AUTH TLS）。探针处理服务器问候、发送升级命令，升级成功后才开始 TLS；证书/cipher/版本和子探测都在升级后的 TLS 内运行。失败输出 starttls error。示例：-subprobe close-state --starttls smtp --dump-cert-details。"},
+    {"starttls", "在 TLS 前完成明文 STARTTLS 升级：smtp（EHLO/STARTTLS）、imap（a001 STARTTLS）、pop3（STLS）、ftp（AUTH TLS）或 managesieve（STARTTLS）。探针处理服务器问候、发送升级命令，升级成功后才开始 TLS；证书/cipher/版本和子探测都在升级后的 TLS 内运行。失败输出 starttls error。示例：-subprobe close-state --starttls smtp --dump-cert-details。"},
     {"subprobe", "必需的 state 子探测；只有 TLS 握手成功（以及 STARTTLS 升级成功）后才初始化，并在加密流内运行。只取证书时使用 close-state。"},
     {"after-tls", "在已经建立的 TLS/STARTTLS 流中运行子探测：跳过明文 greeting，直接发送协议能力命令或 StartupMessage。"},
     {"subprobe-arg", "向 state 子探测传递参数；字符串在 TLS 握手/STARTTLS 升级后由子探测自己的参数表解析。嵌套引号最容易出错，优先使用不含空格的单 token，例如 -subprobe-arg --path=/h2；只有值确实包含空格时才使用双/单引号。"},

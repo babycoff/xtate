@@ -4,6 +4,7 @@ import socket
 import ssl
 import sys
 import threading
+import time
 
 CERT = sys.argv[1]
 KEY = sys.argv[2]
@@ -13,6 +14,8 @@ SPECS = {
     "imap": (2143, b"* OK lab IMAP ready\r\n"),
     "pop3": (2110, b"+OK lab POP3 ready\r\n"),
     "ftp":  (2121, b"220 lab FTP ready\r\n"),
+    "managesieve": (4191, b'"IMPLEMENTATION" "lab" "SIEVE" "fileinto" '
+                           b'"STARTTLS"\r\n'),
 }
 
 
@@ -33,6 +36,7 @@ def serve(proto, port, greeting):
     srv.listen(8)
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     ctx.load_cert_chain(CERT, KEY)
+    ctx.set_alpn_protocols(["h2"])
     while True:
         conn, _ = srv.accept()
         try:
@@ -52,6 +56,9 @@ def serve(proto, port, greeting):
             elif proto == "pop3":
                 line, buf = read_line(conn, buf)
                 conn.sendall(b"+OK Begin TLS\r\n")
+            elif proto == "managesieve":
+                line, buf = read_line(conn, buf)
+                conn.sendall(b'"OK" "Begin TLS"\r\n')
             else:
                 line, buf = read_line(conn, buf)
                 conn.sendall(b"234 Proceed with negotiation\r\n")
@@ -60,14 +67,21 @@ def serve(proto, port, greeting):
             tls.settimeout(3)
             tls.do_handshake()
             try:
-                tls.recv(1024)
-                if proto == "smtp":
+                if proto == "managesieve":
+                    time.sleep(0.4)
+                    tls.sendall(b'"IMPLEMENTATION" "lab" "SIEVE" "fileinto" '
+                                b'"STARTTLS"\r\n')
+                elif proto == "smtp":
+                    tls.recv(1024)
                     tls.sendall(b"250-tls\r\n250 STARTTLS\r\n")
                 elif proto == "imap":
+                    tls.recv(1024)
                     tls.sendall(b"* CAPABILITY IMAP4rev1 STARTTLS\r\na1 OK\r\n")
                 elif proto == "pop3":
+                    tls.recv(1024)
                     tls.sendall(b"+OK\r\nUSER\r\nSTLS\r\n.\r\n")
                 else:
+                    tls.recv(1024)
                     tls.sendall(b"211-Features:\r\n AUTH TLS\r\n211 End\r\n")
             except Exception:
                 pass
