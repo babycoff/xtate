@@ -19,7 +19,7 @@ static ConfRes SET_sieve_after_tls(void *conf, const char *name,
 }
 static ConfParam sieve_state_parameters[] = {
     {"after-tls", SET_sieve_after_tls, Type_FLAG, {"post-tls", 0},
-     "Run inside TLS: send NOOP so the server-first capability greeting is delivered."},
+     "Lab/compatibility wake-up only: send NOOP so the server-first capability greeting is delivered inside TLS. It is not a replacement for a normal ManageSieve handshake and may be rejected by strict servers."},
     {0}};
 
 static void sieve_banner(const unsigned char *px, unsigned len, OutItem *item) {

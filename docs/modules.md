@@ -224,7 +224,7 @@ STARTTLS is emitted as `starttls error`. `--dump-cert-details` outputs
 | Probe | Type | What it does |
 |:---|:---:|:---|
 | `mysql` | tcp | Read MySQL server greeting; protocol/version/capabilities/auth plugin. |
-| `mysql-state` | state | Same greeting over tcp-state; no authentication. |
+| `mysql-state` | state | Same greeting over tcp-state; no authentication. `--after-tls` is a lab-only COM_PING wake-up, not a standard handshake. |
 | `postgres` | tcp | PostgreSQL SSLRequest capability check. |
 | `postgres-state` | state | SSLRequest + auth-boundary StartupMessage. |
 | `mongodb` | tcp | OP_MSG `hello` and BSON identification. |
@@ -237,7 +237,7 @@ STARTTLS is emitted as `starttls error`. `--dump-cert-details` outputs
 | `ftp` | tcp | Read FTP 220 banner. |
 | `ftp-state` | state | FTP FEAT/AUTH TLS. |
 | `managesieve` | tcp | Read ManageSieve capability greeting. |
-| `managesieve-state` | state | ManageSieve capability/STARTTLS/SASL. |
+| `managesieve-state` | state | ManageSieve capability/STARTTLS/SASL. `--after-tls` is a lab-only NOOP wake-up. |
 
 ### Batch C first wave (6)
 

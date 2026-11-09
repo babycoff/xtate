@@ -19,7 +19,7 @@ static ConfRes SET_mysql_after_tls(void *conf, const char *name,
 }
 static ConfParam mysql_state_parameters[] = {
     {"after-tls", SET_mysql_after_tls, Type_FLAG, {"post-tls", 0},
-     "Run inside TLS: send a protocol wake-up byte so server-first greeting is delivered."},
+     "Lab/compatibility wake-up only: send a MySQL COM_PING before authentication so a server-first greeting is delivered inside TLS. Strict/real MySQL servers may reject this; it is not a standard handshake."},
     {0}};
 
 static unsigned mysql_read_le16(const unsigned char *p) {

@@ -199,7 +199,7 @@ STARTTLS 失败输出 `starttls error`。`--dump-cert-details` 输出
 | Probe | Type | What it does |
 |:---|:---:|:---|
 | `mysql` | tcp | 读取 MySQL greeting；protocol/version/capabilities/auth plugin。 |
-| `mysql-state` | state | 有状态 greeting；不认证。 |
+| `mysql-state` | state | 有状态 greeting；不认证。`--after-tls` 仅为 lab COM_PING 唤醒，不是标准握手。 |
 | `postgres` | tcp | PostgreSQL SSLRequest 能力检查。 |
 | `postgres-state` | state | SSLRequest + 认证边界 StartupMessage。 |
 | `mongodb` | tcp | OP_MSG `hello`/BSON 识别。 |
@@ -212,7 +212,7 @@ STARTTLS 失败输出 `starttls error`。`--dump-cert-details` 输出
 | `ftp` | tcp | 读取 FTP 220 banner。 |
 | `ftp-state` | state | FTP FEAT/AUTH TLS。 |
 | `managesieve` | tcp | 读取 ManageSieve capability greeting。 |
-| `managesieve-state` | state | ManageSieve 能力/STARTTLS/SASL。 |
+| `managesieve-state` | state | ManageSieve 能力/STARTTLS/SASL。`--after-tls` 仅为 lab NOOP 唤醒。 |
 
 ### Batch C 第一批（6）
 

@@ -576,6 +576,8 @@ typedef struct I18nModuleParamOverride {
 } I18nModuleParamOverride;
 
 static const I18nModuleParamOverride i18n_module_param_overrides[] = {
+    {"mysql-state", "after-tls", "仅用于 lab/兼容性唤醒：在认证前发送 MySQL COM_PING，让 TLS 内的 server-first greeting 送达；严格或真实 MySQL 服务器可能拒绝，这不是标准握手。"},
+    {"managesieve-state", "after-tls", "仅用于 lab/兼容性唤醒：发送 NOOP，让 TLS 内的 server-first capability greeting 送达；它不是正常 ManageSieve 握手的替代，严格服务器可能拒绝。"},
     {"http-state", "all-banner", "连接超时前获取整个响应 banner，而不只第一段；与 ZBanner 的“确认所有段”实现不同。"},
     {"hello-state", "all-banner", "连接超时前获取整个响应 banner，而不只第一段；与 ZBanner 的“确认所有段”实现不同。"},
     {"recog-state", "all-banner", "连接超时前获取整个响应 banner，而不只第一段；与 ZBanner 的“确认所有段”实现不同。"},
