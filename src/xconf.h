@@ -220,6 +220,7 @@ typedef struct XtateConf {
      * */
     enum Operation   op;
     ipaddress        diag_target;
+    unsigned         listif_json : 1;
     uint64_t         seed;
     uint64_t         repeat;
     double           max_rate;

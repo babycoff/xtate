@@ -128,7 +128,7 @@ void rawsock_diag_target(ipaddress target, bool check, const char *forced_if) {
     printf("Source IPv6:  %s\n", ipv6.hi || ipv6.lo ? i6f.string : "unknown");
     printf("Source MAC:   %s\n", macaddress_is_zero(macaddress_from_bytes(macbuf)) ? "unknown" : mf.string);
     printf("Gateway:      %s\n", gw ? gf.string : "unknown");
-    printf("Note: interface selected by target route on Windows; Linux currently uses default. Use -if to pin.\n");
+    printf("Note: interface selected by the target route. Use -if to pin.\n");
     if (check) {
         printf("Check:        interface=%s source=%s gateway=%s\n",
                ifname[0] ? "OK" : "FAIL",
@@ -166,7 +166,7 @@ int rawsock_resolve_ifname(const char *hint, char *out, size_t out_size) {
  * This function prints to the command line a list of all the network
  * interfaces/devices.
  ***************************************************************************/
-void rawsock_list_adapters(void) {
+void rawsock_list_adapters(bool json) {
     pcap_if_t *alldevs;
     char       errbuf[PCAP_ERRBUF_SIZE];
 
@@ -186,8 +186,11 @@ void rawsock_list_adapters(void) {
                 "libpcap: no adapters found, are you sure you are root?\n");
             return;
         }
-        fprintf(stdout,
-                "IDX  IFACE\t\t\t\tIPv4\t\tMAC\t\t\tGATEWAY\t\tSTATE\n");
+        if (json)
+            fputc('[', stdout);
+        else
+            fprintf(stdout,
+                    "IDX  IFACE\t\t\t\tIPv4\t\tMAC\t\t\tGATEWAY\t\tSTATE\n");
         for (d = alldevs; d; d = PCAP.dev_next(d)) {
             const char *name = PCAP.dev_name(d);
             const char *desc = PCAP.dev_description(d);
@@ -224,18 +227,37 @@ void rawsock_list_adapters(void) {
             ipaddress_formatted_t gwf = ipv4address_fmt(gw);
             macaddress_t macf = mac;
             ipaddress_formatted_t macs = macaddress_fmt(macf);
-
-            fprintf(stdout, " %d  %s\n", i++, name);
-            fprintf(stdout, "     %s\n", desc);
-            fprintf(stdout, "     IPv4=%s MAC=%s GATEWAY=%s STATE=%s%s%s\n",
-                    ipv4 ? ip4f.string : "-",
-                    macaddress_is_zero(mac) ? "-" : macs.string,
-                    has_gw ? gwf.string : "-",
-                    loopback ? "loopback"
-                             : (virt ? "virtual"
-                                     : (ipv4 ? "up" : "no-ipv4")),
-                    has_gw ? " DEFAULT" : "", ipv6.hi || ipv6.lo ? " IPV6" : "");
+            const char *state = loopback ? "loopback"
+                                : virt   ? "virtual"
+                                : ipv4   ? "up"
+                                         : "no-ipv4";
+            if (json) {
+                if (i)
+                    fputc(',', stdout);
+                fprintf(stdout,
+                        "{\"index\":%d,\"name\":\"%s\","
+                        "\"description\":\"%s\",\"ipv4\":\"%s\","
+                        "\"mac\":\"%s\",\"gateway\":\"%s\","
+                        "\"state\":\"%s\",\"default\":%s}",
+                        i, name, desc, ipv4 ? ip4f.string : "",
+                        macaddress_is_zero(mac) ? "" : macs.string,
+                        has_gw ? gwf.string : "", state,
+                        has_gw ? "true" : "false");
+            } else {
+                fprintf(stdout, " %d  %s\n", i, name);
+                fprintf(stdout, "     %s\n", desc);
+                fprintf(stdout,
+                        "     IPv4=%s MAC=%s GATEWAY=%s STATE=%s%s%s\n",
+                        ipv4 ? ip4f.string : "-",
+                        macaddress_is_zero(mac) ? "-" : macs.string,
+                        has_gw ? gwf.string : "-", state,
+                        has_gw ? " DEFAULT" : "",
+                        ipv6.hi || ipv6.lo ? " IPV6" : "");
+            }
+            i++;
         }
+        if (json)
+            fprintf(stdout, "]\n");
         fprintf(stdout, "\n");
         PCAP.freealldevs(alldevs);
     } else {

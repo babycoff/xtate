@@ -6,6 +6,15 @@
 #include "../util-data/safe-string.h"
 #include "../util-data/fine-malloc.h"
 
+#ifndef _WIN32
+#include <arpa/inet.h>
+#include <linux/netlink.h>
+#include <linux/rtnetlink.h>
+#include <net/if.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#endif
+
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -154,12 +163,103 @@ int rawsock_route_lookup(ipaddress target, RawRoute *out) {
     return 0;
 }
 #else
+static int netlink_route(ipaddress target, RawRoute *out) {
+    int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+    if (fd < 0)
+        return -1;
+    struct sockaddr_nl sa = {.nl_family = AF_NETLINK};
+    struct {
+        struct nlmsghdr nlh;
+        struct rtmsg    rtm;
+        char            buf[64];
+    } req;
+    memset(&req, 0, sizeof(req));
+    req.nlh.nlmsg_len   = NLMSG_LENGTH(sizeof(struct rtmsg));
+    req.nlh.nlmsg_type  = RTM_GETROUTE;
+    req.nlh.nlmsg_flags = NLM_F_REQUEST;
+    req.rtm.rtm_family  = target.version == 6 ? AF_INET6 : AF_INET;
+    req.rtm.rtm_dst_len = target.version == 6 ? 128 : 32;
+    req.rtm.rtm_table   = RT_TABLE_UNSPEC;
+
+    struct rtattr *rta = (struct rtattr *)((char *)&req + NLMSG_ALIGN(
+        req.nlh.nlmsg_len));
+    rta->rta_type = RTA_DST;
+    if (target.version == 6) {
+        rta->rta_len = RTA_LENGTH(16);
+        unsigned char b[16];
+        for (int i = 0; i < 8; i++) {
+            b[i] = (unsigned char)(target.ipv6.hi >> (56 - i * 8));
+            b[8 + i] = (unsigned char)(target.ipv6.lo >> (56 - i * 8));
+        }
+        memcpy(RTA_DATA(rta), b, 16);
+    } else {
+        rta->rta_len = RTA_LENGTH(4);
+        unsigned v = htonl(target.ipv4);
+        memcpy(RTA_DATA(rta), &v, 4);
+    }
+    req.nlh.nlmsg_len = NLMSG_ALIGN(req.nlh.nlmsg_len) + RTA_ALIGN(rta->rta_len);
+
+    if (sendto(fd, &req, req.nlh.nlmsg_len, 0, (struct sockaddr *)&sa,
+               sizeof(sa)) < 0) {
+        close(fd);
+        return -1;
+    }
+
+    char buf[4096];
+    int  n = (int)recv(fd, buf, sizeof(buf), 0);
+    close(fd);
+    if (n <= 0)
+        return -1;
+
+    for (struct nlmsghdr *nh = (struct nlmsghdr *)buf; NLMSG_OK(nh, n);
+         nh = NLMSG_NEXT(nh, n)) {
+        if (nh->nlmsg_type != RTM_NEWROUTE)
+            continue;
+        struct rtmsg *rtm = (struct rtmsg *)NLMSG_DATA(nh);
+        unsigned oif = 0, gw = 0, src = 0;
+        bool have_src = false;
+        int  alen = (int)(nh->nlmsg_len - NLMSG_LENGTH(sizeof(*rtm)));
+        for (struct rtattr *a = (struct rtattr *)((char *)rtm +
+                                                  NLMSG_ALIGN(sizeof(*rtm)));
+             RTA_OK(a, alen); a = RTA_NEXT(a, alen)) {
+            if (a->rta_type == RTA_OIF && RTA_PAYLOAD(a) >= 4)
+                memcpy(&oif, RTA_DATA(a), 4);
+            else if (a->rta_type == RTA_GATEWAY &&
+                     RTA_PAYLOAD(a) >= (rtm->rtm_family == AF_INET6 ? 16u : 4u)) {
+                if (rtm->rtm_family == AF_INET)
+                    memcpy(&gw, RTA_DATA(a), 4);
+            } else if (a->rta_type == RTA_PREFSRC &&
+                       RTA_PAYLOAD(a) >= (rtm->rtm_family == AF_INET6 ? 16u : 4u)) {
+                if (rtm->rtm_family == AF_INET) {
+                    memcpy(&src, RTA_DATA(a), 4);
+                    have_src = true;
+                }
+            }
+        }
+        if (!oif || !if_indextoname(oif, out->ifname))
+            return -1;
+        out->source_ip.version = target.version;
+        out->gateway.version   = target.version;
+        if (target.version == 4) {
+            out->source_ip.ipv4 = have_src ? ntohl(src)
+                                           : rawsock_get_adapter_ip(out->ifname);
+            out->gateway.ipv4 = ntohl(gw);
+        }
+        return 0;
+    }
+    return -1;
+}
+
 int rawsock_route_lookup(ipaddress target, RawRoute *out) {
-    char name[256] = {0};
-    unsigned gw = 0;
-    if (!out)
+    if (!out || (target.version != 4 && target.version != 6))
         return -1;
     memset(out, 0, sizeof(*out));
+    if (netlink_route(target, out) == 0)
+        return 0;
+
+    /* Conservative fallback: default interface. */
+    char name[256] = {0};
+    unsigned gw = 0;
     if (rawsock_get_default_interface(name, sizeof(name)) != 0)
         return -1;
     safe_strcpy(out->ifname, sizeof(out->ifname), name);
@@ -168,7 +268,6 @@ int rawsock_route_lookup(ipaddress target, RawRoute *out) {
     out->gateway.version = 4;
     if (rawsock_get_default_gateway(name, &gw) == 0)
         out->gateway.ipv4 = gw;
-    (void)target;
     return 0;
 }
 #endif

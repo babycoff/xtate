@@ -851,6 +851,17 @@ static ConfRes SET_check_network(void *conf, const char *name,
     return Conf_OK;
 }
 
+
+static ConfRes SET_listif_json(void *conf, const char *name,
+                               const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    xconf->listif_json = conf_parse_bool(value);
+    if (xconf->listif_json)
+        xconf->op = Op_ListAdapters;
+    return Conf_OK;
+}
+
 static ConfRes SET_listif(void *conf, const char *name, const char *value) {
     XConf *xconf = (XConf *)conf;
     UNUSEDPARM(name);
@@ -3258,6 +3269,12 @@ ConfParam config_parameters[] = {
      {"net-check", "preflight", 0},
      "Read-only preflight: check interface, source IP and gateway without scanning.",
      "Check network prerequisites."},
+    {"list-if-json",
+     SET_listif_json,
+     Type_FLAG,
+     {"json-if", "list-if-as-json", 0},
+     "Print the adapter list as a JSON array.",
+     "Print adapter list as JSON."},
     {"list-if",
      SET_listif,
      Type_FLAG,

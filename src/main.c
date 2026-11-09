@@ -1019,7 +1019,7 @@ int main(int argc, char *argv[]) {
             break;
 
         case Op_ListAdapters:
-            rawsock_list_adapters();
+            rawsock_list_adapters(xconf->listif_json);
             break;
 
         case Op_ExplainTarget:

@@ -97,7 +97,7 @@ void rawsock_set_filter(Adapter *adapter, const char *scan_filter,
  * Print to the command-line the list of available adapters. It's called
  * when the "--iflist" option is specified on the command-line.
  */
-void rawsock_list_adapters(void);
+void rawsock_list_adapters(bool json);
 void rawsock_diag_target(ipaddress target, bool check, const char *forced_if);
 
 /**
