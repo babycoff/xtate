@@ -95,6 +95,39 @@ void rawsock_prepare(void) {
     return;
 }
 
+
+void rawsock_diag_target(ipaddress target, bool check) {
+    char     ifname[256] = {0};
+    unsigned ipv4 = 0, gw = 0;
+    ipv6address ipv6 = {0};
+    unsigned char macbuf[6] = {0};
+    ipaddress_formatted_t tf = ipaddress_fmt(target);
+    if (rawsock_get_default_interface(ifname, sizeof(ifname)) != 0) {
+        fprintf(stderr, "cannot determine default interface\n");
+        return;
+    }
+    ipv4 = rawsock_get_adapter_ip(ifname);
+    ipv6 = rawsock_get_adapter_ipv6(ifname);
+    rawsock_get_adapter_mac(ifname, macbuf);
+    rawsock_get_default_gateway(ifname, &gw);
+    ipaddress_formatted_t sf = ipv4address_fmt(ipv4);
+    ipaddress_formatted_t gf = ipv4address_fmt(gw);
+    ipaddress_formatted_t mf = macaddress_fmt(macaddress_from_bytes(macbuf));
+    ipaddress_formatted_t i6f = ipv6address_fmt(ipv6);
+    printf("Target:       %s\n", tf.string);
+    printf("Interface:    %s\n", ifname);
+    printf("Source IPv4:  %s\n", ipv4 ? sf.string : "unknown");
+    printf("Source IPv6:  %s\n", ipv6.hi || ipv6.lo ? i6f.string : "unknown");
+    printf("Source MAC:   %s\n", macaddress_is_zero(macaddress_from_bytes(macbuf)) ? "unknown" : mf.string);
+    printf("Gateway:      %s\n", gw ? gf.string : "unknown");
+    printf("Note: route lookup is interface-default in this build; use -if to pin.\n");
+    if (check) {
+        printf("Check:        interface=%s source=%s gateway=%s\n",
+               ifname[0] ? "OK" : "FAIL",
+               ipv4 ? "OK" : "FAIL", gw ? "OK" : "FAIL");
+    }
+}
+
 /***************************************************************************
  * This function prints to the command line a list of all the network
  * interfaces/devices.

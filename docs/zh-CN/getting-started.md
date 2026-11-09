@@ -314,7 +314,7 @@ CLI 本身也能说明用法：`--usage`、`--help`、`--intro`、`--list-scan`�
 
 ## Windows 接口与网关诊断
 
-`--list-if` 现在输出每个 Npcap 接口的描述、IPv4、MAC、默认网关和 `STATE`
+使用 `--explain-target 8.8.8.8` 查看目标/接口/网关只读摘要，使用 `--check --explain-target 8.8.8.8` 做启动前预检。`--list-if` 现在输出每个 Npcap 接口的描述、IPv4、MAC、默认网关和 `STATE`
 （`up` / `virtual` / `loopback` / `no-ipv4`）。虚拟/WAN 接口只列出类型，
 不调用逐接口查询，避免部分 Windows Npcap 设备触发崩溃。
 

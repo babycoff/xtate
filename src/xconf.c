@@ -830,6 +830,27 @@ static ConfRes SET_list_output_modules(void *conf, const char *name,
     return Conf_OK;
 }
 
+
+static ConfRes SET_explain_target(void *conf, const char *name,
+                                  const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    ipaddress ip = target_parse_ip(value);
+    if (ip.version != 4 && ip.version != 6)
+        return Conf_ERR;
+    xconf->diag_target = ip;
+    xconf->op = Op_ExplainTarget;
+    return Conf_OK;
+}
+
+static ConfRes SET_check_network(void *conf, const char *name,
+                                 const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name); UNUSEDPARM(value);
+    xconf->op = Op_CheckNetwork;
+    return Conf_OK;
+}
+
 static ConfRes SET_listif(void *conf, const char *name, const char *value) {
     XConf *xconf = (XConf *)conf;
     UNUSEDPARM(name);
@@ -3225,6 +3246,18 @@ ConfParam config_parameters[] = {
      "targets with `--list-target[order]` or `--list-target[norandom]`. Also "
      "can print relative AS info if `--out-as-info` is on.",
      "Print every unique targets in random or not."},
+    {"explain-target",
+     SET_explain_target,
+     Type_ARG,
+     {"explain", "route-to", 0},
+     "Read-only: print the target, default interface, source IP/MAC and gateway. Does not send packets.",
+     "Explain target interface route."},
+    {"check",
+     SET_check_network,
+     Type_FLAG,
+     {"net-check", "preflight", 0},
+     "Read-only preflight: check interface, source IP and gateway without scanning.",
+     "Check network prerequisites."},
     {"list-if",
      SET_listif,
      Type_FLAG,

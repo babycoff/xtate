@@ -480,6 +480,8 @@ static const I18nModuleParamEntry i18n_module_param_help[] = {
     {"first-probe", "轮换十个 JARM 探针，使标准探针 N（1..10）最先发送；仍发送全部十个。首个 SYN 是 N，收到可接受回复后其余九个按 N+1..10,1..N-1 批量发送。jarm_slot 保留标准编号，因此聚合与发送顺序无关。默认 1；例如 --first-probe 7 的发送顺序是 7,8,9,10,1,2,3,4,5,6。"},
     {"starttls", "在 TLS 前完成明文 STARTTLS 升级：smtp（EHLO/STARTTLS）、imap（a001 STARTTLS）、pop3（STLS）、ftp（AUTH TLS）或 managesieve（STARTTLS）。探针处理服务器问候、发送升级命令，升级成功后才开始 TLS；证书/cipher/版本和子探测都在升级后的 TLS 内运行。失败输出 starttls error。示例：-subprobe close-state --starttls smtp --dump-cert-details。"},
     {"subprobe", "必需的 state 子探测；只有 TLS 握手成功（以及 STARTTLS 升级成功）后才初始化，并在加密流内运行。只取证书时使用 close-state。"},
+    {"explain-target", "只读诊断：输出目标、默认接口、源 IP/MAC 和网关，不发送任何探测包。"},
+    {"check", "只读预检：检查接口、源 IP 和网关，不启动扫描。"},
     {"dnssec", "发送 EDNS0 OPT 且 DO=1，报告 AD/DO、RRSIG/DNSKEY/DS/NSEC 计数；这是部署证据探测，不做完整 DNSSEC 链验证。"},
     {"edns-size", "EDNS0 UDP 负载大小（512..65535，默认 1232）；响应截断时输出 dns_truncated=1。"},
     {"after-tls", "在已经建立的 TLS/STARTTLS 流中运行子探测：跳过明文 greeting，直接发送协议能力命令或 StartupMessage。"},

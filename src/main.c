@@ -1022,6 +1022,14 @@ int main(int argc, char *argv[]) {
             rawsock_list_adapters();
             break;
 
+        case Op_ExplainTarget:
+            rawsock_diag_target(xconf->diag_target, false);
+            break;
+
+        case Op_CheckNetwork:
+            rawsock_diag_target(xconf->diag_target, true);
+            break;
+
         case Op_ListScanModules:
             list_all_scan_modules();
             break;

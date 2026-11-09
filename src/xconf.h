@@ -55,6 +55,8 @@ enum Operation {
     Op_ListRange,           /* list all target IPs in range */
     Op_ListTargets,         /* list all target in IPs and Ports*/
     Op_ListAdapters,        /* list all usable interfaces */
+    Op_ExplainTarget,       /* read-only target/interface diagnostic */
+    Op_CheckNetwork,        /* read-only preflight check */
     Op_ListScanModules,     /* list all scan modules */
     Op_HelpScanModule,      /* print help of specified scan module */
     Op_ListProbeModules,    /* list all probes */
@@ -217,6 +219,7 @@ typedef struct XtateConf {
      * other switches
      * */
     enum Operation   op;
+    ipaddress        diag_target;
     uint64_t         seed;
     uint64_t         repeat;
     double           max_rate;

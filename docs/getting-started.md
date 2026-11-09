@@ -359,7 +359,7 @@ English; see [Help i18n](./help-i18n.md) for the catalog and fallback rules.
 
 ## Windows interface and gateway diagnostics
 
-`--list-if` prints each Npcap interface with its description, IPv4 address,
+Use `--explain-target 8.8.8.8` for a read-only target/interface/gateway summary, and `--check --explain-target 8.8.8.8` for a preflight check. `--list-if` prints each Npcap interface with its description, IPv4 address,
 MAC, default gateway and a `STATE` of `up`, `virtual`, `loopback` or `no-ipv4`.
 Virtual/WAN interfaces are listed without probing because some Windows Npcap
 devices fault the per-adapter helpers.

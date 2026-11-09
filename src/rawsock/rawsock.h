@@ -98,6 +98,7 @@ void rawsock_set_filter(Adapter *adapter, const char *scan_filter,
  * when the "--iflist" option is specified on the command-line.
  */
 void rawsock_list_adapters(void);
+void rawsock_diag_target(ipaddress target, bool check);
 
 /**
  * Queries the operating-system's network-stack in order to discover
