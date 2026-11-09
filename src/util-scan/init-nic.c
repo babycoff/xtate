@@ -57,6 +57,19 @@ int init_nic(XConf *xconf, bool has_ipv4_targets, bool has_ipv6_targets) {
         /*pass the ifname we chose to global*/
         safe_strcpy(xconf->nic.ifname, 256, ifname2);
     }
+    if (xconf->nic.ifname[0]) {
+        char resolved[256];
+        int  rr = rawsock_resolve_ifname(ifname, resolved, sizeof(resolved));
+        if (rr == 0) {
+            safe_strcpy(xconf->nic.ifname, sizeof(xconf->nic.ifname),
+                        resolved);
+            ifname = xconf->nic.ifname;
+        } else if (rr > 1) {
+            LOG(LEVEL_ERROR,
+                "interface name is ambiguous: %s\n", xconf->nic.ifname);
+            return -1;
+        }
+    }
     LOG(LEVEL_DEBUG, "interface = %s\n", ifname);
 
     /*

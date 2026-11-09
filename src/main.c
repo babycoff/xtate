@@ -1023,11 +1023,11 @@ int main(int argc, char *argv[]) {
             break;
 
         case Op_ExplainTarget:
-            rawsock_diag_target(xconf->diag_target, false);
+            rawsock_diag_target(xconf->diag_target, false, xconf->nic.ifname);
             break;
 
         case Op_CheckNetwork:
-            rawsock_diag_target(xconf->diag_target, true);
+            rawsock_diag_target(xconf->diag_target, true, xconf->nic.ifname);
             break;
 
         case Op_ListScanModules:

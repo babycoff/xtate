@@ -368,3 +368,4 @@ On Windows, gateway MAC resolution now tries the OS neighbor table via
 `SendARP` before raw ARP. If the gateway still cannot be resolved, use
 `--router-ip <gateway>` and `--router-mac <mac-from-arp -a>`; do not copy the
 placeholder MAC from an example.
+`-if` also accepts a unique interface description/name substring, e.g. `-if "Intel(R) Wi-Fi"`; ambiguous matches fail instead of choosing one.

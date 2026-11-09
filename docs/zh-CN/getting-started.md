@@ -321,3 +321,4 @@ CLI 本身也能说明用法：`--usage`、`--help`、`--intro`、`--list-scan`�
 Windows 上网关 MAC 会先通过系统邻居表 `SendARP` 获取，再回退到 raw ARP。
 如果仍失败，使用 `--router-ip <网关>` 和 `--router-mac <arp -a 得到的 MAC>`；
 不要复制示例里的占位 MAC。
+`-if` 也支持唯一的接口描述/名称子串，例如 `-if "Intel(R) Wi-Fi"`；多个匹配会失败而不是自行选择。

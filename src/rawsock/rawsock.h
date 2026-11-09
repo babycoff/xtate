@@ -98,7 +98,7 @@ void rawsock_set_filter(Adapter *adapter, const char *scan_filter,
  * when the "--iflist" option is specified on the command-line.
  */
 void rawsock_list_adapters(void);
-void rawsock_diag_target(ipaddress target, bool check);
+void rawsock_diag_target(ipaddress target, bool check, const char *forced_if);
 
 /**
  * Queries the operating-system's network-stack in order to discover
@@ -126,6 +126,7 @@ int rawsock_get_default_interface(char *ifname, size_t sizeof_ifname);
 const char *rawsock_win_name(const char *ifname);
 
 int rawsock_is_adapter_names_equal(const char *lhs, const char *rhs);
+int rawsock_resolve_ifname(const char *hint, char *out, size_t out_size);
 
 /**
  * Transmit any queued (but not yet transmitted) packets. Useful only when

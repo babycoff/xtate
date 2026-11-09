@@ -96,13 +96,15 @@ void rawsock_prepare(void) {
 }
 
 
-void rawsock_diag_target(ipaddress target, bool check) {
+void rawsock_diag_target(ipaddress target, bool check, const char *forced_if) {
     char     ifname[256] = {0};
     unsigned ipv4 = 0, gw = 0;
     ipv6address ipv6 = {0};
     unsigned char macbuf[6] = {0};
     ipaddress_formatted_t tf = ipaddress_fmt(target);
-    if (rawsock_get_default_interface(ifname, sizeof(ifname)) != 0) {
+    if (forced_if && forced_if[0])
+        snprintf(ifname, sizeof(ifname), "%s", forced_if);
+    else if (rawsock_get_default_interface(ifname, sizeof(ifname)) != 0) {
         fprintf(stderr, "cannot determine default interface\n");
         return;
     }
@@ -126,6 +128,32 @@ void rawsock_diag_target(ipaddress target, bool check) {
                ifname[0] ? "OK" : "FAIL",
                ipv4 ? "OK" : "FAIL", gw ? "OK" : "FAIL");
     }
+}
+
+
+int rawsock_resolve_ifname(const char *hint, char *out, size_t out_size) {
+    pcap_if_t *alldevs = NULL;
+    char       errbuf[PCAP_ERRBUF_SIZE];
+    int        found = 0;
+    if (!hint || !hint[0] || !out || !out_size)
+        return -1;
+    if (pcap_init() != 0)
+        return -1;
+    if (PCAP.findalldevs(&alldevs, errbuf) == -1 || !alldevs)
+        return -1;
+    for (const pcap_if_t *d = alldevs; d; d = PCAP.dev_next(d)) {
+        const char *name = PCAP.dev_name(d);
+        const char *desc = PCAP.dev_description(d);
+        if ((name && strcmp(name, hint) == 0) ||
+            (desc && strstr(desc, hint) != NULL)) {
+            if (found == 0)
+                snprintf(out, out_size, "%s", name);
+            found++;
+        }
+    }
+    if (found == 1)
+        return 0;
+    return found > 1 ? 1 : -1;
 }
 
 /***************************************************************************
