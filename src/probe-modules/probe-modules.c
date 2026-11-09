@@ -37,6 +37,9 @@ extern Probe NmapProbe;
 extern Probe NmapUdpProbe;
 extern Probe SlotTestProbe;
 extern Probe SshProbe;
+#ifndef NOT_FOUND_OPENSSL
+extern Probe SshKexProbe;
+#endif
 extern Probe H2cProbe;
 extern Probe H2Probe;
 extern Probe QuicProbe;
@@ -119,6 +122,9 @@ Probe *probe_modules_list[] = {
 #endif
 
     &SshProbe,
+#ifndef NOT_FOUND_OPENSSL
+    &SshKexProbe,
+#endif
     &H2cProbe,
     &H2Probe,
     &RedisProbe,

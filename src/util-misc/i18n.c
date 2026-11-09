@@ -716,6 +716,7 @@ static const I18nModuleHelpDescEntry i18n_module_help_desc[] = {
     {"pptp", "发送 PPTP Start-Control-Connection-Request，解析 SCCRP 的 result/version；不建 GRE、不认证。"},
     {"pptp-state", "有状态 PPTP 控制连接探测；不建 GRE、不认证。"},
     {"h2", "有状态 HTTP/2 探针，必须通过 tcp-state + tls-state --alpn h2 -subprobe h2 使用。发送 HTTP/2 preface、SETTINGS 和最小 HPACK 请求，解析 SETTINGS、HEADERS（静态/literal HPACK，不支持 Huffman）和 DATA。它不是 h2c；明文 prior knowledge 请用 h2c。依赖 OpenSSL（tls-state）。"},
+    {"ssh-kex", "执行未认证的 curve25519-sha256 SSH 密钥交换，输出 host key 类型、位数和 SHA256 指纹；不做用户认证或命令执行。state 探针。"},
     {"redis", "发送只读 `INFO server` 请求识别 Redis，解析 redis_version、redis_mode、os 和 role；不发送会修改数据的命令。单 slot。"},
     {"memcached", "发送 `version` 请求识别 Memcached，解析服务器版本行；只读识别，单 slot。"},
     {"ntp", "发送 NTP v4 mode-3 客户端包，校验 originate timestamp，解析 leap/version/mode、stratum、poll/precision、refid 和 root delay/dispersion；不修改服务器时钟。单 slot UDP。"},
@@ -805,6 +806,7 @@ static const I18nModuleDescEntry i18n_module_desc_help[] = {
     {"managesieve", "读取 ManageSieve banner。"},
     {"managesieve-state", "ManageSieve 能力探测。"},
 
+    {"ssh-kex", "SSH KEX 与 host key 指纹。"},
     {"redis", "只读 INFO 识别 Redis。"},
     {"memcached", "version 命令识别 Memcached。"},
     {"ntp", "NTP mode-3 请求与结构化响应。"},
