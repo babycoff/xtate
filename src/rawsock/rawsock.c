@@ -190,7 +190,7 @@ int rawsock_count_default_interfaces(void) {
  * This function prints to the command line a list of all the network
  * interfaces/devices.
  ***************************************************************************/
-void rawsock_list_adapters(bool json) {
+void rawsock_list_adapters(void) {
     pcap_if_t *alldevs;
     char       errbuf[PCAP_ERRBUF_SIZE];
 
@@ -210,11 +210,8 @@ void rawsock_list_adapters(bool json) {
                 "libpcap: no adapters found, are you sure you are root?\n");
             return;
         }
-        if (json)
-            fputc('[', stdout);
-        else
-            fprintf(stdout,
-                    "IDX  IFACE\t\t\t\tIPv4\t\tMAC\t\t\tGATEWAY\t\tSTATE\n");
+        fprintf(stdout,
+                "IDX  IFACE\t\t\t\tIPv4\t\tMAC\t\t\tGATEWAY\t\tSTATE\n");
         for (d = alldevs; d; d = PCAP.dev_next(d)) {
             const char *name = PCAP.dev_name(d);
             const char *desc = PCAP.dev_description(d);
@@ -255,19 +252,7 @@ void rawsock_list_adapters(bool json) {
                                 : virt   ? "virtual"
                                 : ipv4   ? "up"
                                          : "no-ipv4";
-            if (json) {
-                if (i)
-                    fputc(',', stdout);
-                fprintf(stdout,
-                        "{\"index\":%d,\"name\":\"%s\","
-                        "\"description\":\"%s\",\"ipv4\":\"%s\","
-                        "\"mac\":\"%s\",\"gateway\":\"%s\","
-                        "\"state\":\"%s\",\"default\":%s}",
-                        i, name, desc, ipv4 ? ip4f.string : "",
-                        macaddress_is_zero(mac) ? "" : macs.string,
-                        has_gw ? gwf.string : "", state,
-                        has_gw ? "true" : "false");
-            } else {
+
                 fprintf(stdout, " %d  %s\n", i, name);
                 fprintf(stdout, "     %s\n", desc);
                 fprintf(stdout,
@@ -277,11 +262,8 @@ void rawsock_list_adapters(bool json) {
                         has_gw ? gwf.string : "-", state,
                         has_gw ? " DEFAULT" : "",
                         ipv6.hi || ipv6.lo ? " IPV6" : "");
-            }
             i++;
         }
-        if (json)
-            fprintf(stdout, "]\n");
         fprintf(stdout, "\n");
         PCAP.freealldevs(alldevs);
     } else {
