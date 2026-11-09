@@ -10,6 +10,18 @@
 extern Probe ManageSieveProbe;
 extern Probe ManageSieveStateProbe;
 
+static bool sieve_after_tls;
+static ConfRes SET_sieve_after_tls(void *conf, const char *name,
+                                   const char *value) {
+    UNUSEDPARM(conf); UNUSEDPARM(name);
+    sieve_after_tls = conf_parse_bool(value);
+    return Conf_OK;
+}
+static ConfParam sieve_state_parameters[] = {
+    {"after-tls", SET_sieve_after_tls, Type_FLAG, {"post-tls", 0},
+     "Run inside TLS: send NOOP so the server-first capability greeting is delivered."},
+    {0}};
+
 static void sieve_banner(const unsigned char *px, unsigned len, OutItem *item) {
     dach_append_banner(&item->probe_report, "sieve_banner", px, len);
     safe_strcpy(item->classification, OUT_CLS_SIZE, "managesieve");
@@ -61,7 +73,10 @@ static void sieve_parse_caps(const unsigned char *px, unsigned len, OutItem *ite
 static void sieve_hello(DataPass *pass, ProbeState *state, ProbeTarget *target) {
     UNUSEDPARM(state);
     UNUSEDPARM(target);
-    datapass_set_data(pass, NULL, 0, false);
+    if (sieve_after_tls)
+        datapass_set_data(pass, (unsigned char *)"NOOP\r\n", 6, false);
+    else
+        datapass_set_data(pass, NULL, 0, false);
 }
 
 static unsigned sieve_state_parse(DataPass *pass, ProbeState *state,
@@ -105,6 +120,7 @@ Probe ManageSieveStateProbe = {
     .type       = ProbeType_STATE,
     .hello_wait = 0,
     .short_desc = "ManageSieve capability greeting probe.",
+    .params     = sieve_state_parameters,
     .desc = "Read the ManageSieve capability greeting, parse quoted capability "
             "strings and report STARTTLS/SASL availability. No authentication. "
             "State probe.",

@@ -52,7 +52,7 @@ run() {
 
 # Implicit TLS targets.
 run implicit-smtp 2465 smtp-state "-subprobe-arg --after-tls" 'smtp_starttls: true'
-run implicit-mysql 3307 mysql-state "" 'tls info'
+run implicit-mysql 3307 mysql-state "-subprobe-arg --after-tls" 'mysql_version: "8.0.34"'
 run implicit-postgres 5432 postgres-state "-subprobe-arg --after-tls" 'postgres_auth_type: 5'
 run implicit-mongodb 27018 mongodb-state "" 'mongodb_wire_version: 17'
 
@@ -61,6 +61,6 @@ run starttls-smtp 2525 smtp-state "--starttls smtp -subprobe-arg --after-tls" 's
 run starttls-imap 2143 imap-state "--starttls imap -subprobe-arg --after-tls" 'imap_starttls: true'
 run starttls-pop3 2110 pop3-state "--starttls pop3 -subprobe-arg --after-tls" 'pop3_stls: true'
 run starttls-ftp 2121 ftp-state "--starttls ftp -subprobe-arg --after-tls" 'ftp_auth_tls: true'
-run starttls-managesieve 4191 managesieve-state "--starttls managesieve" 'tls info'
+run starttls-managesieve 4191 managesieve-state "--starttls managesieve -subprobe-arg --after-tls" 'sieve_starttls: true'
 
 echo "PASS: TLS/STARTTLS composition matrix"

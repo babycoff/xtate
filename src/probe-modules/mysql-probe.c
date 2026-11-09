@@ -10,6 +10,18 @@
 extern Probe MysqlProbe;
 extern Probe MysqlStateProbe;
 
+static bool mysql_after_tls;
+static ConfRes SET_mysql_after_tls(void *conf, const char *name,
+                                   const char *value) {
+    UNUSEDPARM(conf); UNUSEDPARM(name);
+    mysql_after_tls = conf_parse_bool(value);
+    return Conf_OK;
+}
+static ConfParam mysql_state_parameters[] = {
+    {"after-tls", SET_mysql_after_tls, Type_FLAG, {"post-tls", 0},
+     "Run inside TLS: send a protocol wake-up byte so server-first greeting is delivered."},
+    {0}};
+
 static unsigned mysql_read_le16(const unsigned char *p) {
     return p[0] | ((unsigned)p[1] << 8);
 }
@@ -98,7 +110,13 @@ static void mysql_state_hello(DataPass *pass, ProbeState *state,
                               ProbeTarget *target) {
     UNUSEDPARM(state);
     UNUSEDPARM(target);
-    datapass_set_data(pass, NULL, 0, false);
+    if (mysql_after_tls) {
+        /* COM_PING packet: length=1, sequence=0, command=0x0e */
+        static const unsigned char ping[] = {0x01, 0x00, 0x00, 0x00, 0x0e};
+        datapass_set_data(pass, (unsigned char *)ping, sizeof(ping), false);
+    } else {
+        datapass_set_data(pass, NULL, 0, false);
+    }
 }
 
 static unsigned mysql_state_parse(DataPass *pass, ProbeState *state,
@@ -154,6 +172,7 @@ Probe MysqlStateProbe = {
     .type       = ProbeType_STATE,
     .hello_wait = 0,
     .short_desc = "Read the MySQL server greeting over tcp-state.",
+    .params     = mysql_state_parameters,
     .desc = "Stateful variant of mysql: wait for the server greeting, parse "
             "the same fields, then close without sending auth. Use tcp-state. "
             "No credentials or queries are sent.",

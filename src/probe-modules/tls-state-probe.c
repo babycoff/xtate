@@ -1549,7 +1549,6 @@ static unsigned tlsstate_parse_response(DataPass *pass, ProbeState *state,
                                         const unsigned char *px,
                                         unsigned             sizeof_px) {
     LOG(LEVEL_DETAIL, "(TSP Parse RESPONSE) >>>\n");
-
     struct TlsState *tls_state = state->data;
 
     if (state->state == TSP_STATE_STARTTLS) {

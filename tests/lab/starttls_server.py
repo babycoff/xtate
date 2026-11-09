@@ -68,7 +68,7 @@ def serve(proto, port, greeting):
             tls.do_handshake()
             try:
                 if proto == "managesieve":
-                    time.sleep(0.4)
+                    tls.recv(1024)
                     tls.sendall(b'"IMPLEMENTATION" "lab" "SIEVE" "fileinto" '
                                 b'"STARTTLS"\r\n')
                 elif proto == "smtp":

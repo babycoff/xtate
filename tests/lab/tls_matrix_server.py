@@ -25,6 +25,7 @@ def bson_doc():
 
 
 def mysql(c):
+    c.recv(4096)
     version = b"8.0.34"
     payload = (b"\x0a" + version + b"\x00" + struct.pack("<I", 42) +
                b"abcdefgh" + b"\x00" + struct.pack("<H", 0xffff) + b"\x21" +
