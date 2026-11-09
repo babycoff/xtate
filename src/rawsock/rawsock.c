@@ -119,13 +119,55 @@ void rawsock_list_adapters(void) {
                 "libpcap: no adapters found, are you sure you are root?\n");
             return;
         }
-        /* Print the list */
+        fprintf(stdout,
+                "IDX  IFACE\t\t\t\tIPv4\t\tMAC\t\t\tGATEWAY\t\tSTATE\n");
         for (d = alldevs; d; d = PCAP.dev_next(d)) {
-            fprintf(stdout, " %d  %s \t", i++, PCAP.dev_name(d));
-            if (PCAP.dev_description(d))
-                fprintf(stdout, "(%s)\n", PCAP.dev_description(d));
-            else
-                fprintf(stdout, "(No description available)\n");
+            const char *name = PCAP.dev_name(d);
+            const char *desc = PCAP.dev_description(d);
+            if (!desc)
+                desc = "(No description available)";
+
+            bool loopback = strstr(desc, "Loopback") != NULL ||
+                            strstr(desc, "loopback") != NULL ||
+                            strstr(name, "Loopback") != NULL;
+            bool virt = strstr(desc, "WAN Miniport") != NULL ||
+                        strstr(desc, "VMware") != NULL ||
+                        strstr(desc, "Hyper-V") != NULL ||
+                        strstr(desc, "Virtual") != NULL ||
+                        strstr(desc, "Wi-Fi Direct") != NULL;
+
+            unsigned ipv4 = 0;
+            ipv6address ipv6 = {0};
+            macaddress_t mac = {{0}};
+            unsigned gw = 0;
+            bool has_gw = false;
+
+            /* Probing some Windows virtual/WAN Npcap devices can fault the
+             * adapter helpers; report their type without querying. */
+            if (!loopback && !virt) {
+                ipv4 = rawsock_get_adapter_ip(name);
+                ipv6 = rawsock_get_adapter_ipv6(name);
+                unsigned char macbuf[6] = {0};
+                if (rawsock_get_adapter_mac(name, macbuf) == 0)
+                    memcpy(mac.addr, macbuf, 6);
+                has_gw = rawsock_get_default_gateway(name, &gw) == 0 && gw != 0;
+            }
+
+            ipaddress_formatted_t ip4f = ipv4address_fmt(ipv4);
+            ipaddress_formatted_t gwf = ipv4address_fmt(gw);
+            macaddress_t macf = mac;
+            ipaddress_formatted_t macs = macaddress_fmt(macf);
+
+            fprintf(stdout, " %d  %s\n", i++, name);
+            fprintf(stdout, "     %s\n", desc);
+            fprintf(stdout, "     IPv4=%s MAC=%s GATEWAY=%s STATE=%s%s%s\n",
+                    ipv4 ? ip4f.string : "-",
+                    macaddress_is_zero(mac) ? "-" : macs.string,
+                    has_gw ? gwf.string : "-",
+                    loopback ? "loopback"
+                             : (virt ? "virtual"
+                                     : (ipv4 ? "up" : "no-ipv4")),
+                    has_gw ? " DEFAULT" : "", ipv6.hi || ipv6.lo ? " IPV6" : "");
         }
         fprintf(stdout, "\n");
         PCAP.freealldevs(alldevs);

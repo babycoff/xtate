@@ -311,3 +311,13 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http \
 CLI 本身也能说明用法：`--usage`、`--help`、`--intro`、`--list-scan`、`--list-probe`、`--list-out`、`--list-gen`，以及按模块查看参数的 `--help-scan <module>` / `--help-probe <module>`。
 
 人类可读帮助可以用 `--lang zh`（或 `XTATE_LANG=zh`）切换中文：`xtate --lang zh --help`。参数名、模块名和结果值保持英文；catalog 与回退规则见 [帮助 i18n](./help-i18n.md)。
+
+## Windows 接口与网关诊断
+
+`--list-if` 现在输出每个 Npcap 接口的描述、IPv4、MAC、默认网关和 `STATE`
+（`up` / `virtual` / `loopback` / `no-ipv4`）。虚拟/WAN 接口只列出类型，
+不调用逐接口查询，避免部分 Windows Npcap 设备触发崩溃。
+
+Windows 上网关 MAC 会先通过系统邻居表 `SendARP` 获取，再回退到 raw ARP。
+如果仍失败，使用 `--router-ip <网关>` 和 `--router-mac <arp -a 得到的 MAC>`；
+不要复制示例里的占位 MAC。

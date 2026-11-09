@@ -247,7 +247,7 @@ endif ()
 
 # Windows--------------------WSock iphlpAPI
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    target_link_libraries(${exe_name} wsock32 ws2_32)
+    target_link_libraries(${exe_name} wsock32 ws2_32 iphlpapi)
     target_link_libraries(${exe_name} IPHLPAPI.lib)
 endif ()
 

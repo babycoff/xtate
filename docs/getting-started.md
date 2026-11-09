@@ -356,3 +356,15 @@ The CLI can also explain itself: `--usage`, `--help`, `--intro`, `--list-scan`, 
 Human-facing help can be switched to Chinese with `--lang zh` (or `XTATE_LANG=zh`):
 `xtate --lang zh --help`. Parameter names, module names and result values stay
 English; see [Help i18n](./help-i18n.md) for the catalog and fallback rules.
+
+## Windows interface and gateway diagnostics
+
+`--list-if` prints each Npcap interface with its description, IPv4 address,
+MAC, default gateway and a `STATE` of `up`, `virtual`, `loopback` or `no-ipv4`.
+Virtual/WAN interfaces are listed without probing because some Windows Npcap
+devices fault the per-adapter helpers.
+
+On Windows, gateway MAC resolution now tries the OS neighbor table via
+`SendARP` before raw ARP. If the gateway still cannot be resolved, use
+`--router-ip <gateway>` and `--router-mac <mac-from-arp -a>`; do not copy the
+placeholder MAC from an example.

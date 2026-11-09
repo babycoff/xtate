@@ -1,5 +1,10 @@
 #include "./init-nic.h"
 
+#ifdef _WIN32
+#include <winsock2.h>
+#include <iphlpapi.h>
+#endif
+
 #include "../rawsock/rawsock.h"
 #include "../stub/stub-pcap-dlt.h"
 #include "../stack/stack-arpv4.h"
@@ -164,9 +169,25 @@ int init_nic(XConf *xconf, bool has_ipv4_targets, bool has_ipv6_targets) {
                 LOG(LEVEL_DETAIL, "if(%s):arp: resolving IPv4 address\n",
                     ifname);
 
+#ifdef _WIN32
+                {
+                    ULONG m[2] = {0, 0};
+                    ULONG mlen = 6;
+                    if (SendARP(htonl(router_ipv4), 0, m, &mlen) == NO_ERROR &&
+                        mlen == 6) {
+                        memcpy(xconf->nic.router_mac_ipv4.addr, m, 6);
+                    } else {
+                        stack_arp_resolve(
+                            xconf->nic.adapter, tmp_acache, adapter_ip,
+                            xconf->nic.source_mac, router_ipv4,
+                            &xconf->nic.router_mac_ipv4);
+                    }
+                }
+#else
                 stack_arp_resolve(xconf->nic.adapter, tmp_acache, adapter_ip,
                                   xconf->nic.source_mac, router_ipv4,
                                   &xconf->nic.router_mac_ipv4);
+#endif
                 rawsock_flush(xconf->nic.adapter, tmp_acache);
             }
 
