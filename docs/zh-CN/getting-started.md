@@ -322,3 +322,5 @@ Windows 上网关 MAC 会先通过系统邻居表 `SendARP` 获取，再回退�
 如果仍失败，使用 `--router-ip <网关>` 和 `--router-mac <arp -a 得到的 MAC>`；
 不要复制示例里的占位 MAC。
 `-if` 也支持唯一的接口描述/名称子串，例如 `-if "Intel(R) Wi-Fi"`；多个匹配会失败而不是自行选择。
+
+Windows 和 Linux 现在都支持目标 IPv4/IPv6 路由查询；未指定 `-if` 且存在多个默认接口时，Xtate 会 fail-closed 报错，而不是自行猜测。`--list-if-json` 输出 JSON 接口数组。

@@ -43,6 +43,13 @@ int init_nic(XConf *xconf, bool has_ipv4_targets, bool has_ipv6_targets) {
     if (xconf->nic.ifname[0])
         ifname = xconf->nic.ifname;
     else {
+        int n = rawsock_count_default_interfaces();
+        if (n > 1) {
+            LOG(LEVEL_ERROR,
+                "multiple default interfaces detected (%d); use -if to choose explicitly\n",
+                n);
+            return -1;
+        }
         /* no adapter specified, so find a default one */
         int err;
         ifname2[0] = '\0';

@@ -162,6 +162,30 @@ int rawsock_resolve_ifname(const char *hint, char *out, size_t out_size) {
     return found > 1 ? 1 : -1;
 }
 
+
+int rawsock_count_default_interfaces(void) {
+    pcap_if_t *alldevs = NULL;
+    char       errbuf[PCAP_ERRBUF_SIZE];
+    int        count = 0;
+    if (pcap_init() != 0)
+        return -1;
+    if (PCAP.findalldevs(&alldevs, errbuf) == -1 || !alldevs)
+        return -1;
+    for (const pcap_if_t *d = alldevs; d; d = PCAP.dev_next(d)) {
+        const char *desc = PCAP.dev_description(d);
+        if (!desc)
+            desc = "";
+        if (strstr(desc, "Loopback") || strstr(desc, "WAN Miniport") ||
+            strstr(desc, "VMware") || strstr(desc, "Hyper-V") ||
+            strstr(desc, "Virtual") || strstr(desc, "Wi-Fi Direct"))
+            continue;
+        unsigned gw = 0;
+        if (rawsock_get_default_gateway(PCAP.dev_name(d), &gw) == 0 && gw)
+            count++;
+    }
+    return count;
+}
+
 /***************************************************************************
  * This function prints to the command line a list of all the network
  * interfaces/devices.

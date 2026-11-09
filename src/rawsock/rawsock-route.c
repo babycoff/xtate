@@ -112,7 +112,14 @@ int rawsock_route_lookup(ipaddress target, RawRoute *out) {
         dst.Ipv4.sin_family = AF_INET;
         dst.Ipv4.sin_addr.s_addr = htonl(target.ipv4);
     } else {
-        return -1; /* IPv6 route lookup not wired yet */
+        unsigned char b[16];
+        for (int i = 0; i < 8; i++) {
+            b[i] = (unsigned char)(target.ipv6.hi >> (56 - i * 8));
+            b[8 + i] = (unsigned char)(target.ipv6.lo >> (56 - i * 8));
+        }
+        dst.si_family = AF_INET6;
+        dst.Ipv6.sin6_family = AF_INET6;
+        memcpy(&dst.Ipv6.sin6_addr, b, 16);
     }
 
     DWORD ifindex = 0;
@@ -141,9 +148,11 @@ int rawsock_route_lookup(ipaddress target, RawRoute *out) {
 
     if (guid[0] && pcap_name_for_guid(guid, out->ifname,
                                       sizeof(out->ifname)) == 0) {
-        out->source_ip.version = 4;
-        adapter_addr_for_index(ifindex, &out->source_ip.ipv4,
-                               &out->source_ip);
+        out->source_ip.version = target.version;
+        unsigned v4src = 0;
+        adapter_addr_for_index(ifindex, &v4src, &out->source_ip);
+        if (target.version == 4)
+            out->source_ip.ipv4 = v4src;
     } else {
         /* Fall back to default interface name and address. */
         char name[256] = {0};
@@ -218,6 +227,8 @@ static int netlink_route(ipaddress target, RawRoute *out) {
         struct rtmsg *rtm = (struct rtmsg *)NLMSG_DATA(nh);
         unsigned oif = 0, gw = 0, src = 0;
         bool have_src = false;
+        unsigned char gw6[16] = {0}, src6[16] = {0};
+        bool have_gw6 = false, have_src6 = false;
         int  alen = (int)(nh->nlmsg_len - NLMSG_LENGTH(sizeof(*rtm)));
         for (struct rtattr *a = (struct rtattr *)((char *)rtm +
                                                   NLMSG_ALIGN(sizeof(*rtm)));
@@ -228,11 +239,18 @@ static int netlink_route(ipaddress target, RawRoute *out) {
                      RTA_PAYLOAD(a) >= (rtm->rtm_family == AF_INET6 ? 16u : 4u)) {
                 if (rtm->rtm_family == AF_INET)
                     memcpy(&gw, RTA_DATA(a), 4);
+                else {
+                    memcpy(gw6, RTA_DATA(a), 16);
+                    have_gw6 = true;
+                }
             } else if (a->rta_type == RTA_PREFSRC &&
                        RTA_PAYLOAD(a) >= (rtm->rtm_family == AF_INET6 ? 16u : 4u)) {
                 if (rtm->rtm_family == AF_INET) {
                     memcpy(&src, RTA_DATA(a), 4);
                     have_src = true;
+                } else {
+                    memcpy(src6, RTA_DATA(a), 16);
+                    have_src6 = true;
                 }
             }
         }
@@ -244,6 +262,16 @@ static int netlink_route(ipaddress target, RawRoute *out) {
             out->source_ip.ipv4 = have_src ? ntohl(src)
                                            : rawsock_get_adapter_ip(out->ifname);
             out->gateway.ipv4 = ntohl(gw);
+        } else {
+            out->source_ip.version = 6;
+            if (have_src6)
+                out->source_ip.ipv6 = ipv6address_from_bytes(src6);
+            else
+                out->source_ip.ipv6 = rawsock_get_adapter_ipv6(out->ifname);
+            if (have_gw6) {
+                out->gateway.version = 6;
+                out->gateway.ipv6 = ipv6address_from_bytes(gw6);
+            }
         }
         return 0;
     }

@@ -127,6 +127,7 @@ const char *rawsock_win_name(const char *ifname);
 
 int rawsock_is_adapter_names_equal(const char *lhs, const char *rhs);
 int rawsock_resolve_ifname(const char *hint, char *out, size_t out_size);
+int rawsock_count_default_interfaces(void);
 
 /**
  * Transmit any queued (but not yet transmitted) packets. Useful only when

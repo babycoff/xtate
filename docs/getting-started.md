@@ -369,3 +369,5 @@ On Windows, gateway MAC resolution now tries the OS neighbor table via
 `--router-ip <gateway>` and `--router-mac <mac-from-arp -a>`; do not copy the
 placeholder MAC from an example.
 `-if` also accepts a unique interface description/name substring, e.g. `-if "Intel(R) Wi-Fi"`; ambiguous matches fail instead of choosing one.
+
+Target route lookup now covers IPv4 and IPv6 on Windows and IPv4/IPv6 via Linux rtnetlink. When multiple default interfaces are present and `-if` is omitted, Xtate fails closed with an ambiguity error instead of guessing. `--list-if-json` emits a JSON adapter array.
