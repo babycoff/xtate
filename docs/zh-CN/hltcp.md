@@ -52,6 +52,8 @@ peer: DATA -> duplicate prefix trimmed, seqno_them advances, one ACK per segment
 
 ## HLTCP 之上的 TLS
 
+关于 `--after-tls`、隐式 TLS 和 STARTTLS 的详细说明见 [TLS 与 STARTTLS 组合](./tls-composition.md)。
+
 TLS 是这个栈存在的理由，它的实现方式是把字节流交给 OpenSSL，而不是自己解析记录。
 
 ![HLTCP 时序：先发无状态 SYN；只有收到 SYN-ACK 才创建 TCB；之后是 ACK、可选 TLS 握手、内部证据收集和 RST](../../screenshots/hltcp-sequence.png)

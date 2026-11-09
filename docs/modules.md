@@ -149,7 +149,7 @@ label `quic_response: initial` as `http3`.
 
 ### TLS evidence, certificate details and STARTTLS
 
-`tls-state` is an HLTCP middle layer and requires a `state` sub-probe. Certificate
+`tls-state` is an HLTCP middle layer and requires a `state` sub-probe. See [TLS composition](./tls-composition.md) for `--after-tls` and implicit/STARTTLS examples. Certificate
 and TLS fields are emitted after a successful handshake, independent of what the
 sub-probe does afterwards.
 

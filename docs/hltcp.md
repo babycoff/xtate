@@ -74,6 +74,8 @@ the process runs.
 
 ## TLS on top of HLTCP
 
+See [TLS and STARTTLS composition](./tls-composition.md) for `--after-tls`, implicit TLS and STARTTLS examples.
+
 TLS is the reason this stack exists, and it is implemented by handing the byte stream to
 OpenSSL rather than by parsing records ourselves.
 

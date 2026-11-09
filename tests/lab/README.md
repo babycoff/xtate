@@ -81,6 +81,8 @@ HTTP/3.
 
 ## STARTTLS
 
+See `docs/tls-composition.md` for `--after-tls`, implicit TLS and the full matrix.
+
 The lab starts a local Python target with SMTP, IMAP, POP3 and FTP STARTTLS
 listeners. `tls-state --starttls <proto> --dump-cert-details` must complete the
 plaintext upgrade and report the certificate subject.
