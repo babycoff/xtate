@@ -18,6 +18,7 @@
 #include "../util-out/logger.h"
 #include "../util-scan/ptrace.h"
 #include "../util-data/fine-malloc.h"
+#include "../util-misc/misc.h"
 
 #include "../stub/stub-pcap.h"
 #include "../stub/stub-pcap-dlt.h"
