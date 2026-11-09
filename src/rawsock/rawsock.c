@@ -128,7 +128,7 @@ void rawsock_diag_target(ipaddress target, bool check, const char *forced_if) {
     printf("Source IPv6:  %s\n", ipv6.hi || ipv6.lo ? i6f.string : "unknown");
     printf("Source MAC:   %s\n", macaddress_is_zero(macaddress_from_bytes(macbuf)) ? "unknown" : mf.string);
     printf("Gateway:      %s\n", gw ? gf.string : "unknown");
-    printf("Note: route lookup is interface-default in this build; use -if to pin.\n");
+    printf("Note: interface selected by target route on Windows; Linux currently uses default. Use -if to pin.\n");
     if (check) {
         printf("Check:        interface=%s source=%s gateway=%s\n",
                ifname[0] ? "OK" : "FAIL",
