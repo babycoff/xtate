@@ -5,6 +5,7 @@
     basic raw sockets, bypassing libpcap for better performance.
 */
 #include "rawsock.h"
+#include "rawsock-route.h"
 
 #include <assert.h>
 #include <ctype.h>
@@ -103,11 +104,15 @@ void rawsock_diag_target(ipaddress target, bool check, const char *forced_if) {
     ipv6address ipv6 = {0};
     unsigned char macbuf[6] = {0};
     ipaddress_formatted_t tf = ipaddress_fmt(target);
-    if (forced_if && forced_if[0])
+    if (forced_if && forced_if[0]) {
         snprintf(ifname, sizeof(ifname), "%s", forced_if);
-    else if (rawsock_get_default_interface(ifname, sizeof(ifname)) != 0) {
-        fprintf(stderr, "cannot determine default interface\n");
-        return;
+    } else {
+        RawRoute route = {0};
+        if (rawsock_route_lookup(target, &route) != 0) {
+            fprintf(stderr, "cannot determine route\n");
+            return;
+        }
+        snprintf(ifname, sizeof(ifname), "%s", route.ifname);
     }
     ipv4 = rawsock_get_adapter_ip(ifname);
     ipv6 = rawsock_get_adapter_ipv6(ifname);
