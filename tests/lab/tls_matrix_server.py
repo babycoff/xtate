@@ -47,9 +47,10 @@ def mongodb(c):
 
 
 def smtp(c):
-    c.sendall(b"220 lab ESMTP\r\n")
-    c.recv(4096)
-    c.sendall(b"250-lab\r\n250-STARTTLS\r\n250 AUTH PLAIN\r\n")
+    # The implicit-SMTP case runs smtp-state --after-tls: wait for EHLO
+    # and answer with capabilities, without a second greeting.
+    if c.recv(4096):
+        c.sendall(b"250-lab\r\n250-STARTTLS\r\n250 AUTH PLAIN\r\n")
 
 
 def serve(port, handler):

@@ -51,7 +51,7 @@ run() {
 }
 
 # Implicit TLS targets.
-run implicit-smtp 2465 smtp-state "" 'smtp_starttls: true'
+run implicit-smtp 2465 smtp-state "-subprobe-arg --after-tls" 'smtp_starttls: true'
 run implicit-mysql 3307 mysql-state "" 'mysql_version: "8.0.34"'
 run implicit-postgres 5432 postgres-state "-subprobe-arg --after-tls" 'postgres_auth_type: 5'
 run implicit-mongodb 27018 mongodb-state "" 'mongodb_wire_version: 17'
