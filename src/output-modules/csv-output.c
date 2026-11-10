@@ -3,6 +3,7 @@
 #include "../xconf.h"
 #include "../util-out/logger.h"
 #include "../util-data/safe-string.h"
+#include "../util-data/json-escape.h"
 #include "../pixie/pixie-file.h"
 
 extern Output CsvOutput; /*for internal x-ref*/
@@ -62,32 +63,20 @@ static void csv_field(FILE *fp, const char *value) {
     fputc('"', fp);
 }
 
-/* Write a JSON string while keeping the surrounding CSV field valid: JSON
- * escapes quotes/backslashes/control characters, and CSV doubles every quote
- * that remains in the field. */
+static void csv_json_sink(void *ctx, const char *data, size_t len) {
+    FILE *fp = (FILE *)ctx;
+    for (size_t i = 0; i < len; i++) {
+        if (data[i] == '"')
+            fputs("\"\"", fp);
+        else
+            fputc(data[i], fp);
+    }
+}
+
+/* Write a JSON string while keeping the surrounding CSV field valid. */
 static void csv_json_string(FILE *fp, const char *value, size_t len) {
     fputs("\"\"", fp);
-    for (size_t i = 0; i < len; i++) {
-        unsigned char c = (unsigned char)value[i];
-        if (c == '"')
-            fputs("\\\"\"", fp);
-        else if (c == '\\')
-            fputs("\\\\", fp);
-        else if (c == '\b')
-            fputs("\\b", fp);
-        else if (c == '\f')
-            fputs("\\f", fp);
-        else if (c == '\n')
-            fputs("\\n", fp);
-        else if (c == '\r')
-            fputs("\\r", fp);
-        else if (c == '\t')
-            fputs("\\t", fp);
-        else if (c < 0x20)
-            fprintf(fp, "\\u%04x", c);
-        else
-            fputc(c, fp);
-    }
+    json_escape_to(csv_json_sink, fp, (const unsigned char *)value, len);
     fputs("\"\"", fp);
 }
 

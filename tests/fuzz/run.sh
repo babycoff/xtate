@@ -15,10 +15,10 @@ ARTIFACTS="$ROOT/tests/fuzz/artifacts"
 
 mkdir -p "$BUILD" "$ARTIFACTS" \
     "$CORPUS/preprocess" "$CORPUS/target-parse" "$CORPUS/targetset" "$CORPUS/targetfile" \
-    "$CORPUS/h3-qpack" "$CORPUS/h2-hpack" \
+    "$CORPUS/h3-qpack" "$CORPUS/h2-hpack" "$CORPUS/json-escape" \
     "$WORK_CORPUS/preprocess" "$WORK_CORPUS/target-parse" \
     "$WORK_CORPUS/targetset" "$WORK_CORPUS/targetfile" \
-    "$WORK_CORPUS/h3-qpack" "$WORK_CORPUS/h2-hpack"
+    "$WORK_CORPUS/h3-qpack" "$WORK_CORPUS/h2-hpack" "$WORK_CORPUS/json-escape"
 
 if ! command -v "$CC" >/dev/null 2>&1; then
     echo "SKIP: $CC not available (install clang to run the fuzzers)" >&2
@@ -69,6 +69,12 @@ echo "==> building h2_hpack_fuzz"
     "$ROOT/tests/fuzz/h2_hpack_fuzz.c" \
     -Wl,--gc-sections \
     -o "$BUILD/h2_hpack_fuzz"
+
+echo "==> building json_escape_fuzz"
+"$CC" "${COMMON[@]}" \
+    "$ROOT/tests/fuzz/json_escape_fuzz.c" \
+    "$ROOT/src/util-data/json-escape.c" \
+    -o "$BUILD/json_escape_fuzz"
 
 echo "==> building targetfile_fuzz"
 "$CC" "${COMMON[@]}" \
@@ -132,5 +138,13 @@ echo "==> fuzzing target-file parser for ${FUZZ_TIME}s"
     -timeout=5 \
     -artifact_prefix="$ARTIFACTS/targetfile-" \
     "$WORK_CORPUS/targetfile" "$CORPUS/targetfile"
+
+echo "==> fuzzing JSON escape for ${FUZZ_TIME}s"
+"$BUILD/json_escape_fuzz" \
+    -max_total_time="$FUZZ_TIME" \
+    -max_len=65535 \
+    -timeout=5 \
+    -artifact_prefix="$ARTIFACTS/json-escape-" \
+    "$WORK_CORPUS/json-escape" "$CORPUS/json-escape"
 
 echo "fuzz smoke passed"

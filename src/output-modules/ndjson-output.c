@@ -3,6 +3,7 @@
 #include "../xconf.h"
 #include "../util-out/logger.h"
 #include "../util-data/safe-string.h"
+#include "../util-data/json-escape.h"
 #include "../pixie/pixie-file.h"
 
 extern Output NdjsonOutput; /*for internal x-ref*/
@@ -51,25 +52,13 @@ static bool ndjson_init(const XConf *xconf, const OutConf *out) {
     return true;
 }
 
+static void ndjson_file_sink(void *ctx, const char *data, size_t len) {
+    fwrite(data, 1, len, (FILE *)ctx);
+}
+
 static void ndjson_quote(FILE *fp, const char *s, size_t len) {
     fputc('"', fp);
-    for (size_t i = 0; i < len; i++) {
-        unsigned char c = (unsigned char)s[i];
-        switch (c) {
-            case '"': fputs("\\\"", fp); break;
-            case '\\': fputs("\\\\", fp); break;
-            case '\b': fputs("\\b", fp); break;
-            case '\f': fputs("\\f", fp); break;
-            case '\n': fputs("\\n", fp); break;
-            case '\r': fputs("\\r", fp); break;
-            case '\t': fputs("\\t", fp); break;
-            default:
-                if (c < 0x20)
-                    fprintf(fp, "\\u%04x", c);
-                else
-                    fputc(c, fp);
-        }
-    }
+    json_escape_to(ndjson_file_sink, fp, (const unsigned char *)s, len);
     fputc('"', fp);
 }
 

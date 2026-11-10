@@ -20,7 +20,7 @@ MongoDB output paths. It is a correctness review, not a performance benchmark.
 | CSV | Classification/reason were unquoted; report strings were not CSV-escaped. | Fixed: every field is quoted, embedded quotes are doubled, and report JSON is CSV-safe. |
 | BSON output | UTF-8 string append failures were ignored. | Fixed for `BSON_APPEND_UTF8`; other BSON append types are still unchecked. |
 | Mongo output | BSON import insert failures were logged but still counted as success; output document allocation was unchecked. | Fixed: failures return false and allocation is checked. |
-| Parser fuzzing | No fuzz target for NDJSON/BSON output or BSON input. | Open. |
+| Parser fuzzing | No fuzz target for output escaping. | Added `json_escape_fuzz` (libFuzzer + ASan/UBSan driver); BSON/output fuzz remains open. |
 
 ## Verification performed
 
@@ -33,6 +33,7 @@ corrupt BSON length 0x7fffffff: rejected before allocation, non-zero exit
 target file line > 65535 bytes: rejected with line number
 Linux build/selftest: PASS
 MSVC build: PASS
+json_escape_fuzz: 398k runs / 3s, fuzz smoke passed
 ```
 
 ## Next steps
@@ -40,4 +41,4 @@ MSVC build: PASS
 1. Add a CSV fixture with quotes/newlines in report values (the writer is now RFC4180-style).
 2. Check remaining BSON append return paths.
 3. Add malformed-input fixtures for BSON and target files.
-4. Add a fuzz/regression test for NDJSON escaping.
+4. Extend fuzzing to BSON input/output (JSON escaping is covered).

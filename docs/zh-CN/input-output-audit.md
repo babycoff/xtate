@@ -20,7 +20,7 @@
 | CSV | classification/reason 未加引号；报告字符串没有 CSV 转义。 | 已修复：所有字段加引号，双写引号，报告 JSON 做 CSV 安全转义。 |
 | BSON 输出 | UTF-8 字符串附加失败被忽略。 | 已修复 `BSON_APPEND_UTF8`；其他 BSON 类型仍未检查。 |
 | Mongo 输出 | BSON 导入插入失败仍计为成功；输出文档分配未检查。 | 已修复：失败返回 false，分配检查。 |
-| 解析器 fuzz | NDJSON/BSON 输出和 BSON 输入没有 fuzz 目标。 | 待补。 |
+| 解析器 fuzz | 输出转义没有 fuzz 目标。 | 已增加 `json_escape_fuzz`（libFuzzer + ASan/UBSan 驱动）；BSON/输出 fuzz 仍待补。 |
 
 ## 已执行验证
 
@@ -33,6 +33,7 @@ CSV 追加：只写一次表头
 目标文件超长行 > 65535：带行号拒绝
 Linux 构建/selftest：PASS
 MSVC 构建：PASS
+json_escape_fuzz：3 秒 398k 次执行，fuzz smoke passed
 ```
 
 ## 下一步
@@ -40,4 +41,4 @@ MSVC 构建：PASS
 1. 增加包含引号/换行的 CSV fixture（writer 已按 RFC4180 风格重写）。
 2. 检查剩余 BSON append 返回值。
 3. 增加 BSON 和目标文件的畸形输入 fixture。
-4. 增加 NDJSON 转义的 fuzz/回归测试。
+4. 将 fuzz 扩展到 BSON 输入/输出（JSON 转义已覆盖）。
