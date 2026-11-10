@@ -146,24 +146,32 @@ int rawsock_route_lookup(ipaddress target, RawRoute *out) {
     }
     FREE(a);
 
+    unsigned v4src = 0;
+    ipaddress v6src = {0};
+    adapter_addr_for_index(ifindex, &v4src, &v6src);
+    out->source_ip = target.version == 6 ? v6src : (ipaddress){0};
+    if (target.version == 4) {
+        out->source_ip.version = 4;
+        out->source_ip.ipv4 = v4src;
+    }
+
     if (guid[0] && pcap_name_for_guid(guid, out->ifname,
                                       sizeof(out->ifname)) == 0) {
-        out->source_ip.version = target.version;
-        unsigned v4src = 0;
-        adapter_addr_for_index(ifindex, &v4src, &out->source_ip);
-        if (target.version == 4)
-            out->source_ip.ipv4 = v4src;
+        /* mapped to a pcap device */
     } else {
-        /* Fall back to default interface name and address. */
+        /* Fall back to default interface name, but keep the routed source. */
         char name[256] = {0};
         if (rawsock_get_default_interface(name, sizeof(name)) != 0)
             return -1;
         safe_strcpy(out->ifname, sizeof(out->ifname), name);
-        out->source_ip.version = 4;
-        out->source_ip.ipv4 = rawsock_get_adapter_ip(name);
+        if (target.version == 4 && !out->source_ip.ipv4)
+            out->source_ip.ipv4 = rawsock_get_adapter_ip(name);
+        if (target.version == 6 &&
+            !(out->source_ip.ipv6.hi || out->source_ip.ipv6.lo))
+            out->source_ip.ipv6 = rawsock_get_adapter_ipv6(name);
     }
 
-    if (out->source_ip.version == 4) {
+    if (target.version == 4) {
         out->gateway.version = 4;
         unsigned gw = 0;
         if (rawsock_get_default_gateway(out->ifname, &gw) == 0)

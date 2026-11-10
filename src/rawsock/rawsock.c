@@ -124,7 +124,7 @@ void rawsock_diag_target(ipaddress target, bool check, const char *forced_if) {
                : rawsock_get_adapter_ipv6(ifname);
     rawsock_get_adapter_mac(ifname, macbuf);
     gw = have_route && route.gateway.version == 4 ? route.gateway.ipv4 : 0;
-    if (!gw)
+    if (!gw && target.version == 4)
         rawsock_get_default_gateway(ifname, &gw);
     ipaddress_formatted_t sf = ipv4address_fmt(ipv4);
     ipaddress_formatted_t gf = ipv4address_fmt(gw);
@@ -138,8 +138,12 @@ void rawsock_diag_target(ipaddress target, bool check, const char *forced_if) {
     printf("Source IPv4:  %s\n", ipv4 ? sf.string : "unknown");
     printf("Source IPv6:  %s\n", ipv6.hi || ipv6.lo ? i6f.string : "unknown");
     printf("Source MAC:   %s\n", macaddress_is_zero(macaddress_from_bytes(macbuf)) ? "unknown" : mf.string);
-    if (have_route && route.gateway.version == 6 && (route.gateway.ipv6.hi || route.gateway.ipv6.lo))
-        printf("Gateway:      %s\n", g6f.string);
+    if (target.version == 6)
+        printf("Gateway:      %s\n",
+               have_route && route.gateway.version == 6 &&
+                       (route.gateway.ipv6.hi || route.gateway.ipv6.lo)
+                   ? g6f.string
+                   : "unknown");
     else
         printf("Gateway:      %s\n", gw ? gf.string : "unknown");
     printf("Note: interface selected by the target route. Use -if to pin.\n");
