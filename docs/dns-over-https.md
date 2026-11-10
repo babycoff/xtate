@@ -44,6 +44,16 @@ Linux scanners must install `firewall/add_rules.sh`; Windows needs the normal
 | `--dnssec` | Send EDNS0 DO=1 |
 | `--edns-size` | EDNS0 UDP size, default 1232 |
 
+`doh-h2` uses the h2 probe's parameters instead:
+
+| Option | Meaning |
+|:---|:---|
+| `--dns-name` | DNS name to query (required) |
+| `--dns-type` | DNS type, default `A` |
+| `--path` | HTTP/2 `:path`, default `/`; use `/dns-query` |
+| `--authority` | HTTP/2 `:authority` / Host |
+| `--dnssec` | Send EDNS0 DO=1 |
+
 ## Output
 
 ```text
@@ -64,6 +74,8 @@ doh_dnssec_present
 
 - `doh` implements HTTP/1.1; `doh-h2` implements HTTP/2 (the normal public
   DoH deployment). Use the matching `-alpn`.
+- `doh-h2` uses the in-tree HTTP/2 implementation, including HPACK literal
+  names/values and Huffman-coded response headers.
 - DoH over HTTP/3 is a later extension.
 - `doh_dnssec_present` is deployment evidence, not a validated DNSSEC chain.
 - The 2-byte DoT length prefix is **not** used here; DoH carries the raw DNS
