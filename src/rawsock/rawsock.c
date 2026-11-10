@@ -229,7 +229,8 @@ void rawsock_list_adapters(void) {
             return;
         }
         fprintf(stdout,
-                "IDX  IFACE\t\t\t\tIPv4\t\tMAC\t\t\tGATEWAY\t\tSTATE\n");
+                "IDX  %-34s %-15s %-17s %-15s %s\n",
+                "INTERFACE", "IPv4", "MAC", "GATEWAY", "STATE");
         for (d = alldevs; d; d = PCAP.dev_next(d)) {
             const char *name = PCAP.dev_name(d);
             const char *desc = PCAP.dev_description(d);
@@ -271,15 +272,11 @@ void rawsock_list_adapters(void) {
                                 : ipv4   ? "up"
                                          : "no-ipv4";
 
-                fprintf(stdout, " %d  %s\n", i, name);
-                fprintf(stdout, "     %s\n", desc);
-                fprintf(stdout,
-                        "     IPv4=%s MAC=%s GATEWAY=%s STATE=%s%s%s\n",
-                        ipv4 ? ip4f.string : "-",
+                fprintf(stdout, "%3d  %-34.34s %-15s %-17s %-15s %s%s\n",
+                        i, desc, ipv4 ? ip4f.string : "-",
                         macaddress_is_zero(mac) ? "-" : macs.string,
                         has_gw ? gwf.string : "-", state,
-                        has_gw ? " DEFAULT" : "",
-                        ipv6.hi || ipv6.lo ? " IPV6" : "");
+                        has_gw ? " (default)" : "");
             i++;
         }
         fprintf(stdout, "\n");
