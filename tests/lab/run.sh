@@ -17,6 +17,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BIN="${XTATE_BIN:-$ROOT/bin/xtate}"
 IMAGE="${XTATE_LAB_IMAGE:-xtate-builder:24.04}"
+TARGET_IMAGE="${XTATE_TARGET_IMAGE:-$IMAGE}"
 NET="xtate-lab-$$"
 HTTP_TARGET="xtate-lab-http-$$"
 TLS_TARGET="xtate-lab-tls-$$"
@@ -29,6 +30,7 @@ QUIC_TARGET="xtate-lab-quic-$$"
 QUIC_RETRY_TARGET="xtate-lab-quic-retry-$$"
 HTTP3_TARGET="xtate-lab-http3-$$"
 STARTTLS_TARGET="xtate-lab-starttls-$$"
+DOT_TARGET="xtate-lab-dot-$$"
 HTTP_PORT=8080
 CLOSED_PORT=9
 TLS_PORT=8443
@@ -43,9 +45,10 @@ STARTTLS_SMTP_PORT=2525
 STARTTLS_IMAP_PORT=2143
 STARTTLS_POP3_PORT=2110
 STARTTLS_FTP_PORT=2121
+DOT_PORT=8853
 
 cleanup() {
-    docker rm -f "$HTTP_TARGET" "$TLS_TARGET" "$JARM_TARGET" "$UDP_ECHO_TARGET" "$SSH_TARGET" "$HTTP2_TARGET" "$H2_TARGET" "$STARTTLS_TARGET" "$QUIC_TARGET" "$QUIC_RETRY_TARGET" "$HTTP3_TARGET" >/dev/null 2>&1 || true
+    docker rm -f "$HTTP_TARGET" "$TLS_TARGET" "$JARM_TARGET" "$UDP_ECHO_TARGET" "$SSH_TARGET" "$HTTP2_TARGET" "$H2_TARGET" "$STARTTLS_TARGET" "$DOT_TARGET" "$QUIC_TARGET" "$QUIC_RETRY_TARGET" "$HTTP3_TARGET" >/dev/null 2>&1 || true
     docker network rm "$NET" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
@@ -71,7 +74,7 @@ echo "==> creating isolated network $NET"
 docker network create "$NET" >/dev/null
 
 echo "==> starting HTTP target"
-docker run -d --name "$HTTP_TARGET" --network "$NET" "$IMAGE" bash -lc \
+docker run -d --name "$HTTP_TARGET" --network "$NET" "$TARGET_IMAGE" bash -lc \
     "if ! command -v python3 >/dev/null 2>&1; then \
        apt-get update -qq >/dev/null 2>&1 && \
        apt-get install -y -qq python3 >/dev/null 2>&1; \
@@ -79,7 +82,7 @@ docker run -d --name "$HTTP_TARGET" --network "$NET" "$IMAGE" bash -lc \
      python3 -u -m http.server $HTTP_PORT" >/dev/null
 
 echo "==> starting TLS target"
-docker run -d --name "$TLS_TARGET" --network "$NET" "$IMAGE" bash -lc \
+docker run -d --name "$TLS_TARGET" --network "$NET" "$TARGET_IMAGE" bash -lc \
     "if ! command -v openssl >/dev/null 2>&1; then \
        apt-get update -qq >/dev/null 2>&1 && \
        apt-get install -y -qq openssl >/dev/null 2>&1; \
@@ -101,58 +104,65 @@ wait_tcp() {
     return 1
 }
 echo "==> starting isolated JARM TLS target"
-docker run -d --name "$JARM_TARGET" --network "$NET" "$IMAGE" bash -lc \
+docker run -d --name "$JARM_TARGET" --network "$NET" "$TARGET_IMAGE" bash -lc \
     "openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/key.pem \
        -out /tmp/cert.pem -subj '/CN=localhost' -days 1 >/dev/null 2>&1 && \
      openssl s_server -accept $JARM_PORT -cert /tmp/cert.pem -key /tmp/key.pem -tlsextdebug -www" >/dev/null
 
 echo "==> starting UDP echo target"
 MSYS_NO_PATHCONV=1 docker run -d --name "$UDP_ECHO_TARGET" --network "$NET" \
-    -v "$ROOT:/src:ro" "$IMAGE" \
+    -v "$ROOT:/src:ro" "$TARGET_IMAGE" \
     python3 -u /src/tests/lab/udp_echo.py >/dev/null
 sleep 1
 
 echo "==> starting SSH banner target"
 MSYS_NO_PATHCONV=1 docker run -d --name "$SSH_TARGET" --network "$NET" \
-    -v "$ROOT:/src:ro" "$IMAGE" \
+    -v "$ROOT:/src:ro" "$TARGET_IMAGE" \
     python3 -u /src/tests/lab/ssh_banner.py >/dev/null
 
 echo "==> starting HTTP/2 target"
 MSYS_NO_PATHCONV=1 docker run -d --name "$HTTP2_TARGET" --network "$NET" \
-    -v "$ROOT:/src:ro" "$IMAGE" \
+    -v "$ROOT:/src:ro" "$TARGET_IMAGE" \
     python3 -u /src/tests/lab/http2_server.py >/dev/null
 
 echo "==> starting STARTTLS targets"
 MSYS_NO_PATHCONV=1 docker run -d --name "$STARTTLS_TARGET" --network "$NET" \
-    -v "$ROOT:/src:ro" "$IMAGE" bash -lc \
+    -v "$ROOT:/src:ro" "$TARGET_IMAGE" bash -lc \
     "openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/st-key.pem \
        -out /tmp/st-cert.pem -subj '/CN=starttls.test' -days 1 >/dev/null 2>&1 && \
      python3 -u /src/tests/lab/starttls_server.py /tmp/st-cert.pem /tmp/st-key.pem" >/dev/null
 
+echo "==> starting DoT target"
+MSYS_NO_PATHCONV=1 docker run -d --name "$DOT_TARGET" --network "$NET" \
+    -v "$ROOT:/src:ro" "$TARGET_IMAGE" bash -lc \
+    "openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/dot-key.pem \
+       -out /tmp/dot-cert.pem -subj '/CN=dot.test' -days 1 >/dev/null 2>&1 && \
+     python3 -u /src/tests/lab/dot_server.py /tmp/dot-cert.pem /tmp/dot-key.pem $DOT_PORT" >/dev/null
+
 echo "==> starting QUIC target"
 MSYS_NO_PATHCONV=1 docker run -d --name "$QUIC_TARGET" --network "$NET" \
-    -v "$ROOT:/src:ro" "$IMAGE" bash -lc \
+    -v "$ROOT:/src:ro" "$TARGET_IMAGE" bash -lc \
     "openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/quic-key.pem \
        -out /tmp/quic-cert.pem -subj '/CN=quic.test' -days 1 >/dev/null 2>&1 && \
      python3 -u /src/tests/lab/quic_server.py /tmp/quic-cert.pem /tmp/quic-key.pem $QUIC_PORT" >/dev/null
 
 echo "==> starting QUIC Retry target"
 MSYS_NO_PATHCONV=1 docker run -d --name "$QUIC_RETRY_TARGET" --network "$NET" \
-    -v "$ROOT:/src:ro" "$IMAGE" bash -lc \
+    -v "$ROOT:/src:ro" "$TARGET_IMAGE" bash -lc \
     "openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/quic-key.pem \
        -out /tmp/quic-cert.pem -subj '/CN=quic.test' -days 1 >/dev/null 2>&1 && \
      python3 -u /src/tests/lab/quic_server.py /tmp/quic-cert.pem /tmp/quic-key.pem $QUIC_RETRY_PORT retry" >/dev/null
 
 echo "==> starting HTTP/3 target"
 MSYS_NO_PATHCONV=1 docker run -d --name "$HTTP3_TARGET" --network "$NET" \
-    -v "$ROOT:/src:ro" "$IMAGE" bash -lc \
+    -v "$ROOT:/src:ro" "$TARGET_IMAGE" bash -lc \
     "openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/h3-key.pem \
        -out /tmp/h3-cert.pem -subj '/CN=quic.test' -days 1 >/dev/null 2>&1 && \
      python3 -u /src/tests/lab/http3_server.py /tmp/h3-cert.pem /tmp/h3-key.pem $HTTP3_PORT" >/dev/null
 
 echo "==> starting TLS HTTP/2 target"
 MSYS_NO_PATHCONV=1 docker run -d --name "$H2_TARGET" --network "$NET" \
-    -v "$ROOT:/src:ro" "$IMAGE" bash -lc \
+    -v "$ROOT:/src:ro" "$TARGET_IMAGE" bash -lc \
     "openssl req -x509 -newkey rsa:2048 -nodes -keyout /tmp/h2-key.pem \
        -out /tmp/h2-cert.pem -subj '/CN=example.test' -days 1 >/dev/null 2>&1 && \
      python3 -u /src/tests/lab/h2_tls_server.py" >/dev/null
@@ -167,6 +177,7 @@ wait_tcp "$STARTTLS_TARGET" "$STARTTLS_SMTP_PORT"
 wait_tcp "$STARTTLS_TARGET" "$STARTTLS_IMAP_PORT"
 wait_tcp "$STARTTLS_TARGET" "$STARTTLS_POP3_PORT"
 wait_tcp "$STARTTLS_TARGET" "$STARTTLS_FTP_PORT"
+wait_tcp "$DOT_TARGET" "$DOT_PORT"
 sleep 2
 
 HTTP_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$HTTP_TARGET")"
@@ -177,6 +188,7 @@ SSH_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{
 HTTP2_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$HTTP2_TARGET")"
 H2_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$H2_TARGET")"
 STARTTLS_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$STARTTLS_TARGET")"
+DOT_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$DOT_TARGET")"
 QUIC_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$QUIC_TARGET")"
 QUIC_RETRY_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$QUIC_RETRY_TARGET")"
 HTTP3_IP="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$HTTP3_TARGET")"
@@ -192,10 +204,10 @@ echo "TLS h2:      $H2_IP:$H2_PORT"
 docker run --rm \
     --cap-add NET_RAW --cap-add NET_ADMIN \
     --network "$NET" \
-    -e HTTP_IP="$HTTP_IP" -e TLS_IP="$TLS_IP" -e JARM_IP="$JARM_IP" -e UDP_ECHO_IP="$UDP_ECHO_IP" -e SSH_IP="$SSH_IP" -e HTTP2_IP="$HTTP2_IP" -e H2_IP="$H2_IP" -e STARTTLS_IP="$STARTTLS_IP" -e QUIC_IP="$QUIC_IP" -e QUIC_RETRY_IP="$QUIC_RETRY_IP" -e HTTP3_IP="$HTTP3_IP" \
+    -e HTTP_IP="$HTTP_IP" -e TLS_IP="$TLS_IP" -e JARM_IP="$JARM_IP" -e UDP_ECHO_IP="$UDP_ECHO_IP" -e SSH_IP="$SSH_IP" -e HTTP2_IP="$HTTP2_IP" -e H2_IP="$H2_IP" -e STARTTLS_IP="$STARTTLS_IP" -e DOT_IP="$DOT_IP" -e QUIC_IP="$QUIC_IP" -e QUIC_RETRY_IP="$QUIC_RETRY_IP" -e HTTP3_IP="$HTTP3_IP" \
     -e HTTP_PORT="$HTTP_PORT" -e CLOSED_PORT="$CLOSED_PORT" \
     -e TLS_PORT="$TLS_PORT" -e JARM_PORT="$JARM_PORT" -e SSH_PORT="$SSH_PORT" -e HTTP2_PORT="$HTTP2_PORT" -e H2_PORT="$H2_PORT" \
-    -e STARTTLS_SMTP_PORT="$STARTTLS_SMTP_PORT" -e STARTTLS_IMAP_PORT="$STARTTLS_IMAP_PORT" -e STARTTLS_POP3_PORT="$STARTTLS_POP3_PORT" -e STARTTLS_FTP_PORT="$STARTTLS_FTP_PORT" -e QUIC_PORT="$QUIC_PORT" -e QUIC_RETRY_PORT="$QUIC_RETRY_PORT" -e HTTP3_PORT="$HTTP3_PORT" \
+    -e DOT_PORT="$DOT_PORT" -e STARTTLS_SMTP_PORT="$STARTTLS_SMTP_PORT" -e STARTTLS_IMAP_PORT="$STARTTLS_IMAP_PORT" -e STARTTLS_POP3_PORT="$STARTTLS_POP3_PORT" -e STARTTLS_FTP_PORT="$STARTTLS_FTP_PORT" -e QUIC_PORT="$QUIC_PORT" -e QUIC_RETRY_PORT="$QUIC_RETRY_PORT" -e HTTP3_PORT="$HTTP3_PORT" \
     -v "$ROOT:/src:ro" -v "$BIN:/xtate:ro" \
     "$IMAGE" bash -lc '
 set -euo pipefail
@@ -477,9 +489,17 @@ if command -v iptables >/dev/null 2>&1; then
     bash firewall/rm_rules.sh >/dev/null 2>&1 || true
 fi
 
+
+run_case state-dot \
+    -ip "$DOT_IP" -p "$DOT_PORT" -scan tcp-state -probe tls-state \
+    -src-port 47000-47255 -rate 100 --wait 3 --no-status -show info -show failed \
+    -probe-arg "-subprobe dot -alpn dot -sni dot.test -subprobe-arg '--req-name=example.com'"
+grep -q "dot_rcode" /tmp/state-dot.log
+grep -q "dot_answer" /tmp/state-dot.log
 echo "ALL LOCAL LAB CHECKS PASSED"
 ' 
 
 # SNI/ALPN delivery is asserted from scanner output (`tls_alpn`) above.
+
 echo "==> lab passed"
 
