@@ -127,10 +127,10 @@ static void doh_make_hello(DataPass *pass, ProbeState *state,
     if (!dns_len) { pass->is_close = 1; return; }
     char head[1024];
     int n = snprintf(head, sizeof(head),
-                     "POST %s HTTP/1.1\\r\\nHost: %s\\r\\n"
-                     "Content-Type: application/dns-message\\r\\n"
-                     "Accept: application/dns-message\\r\\n"
-                     "Content-Length: %zu\\r\\nConnection: close\\r\\n\\r\\n",
+                     "POST %s HTTP/1.1\r\nHost: %s\r\n"
+                     "Content-Type: application/dns-message\r\n"
+                     "Accept: application/dns-message\r\n"
+                     "Content-Length: %zu\r\nConnection: close\r\n\r\n",
                      doh_conf.doh_path, doh_conf.doh_host, dns_len);
     if (n <= 0 || (size_t)n + dns_len > 4096) { pass->is_close = 1; return; }
     unsigned char *req = MALLOC((size_t)n + dns_len);
@@ -144,7 +144,7 @@ static const char *find_header(const char *headers, const char *name) {
     size_t nlen = strlen(name);
     const char *p = headers;
     while (p && *p) {
-        const char *e = strstr(p, "\\r\\n");
+        const char *e = strstr(p, "\r\n");
         if (!e) break;
         if ((size_t)(e - p) > nlen && strncasecmp(p, name, nlen) == 0 &&
             p[nlen] == ':') {
@@ -205,7 +205,7 @@ static unsigned doh_parse(DataPass *pass, ProbeState *state, OutConf *out,
     size_t room = sizeof(st->buf) - st->len;
     if (sizeof_px < room) room = sizeof_px;
     memcpy(st->buf + st->len, px, room); st->len += room;
-    char *hdr_end = strstr((char *)st->buf, "\\r\\n\\r\\n");
+    char *hdr_end = strstr((char *)st->buf, "\r\n\r\n");
     if (!hdr_end) return 0;
     char *body = hdr_end + 4;
     if (st->len < (size_t)(body - (char *)st->buf)) return 0;
@@ -228,7 +228,7 @@ static unsigned doh_parse(DataPass *pass, ProbeState *state, OutConf *out,
     dach_set_int(&item.probe_report, "doh_status", status);
     const char *ct = find_header((char *)st->buf, "Content-Type");
     if (ct) {
-        const char *e = strstr(ct, "\\r\\n");
+        const char *e = strstr(ct, "\r\n");
         if (e) dach_append_str(&item.probe_report, "doh_content_type", ct,
                                (size_t)(e - ct));
     }

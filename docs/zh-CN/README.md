@@ -21,6 +21,7 @@
 | HTTP 探针质量 | [HTTP 探针审计](./http-probes-audit.md) |
 | 参数解析测试 | [参数解析器计划](./parser-test-plan.md) |
 | 协议扩展 | [协议覆盖计划](./protocol-coverage.md) |
+| DNS over HTTPS | [DNS over HTTPS](./dns-over-https.md) |
 | DNS over TLS | [DNS over TLS](./dns-over-tls.md) |
 | 输入/输出审查 | [输入/输出审查](./input-output-audit.md) |
 | 想了解内部原理 | [架构](./architecture.md) → [ZBanner](./zbanner.md) / [HLTCP](./hltcp.md) |
