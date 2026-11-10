@@ -3251,7 +3251,8 @@ ConfParam config_parameters[] = {
      SET_explain_target,
      Type_ARG,
      {"explain", "route-to", 0},
-     "Read-only: print the target, default interface, source IP/MAC and gateway. Does not send packets.",
+     "Read-only: target, route-selected interface, source IP/MAC, gateway. "
+     "No packets are sent.",
      "Explain target interface route."},
     {"check",
      SET_check_network,
@@ -3263,8 +3264,8 @@ ConfParam config_parameters[] = {
      SET_listif,
      Type_FLAG,
      {"list-interface", "list-adapter", 0},
-     "Do not run, but instead print informations of all adapters in this "
-     "machine.",
+     "Do not run. Print one aligned row per adapter: IPv4, MAC, gateway, "
+     "state.",
      "Print informations of all adapters"},
     {"help-parameter",
      SET_help_param,

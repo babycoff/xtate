@@ -269,7 +269,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 - 回包到达时结果实时写到 **stdout**，每个主机/端口一行：`[+] host: 192.168.1.10 port: 80 "open" because "syn-ack"`。
 - 默认只显示 `success` 等级的结果。对 `tcp-syn` 来说，关闭端口属于 `failed` 等级（`"closed" because "rst"`）；`zbanner` 的开放/关闭结果默认是 `info` 等级，除非你主动提升。加上 `-show failed` 和/或 `-show info` 才能看到更多。
 - 实时状态栏（速率、进度、队列水位）画在 **stderr** 上，所以 `... > results.txt` 重定向不会弄脏结果文件。`--no-status` 可以关掉状态栏。
-- 网卡会自动选为第一个带默认网关的接口；用 `--list-if` 列出网卡，用 `-if eth0` 指定。
+- 网卡按目标路由选择；如果存在多个默认接口且未指定 `-if`，Xtate 会 fail-closed 报错。用 `--list-if` 查看网卡，用 `--explain-target <ip>` 做只读路由诊断，用 `-if <编号|描述>` 固定接口。
 - TCP/UDP 扫描务必给出 `-p`。完全不给端口时 Xtate 会告警并替换成一个假的 `o:0` 端点，它不是 TCP/UDP 端口，扫描因此不会发出任何报文。
 - 按一次 `Ctrl-C` 即可停止：发送停止后，迟到的回包仍会在 `--wait` 秒内（默认 10）被继续收集。再按一次 `Ctrl-C` 会强制中止。
 
@@ -314,9 +314,10 @@ CLI 本身也能说明用法：`--usage`、`--help`、`--intro`、`--list-scan`�
 
 ## Windows 接口与网关诊断
 
-使用 `--explain-target 8.8.8.8` 查看目标/接口/网关只读摘要，使用 `--check --explain-target 8.8.8.8` 做启动前预检。`--list-if` 现在输出每个 Npcap 接口的描述、IPv4、MAC、默认网关和 `STATE`
+使用 `--explain-target 8.8.8.8` 查看目标/接口/网关只读摘要，使用 `--check --explain-target 8.8.8.8` 做启动前预检。`--list-if` 现在每个网卡输出一行对齐表格：描述、IPv4、MAC、默认网关和 `STATE`
 （`up` / `virtual` / `loopback` / `no-ipv4`）。虚拟/WAN 接口只列出类型，
-不调用逐接口查询，避免部分 Windows Npcap 设备触发崩溃。
+不调用逐接口查询，避免部分 Windows Npcap 设备触发崩溃。可用编号或唯一描述子串选择，
+例如 `-if 3` 或 `-if "Intel(R) Wi-Fi"`。
 
 Windows 上网关 MAC 会先通过系统邻居表 `SendARP` 获取，再回退到 raw ARP。
 如果仍失败，使用 `--router-ip <网关>` 和 `--router-mac <arp -a 得到的 MAC>`；

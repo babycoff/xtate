@@ -311,7 +311,7 @@ What to expect:
 - Results go to **stdout** as replies arrive, one line per host/port: `[+] host: 192.168.1.10 port: 80 "open" because "syn-ack"`.
 - Only `success`-level results are shown by default. For `tcp-syn`, closed ports are `failed` level (`"closed" because "rst"`); `zbanner` reports open/closed at `info` level unless you promote them. Add `-show failed` and/or `-show info` to see more.
 - A live status bar (rate, progress, queue levels) is drawn on **stderr**, so `... > results.txt` keeps the file clean. `--no-status` hides it.
-- The interface is auto-detected as the first one with a default gateway; use `--list-if` to list adapters and `-if eth0` to choose one.
+- The interface is selected from the target route; if several default interfaces exist and `-if` is omitted, Xtate fails closed. Use `--list-if` to inspect adapters, `--explain-target <ip>` for a read-only route summary, and `-if <index|description>` to pin one.
 - Always give `-p` for TCP/UDP scans. Without any port Xtate warns and substitutes a fake `o:0` endpoint, which is not a TCP/UDP port, so the scan sends nothing at all.
 - Stop with a single `Ctrl-C`: transmission stops, late replies are still collected for `--wait` seconds (default 10). Pressing `Ctrl-C` again aborts.
 
@@ -359,10 +359,11 @@ English; see [Help i18n](./help-i18n.md) for the catalog and fallback rules.
 
 ## Windows interface and gateway diagnostics
 
-Use `--explain-target 8.8.8.8` for a read-only target/interface/gateway summary, and `--check --explain-target 8.8.8.8` for a preflight check. `--list-if` prints each Npcap interface with its description, IPv4 address,
-MAC, default gateway and a `STATE` of `up`, `virtual`, `loopback` or `no-ipv4`.
-Virtual/WAN interfaces are listed without probing because some Windows Npcap
-devices fault the per-adapter helpers.
+Use `--explain-target 8.8.8.8` for a read-only target/interface/gateway summary, and `--check --explain-target 8.8.8.8` for a preflight check. `--list-if` prints one aligned row per adapter: description, IPv4, MAC, default
+gateway and `STATE` (`up`, `virtual`, `loopback` or `no-ipv4`). Virtual/WAN
+interfaces are listed without probing because some Windows Npcap devices fault
+the per-adapter helpers. Select an adapter by index or a unique description
+substring, for example `-if 3` or `-if "Intel(R) Wi-Fi"`.
 
 On Windows, gateway MAC resolution now tries the OS neighbor table via
 `SendARP` before raw ARP. If the gateway still cannot be resolved, use
