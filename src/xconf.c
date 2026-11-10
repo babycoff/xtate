@@ -3263,7 +3263,7 @@ ConfParam config_parameters[] = {
      SET_check_network,
      Type_FLAG,
      {"net-check", "preflight", 0},
-     "Read-only preflight: check interface, source IP, gateway and (Linux) the firewall RST/ICMP rules without scanning.",
+     "Read-only: check interface, source IP, gateway and Linux firewall rules.",
      "Check network prerequisites."},
     {"list-if",
      SET_listif,
