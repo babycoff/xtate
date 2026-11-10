@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ROOT="${XTATE_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 BIN="${XTATE_BIN:-$ROOT/bin/xtate}"
 IMAGE="${XTATE_LAB_IMAGE:-xtate-builder:24.04}"
 TARGET_IMAGE="${XTATE_TARGET_IMAGE:-$IMAGE}"
@@ -101,6 +101,7 @@ wait_tcp() {
         sleep 1
     done
     echo "target $host port $port did not become ready" >&2
+    docker logs "$host" >&2 || true
     return 1
 }
 echo "==> starting isolated JARM TLS target"
