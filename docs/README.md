@@ -21,6 +21,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 | HTTP probe quality | [HTTP probe audit](./http-probes-audit.md) |
 | Parser testing | [Parameter parser plan](./parser-test-plan.md) |
 | Protocol expansion | [Protocol coverage plan](./protocol-coverage.md) |
+| Input/output audit | [Input/output audit](./input-output-audit.md) |
 | Curious how it works | [Architecture](./architecture.md) → [ZBanner](./zbanner.md) / [HLTCP](./hltcp.md) / [TLS composition](./tls-composition.md) |
 | Stuck | [Troubleshooting](./troubleshooting.md) → [Known limitations](./known-limitations.md) |
 | Chinese help / localization | [Help i18n](./help-i18n.md) |

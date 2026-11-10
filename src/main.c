@@ -1100,7 +1100,8 @@ int main(int argc, char *argv[]) {
 
 #ifndef NOT_FOUND_BSON
         case Op_ParseBson:
-            parse_bson_file(xconf->parse_bson_file);
+            if (parse_bson_file(xconf->parse_bson_file) != 0)
+                return 1;
             break;
 #endif
 

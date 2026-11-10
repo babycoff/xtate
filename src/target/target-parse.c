@@ -951,12 +951,27 @@ int targetset_parse_file(TargetSet *targetset, const char *filename) {
      */
     while (!is_error && fgets(line, sizeof(line), fp) != NULL) {
         line_number++;
+        size_t line_len = strlen(line);
+        if (line_len == sizeof(line) - 1 && line[line_len - 1] != '\n') {
+            int c;
+            while ((c = fgetc(fp)) != EOF && c != '\n')
+                ;
+            LOG(LEVEL_ERROR,
+                "%s:%llu: line too long (max %zu bytes)\n", filename,
+                line_number, sizeof(line) - 1);
+            is_error = true;
+            break;
+        }
         if (targetset_add_ip_str(targetset, line)) {
             LOG(LEVEL_ERROR,
                 "%s:%llu: invalid IP address or range on this line\n",
                 filename, line_number);
             is_error = true;
         }
+    }
+    if (ferror(fp)) {
+        LOG(LEVEL_ERROR, "%s: read error\n", filename);
+        is_error = true;
     }
 
     if (fp != stdin && fp != NULL)

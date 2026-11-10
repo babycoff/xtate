@@ -702,8 +702,8 @@ void store_bson_file(const char *filename, const char *uri_name,
         /*get real doc len*/
         doc_length = BSON_UINT32_FROM_LE(doc_length);
 
-        /*the shortest doc len*/
-        if (doc_length < 5) {
+        /*the shortest doc len; cap to avoid a corrupt 4GB allocation*/
+        if (doc_length < 5 || doc_length > 16 * 1024 * 1024) {
             LOG(LEVEL_ERROR, "(StoreBson) Invalid BSON document length: %u\n",
                 doc_length);
             break;
@@ -712,6 +712,10 @@ void store_bson_file(const char *filename, const char *uri_name,
         // read remaining doc data
         size_t   remaining = doc_length - 4;
         uint8_t *bson_data = MALLOC(doc_length);
+        if (!bson_data) {
+            LOG(LEVEL_ERROR, "(StoreBson) out of memory for BSON document\n");
+            break;
+        }
 
         // contains the len field
         ((uint32_t *)bson_data)[0] = BSON_UINT32_TO_LE(doc_length);

@@ -588,6 +588,11 @@ static ConfRes SET_output_filename(void *conf, const char *name,
         return 0;
     }
 
+    if (strlen(value) >= sizeof(xconf->out_conf.output_filename)) {
+        LOG(LEVEL_ERROR, "output filename is too long (max %zu bytes).\n",
+            sizeof(xconf->out_conf.output_filename) - 1);
+        return Conf_ERR;
+    }
     safe_strcpy(xconf->out_conf.output_filename,
                 sizeof(xconf->out_conf.output_filename), value);
 

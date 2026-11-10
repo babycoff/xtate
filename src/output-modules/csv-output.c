@@ -71,10 +71,10 @@ static bool csv_init(const XConf *xconf, const OutConf *out) {
         return false;
     }
 
-    err = fputs(header_csv, file);
-
-    if (err < 0) {
-        LOG(LEVEL_ERROR, "(CsvOutput) could not write header to file.\n");
+    if (!out->is_append) {
+        err = fputs(header_csv, file);
+        if (err < 0)
+            LOG(LEVEL_ERROR, "(CsvOutput) could not write header to file.\n");
     }
 
     return true;
@@ -217,10 +217,10 @@ error:
 }
 
 static void csv_close(const OutConf *out) {
-    fflush(file);
-    if (file != stdout) {
-        fclose(file);
-    }
+    if (fflush(file) != 0)
+        LOG(LEVEL_ERROR, "(CsvOutput) could not flush output file.\n");
+    if (file != stdout && fclose(file) != 0)
+        LOG(LEVEL_ERROR, "(CsvOutput) could not close output file.\n");
 }
 
 Output CsvOutput = {

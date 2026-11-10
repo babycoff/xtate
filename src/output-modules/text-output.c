@@ -164,10 +164,10 @@ error:
 }
 
 static void text_close(const OutConf *out) {
-    fflush(file);
-    if (file != stdout) {
-        fclose(file);
-    }
+    if (fflush(file) != 0)
+        LOG(LEVEL_ERROR, "(TextOutput) could not flush output file.\n");
+    if (file != stdout && fclose(file) != 0)
+        LOG(LEVEL_ERROR, "(TextOutput) could not close output file.\n");
 }
 
 Output TextOutput = {

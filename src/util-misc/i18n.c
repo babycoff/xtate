@@ -730,7 +730,7 @@ static const I18nModuleHelpDescEntry i18n_module_help_desc[] = {
     {"slot-test", "在三个独立 TCP flow 上发送 `slot:<n>\\n`，报告 slot 编号和收到的字节。用于开发和测试 ProbeSlot_Always，不依赖外部库。"},
     {"slot-test-udp", "在三个独立 UDP flow 上发送 `slot:<n>\\n`，报告 slot 编号和收到的字节。用于开发和测试 ProbeSlot_Always，不依赖外部库。"},
     {"text", "把结果以人类可读的文本格式写入指定文件；包含分类、原因和字段，适合直接查看。"},
-    {"ndjson", "把结果按 Newline-Delimited JSON（NDJSON/JSONL）写入指定文件。不会主动转换转义字符；部分模块的字段不是标准 JSON 字符串，使用 --no-escape-char 时需自行保证有效性。"},
+    {"ndjson", "把结果按 Newline-Delimited JSON（NDJSON/JSONL）写入指定文件；字符串字段会做 JSON 转义。已规范化为 \\xNN 形式的值会作为字面字符串输出，不会解码回原始字节。"},
     {"bson", "把结果按 BSON（Binary JSON）写入指定文件。BSON 可保留完整二进制字段；Xtate 可用 --parse-bson 转成 JSON，也可用 bsondump。依赖 libbson。"},
     {"csv", "把结果按逗号分隔值（CSV）写入指定文件。不会主动转换转义字符；字段中包含逗号/换行时需注意输出格式。"},
     {"list", "只输出 `IP port` 形式的结果，不包含其它字段，便于作为下一阶段输入。UDP/SCTP/其它端口分别带 u:/s:/o: 前缀；--no-port 只输出 IP。"},

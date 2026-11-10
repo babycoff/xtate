@@ -21,6 +21,7 @@
 | HTTP 探针质量 | [HTTP 探针审计](./http-probes-audit.md) |
 | 参数解析测试 | [参数解析器计划](./parser-test-plan.md) |
 | 协议扩展 | [协议覆盖计划](./protocol-coverage.md) |
+| 输入/输出审查 | [输入/输出审查](./input-output-audit.md) |
 | 想了解内部原理 | [架构](./architecture.md) → [ZBanner](./zbanner.md) / [HLTCP](./hltcp.md) |
 | 卡住了 | [故障排查](./troubleshooting.md) → [已知限制](./known-limitations.md) |
 | 中文帮助 / 本地化 | [帮助 i18n](./help-i18n.md) |

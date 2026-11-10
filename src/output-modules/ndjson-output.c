@@ -51,178 +51,124 @@ static bool ndjson_init(const XConf *xconf, const OutConf *out) {
     return true;
 }
 
-static void ndjson_result(OutItem *item) {
-    DataLink *pre;
-    int       err;
+static void ndjson_quote(FILE *fp, const char *s, size_t len) {
+    fputc('"', fp);
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)s[i];
+        switch (c) {
+            case '"': fputs("\\\"", fp); break;
+            case '\\': fputs("\\\\", fp); break;
+            case '\b': fputs("\\b", fp); break;
+            case '\f': fputs("\\f", fp); break;
+            case '\n': fputs("\\n", fp); break;
+            case '\r': fputs("\\r", fp); break;
+            case '\t': fputs("\\t", fp); break;
+            default:
+                if (c < 0x20)
+                    fprintf(fp, "\\u%04x", c);
+                else
+                    fputc(c, fp);
+        }
+    }
+    fputc('"', fp);
+}
 
+static void ndjson_key(FILE *fp, unsigned *first, const char *name) {
+    if (!*first)
+        fputc(',', fp);
+    *first = 0;
+    ndjson_quote(fp, name, strlen(name));
+    fputc(':', fp);
+}
+
+static void ndjson_str(FILE *fp, const char *name, const char *value) {
+    unsigned first = 0;
+    ndjson_key(fp, &first, name);
+    ndjson_quote(fp, value, strlen(value));
+}
+
+static void ndjson_result(OutItem *item) {
     ipaddress_formatted_t ip_them_fmt = ipaddress_fmt(item->target.ip_them);
     ipaddress_formatted_t ip_me_fmt   = ipaddress_fmt(item->target.ip_me);
-
     safe_iso8601_time(format_time, sizeof(format_time), &item->timestamp);
 
-    err =
-        fprintf(file, fmt_ndjson_prefix, format_time,
-                output_level_to_string(item->level),
-                ip_proto_to_string(item->target.ip_proto), ip_them_fmt.string);
+    fputc('{', file);
+    fputs("\"time\":", file);
+    ndjson_quote(file, format_time, strlen(format_time));
+    fputs(",\"level\":", file);
+    ndjson_quote(file, output_level_to_string(item->level),
+                 strlen(output_level_to_string(item->level)));
+    fputs(",\"ip_proto\":", file);
+    const char *proto = ip_proto_to_string(item->target.ip_proto);
+    ndjson_quote(file, proto, strlen(proto));
+    fputs(",\"ip_them\":", file);
+    ndjson_quote(file, ip_them_fmt.string, strlen(ip_them_fmt.string));
+    if (!item->no_port)
+        fprintf(file, ",\"port_them\":%u", item->target.port_them);
+    fputs(",\"ip_me\":", file);
+    ndjson_quote(file, ip_me_fmt.string, strlen(ip_me_fmt.string));
+    if (!item->no_port)
+        fprintf(file, ",\"port_me\":%u", item->target.port_me);
+    fputs(",\"classification\":", file);
+    ndjson_quote(file, item->classification,
+                 strnlen(item->classification, OUT_CLS_SIZE));
+    fputs(",\"reason\":", file);
+    ndjson_quote(file, item->reason, strnlen(item->reason, OUT_RSN_SIZE));
 
-    if (err < 0)
-        goto error;
-
-    if (!item->no_port) {
-        err = fprintf(file, fmt_ndjson_port_them, item->target.port_them);
-        if (err < 0)
-            goto error;
-    }
-
-    err = fprintf(file, fmt_ndjson_ip_me, ip_me_fmt.string);
-    if (err < 0)
-        goto error;
-
-    if (!item->no_port) {
-        err = fprintf(file, fmt_ndjson_port_me, item->target.port_me);
-        if (err < 0)
-            goto error;
-    }
-
-    err = fprintf(file, fmt_ndjson_inffix, item->classification, item->reason);
-    if (err < 0)
-        goto error;
-
-    pre = item->scan_report.link;
-    if (pre->next) {
-        err = fprintf(file, fmt_ndjson_scan_inffix);
-        if (err < 0)
-            goto error;
-
-        unsigned is_first = 1; /*no comma for first item*/
+    const char *sections[] = {"scan report", "probe report", "output report"};
+    DataChain *chains[] = {&item->scan_report, &item->probe_report,
+                           &item->output_report};
+    for (unsigned k = 0; k < 3; k++) {
+        DataLink *pre = chains[k]->link;
+        if (!pre->next)
+            continue;
+        fputs(",\"", file);
+        fputs(sections[k], file);
+        fputs("\":{", file);
+        unsigned first = 1;
         while (pre->next) {
-            if (pre->next->link_type == LinkType_String) {
-                err = fprintf(file, fmt_ndjson_str_inffix + is_first,
-                              pre->next->name, pre->next->value_data);
-            } else if (pre->next->link_type == LinkType_Int) {
-                err = fprintf(file, fmt_ndjson_int_inffix + is_first,
-                              pre->next->name, pre->next->value_int);
-            } else if (pre->next->link_type == LinkType_Double) {
-                err = fprintf(file, fmt_ndjson_double_inffix + is_first,
-                              pre->next->name, pre->next->value_double);
-            } else if (pre->next->link_type == LinkType_Bool) {
-                err = fprintf(file,
-                              pre->next->value_bool
-                                  ? fmt_ndjson_true_inffix + is_first
-                                  : fmt_ndjson_false_inffix + is_first,
-                              pre->next->name);
-            } else if (pre->next->link_type == LinkType_Binary) {
-                err = fprintf(file, fmt_ndjson_bin_inffix + is_first,
-                              pre->next->name, pre->next->data_len);
+            DataLink *l = pre->next;
+            if (!first)
+                fputc(',', file);
+            first = 0;
+            ndjson_quote(file, l->name, strlen(l->name));
+            fputc(':', file);
+            switch (l->link_type) {
+                case LinkType_String:
+                    ndjson_quote(file, (const char *)l->value_data,
+                                 strnlen((const char *)l->value_data,
+                                         l->data_len));
+                    break;
+                case LinkType_Int:
+                    fprintf(file, "%" PRIu64, l->value_int);
+                    break;
+                case LinkType_Double:
+                    fprintf(file, "%.2f", l->value_double);
+                    break;
+                case LinkType_Bool:
+                    fputs(l->value_bool ? "true" : "false", file);
+                    break;
+                case LinkType_Binary:
+                    fprintf(file, "\"(%u bytes bin)\"", l->data_len);
+                    break;
+                default:
+                    fputs("null", file);
             }
-
-            if (err < 0)
-                goto error;
-
-            pre      = pre->next;
-            is_first = 0;
+            pre = l;
         }
-
-        err = fprintf(file, "}");
-        if (err < 0)
-            goto error;
+        fputc('}', file);
     }
+    fputs("}\n", file);
 
-    pre = item->probe_report.link;
-    if (pre->next) {
-        err = fprintf(file, fmt_ndjson_probe_inffix);
-        if (err < 0)
-            goto error;
-
-        unsigned is_first = 1; /*no comma for first item*/
-        while (pre->next) {
-            if (pre->next->link_type == LinkType_String) {
-                err = fprintf(file, fmt_ndjson_str_inffix + is_first,
-                              pre->next->name, pre->next->value_data);
-            } else if (pre->next->link_type == LinkType_Int) {
-                err = fprintf(file, fmt_ndjson_int_inffix + is_first,
-                              pre->next->name, pre->next->value_int);
-            } else if (pre->next->link_type == LinkType_Double) {
-                err = fprintf(file, fmt_ndjson_double_inffix + is_first,
-                              pre->next->name, pre->next->value_double);
-            } else if (pre->next->link_type == LinkType_Bool) {
-                err = fprintf(file,
-                              pre->next->value_bool
-                                  ? fmt_ndjson_true_inffix + is_first
-                                  : fmt_ndjson_false_inffix + is_first,
-                              pre->next->name);
-            } else if (pre->next->link_type == LinkType_Binary) {
-                err = fprintf(file, fmt_ndjson_bin_inffix + is_first,
-                              pre->next->name, pre->next->data_len);
-            }
-
-            if (err < 0)
-                goto error;
-
-            pre      = pre->next;
-            is_first = 0;
-        }
-
-        err = fprintf(file, "}");
-        if (err < 0)
-            goto error;
-    }
-
-    pre = item->output_report.link;
-    if (pre->next) {
-        err = fprintf(file, fmt_ndjson_output_inffix);
-        if (err < 0)
-            goto error;
-
-        unsigned is_first = 1; /*no comma for first item*/
-        while (pre->next) {
-            if (pre->next->link_type == LinkType_String) {
-                err = fprintf(file, fmt_ndjson_str_inffix + is_first,
-                              pre->next->name, pre->next->value_data);
-            } else if (pre->next->link_type == LinkType_Int) {
-                err = fprintf(file, fmt_ndjson_int_inffix + is_first,
-                              pre->next->name, pre->next->value_int);
-            } else if (pre->next->link_type == LinkType_Double) {
-                err = fprintf(file, fmt_ndjson_double_inffix + is_first,
-                              pre->next->name, pre->next->value_double);
-            } else if (pre->next->link_type == LinkType_Bool) {
-                err = fprintf(file,
-                              pre->next->value_bool
-                                  ? fmt_ndjson_true_inffix + is_first
-                                  : fmt_ndjson_false_inffix + is_first,
-                              pre->next->name);
-            } else if (pre->next->link_type == LinkType_Binary) {
-                err = fprintf(file, fmt_ndjson_bin_inffix + is_first,
-                              pre->next->name, pre->next->data_len);
-            }
-
-            if (err < 0)
-                goto error;
-
-            pre      = pre->next;
-            is_first = 0;
-        }
-
-        err = fprintf(file, "}");
-        if (err < 0)
-            goto error;
-    }
-
-    err = fprintf(file, "}\n");
-    if (err < 0)
-        goto error;
-
-    return;
-
-error:
-    LOG(LEVEL_ERROR, "(NdjsonOutput) could not write result to file.\n");
+    if (ferror(file))
+        LOG(LEVEL_ERROR, "(NdjsonOutput) could not write result to file.\n");
 }
 
 static void ndjson_close(const OutConf *out) {
-    fflush(file);
-    if (file != stdout) {
-        fclose(file);
-    }
+    if (fflush(file) != 0)
+        LOG(LEVEL_ERROR, "(NdjsonOutput) could not flush output file.\n");
+    if (file != stdout && fclose(file) != 0)
+        LOG(LEVEL_ERROR, "(NdjsonOutput) could not close output file.\n");
 }
 
 Output NdjsonOutput = {
@@ -234,8 +180,8 @@ Output NdjsonOutput = {
         "NdjsonOutput save results in Newline-Delimited JSON(NDJSON) format to "
         "specified file. The format is also called JSONL(ines) and its filename"
         " suffix can be '.jsonl'.\n"
-        "NOTE1: NdjsonOutput doesn't convert any escaped chars actively.\n"
-        "NOTE2: Results from some modules is not standard string for JSON.",
+        "Strings are JSON-escaped on output. Values that were already normalized "
+        "to \\xNN form are emitted as literal JSON strings, not decoded bytes.",
 
     .init_cb   = &ndjson_init,
     .result_cb = &ndjson_result,

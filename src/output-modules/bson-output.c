@@ -68,6 +68,10 @@ static bool bsonout_init(const XConf *xconf, const OutConf *out) {
 static void bsonout_result(OutItem *item) {
     DataLink *pre;
     bson_t   *res_doc = bson_new();
+    if (!res_doc) {
+        LOG(LEVEL_ERROR, "(BsonOutput) could not allocate result document.\n");
+        return;
+    }
     bson_t    scan_report_doc;
     bson_t    probe_report_doc;
     bson_t    output_report_doc;
@@ -200,17 +204,19 @@ static void bsonout_result(OutItem *item) {
         bson_destroy(&output_report_doc);
     }
 
-    fwrite(bson_get_data(res_doc), 1, res_doc->len, file);
+    size_t written = fwrite(bson_get_data(res_doc), 1, res_doc->len, file);
+    if (written != res_doc->len)
+        LOG(LEVEL_ERROR, "(BsonOutput) could not write result to file.\n");
     bson_destroy(res_doc);
 
     return;
 }
 
 static void bsonout_close(const OutConf *out) {
-    fflush(file);
-    if (file != stdout) {
-        fclose(file);
-    }
+    if (fflush(file) != 0)
+        LOG(LEVEL_ERROR, "(BsonOutput) could not flush output file.\n");
+    if (file != stdout && fclose(file) != 0)
+        LOG(LEVEL_ERROR, "(BsonOutput) could not close output file.\n");
 }
 
 Output BsonOutput = {
@@ -272,15 +278,16 @@ bson_to_json_err1:
     return is_success;
 }
 
-void parse_bson_file(const char *filename) {
+int parse_bson_file(const char *filename) {
 
     FILE *bsonfile = fopen(filename, "rb");
     if (bsonfile == NULL) {
         LOG(LEVEL_ERROR, "(ParseBson) could not open BSON file %s.\n",
             filename);
         LOGPERROR(filename);
-        return;
+        return -1;
     }
+    bool ok = true;
 
     while (true) {
         /*read the first 4 bytes as length of a BSON doc*/
@@ -292,22 +299,29 @@ void parse_bson_file(const char *filename) {
         } else if (read_size < 4) {
             LOG(LEVEL_ERROR,
                 "(ParseBson) Incomplete length field. Corrupted file?\n");
+            ok = false;
             break;
         }
 
         /*get real doc len*/
         doc_length = BSON_UINT32_FROM_LE(doc_length);
 
-        /*the shortest doc len*/
-        if (doc_length < 5) {
+        /*the shortest doc len; cap to avoid a corrupt 4GB allocation*/
+        if (doc_length < 5 || doc_length > 16 * 1024 * 1024) {
             LOG(LEVEL_ERROR, "(ParseBson) Invalid BSON document length: %u\n",
                 doc_length);
+            ok = false;
             break;
         }
 
         // read remaining doc data
         size_t   remaining = doc_length - 4;
         uint8_t *bson_data = MALLOC(doc_length);
+        if (!bson_data) {
+            LOG(LEVEL_ERROR, "(ParseBson) out of memory for BSON document\n");
+            ok = false;
+            break;
+        }
 
         // contains the len field
         ((uint32_t *)bson_data)[0] = BSON_UINT32_TO_LE(doc_length);
@@ -319,16 +333,20 @@ void parse_bson_file(const char *filename) {
                 "%zu bytes.\n",
                 remaining, read_size);
             FREE(bson_data);
+            ok = false;
             break;
         }
 
         // print BSON as JSON
-        _print_bson_as_json(bson_data, doc_length);
+        if (!_print_bson_as_json(bson_data, doc_length))
+            ok = false;
 
         FREE(bson_data);
     }
 
-    fclose(bsonfile);
+    if (fclose(bsonfile) != 0)
+        ok = false;
+    return ok ? 0 : -1;
 }
 
 #endif
