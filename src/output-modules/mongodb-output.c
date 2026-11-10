@@ -445,6 +445,10 @@ static void mongodbout_result(OutItem *item) {
     bson_t       probe_report_doc;
     bson_t       output_report_doc;
     bson_t      *res_doc = bson_new();
+    if (!res_doc) {
+        LOG(LEVEL_ERROR, "(MongodbOut) could not allocate result document.\n");
+        return;
+    }
 
     /**
      * Add _id at first.
@@ -658,6 +662,7 @@ static bool _store_bson_to_db(const uint8_t *bson_data, size_t bson_len) {
                                       NULL, &error)) {
         LOG(LEVEL_ERROR, "(StoreBson insert) %s: %u\n", error.message,
             error.code);
+        is_success = false;
     }
 
     bson_destroy(&bson_doc);

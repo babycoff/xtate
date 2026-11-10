@@ -17,16 +17,17 @@
 | CSV 追加 | 每次追加都会重复写表头。 | 已修复：仅新文件写表头。 |
 | 输出关闭 | `fflush()`/`fclose()` 失败被忽略。 | 已修复：text/CSV/NDJSON/BSON 记录错误。 |
 | BSON 输出 | `bson_new()` 和 `fwrite()` 失败被忽略。 | 已修复：检查分配和写入。 |
-| CSV | classification/reason 未加 CSV 引号；报告字符串没有专门的 CSV 转义。 | 待修：标准目标因 data-chain 转义通常安全，但任意模块输出需要专用 CSV writer。 |
+| CSV | classification/reason 未加引号；报告字符串没有 CSV 转义。 | 已修复：所有字段加引号，双写引号，报告 JSON 做 CSV 安全转义。 |
 | BSON 输出 | `bson_append_*` 返回值未检查。 | 待修。 |
-| Mongo 输出 | 插入失败只记录日志，不重试也不计入失败。 | 待修。 |
+| Mongo 输出 | BSON 导入插入失败仍计为成功；输出文档分配未检查。 | 已修复：失败返回 false，分配检查。 |
 | 解析器 fuzz | NDJSON/BSON 输出和 BSON 输入没有 fuzz 目标。 | 待补。 |
 
 ## 已执行验证
 
 ```text
 pcap 回放 -> NDJSON：Python json 逐行解析通过
-pcap 回放 -> CSV：标准 csv reader 读出 12 列
+pcap 回放 -> CSV：标准 csv reader 读出 12 列，报告列可解析为 JSON
+CSV 追加：只写一次表头
 损坏 BSON 长度 0x7fffffff：分配前拒绝，非零退出
 目标文件超长行 > 65535：带行号拒绝
 Linux 构建/selftest：PASS
@@ -35,7 +36,7 @@ MSVC 构建：PASS
 
 ## 下一步
 
-1. 实现对所有字段加引号、双写引号/换行的 CSV writer。
-2. 检查 BSON/Mongo 的 append/insert 返回值。
+1. 增加包含引号/换行的 CSV fixture（writer 已按 RFC4180 风格重写）。
+2. 检查剩余 BSON append 返回值。
 3. 增加 BSON 和目标文件的畸形输入 fixture。
 4. 增加 NDJSON 转义的 fuzz/回归测试。

@@ -33,6 +33,10 @@ python3 - "$TMP/out.csv" <<'PY'
 import csv, sys
 rows = list(csv.reader(open(sys.argv[1], encoding="utf-8")))
 assert rows and len(rows[0]) == 12, rows[0]
+import json
+for row in rows[1:]:
+    for i in (9, 10, 11):
+        json.loads(row[i])
 print("csv: ok")
 PY
 
