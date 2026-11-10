@@ -482,6 +482,7 @@ static const I18nModuleParamEntry i18n_module_param_help[] = {
     {"subprobe", "必需的 state 子探测；只有 TLS 握手成功（以及 STARTTLS 升级成功）后才初始化，并在加密流内运行。只取证书时使用 close-state。"},
     {"explain-target", "只读诊断：输出目标、按目标路由选择的接口、源 IP/MAC 和网关，不发送任何探测包。"},
     {"check", "只读预检：检查接口、源 IP 和网关，不启动扫描。"},
+    {"dot", "DNS over TLS（DoT）state 子探针：在 tls-state 内发送 2 字节长度前缀的 DNS 查询并解析响应；TLS 由 tls-state 负责。"},
     {"dnssec", "发送 EDNS0 OPT 且 DO=1，报告 AD/DO、RRSIG/DNSKEY/DS/NSEC 计数；这是部署证据探测，不做完整 DNSSEC 链验证。"},
     {"edns-size", "EDNS0 UDP 负载大小（512..65535，默认 1232）；响应截断时输出 dns_truncated=1。"},
     {"after-tls", "在已经建立的 TLS/STARTTLS 流中运行子探测：跳过明文 greeting，直接发送协议能力命令或 StartupMessage。"},

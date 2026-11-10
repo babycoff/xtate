@@ -190,6 +190,7 @@ STARTTLS 失败输出 `starttls error`。`--dump-cert-details` 输出
 | `socks5` | state | SOCKS5 greeting 和方法选择。 |
 | `telnet` | state | 初始 Telnet banner 和 IAC 选项解析。 |
 | `jarm` | tcp | 通过 10 个 ClientHello slot 做 JARM；`--first-probe 1..10` 轮换哪个标准探针先发，`jarm_slot` 保留标准编号；`--probe-index` 只发一个；`jarm_part` 由 `tools/jarm_aggregate.py` 聚合。 |
+| `dot` | state | `tls-state` 内的 DNS over TLS（`-alpn dot`），带 2 字节长度前缀。 |
 | `dns` | udp | DNS 记录请求，可配置名称/类型/递归；`--dnssec` 发送 EDNS0 DO 并报告 DNSSEC 证据（非完整验证）。 |
 | `snmp` | udp | SNMP（v1/v2c）请求，并按 MIB 提取主机信息。 |
 | `echo` | udp | 四个由 cookie 派生的字节；接受包含它们的回包。 |
