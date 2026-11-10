@@ -11,10 +11,22 @@ tcp-state -> tls-state (ALPN http/1.1) -> doh
 
 ## 运行
 
+HTTP/1.1：
+
 ```bash
 sudo ./bin/xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
   -probe-arg "-subprobe doh -alpn http/1.1 -sni dns.example \
               -subprobe-arg '--req-name=example.com --doh-host=dns.example'" \
+  -show info
+```
+
+HTTP/2（互联网 DoH 的常见形态）：
+
+```bash
+sudo ./bin/xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
+  -probe-arg "-subprobe doh-h2 -alpn h2 -sni dns.example \
+              -subprobe-arg '--dns-name=example.com --authority=dns.example \
+                             --path=/dns-query'" \
   -show info
 ```
 
@@ -50,7 +62,7 @@ doh_dnssec_present
 
 ## 注意事项
 
-- 当前只实现 HTTP/1.1；使用 `-alpn http/1.1`。
-- DoH over HTTP/2/3 是后续扩展。
+- `doh` 实现 HTTP/1.1；`doh-h2` 实现 HTTP/2（公共 DoH 的常见形态），分别使用对应 `-alpn`。
+- DoH over HTTP/3 是后续扩展。
 - `doh_dnssec_present` 是部署证据，不是完整 DNSSEC 链验证。
 - 这里不使用 DoT 的 2 字节长度前缀；DoH 直接把 DNS 报文作为 HTTP body。

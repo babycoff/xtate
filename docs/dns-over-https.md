@@ -11,10 +11,22 @@ tcp-state -> tls-state (ALPN http/1.1) -> doh
 
 ## Run
 
+HTTP/1.1:
+
 ```bash
 sudo ./bin/xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
   -probe-arg "-subprobe doh -alpn http/1.1 -sni dns.example \
               -subprobe-arg '--req-name=example.com --doh-host=dns.example'" \
+  -show info
+```
+
+HTTP/2 (the normal DoH deployment):
+
+```bash
+sudo ./bin/xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
+  -probe-arg "-subprobe doh-h2 -alpn h2 -sni dns.example \
+              -subprobe-arg '--dns-name=example.com --authority=dns.example \
+                             --path=/dns-query'" \
   -show info
 ```
 
@@ -50,8 +62,9 @@ doh_dnssec_present
 
 ## Caveats
 
-- This release implements HTTP/1.1 only; use `-alpn http/1.1`.
-- DoH over HTTP/2/3 is a later extension.
+- `doh` implements HTTP/1.1; `doh-h2` implements HTTP/2 (the normal public
+  DoH deployment). Use the matching `-alpn`.
+- DoH over HTTP/3 is a later extension.
 - `doh_dnssec_present` is deployment evidence, not a validated DNSSEC chain.
 - The 2-byte DoT length prefix is **not** used here; DoH carries the raw DNS
   message as the HTTP body.
