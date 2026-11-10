@@ -129,3 +129,10 @@ Depth matrices:
 - `ci-batch-b.sh` — MySQL/PostgreSQL/MongoDB/SMTP/IMAP/POP3/FTP/ManageSieve tcp/state lab;
 - `ci-batch-c.sh` — IPP/AMQP/PPTP tcp/state lab;
 - `ci-tls-composition.sh` — SMTP state probe after implicit TLS and STARTTLS.
+
+## DNS transport lab
+
+`ci-dns-transport.sh` starts DoT (8853), DoH HTTP/1.1 (8854) and DoH HTTP/2
+(8855) targets on an isolated Docker network and asserts `dot_rcode`,
+`doh_status: 200`, and that `h2_hpack_decode_failed` is absent. Run it on a
+native Linux host with Docker; the target image needs python3/openssl.
