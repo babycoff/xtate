@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.39.1-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.40.1-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -21,6 +21,11 @@
 </div>
 
 > **God is Stateless.** — the Xtate proverb
+
+> **Linux prerequisite:** `zbanner`, `tcp-state`, `tls-state` and every state
+> sub-probe require `sudo ./firewall/add_rules.sh` on the scanner host before
+> scanning. Missing rules produce `open` with no banner/TLS/probe output.
+> See [Linux firewall](./docs/firewall.md).
 
 Xtate is a network scanner for large-scale active measurement. It splits the scanning stack into four pluggable module types — **Scan** (L3/L4 packets), **Probe** (L5+ payloads and parsers), **Generate** (targets) and **Output** (results) — and ships two original engines:
 

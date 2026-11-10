@@ -9,6 +9,7 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "../xcmd.h"
@@ -98,6 +99,10 @@ void rawsock_prepare(void) {
 }
 
 
+#ifndef _WIN32
+static bool has_iptables_rule(const char *cmd, const char *needle);
+#endif
+
 void rawsock_diag_target(ipaddress target, bool check, const char *forced_if) {
     char     ifname[256] = {0};
     unsigned ipv4 = 0, gw = 0;
@@ -147,6 +152,13 @@ void rawsock_diag_target(ipaddress target, bool check, const char *forced_if) {
     else
         printf("Gateway:      %s\n", gw ? gf.string : "unknown");
     printf("Note: interface selected by the target route. Use -if to pin.\n");
+#ifndef _WIN32
+    printf("Firewall:     %s\n",
+           has_iptables_rule("iptables -S OUTPUT 2>/dev/null",
+                             "--tcp-flags RST RST")
+               ? "RST suppression installed"
+               : "RST suppression missing (run firewall/add_rules.sh)");
+#endif
     if (check) {
         printf("Check:        interface=%s source=%s gateway=%s\n",
                ifname[0] ? "OK" : "FAIL",
@@ -203,6 +215,39 @@ int rawsock_count_default_interfaces(void) {
     }
     return count;
 }
+
+
+#ifndef _WIN32
+static bool has_iptables_rule(const char *cmd, const char *needle) {
+    FILE *fp = popen(cmd, "r");
+    if (!fp)
+        return false;
+    char line[512];
+    bool found = false;
+    while (fgets(line, sizeof(line), fp)) {
+        if (strstr(line, needle)) { found = true; break; }
+    }
+    pclose(fp);
+    return found;
+}
+
+void rawsock_firewall_warn(void) {
+    bool rst4 = has_iptables_rule("iptables -S OUTPUT 2>/dev/null",
+                                  "--tcp-flags RST RST");
+    bool rst6 = has_iptables_rule("ip6tables -S OUTPUT 2>/dev/null",
+                                  "--tcp-flags RST RST");
+    bool icmp4 = has_iptables_rule("iptables -S OUTPUT 2>/dev/null",
+                                   "--icmp-type 3/3");
+    if (rst4 && rst6 && icmp4)
+        return;
+    LOG(LEVEL_WARN,
+        "firewall RST/ICMP suppression rules are not fully installed\n");
+    LOG(LEVEL_HINT,
+        "run: sudo ./firewall/add_rules.sh   (Linux; zbanner/tcp-state/state probes need it)\n");
+}
+#else
+void rawsock_firewall_warn(void) {}
+#endif
 
 /***************************************************************************
  * This function prints to the command line a list of all the network

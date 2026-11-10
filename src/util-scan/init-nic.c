@@ -33,6 +33,8 @@ int init_nic(XConf *xconf, bool has_ipv4_targets, bool has_ipv6_targets) {
     bool          is_usable_ipv4 = !has_ipv4_targets;
     bool          is_usable_ipv6 = !has_ipv6_targets;
 
+    rawsock_firewall_warn();
+
     /*
      * ADAPTER/NETWORK-INTERFACE
      *
