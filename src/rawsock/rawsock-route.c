@@ -107,6 +107,55 @@ out:
     return rc;
 }
 
+
+static int ipv6_prefix_match(const unsigned char *a, const unsigned char *b,
+                             unsigned bits) {
+    unsigned full = bits / 8, rem = bits % 8;
+    if (memcmp(a, b, full) != 0)
+        return 0;
+    if (rem) {
+        unsigned char mask = (unsigned char)(0xff << (8 - rem));
+        if ((a[full] & mask) != (b[full] & mask))
+            return 0;
+    }
+    return 1;
+}
+
+static int windows_ipv6_next_hop(ULONG ifindex, ipaddress target,
+                                 ipaddress *gw) {
+    PMIB_IPFORWARD_TABLE2 table = NULL;
+    if (GetIpForwardTable2(AF_INET6, &table) != NO_ERROR)
+        return -1;
+    unsigned char tb[16];
+    for (int i = 0; i < 8; i++) {
+        tb[i] = (unsigned char)(target.ipv6.hi >> (56 - i * 8));
+        tb[8 + i] = (unsigned char)(target.ipv6.lo >> (56 - i * 8));
+    }
+    unsigned best_len = 0;
+    bool found = false;
+    for (ULONG i = 0; i < table->NumEntries; i++) {
+        PMIB_IPFORWARD_ROW2 r = &table->Table[i];
+        if (r->InterfaceIndex != ifindex)
+            continue;
+        if (r->DestinationPrefix.Prefix.si_family != AF_INET6)
+            continue;
+        const unsigned char *pb =
+            (const unsigned char *)&r->DestinationPrefix.Prefix.Ipv6.sin6_addr;
+        unsigned len = r->DestinationPrefix.PrefixLength;
+        if (len < best_len || !ipv6_prefix_match(tb, pb, len))
+            continue;
+        if (r->NextHop.si_family == AF_INET6) {
+            gw->version = 6;
+            gw->ipv6 = ipv6address_from_bytes(
+                (const unsigned char *)&r->NextHop.Ipv6.sin6_addr);
+            best_len = len;
+            found = true;
+        }
+    }
+    FreeMibTable(table);
+    return found ? 0 : -1;
+}
+
 int rawsock_route_lookup(ipaddress target, RawRoute *out) {
     if (!out || (target.version != 4 && target.version != 6))
         return -1;
@@ -183,6 +232,9 @@ int rawsock_route_lookup(ipaddress target, RawRoute *out) {
         unsigned gw = 0;
         if (rawsock_get_default_gateway(out->ifname, &gw) == 0)
             out->gateway.ipv4 = gw;
+    } else if (windows_ipv6_next_hop(ifindex, target, &out->gateway) != 0) {
+        /* on-link or no next-hop; leave gateway zero/unknown */
+        out->gateway.version = 6;
     }
     return 0;
 }
