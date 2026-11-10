@@ -40,7 +40,7 @@ Linux 扫描端必须先安装 `firewall/add_rules.sh`；Windows 使用正常的
 | `--req-name` | 要查询的 DNS 名（必需） |
 | `--req-type` | DNS 类型，默认 `A` |
 | `--doh-path` | HTTP 路径，默认 `/dns-query` |
-| `--doh-host` | HTTP Host 头（必需） |
+| `--doh-host` | HTTP Host 头；默认使用目标 IP |
 | `--dnssec` | 发送 EDNS0 DO=1 |
 | `--edns-size` | EDNS0 UDP 大小，默认 1232 |
 

@@ -40,7 +40,7 @@ Linux scanners must install `firewall/add_rules.sh`; Windows needs the normal
 | `--req-name` | DNS name to query (required) |
 | `--req-type` | DNS type, default `A` |
 | `--doh-path` | HTTP path, default `/dns-query` |
-| `--doh-host` | HTTP Host header (required) |
+| `--doh-host` | HTTP Host header; defaults to the target IP |
 | `--dnssec` | Send EDNS0 DO=1 |
 | `--edns-size` | EDNS0 UDP size, default 1232 |
 
