@@ -36,7 +36,7 @@ DOH_MAC=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.MacAddress}}{
 DOH2_MAC=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.MacAddress}}{{end}}' "$DOH2")
 
 docker run --rm --network "$NET" --cap-add NET_RAW --cap-add NET_ADMIN \
-  -v "$BIN:/xtate:ro" -e DOT_IP="$DOT_IP" -e DOH_IP="$DOH_IP" -e DOH2_IP="$DOH2_IP" \
+  -v "$BIN:/xtate:ro" -v "$ROOT:/src:ro" -e DOT_IP="$DOT_IP" -e DOH_IP="$DOH_IP" -e DOH2_IP="$DOH2_IP" \
   -e DOT_MAC="$DOT_MAC" -e DOH_MAC="$DOH_MAC" -e DOH2_MAC="$DOH2_MAC" "$SCANNER_IMAGE" bash -lc '
 set -euo pipefail
 apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq iptables >/dev/null 2>&1 || true
