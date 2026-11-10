@@ -215,6 +215,7 @@ STARTTLS is emitted as `starttls error`. `--dump-cert-details` outputs
 | `telnet` | state | Initial Telnet banner and IAC option parse. |
 | `quic` | udp | QUIC v1 Initial capability probe; classifies Version Negotiation/Retry/Initial/Handshake; no QUIC handshake or HTTP/3 claim. |
 | `jarm` | tcp | JARM via 10 ClientHello slots; emits `jarm_part`, aggregated by `tools/jarm_aggregate.py`. |
+| `doh` | state | DNS over HTTPS, HTTP/1.1 POST inside `tls-state`. |
 | `dot` | state | DNS over TLS inside `tls-state` (`-alpn dot`); length-prefixed DNS query. |
 | `dns` | udp | DNS record request with configurable name/type/recursion; `--dnssec` sends EDNS0 DO and reports DNSSEC evidence (not validation). |
 | `snmp` | udp | SNMP (v1/v2c) request and MIB-guided host info extraction. |
