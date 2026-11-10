@@ -482,6 +482,7 @@ static const I18nModuleParamEntry i18n_module_param_help[] = {
     {"subprobe", "必需的 state 子探测；只有 TLS 握手成功（以及 STARTTLS 升级成功）后才初始化，并在加密流内运行。只取证书时使用 close-state。"},
     {"explain-target", "只读诊断：输出目标、按目标路由选择的接口、源 IP/MAC 和网关，不发送任何探测包。"},
     {"check", "只读预检：检查接口、源 IP 和网关，不启动扫描。"},
+    {"doh-h2", "DNS over HTTPS over HTTP/2：在 tls-state 内发送 HTTP/2 POST application/dns-message 并解析 DNS 响应；需要 -alpn h2。"},
     {"doh", "DNS over HTTPS（DoH）state 子探针：在 tls-state 内用 HTTP/1.1 POST 发送 application/dns-message 并解析 DNS 响应；TLS 由 tls-state 负责。需要 -alpn http/1.1。"},
     {"dot", "DNS over TLS（DoT）state 子探针：在 tls-state 内发送 2 字节长度前缀的 DNS 查询并解析响应；TLS 由 tls-state 负责。需要 -alpn dot，并且 Linux 扫描端要先安装 firewall/add_rules.sh 的 RST 抑制规则。"},
     {"dnssec", "发送 EDNS0 OPT 且 DO=1，报告 AD/DO、RRSIG/DNSKEY/DS/NSEC 计数；这是部署证据探测，不做完整 DNSSEC 链验证。"},

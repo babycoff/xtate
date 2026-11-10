@@ -9,6 +9,7 @@
 #include "../util-data/safe-string.h"
 #include "../util-misc/misc.h"
 #include "../proto/proto-match.h"
+#include "../proto/proto-dns.h"
 #include "../version.h"
 
 #define H2_PREFACE "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
@@ -27,6 +28,10 @@ struct H2Conf {
     unsigned      decode_headers : 1;
     unsigned      max_frames;
     unsigned      max_data;
+    unsigned      doh : 1;
+    char          dns_name[256];
+    dns_record_type dns_type;
+    unsigned      dnssec : 1;
     MatchSpec     match;
 };
 
@@ -204,6 +209,31 @@ static ConfRes SET_newlines(void *conf, const char *name, const char *value) {
     return Conf_OK;
 }
 
+
+static ConfRes SET_doh(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf); UNUSEDPARM(name);
+    h2_conf.doh = conf_parse_bool(value);
+    return Conf_OK;
+}
+static ConfRes SET_dns_name(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf); UNUSEDPARM(name);
+    if (!value || strlen(value) >= sizeof(h2_conf.dns_name))
+        return Conf_ERR;
+    snprintf(h2_conf.dns_name, sizeof(h2_conf.dns_name), "%s", value);
+    h2_conf.doh = 1;
+    return Conf_OK;
+}
+static ConfRes SET_dns_type(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf); UNUSEDPARM(name);
+    h2_conf.dns_type = dns_str_to_record_type(value);
+    return h2_conf.dns_type == DNS_REC_INVALID ? Conf_ERR : Conf_OK;
+}
+static ConfRes SET_dnssec(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf); UNUSEDPARM(name);
+    h2_conf.dnssec = conf_parse_bool(value);
+    return Conf_OK;
+}
+
 static ConfParam h2_parameters[] = {
     {"path",
      SET_path,
@@ -280,6 +310,14 @@ static ConfParam h2_parameters[] = {
      Type_FLAG,
      {"include-newline", "newline", "newlines", 0},
      "Let PCRE2 dot match newlines (DOTALL)."},
+    {"doh", SET_doh, Type_FLAG, {"doh-mode", 0},
+     "Send an HTTP/2 POST with application/dns-message."},
+    {"dns-name", SET_dns_name, Type_ARG, {"dns-query", 0},
+     "DNS name for DoH mode."},
+    {"dns-type", SET_dns_type, Type_ARG, {"dns-record-type", 0},
+     "DNS type for DoH mode, default A."},
+    {"dnssec", SET_dnssec, Type_FLAG, {"do", 0},
+     "Set EDNS0 DO=1 in DoH mode."},
     {0}};
 
 static size_t h2_put_indexed(unsigned char *buf, size_t cap, size_t off,
@@ -321,8 +359,8 @@ static size_t h2_put_literal_new_name(unsigned char *buf, size_t cap,
 static size_t h2_encode_headers(unsigned char *buf, size_t cap,
                                 ProbeTarget *target) {
     size_t off = 0;
-    /* :method GET (static index 2), :scheme https (7). */
-    off = h2_put_indexed(buf, cap, off, 2);
+    /* :method POST (static index 3) for DoH, GET (2) otherwise. */
+    off = h2_put_indexed(buf, cap, off, h2_conf.doh ? 3 : 2);
     if (!off)
         return 0;
     off = h2_put_indexed(buf, cap, off, 7);
@@ -348,6 +386,11 @@ static size_t h2_encode_headers(unsigned char *buf, size_t cap,
     if (!off)
         return 0;
 
+    if (h2_conf.doh) {
+        off = h2_put_literal_new_name(buf, cap, off, "content-type",
+                                      "application/dns-message");
+        return off;
+    }
     if (!h2_conf.no_user_agent && h2_conf.user_agent[0]) {
         off = h2_put_literal_new_name(buf, cap, off, "user-agent",
                                       h2_conf.user_agent);
@@ -404,6 +447,25 @@ static void h2_conn_close(ProbeState *state, ProbeTarget *target) {
     state->data = NULL;
 }
 
+
+static size_t h2_doh_query(ProbeTarget *target, unsigned char *out) {
+    if (!h2_conf.dns_name[0])
+        return 0;
+    int n = dns_question_create(out, h2_conf.dns_name,
+                                h2_conf.dns_type ? h2_conf.dns_type : DNS_REC_A,
+                                target->cookie & 0xffff);
+    if (n <= 0)
+        return 0;
+    if (h2_conf.dnssec) {
+        unsigned char *p = out + n;
+        p[0]=0; p[1]=0x00; p[2]=0x29; p[3]=0x04; p[4]=0xd0;
+        p[5]=0; p[6]=0; p[7]=0x80; p[8]=0; p[9]=0; p[10]=0; p[11]=0;
+        n += 11;
+        out[10]=0; out[11]=1;
+    }
+    return n > 0 ? (size_t)n : 0;
+}
+
 static void h2_make_hello(DataPass *pass, ProbeState *state,
                           ProbeTarget *target) {
     UNUSEDPARM(state);
@@ -430,9 +492,23 @@ static void h2_make_hello(DataPass *pass, ProbeState *state,
         datapass_set_data(pass, NULL, 0, false);
         return;
     }
-    off += h2_frame_header(buf + off, (unsigned)block_len, 1, 0x5, 1);
+    off += h2_frame_header(buf + off, (unsigned)block_len, 1,
+                           h2_conf.doh ? 0x4 : 0x5, 1);
     memcpy(buf + off, block, block_len);
     off += block_len;
+
+    if (h2_conf.doh) {
+        unsigned char dns[2048];
+        size_t dns_len = h2_doh_query(target, dns);
+        if (!dns_len || off + 9 + dns_len > cap) {
+            FREE(buf);
+            datapass_set_data(pass, NULL, 0, false);
+            return;
+        }
+        off += h2_frame_header(buf + off, (unsigned)dns_len, 0, 0x1, 1);
+        memcpy(buf + off, dns, dns_len);
+        off += dns_len;
+    }
 
     datapass_set_data(pass, buf, off, true);
 }
@@ -705,6 +781,48 @@ static bool h2_handle_response(DataPass *pass, ProbeState *state, OutConf *out,
     if (h2_conf.record_raw)
         dach_append_bin(&item.probe_report, "h2_raw", px, sizeof_px);
 
+    if (h2_conf.doh && hs->body_len >= 12) {
+        dns_pkt_t pkt;
+        if (dns_parse_reply(hs->body, hs->body_len, &pkt)) {
+            dach_set_int(&item.probe_report, "doh_dns_len",
+                         (unsigned)hs->body_len);
+            dach_set_int(&item.probe_report, "doh_rcode",
+                         pkt.head.header.rcode);
+            dach_set_bool(&item.probe_report, "doh_ad", pkt.head.header.ad);
+            if (pkt.head.header.ans_count > 0) {
+                char answer[256];
+                dns_raw_record_data2str(&pkt.body.ans[0], hs->body,
+                                        hs->body + hs->body_len, false, answer,
+                                        sizeof(answer));
+                dach_append_str(&item.probe_report, "doh_answer", answer,
+                                strlen(answer));
+            }
+            unsigned sig=0, key=0, ds=0, nsec=0;
+            for (unsigned i=0; i<pkt.head.header.ans_count+
+                                      pkt.head.header.auth_count+
+                                      pkt.head.header.add_count; i++) {
+                dns_record_t *r;
+                if (i < pkt.head.header.ans_count) r=&pkt.body.ans[i];
+                else if (i < pkt.head.header.ans_count+pkt.head.header.auth_count)
+                    r=&pkt.body.auth[i-pkt.head.header.ans_count];
+                else r=&pkt.body.add[i-pkt.head.header.ans_count-
+                                            pkt.head.header.auth_count];
+                if (r->type==46) sig++; else if (r->type==48) key++;
+                else if (r->type==43) ds++; else if (r->type==47||r->type==50) nsec++;
+            }
+            dach_set_int(&item.probe_report, "doh_rrsig_count", sig);
+            dach_set_int(&item.probe_report, "doh_dnskey_count", key);
+            dach_set_int(&item.probe_report, "doh_ds_count", ds);
+            dach_set_int(&item.probe_report, "doh_nsec_count", nsec);
+            dach_set_bool(&item.probe_report, "doh_dnssec_present",
+                          sig||key||ds||nsec);
+            safe_strcpy(item.classification, OUT_CLS_SIZE, "doh");
+            safe_strcpy(item.reason, OUT_RSN_SIZE,
+                        dns_rcode2str(pkt.head.header.rcode));
+        }
+    }
+
+
     if (h2_conf.match.configured) {
         size_t all_len = hs->headers_len + hs->body_len + 3;
         char  *all = MALLOC(all_len);
@@ -768,6 +886,25 @@ static unsigned h2_parse_response(DataPass *pass, ProbeState *state,
 }
 
 #ifndef H2_FUZZ
+
+Probe DohH2Probe = {
+    .name       = "doh-h2",
+    .type       = ProbeType_STATE,
+    .hello_wait = 0,
+    .params     = h2_parameters,
+    .short_desc = "DNS over HTTPS (DoH) over HTTP/2.",
+    .desc = "Stateful DoH/HTTP2 client for `-scan tcp-state -probe tls-state "
+            "-alpn h2 -subprobe doh-h2`. Sends an HTTP/2 POST with "
+            "application/dns-message and parses the DNS response body. "
+            "Requires --dns-name and --authority. State probe.",
+    .init_cb           = &h2_init,
+    .conn_init_cb      = &h2_conn_init,
+    .make_hello_cb     = &h2_make_hello,
+    .parse_response_cb = &h2_parse_response,
+    .conn_close_cb     = &h2_conn_close,
+    .close_cb          = &h2_close,
+};
+
 Probe H2Probe = {
     .name       = "h2",
     .type       = ProbeType_STATE,

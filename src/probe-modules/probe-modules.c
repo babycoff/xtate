@@ -39,6 +39,7 @@ extern Probe SlotTestProbe;
 extern Probe SshProbe;
 extern Probe DotProbe;
 extern Probe DohProbe;
+extern Probe DohH2Probe;
 #ifndef NOT_FOUND_OPENSSL
 extern Probe SshKexProbe;
 #endif
@@ -126,6 +127,7 @@ Probe *probe_modules_list[] = {
     &SshProbe,
     &DotProbe,
     &DohProbe,
+    &DohH2Probe,
 #ifndef NOT_FOUND_OPENSSL
     &SshKexProbe,
 #endif
