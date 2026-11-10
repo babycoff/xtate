@@ -16,8 +16,10 @@ MongoDB output paths. It is a correctness review, not a performance benchmark.
 | Output filename | Long `--output-file` paths were silently truncated to 255 bytes. | Fixed: rejected with an error. |
 | CSV append | The header was written on every append run. | Fixed: header only on a new file. |
 | Output close | `fflush()`/`fclose()` failures were ignored. | Fixed: logged for text/CSV/NDJSON/BSON. |
+| CSV control characters | No end-to-end pcap fixture (HTTP parser rejects raw controls), but `json_escape_fuzz` covers every control byte. | Partial |
 | BSON output | `bson_new()` and `fwrite()` failures were ignored. | Fixed: allocation and write checks. |
 | CSV | Classification/reason were unquoted; report strings were not CSV-escaped. | Fixed: every field is quoted, embedded quotes are doubled, and report JSON is CSV-safe. |
+| CSV control characters | No end-to-end pcap fixture (HTTP parser rejects raw controls), but `json_escape_fuzz` covers every control byte. | Partial |
 | BSON output | BSON append failures were ignored. | Fixed: UTF-8, date, int32/int64, double, bool, binary and OID appends are checked. |
 | Mongo output | BSON import insert failures were logged but still counted as success; output document allocation was unchecked. | Fixed: failures return false, allocation is checked, bulk failures are counted. |
 | Parser fuzzing | Output escaping and BSON documents had no fuzz target. | Added `json_escape_fuzz` and `bson_doc_fuzz`; both run in `tests/fuzz/run.sh`. |

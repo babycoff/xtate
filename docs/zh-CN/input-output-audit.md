@@ -16,8 +16,10 @@
 | 输出文件名 | 过长 `--output-file` 被静默截断到 255 字节。 | 已修复：直接报错。 |
 | CSV 追加 | 每次追加都会重复写表头。 | 已修复：仅新文件写表头。 |
 | 输出关闭 | `fflush()`/`fclose()` 失败被忽略。 | 已修复：text/CSV/NDJSON/BSON 记录错误。 |
+| CSV 控制字符 | 没有端到端 pcap fixture（HTTP parser 拒绝原始控制字符），但 `json_escape_fuzz` 覆盖所有控制字节。 | 部分 |
 | BSON 输出 | `bson_new()` 和 `fwrite()` 失败被忽略。 | 已修复：检查分配和写入。 |
 | CSV | classification/reason 未加引号；报告字符串没有 CSV 转义。 | 已修复：所有字段加引号，双写引号，报告 JSON 做 CSV 安全转义。 |
+| CSV 控制字符 | 没有端到端 pcap fixture（HTTP parser 拒绝原始控制字符），但 `json_escape_fuzz` 覆盖所有控制字节。 | 部分 |
 | BSON 输出 | BSON 附加失败被忽略。 | 已修复：UTF-8、日期、int32/int64、double、bool、binary、OID 均检查。 |
 | Mongo 输出 | BSON 导入插入失败仍计为成功；输出文档分配未检查。 | 已修复：失败返回 false，分配检查，批量失败计数。 |
 | 解析器 fuzz | 输出转义和 BSON 文档没有 fuzz 目标。 | 已增加 `json_escape_fuzz` 和 `bson_doc_fuzz`，均接入 `tests/fuzz/run.sh`。 |
