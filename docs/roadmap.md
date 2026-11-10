@@ -213,3 +213,18 @@ after the current protocol work, before new ZBanner features.
 Functional changes take a minor version (`2.29.x` → `2.33.0`); fixes take a
 patch version. A release is not complete until the tag is pushed, the GitHub
 release exists, and the build/test evidence is recorded.
+
+## Input/output module audit
+
+A dedicated review of every input (target/generate/pcap) and output module is
+planned before the next protocol batch:
+
+- bounds and overflow review for file/stream/BSON/NDJSON/pcap inputs;
+- error handling and partial-write behavior for text/NDJSON/CSV/BSON/Mongo outputs;
+- output escaping and machine-readable JSON validity;
+- path/permission and cleanup behavior;
+- unit tests for malformed input and failure paths;
+- regression tests for existing pcap and target-file matrices.
+
+This is a code-review workstream, not a new feature; it should land as a
+separate audit report plus fixes.

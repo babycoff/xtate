@@ -104,30 +104,44 @@ void rawsock_diag_target(ipaddress target, bool check, const char *forced_if) {
     ipv6address ipv6 = {0};
     unsigned char macbuf[6] = {0};
     ipaddress_formatted_t tf = ipaddress_fmt(target);
+    RawRoute route = {0};
+    bool have_route = false;
     if (forced_if && forced_if[0]) {
         snprintf(ifname, sizeof(ifname), "%s", forced_if);
     } else {
-        RawRoute route = {0};
         if (rawsock_route_lookup(target, &route) != 0) {
             fprintf(stderr, "cannot determine route\n");
             return;
         }
+        have_route = true;
         snprintf(ifname, sizeof(ifname), "%s", route.ifname);
     }
-    ipv4 = rawsock_get_adapter_ip(ifname);
-    ipv6 = rawsock_get_adapter_ipv6(ifname);
+    ipv4 = have_route && route.source_ip.version == 4
+               ? route.source_ip.ipv4
+               : rawsock_get_adapter_ip(ifname);
+    ipv6 = have_route && route.source_ip.version == 6
+               ? route.source_ip.ipv6
+               : rawsock_get_adapter_ipv6(ifname);
     rawsock_get_adapter_mac(ifname, macbuf);
-    rawsock_get_default_gateway(ifname, &gw);
+    gw = have_route && route.gateway.version == 4 ? route.gateway.ipv4 : 0;
+    if (!gw)
+        rawsock_get_default_gateway(ifname, &gw);
     ipaddress_formatted_t sf = ipv4address_fmt(ipv4);
     ipaddress_formatted_t gf = ipv4address_fmt(gw);
     ipaddress_formatted_t mf = macaddress_fmt(macaddress_from_bytes(macbuf));
     ipaddress_formatted_t i6f = ipv6address_fmt(ipv6);
+    ipaddress_formatted_t g6f = ipv6address_fmt(
+        have_route && route.gateway.version == 6 ? route.gateway.ipv6
+                                                 : (ipv6address){0});
     printf("Target:       %s\n", tf.string);
     printf("Interface:    %s\n", ifname);
     printf("Source IPv4:  %s\n", ipv4 ? sf.string : "unknown");
     printf("Source IPv6:  %s\n", ipv6.hi || ipv6.lo ? i6f.string : "unknown");
     printf("Source MAC:   %s\n", macaddress_is_zero(macaddress_from_bytes(macbuf)) ? "unknown" : mf.string);
-    printf("Gateway:      %s\n", gw ? gf.string : "unknown");
+    if (have_route && route.gateway.version == 6 && (route.gateway.ipv6.hi || route.gateway.ipv6.lo))
+        printf("Gateway:      %s\n", g6f.string);
+    else
+        printf("Gateway:      %s\n", gw ? gf.string : "unknown");
     printf("Note: interface selected by the target route. Use -if to pin.\n");
     if (check) {
         printf("Check:        interface=%s source=%s gateway=%s\n",
