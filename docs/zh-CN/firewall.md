@@ -6,6 +6,20 @@ Xtate 的 `zbanner`、`tcp-state`、`tls-state`、`http-state`、H2/H3 以及所
 state 子探针都用 raw packet 完成 TCP 握手。Linux 内核不知道这些连接，会用
 RST 终止连接，导致 banner/TLS/探针响应到达前就失败。
 
+## 操作系统区分
+
+### Linux
+
+使用 `firewall/add_rules.sh`。规则是主机级的，扫描结束后立即删除。
+只适用于下面列出的 stateful 扫描。
+
+### Windows
+
+没有等价脚本，**不要在 Windows 上执行 `add_rules.sh`**。使用 Npcap 和
+管理员权限。Windows 宿主协议栈可能自己发 RST；`tcp-syn` 可用
+`-scan-arg "--send-rst"` 显式关闭半开连接。如果 stateful 扫描出现 `open`
+但没有应用数据，应抓包检查宿主协议栈 RST，而不是找 iptables 规则。
+
 ## 谁需要
 
 需要：
@@ -77,5 +91,5 @@ Xtate 启动时只会对需要规则的扫描检查 Linux iptables 并输出：
 - Docker/GitHub Actions 扫描容器：安装 `iptables`，去掉脚本里的 `sudo`，
   处理 CRLF，执行后确认规则存在。
 - 目标容器不需要这些规则。
-- Windows 没有等价脚本；使用 Npcap/管理员配置，不要假设宿主协议栈的 RST 行为。
+- Windows 没有等价脚本；使用 Npcap/管理员配置，不要假设宿主协议栈的 RST 行为，也不要在 Windows 上运行 Linux 的 `add_rules.sh`。
 - 不要在共享主机上长期保留规则：它会丢弃所有出站 RST。

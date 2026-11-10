@@ -22,7 +22,7 @@
 
 > **God is Stateless.** — the Xtate proverb
 
-> **Linux prerequisite:** `zbanner`, `tcp-state`, `tls-state` and every state
+> **Linux prerequisite (not Windows):** `zbanner`, `tcp-state`, `tls-state` and every state
 > sub-probe require `sudo ./firewall/add_rules.sh` on the scanner host before
 > scanning (not `tcp-syn`/stateless port scans). Missing rules produce `open` with no banner/TLS/probe output.
 > See [Linux firewall](./docs/firewall.md).

@@ -152,7 +152,10 @@ void rawsock_diag_target(ipaddress target, bool check, const char *forced_if) {
     else
         printf("Gateway:      %s\n", gw ? gf.string : "unknown");
     printf("Note: interface selected by the target route. Use -if to pin.\n");
-#ifndef _WIN32
+#ifdef _WIN32
+    printf("Firewall:     Windows: no Linux RST script; use Npcap + "
+           "Administrator\n");
+#else
     printf("Firewall:     %s\n",
            has_iptables_rule("iptables -S OUTPUT 2>/dev/null",
                              "--tcp-flags RST RST")
@@ -259,7 +262,15 @@ void rawsock_firewall_warn(const char *scanner, const char *probe) {
     }
 }
 #else
-void rawsock_firewall_warn(void) {}
+void rawsock_firewall_warn(const char *scanner, const char *probe) {
+    UNUSEDPARM(probe);
+    if (scanner && (!strcmp(scanner, "zbanner") ||
+                    !strcmp(scanner, "tcp-state"))) {
+        LOG(LEVEL_HINT,
+            "Windows: no Linux RST script; use Npcap + Administrator, and "
+            "consider --send-rst for tcp-syn\n");
+    }
+}
 #endif
 
 /***************************************************************************

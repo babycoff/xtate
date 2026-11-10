@@ -24,7 +24,7 @@
 
 > **God is Stateless.** —— Xtate 的格言
 
-> **Linux 前置条件：** `zbanner`、`tcp-state`、`tls-state` 和所有 state 子探针
+> **Linux 前置条件（不适用于 Windows）：** `zbanner`、`tcp-state`、`tls-state` 和所有 state 子探针
 > 在扫描端必须先执行 `sudo ./firewall/add_rules.sh`（`tcp-syn` 等无状态扫描不需要）。缺失规则会出现
 > `open` 但没有 banner/TLS/探针输出。见 [Linux 防火墙](./docs/firewall.md)。
 
