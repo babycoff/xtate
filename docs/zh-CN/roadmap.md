@@ -186,3 +186,34 @@ GitHub Release 和构建/测试证据齐全才算发布完成。
 - 现有 pcap 和目标文件矩阵回归。
 
 这是代码审查工作流，不是新功能；应单独产出审计报告和修复。
+
+## AI 集成（MCP / Agent / Skill）
+
+目标：让 AI 能安全地操作 Xtate，而不是把无结构 shell 交给模型。
+CLI 仍是唯一事实来源；AI 集成是带类型、可审计的封装层。
+
+计划交付：
+
+1. 稳定的机器可读契约：模块元数据、扫描配置、结果和错误的 JSON schema；
+   必要时增加 `--json`/`--json-schema`。
+2. Agent skill：受审查的 skill 文件，描述安全扫描流程、目标授权、防火墙前置、
+   速率限制和结果处理。
+3. stdio JSON-RPC 的 MCP server（`xtate mcp`），先提供只读工具：
+   `list_modules`、`describe_probe`、`explain_target`、`check`、
+   `validate_config`、`get_scan_status`、`get_results`。
+4. 只读阶段稳定后增加受控扫描工具：`start_scan`、`stop_scan`，
+   带 scan/probe/args 白名单、明确目标范围、速率限制、超时和审计日志。
+5. 任务模型：扫描作为受管 job（id、状态、计数、结果文件），不暴露无界阻塞调用。
+6. 安全：不允许任意 shell、不处理凭据、不扩展用户给定目标、写操作默认 dry-run，
+   扫描和防火墙变更需要显式确认。
+
+阶段：
+
+```text
+2.42.0  JSON 契约 + agent skill
+2.43.0  只读 MCP server
+2.44.0  MCP 受控扫描 job
+2.45.0  agent 评测与打包
+```
+
+见 [AI 集成设计](./ai-integration.md)。

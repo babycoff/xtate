@@ -228,3 +228,37 @@ planned before the next protocol batch:
 
 This is a code-review workstream, not a new feature; it should land as a
 separate audit report plus fixes.
+
+## AI integration (MCP / Agent / Skill)
+
+Goal: make Xtate usable by AI agents without giving them an unstructured shell.
+The CLI remains the source of truth; AI integration is a typed, auditable layer.
+
+Planned deliverables:
+
+1. Stable machine-readable contracts: JSON schemas for module metadata, scan
+   config, results and errors; explicit `--json`/`--json-schema` where needed.
+2. Agent skill: a reviewed skill file describing safe scan workflows, target
+   authorization, firewall prerequisites, rate limits and result handling.
+3. MCP server (`xtate mcp`) over stdio JSON-RPC, exposing read-only tools first:
+   `list_modules`, `describe_probe`, `explain_target`, `check`,
+   `validate_config`, `get_scan_status`, `get_results`.
+4. Controlled scan tools after the read-only phase: `start_scan`, `stop_scan`,
+   with an allowlist of scan/probe/args, explicit target scope, rate limit,
+   timeout and audit log.
+5. Job model: scans run as managed jobs (id, status, counters, result file),
+   never as an unbounded blocking tool call.
+6. Safety: no arbitrary shell, no credential handling, no target expansion
+   beyond what the user supplied, dry-run by default for write-like actions,
+   explicit confirmation for scans and firewall changes.
+
+Phases:
+
+```text
+2.42.0  JSON contracts + agent skill
+2.43.0  read-only MCP server
+2.44.0  controlled scan jobs over MCP
+2.45.0  agent evaluation suite and packaging
+```
+
+See [AI integration design](./ai-integration.md).
