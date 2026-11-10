@@ -415,6 +415,8 @@ static size_t h2_frame_header(unsigned char *buf, unsigned length,
 
 static bool h2_init(const struct XtateConf *xconf) {
     UNUSEDPARM(xconf);
+    if (h2_conf.doh && strcmp(h2_conf.path, "/") == 0)
+        snprintf(h2_conf.path, sizeof(h2_conf.path), "%s", "/dns-query");
     return match_spec_finalize(&h2_conf.match);
 }
 

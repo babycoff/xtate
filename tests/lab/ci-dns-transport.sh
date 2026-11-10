@@ -40,20 +40,23 @@ docker run --rm --network "$NET" --cap-add NET_RAW --cap-add NET_ADMIN \
   -e DOT_MAC="$DOT_MAC" -e DOH_MAC="$DOH_MAC" -e DOH2_MAC="$DOH2_MAC" "$SCANNER_IMAGE" bash -lc '
 set -euo pipefail
 apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq iptables >/dev/null 2>&1 || true
-bash /src/firewall/add_rules.sh >/dev/null 2>&1 || true
+sed -e "s/\r$//" -e "s/sudo //g" /src/firewall/add_rules.sh >/tmp/add_rules.sh
+bash /tmp/add_rules.sh
+iptables -C OUTPUT -p tcp --tcp-flags RST RST -j DROP
 run() { local name="$1"; shift; timeout 15 /xtate "$@" > "/tmp/$name.log" 2>&1 || true; cat "/tmp/$name.log"; }
 run dot -if eth0 -ip "$DOT_IP" -p 8853 -scan tcp-state -probe tls-state \
   -probe-arg "-subprobe dot -alpn dot -sni dns.test -subprobe-arg --req-name=example.com" \
   --router-mac "$DOT_MAC" -src-port 48000-48255 --rate 100 --no-resume-file --wait 3 --no-status -show info -show failed
 grep -q "dot_rcode" /tmp/dot.log
 run doh -if eth0 -ip "$DOH_IP" -p 8854 -scan tcp-state -probe tls-state \
-  -probe-arg "-subprobe doh -alpn http/1.1 -sni dns.test -subprobe-arg \"--req-name=example.com --doh-host=dns.test\"" \
+  -probe-arg "-subprobe doh -alpn http/1.1 -sni dns.test -subprobe-arg --req-name=example.com" \
   --router-mac "$DOH_MAC" -src-port 48300-48555 --rate 100 --no-resume-file --wait 3 --no-status -show info -show failed
 grep -q "doh_status: 200" /tmp/doh.log
 run doh2 -if eth0 -ip "$DOH2_IP" -p 8855 -scan tcp-state -probe tls-state \
-  -probe-arg "-subprobe doh-h2 -alpn h2 -sni dns.test -subprobe-arg \"--dns-name=example.com --authority=dns.test --path=/dns-query\"" \
+  -probe-arg "-subprobe doh-h2 -alpn h2 -sni dns.test -subprobe-arg --dns-name=example.com" \
   --router-mac "$DOH2_MAC" -src-port 48600-48855 --rate 100 --no-resume-file --wait 3 --no-status -show info -show failed
-grep -q "doh_status: 200" /tmp/doh2.log
+grep -q "h2_status: \"200\"" /tmp/doh2.log
+grep -q "doh_rcode" /tmp/doh2.log
 ! grep -q "h2_hpack_decode_failed" /tmp/doh2.log
 '
 echo "dns transport lab passed"

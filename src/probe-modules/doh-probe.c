@@ -80,8 +80,8 @@ static ConfParam doh_parameters[] = {
     {0}};
 
 static bool doh_init(const XConf *xconf) {
-    if (!doh_conf.req_name || !doh_conf.doh_host) {
-        LOG(LEVEL_ERROR, "doh requires --req-name and --doh-host.\\n");
+    if (!doh_conf.req_name) {
+        LOG(LEVEL_ERROR, "doh requires --req-name.\\n");
         return false;
     }
     if (doh_conf.req_type == 0) doh_conf.req_type = DNS_REC_A;
@@ -125,13 +125,15 @@ static void doh_make_hello(DataPass *pass, ProbeState *state,
     unsigned char dns[2048];
     size_t dns_len = doh_dns_query(target, dns);
     if (!dns_len) { pass->is_close = 1; return; }
+    ipaddress_formatted_t host_fmt = ipaddress_fmt(target->target.ip_them);
+    const char *host = doh_conf.doh_host ? doh_conf.doh_host : host_fmt.string;
     char head[1024];
     int n = snprintf(head, sizeof(head),
                      "POST %s HTTP/1.1\r\nHost: %s\r\n"
                      "Content-Type: application/dns-message\r\n"
                      "Accept: application/dns-message\r\n"
                      "Content-Length: %zu\r\nConnection: close\r\n\r\n",
-                     doh_conf.doh_path, doh_conf.doh_host, dns_len);
+                     doh_conf.doh_path, host, dns_len);
     if (n <= 0 || (size_t)n + dns_len > 4096) { pass->is_close = 1; return; }
     unsigned char *req = MALLOC((size_t)n + dns_len);
     if (!req) { pass->is_close = 1; return; }
