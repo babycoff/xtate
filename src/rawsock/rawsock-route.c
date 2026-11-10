@@ -72,6 +72,7 @@ static int adapter_addr_for_index(ULONG ifindex, unsigned *ipv4,
         goto out;
     }
 
+    bool have_v6_global = false;
     for (a = addrs; a; a = a->Next) {
         if (a->IfIndex != ifindex || a->OperStatus != IfOperStatusUp)
             continue;
@@ -84,9 +85,15 @@ static int adapter_addr_for_index(ULONG ifindex, unsigned *ipv4,
             } else if (u->Address.lpSockaddr->sa_family == AF_INET6 && ip6) {
                 const SOCKADDR_IN6 *sin6 =
                     (const SOCKADDR_IN6 *)u->Address.lpSockaddr;
+                const unsigned char *b =
+                    (const unsigned char *)&sin6->sin6_addr;
+                bool linklocal = (b[0] == 0xfe && (b[1] & 0xc0) == 0x80);
+                if (have_v6_global || (ip6->version == 6 && !linklocal))
+                    continue;
                 ip6->version = 6;
-                ip6->ipv6 = ipv6address_from_bytes(
-                    (const unsigned char *)&sin6->sin6_addr);
+                ip6->ipv6 = ipv6address_from_bytes(b);
+                if (!linklocal)
+                    have_v6_global = true;
             }
         }
         if (a->PhysicalAddressLength >= 6) {
