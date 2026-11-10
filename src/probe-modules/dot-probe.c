@@ -121,7 +121,7 @@ static void dot_make_hello(DataPass *pass, ProbeState *state,
         pass->is_close = 1;
         return;
     }
-    datapass_set_data(pass, buf, n, false);
+    datapass_set_data(pass, buf, n, true);
 }
 
 static unsigned dot_handle(ProbeTarget *target, const unsigned char *px,
