@@ -16,12 +16,16 @@ This applies only to the stateful scans listed below.
 
 ### Windows
 
-There is no equivalent script and `add_rules.sh` must **not** be run on
-Windows. Use Npcap with Administrator privileges. The Windows host stack can
-emit its own RST; `tcp-syn` supports `-scan-arg "--send-rst"` to close the
-half-open connection explicitly. If a stateful scan returns `open` without
-application data, capture the traffic and check for a host-stack RST instead
-of looking for iptables.
+There is no firewall step and `add_rules.sh` must **not** be run on Windows.
+UDP/DNS scans do not need any local firewall rule. Xtate does not print a
+Linux-firewall warning on Windows; for `tcp-syn` it prints one hint:
+
+```text
+Windows: tcp-syn can add -scan-arg "--send-rst" ...
+```
+
+That option closes the half-open connection explicitly. Use Npcap with
+Administrator privileges for any raw scan.
 
 ## Who needs it
 
@@ -96,7 +100,6 @@ Xtate now checks Linux iptables only for the scans that need it and prints:
 - Docker/GitHub Actions scanner container: install `iptables`, strip `sudo`
   from the script, normalize CRLF, run it, and verify the rule exists.
 - Target containers do not need the rules.
-- Windows has no equivalent script; use the normal Npcap/Administrator setup
-  and do not assume host-stack RST behavior. Never run the Linux `add_rules.sh`
-  there.
+- Windows has no firewall step; UDP/DNS needs no local rule, and raw scans use
+  Npcap/Administrator. Never run the Linux `add_rules.sh` there.
 - Never leave the rules installed on a shared host: they drop all outgoing RSTs.

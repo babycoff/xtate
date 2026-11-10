@@ -15,10 +15,15 @@ RST 终止连接，导致 banner/TLS/探针响应到达前就失败。
 
 ### Windows
 
-没有等价脚本，**不要在 Windows 上执行 `add_rules.sh`**。使用 Npcap 和
-管理员权限。Windows 宿主协议栈可能自己发 RST；`tcp-syn` 可用
-`-scan-arg "--send-rst"` 显式关闭半开连接。如果 stateful 扫描出现 `open`
-但没有应用数据，应抓包检查宿主协议栈 RST，而不是找 iptables 规则。
+没有防火墙步骤，**不要在 Windows 上执行 `add_rules.sh`**。
+UDP/DNS 扫描不需要任何本地防火墙规则。Xtate 在 Windows 上不会输出
+Linux 防火墙警告；只有 `tcp-syn` 会提示：
+
+```text
+Windows: tcp-syn can add -scan-arg "--send-rst" ...
+```
+
+用于显式关闭半开连接。raw 扫描使用 Npcap 和管理员权限。
 
 ## 谁需要
 
@@ -91,5 +96,5 @@ Xtate 启动时只会对需要规则的扫描检查 Linux iptables 并输出：
 - Docker/GitHub Actions 扫描容器：安装 `iptables`，去掉脚本里的 `sudo`，
   处理 CRLF，执行后确认规则存在。
 - 目标容器不需要这些规则。
-- Windows 没有等价脚本；使用 Npcap/管理员配置，不要假设宿主协议栈的 RST 行为，也不要在 Windows 上运行 Linux 的 `add_rules.sh`。
+- Windows 没有防火墙步骤；UDP/DNS 不需要本地规则，raw 扫描使用 Npcap/管理员权限。不要在 Windows 上运行 Linux 的 `add_rules.sh`。
 - 不要在共享主机上长期保留规则：它会丢弃所有出站 RST。
