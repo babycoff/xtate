@@ -55,6 +55,7 @@ Xtate 是一款面向大规模主动测量的网络扫描器。它把扫描栈�
 - 🧬 **HLTCP**——按需创建的混合状态用户态 TCP 协议栈。它能完成 TLS 握手，并在握手之上直接讲 HTTP。
 - 🛰 **QUIC 能力探测**——发送真实 QUIC v1 Initial，识别 Version Negotiation/Retry/Initial/Handshake；不声称完成 HTTP/3 握手。
 - 🔄 **QUIC state**——可选 ngtcp2/GnuTLS 有状态 QUIC 握手，输出版本、TLS/ALPN、证书字段并支持 state 子探测；原始 UDP 与源端口仍由 Xtate 控制。
+- 🌐 **HTTP 与 DNS 协议覆盖**——HTTP/1.0/1.1、HTTP/2（HPACK，含 Huffman）、QUIC 上的 HTTP/3、HTTPS/TLS；UDP DNS、DNSSEC 证据（`--dnssec`）、DoT（`dot`）、DoH HTTP/1.1（`doh`）与 DoH HTTP/2（`doh-h2`）。
 - 🔐 **TLS 证据**——完整握手后可输出结构化证书细节（subject、issuer、SAN、有效期、序列号、公钥、签名、ALPN），并支持 SMTP/IMAP/POP3/FTP STARTTLS 升级。
 - 🧪 **JARM**——十个标准 Salesforce 探针，可用 `--first-probe` 轮换首个标准探针；后续探针批量发送，输出与顺序无关。
 - 🧩 **模块**——11 个基础扫描模块（有 ngtcp2/GnuTLS 时另有 `quic-state`）/ 27 个基础探测模块（另有 `http3-state`）/ 7 个输出模块 / 5 个生成模块。四套接口，一条流水线，没有运行时的插件魔法。

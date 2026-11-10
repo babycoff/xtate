@@ -57,6 +57,7 @@ Most fast scanners stop at "port open"; most service scanners give up at Interne
 - ⚡ **ZBanner** — real TCP responses without a per-target connection table. The peer's TCP stack holds the state; a SipHash cookie proves the reply is yours.
 - 🧬 **HLTCP** — a hybrid-state user-space TCP stack, created only where needed. It completes TLS handshakes and speaks HTTP inside them.
 - 🛰 **QUIC capability** — sends a real QUIC v1 Initial and classifies Version Negotiation/Retry/Initial/Handshake without claiming a completed HTTP/3 handshake.
+- 🌐 **HTTP and DNS protocol breadth** — HTTP/1.0/1.1, HTTP/2 (HPACK including Huffman), HTTP/3 over QUIC, and HTTPS/TLS; DNS over UDP, DNSSEC evidence (`--dnssec`), DoT (`dot`), DoH over HTTP/1.1 (`doh`) and DoH over HTTP/2 (`doh-h2`).
 - 🔐 **TLS evidence** — a full handshake plus structured certificate details (subject, issuer, SAN, validity, serial, key, signature, ALPN), including SMTP/IMAP/POP3/FTP STARTTLS upgrades.
 - 🧪 **JARM** — the ten standard Salesforce probes, with `--first-probe` to rotate which standard probe is sent first and burst-ordered follow-ups; output stays order-independent.
 - 🧩 **Modules** — 11 base scan / 27 probe / 7 output / 5 generate modules, plus optional `quic-state` and `http3-state` when ngtcp2/GnuTLS is available. Four interfaces, one pipeline, no runtime plugin magic.
