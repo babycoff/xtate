@@ -10,6 +10,7 @@
 #include "../util-misc/misc.h"
 #include "../proto/proto-match.h"
 #include "../proto/proto-dns.h"
+#include "../proto/hpack-huffman.h"
 #include "../version.h"
 
 #define H2_PREFACE "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
@@ -513,7 +514,7 @@ static void h2_make_hello(DataPass *pass, ProbeState *state,
     datapass_set_data(pass, buf, off, true);
 }
 
-/* ---------------- HPACK (static table + literals, no Huffman) ---------- */
+/* ---------------- HPACK (static table, literals, Huffman) ---------- */
 
 static const char *const h2_static_names[] = {
     "", ":authority", ":method", ":method", ":path", ":path", ":scheme",
@@ -586,15 +587,62 @@ static size_t h2_hpack_int(const unsigned char *data, size_t len, size_t *off,
     return (size_t)-1;
 }
 
+
+static int h2_huffman_decode(const unsigned char *src, size_t srclen,
+                             char *dst, size_t dstcap) {
+    uint64_t acc = 0;
+    unsigned bits = 0;
+    size_t   si = 0, di = 0;
+    for (;;) {
+        while (bits < 32 && si < srclen) {
+            acc = (acc << 8) | src[si++];
+            bits += 8;
+        }
+        if (bits == 0)
+            break;
+        int found = -1; unsigned flen = 0;
+        for (unsigned sym = 0; sym < 257; sym++) {
+            unsigned len = h3_huff_len[sym];
+            if (len <= bits) {
+                uint64_t mask = (1ULL << len) - 1;
+                if (((acc >> (bits - len)) & mask) == h3_huff_code[sym]) {
+                    found = (int)sym; flen = len; break;
+                }
+            }
+        }
+        if (found < 0) {
+            if (si >= srclen && bits <= 7 &&
+                (acc & ((1ULL << bits) - 1)) == ((1ULL << bits) - 1))
+                break;
+            return -1;
+        }
+        if (found == 256) return -1;
+        if (di + 1 >= dstcap) return -1;
+        dst[di++] = (char)found;
+        bits -= flen;
+        if (bits == 0 && si == srclen) break;
+    }
+    if (di >= dstcap) return -1;
+    dst[di] = 0;
+    return (int)di;
+}
+
 static bool h2_hpack_str(const unsigned char *data, size_t len, size_t *off,
                          char *out, size_t out_size) {
     if (*off >= len)
         return false;
     bool huffman = (data[*off] & 0x80) != 0;
     size_t slen = h2_hpack_int(data, len, off, 7);
-    if (slen == (size_t)-1 || *off + slen > len || slen >= out_size)
+    if (slen == (size_t)-1 || *off + slen > len)
         return false;
-    if (huffman)
+    if (huffman) {
+        int d = h2_huffman_decode(data + *off, slen, out, out_size);
+        if (d < 0)
+            return false;
+        *off += slen;
+        return true;
+    }
+    if (slen >= out_size)
         return false;
     memcpy(out, data + *off, slen);
     out[slen] = '\0';
@@ -914,7 +962,7 @@ Probe H2Probe = {
     .desc = "Stateful HTTP/2 client for -scan tcp-state -probe tls-state "
             "-alpn h2 -subprobe h2. Sends the HTTP/2 preface, SETTINGS and a "
             "minimal HPACK request, then parses SETTINGS, HEADERS (static/"
-            "literal HPACK, no Huffman) and DATA. Response matching supports "
+            "HPACK including Huffman) and DATA. Response matching supports "
             "--keyword/--regex with all/headers/body scopes. It is not h2c; "
             "use the separate h2c probe for cleartext prior knowledge.\n"
             "Dependencies: OpenSSL (for tls-state).",
