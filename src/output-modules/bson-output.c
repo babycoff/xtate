@@ -65,6 +65,11 @@ static bool bsonout_init(const XConf *xconf, const OutConf *out) {
     return true;
 }
 
+static void bson_put_utf8(bson_t *doc, const char *name, const char *value) {
+    if (!BSON_APPEND_UTF8(doc, name, value))
+        LOG(LEVEL_ERROR, "(BsonOutput) could not append UTF-8 field %s.\n", name);
+}
+
 static void bsonout_result(OutItem *item) {
     DataLink *pre;
     bson_t   *res_doc = bson_new();
@@ -94,14 +99,14 @@ static void bsonout_result(OutItem *item) {
         }
     } else {
         safe_iso8601_time(format_time, sizeof(format_time), &item->timestamp);
-        BSON_APPEND_UTF8(res_doc, "time", format_time);
-        BSON_APPEND_UTF8(res_doc, "level", output_level_to_string(item->level));
-        BSON_APPEND_UTF8(res_doc, "ip_proto",
+        bson_put_utf8(res_doc, "time", format_time);
+        bson_put_utf8(res_doc, "level", output_level_to_string(item->level));
+        bson_put_utf8(res_doc, "ip_proto",
                          ip_proto_to_string(item->target.ip_proto));
         ipaddress_formatted_t ip_them_fmt = ipaddress_fmt(item->target.ip_them);
         ipaddress_formatted_t ip_me_fmt   = ipaddress_fmt(item->target.ip_me);
-        BSON_APPEND_UTF8(res_doc, "ip_them", ip_them_fmt.string);
-        BSON_APPEND_UTF8(res_doc, "ip_me", ip_me_fmt.string);
+        bson_put_utf8(res_doc, "ip_them", ip_them_fmt.string);
+        bson_put_utf8(res_doc, "ip_me", ip_me_fmt.string);
     }
 
     if (!item->no_port) {
@@ -110,11 +115,11 @@ static void bsonout_result(OutItem *item) {
     }
 
     if (item->classification[0]) {
-        BSON_APPEND_UTF8(res_doc, "classification", item->classification);
+        bson_put_utf8(res_doc, "classification", item->classification);
     }
 
     if (item->reason[0]) {
-        BSON_APPEND_UTF8(res_doc, "reason", item->reason);
+        bson_put_utf8(res_doc, "reason", item->reason);
     }
 
     pre = item->scan_report.link;
@@ -123,7 +128,7 @@ static void bsonout_result(OutItem *item) {
                                    &scan_report_doc);
         while (pre->next) {
             if (pre->next->link_type == LinkType_String) {
-                BSON_APPEND_UTF8(&scan_report_doc, pre->next->name,
+                bson_put_utf8(&scan_report_doc, pre->next->name,
                                  (char *)pre->next->value_data);
             } else if (pre->next->link_type == LinkType_Int) {
                 BSON_APPEND_INT64(&scan_report_doc, pre->next->name,
@@ -152,7 +157,7 @@ static void bsonout_result(OutItem *item) {
                                    &probe_report_doc);
         while (pre->next) {
             if (pre->next->link_type == LinkType_String) {
-                BSON_APPEND_UTF8(&probe_report_doc, pre->next->name,
+                bson_put_utf8(&probe_report_doc, pre->next->name,
                                  (char *)pre->next->value_data);
             } else if (pre->next->link_type == LinkType_Int) {
                 BSON_APPEND_INT64(&probe_report_doc, pre->next->name,
@@ -181,7 +186,7 @@ static void bsonout_result(OutItem *item) {
                                    &output_report_doc);
         while (pre->next) {
             if (pre->next->link_type == LinkType_String) {
-                BSON_APPEND_UTF8(&output_report_doc, pre->next->name,
+                bson_put_utf8(&output_report_doc, pre->next->name,
                                  (char *)pre->next->value_data);
             } else if (pre->next->link_type == LinkType_Int) {
                 BSON_APPEND_INT64(&output_report_doc, pre->next->name,

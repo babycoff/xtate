@@ -18,7 +18,7 @@
 | 输出关闭 | `fflush()`/`fclose()` 失败被忽略。 | 已修复：text/CSV/NDJSON/BSON 记录错误。 |
 | BSON 输出 | `bson_new()` 和 `fwrite()` 失败被忽略。 | 已修复：检查分配和写入。 |
 | CSV | classification/reason 未加引号；报告字符串没有 CSV 转义。 | 已修复：所有字段加引号，双写引号，报告 JSON 做 CSV 安全转义。 |
-| BSON 输出 | `bson_append_*` 返回值未检查。 | 待修。 |
+| BSON 输出 | UTF-8 字符串附加失败被忽略。 | 已修复 `BSON_APPEND_UTF8`；其他 BSON 类型仍未检查。 |
 | Mongo 输出 | BSON 导入插入失败仍计为成功；输出文档分配未检查。 | 已修复：失败返回 false，分配检查。 |
 | 解析器 fuzz | NDJSON/BSON 输出和 BSON 输入没有 fuzz 目标。 | 待补。 |
 
@@ -27,6 +27,7 @@
 ```text
 pcap 回放 -> NDJSON：Python json 逐行解析通过
 pcap 回放 -> CSV：标准 csv reader 读出 12 列，报告列可解析为 JSON
+带引号/反斜杠 header 的 pcap 回放 -> NDJSON/CSV 仍保持合法 JSON
 CSV 追加：只写一次表头
 损坏 BSON 长度 0x7fffffff：分配前拒绝，非零退出
 目标文件超长行 > 65535：带行号拒绝

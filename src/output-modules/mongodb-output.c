@@ -18,6 +18,7 @@
 #define DFT_BULK_SIZE 200;
 
 extern Output MongodbOutput; /*for internal x-ref*/
+static void mongo_put_utf8(bson_t *doc, const char *name, const char *value);
 
 static char format_time[32];
 
@@ -285,7 +286,7 @@ static bool _init_and_test_db(const char *uri_name, const char *db_name,
      */
     bson_oid_init(&oid, NULL);
     test_insert = bson_new();
-    BSON_APPEND_UTF8(test_insert, "hello", XTATE_NAME);
+    mongo_put_utf8(test_insert, "hello", XTATE_NAME);
     BSON_APPEND_OID(test_insert, "_id", &oid);
     if (!mongoc_collection_insert_one(mongodb_conf.collection, test_insert,
                                       NULL, NULL, &error)) {
@@ -432,6 +433,11 @@ static bool _mongo_insert_one_with_retry(const bson_t *doc) {
     return false;
 }
 
+static void mongo_put_utf8(bson_t *doc, const char *name, const char *value) {
+    if (!BSON_APPEND_UTF8(doc, name, value))
+        LOG(LEVEL_ERROR, "(MongodbOut) could not append UTF-8 field %s.\n", name);
+}
+
 static void mongodbout_result(OutItem *item) {
     /* Once the sink is marked fatal, do not spend another retry window on each
      * queued result while the scan is shutting down. */
@@ -476,14 +482,14 @@ static void mongodbout_result(OutItem *item) {
         }
     } else {
         safe_iso8601_time(format_time, sizeof(format_time), &item->timestamp);
-        BSON_APPEND_UTF8(res_doc, "time", format_time);
-        BSON_APPEND_UTF8(res_doc, "level", output_level_to_string(item->level));
-        BSON_APPEND_UTF8(res_doc, "ip_proto",
+        mongo_put_utf8(res_doc, "time", format_time);
+        mongo_put_utf8(res_doc, "level", output_level_to_string(item->level));
+        mongo_put_utf8(res_doc, "ip_proto",
                          ip_proto_to_string(item->target.ip_proto));
         ipaddress_formatted_t ip_them_fmt = ipaddress_fmt(item->target.ip_them);
         ipaddress_formatted_t ip_me_fmt   = ipaddress_fmt(item->target.ip_me);
-        BSON_APPEND_UTF8(res_doc, "ip_them", ip_them_fmt.string);
-        BSON_APPEND_UTF8(res_doc, "ip_me", ip_me_fmt.string);
+        mongo_put_utf8(res_doc, "ip_them", ip_them_fmt.string);
+        mongo_put_utf8(res_doc, "ip_me", ip_me_fmt.string);
     }
 
     if (!item->no_port) {
@@ -492,11 +498,11 @@ static void mongodbout_result(OutItem *item) {
     }
 
     if (item->classification[0]) {
-        BSON_APPEND_UTF8(res_doc, "classification", item->classification);
+        mongo_put_utf8(res_doc, "classification", item->classification);
     }
 
     if (item->reason[0]) {
-        BSON_APPEND_UTF8(res_doc, "reason", item->reason);
+        mongo_put_utf8(res_doc, "reason", item->reason);
     }
 
     pre = item->scan_report.link;
@@ -505,7 +511,7 @@ static void mongodbout_result(OutItem *item) {
                                    &scan_report_doc);
         while (pre->next) {
             if (pre->next->link_type == LinkType_String) {
-                BSON_APPEND_UTF8(&scan_report_doc, pre->next->name,
+                mongo_put_utf8(&scan_report_doc, pre->next->name,
                                  (char *)pre->next->value_data);
             } else if (pre->next->link_type == LinkType_Int) {
                 BSON_APPEND_INT64(&scan_report_doc, pre->next->name,
@@ -534,7 +540,7 @@ static void mongodbout_result(OutItem *item) {
                                    &probe_report_doc);
         while (pre->next) {
             if (pre->next->link_type == LinkType_String) {
-                BSON_APPEND_UTF8(&probe_report_doc, pre->next->name,
+                mongo_put_utf8(&probe_report_doc, pre->next->name,
                                  (char *)pre->next->value_data);
             } else if (pre->next->link_type == LinkType_Int) {
                 BSON_APPEND_INT64(&probe_report_doc, pre->next->name,
@@ -563,7 +569,7 @@ static void mongodbout_result(OutItem *item) {
                                    &output_report_doc);
         while (pre->next) {
             if (pre->next->link_type == LinkType_String) {
-                BSON_APPEND_UTF8(&output_report_doc, pre->next->name,
+                mongo_put_utf8(&output_report_doc, pre->next->name,
                                  (char *)pre->next->value_data);
             } else if (pre->next->link_type == LinkType_Int) {
                 BSON_APPEND_INT64(&output_report_doc, pre->next->name,

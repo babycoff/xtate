@@ -18,7 +18,7 @@ MongoDB output paths. It is a correctness review, not a performance benchmark.
 | Output close | `fflush()`/`fclose()` failures were ignored. | Fixed: logged for text/CSV/NDJSON/BSON. |
 | BSON output | `bson_new()` and `fwrite()` failures were ignored. | Fixed: allocation and write checks. |
 | CSV | Classification/reason were unquoted; report strings were not CSV-escaped. | Fixed: every field is quoted, embedded quotes are doubled, and report JSON is CSV-safe. |
-| BSON output | `bson_append_*` return values are not checked. | Open. |
+| BSON output | UTF-8 string append failures were ignored. | Fixed for `BSON_APPEND_UTF8`; other BSON append types are still unchecked. |
 | Mongo output | BSON import insert failures were logged but still counted as success; output document allocation was unchecked. | Fixed: failures return false and allocation is checked. |
 | Parser fuzzing | No fuzz target for NDJSON/BSON output or BSON input. | Open. |
 
@@ -27,6 +27,7 @@ MongoDB output paths. It is a correctness review, not a performance benchmark.
 ```text
 pcap replay -> NDJSON: every line parsed by Python json
 pcap replay -> CSV: 12 columns, standard csv reader, report columns parse as JSON
+pcap replay with quoted/backslash header -> NDJSON and CSV preserve valid JSON
 CSV append: one header only
 corrupt BSON length 0x7fffffff: rejected before allocation, non-zero exit
 target file line > 65535 bytes: rejected with line number
