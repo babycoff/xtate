@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Isolated DoT / DoH regression lab. Requires Docker and a Linux xtate binary.
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+ROOT="${XTATE_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 BIN="${XTATE_BIN:-$ROOT/bin/xtate}"
 TARGET_IMAGE="${XTATE_TARGET_IMAGE:-xtate-lab-target:24.04}"
 SCANNER_IMAGE="${XTATE_LAB_IMAGE:-xtate-builder:24.04}"
