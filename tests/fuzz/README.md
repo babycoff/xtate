@@ -14,6 +14,7 @@ parser. They complement `--selftest` and the fixed target/parser tests.
 | `h3_qpack_fuzz` | in-tree HTTP/3 frame and QPACK decoder |
 | `h2_hpack_fuzz` | in-tree HTTP/2 HPACK decoder |
 | `json_escape_fuzz` | NDJSON/CSV JSON string escaping |
+| `bson_doc_fuzz` | libbson document parsing used by BSON input |
 
 The H2/H3 harnesses include the probe translation unit with a test-only guard
 so the fuzzed code is the product parser, not a copy. The other harnesses stub

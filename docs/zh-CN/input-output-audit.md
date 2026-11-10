@@ -18,9 +18,9 @@
 | 输出关闭 | `fflush()`/`fclose()` 失败被忽略。 | 已修复：text/CSV/NDJSON/BSON 记录错误。 |
 | BSON 输出 | `bson_new()` 和 `fwrite()` 失败被忽略。 | 已修复：检查分配和写入。 |
 | CSV | classification/reason 未加引号；报告字符串没有 CSV 转义。 | 已修复：所有字段加引号，双写引号，报告 JSON 做 CSV 安全转义。 |
-| BSON 输出 | UTF-8 字符串附加失败被忽略。 | 已修复 `BSON_APPEND_UTF8`；其他 BSON 类型仍未检查。 |
-| Mongo 输出 | BSON 导入插入失败仍计为成功；输出文档分配未检查。 | 已修复：失败返回 false，分配检查。 |
-| 解析器 fuzz | 输出转义没有 fuzz 目标。 | 已增加 `json_escape_fuzz`（libFuzzer + ASan/UBSan 驱动）；BSON/输出 fuzz 仍待补。 |
+| BSON 输出 | BSON 附加失败被忽略。 | 已修复：UTF-8、日期、int32/int64、double、bool、binary、OID 均检查。 |
+| Mongo 输出 | BSON 导入插入失败仍计为成功；输出文档分配未检查。 | 已修复：失败返回 false，分配检查，批量失败计数。 |
+| 解析器 fuzz | 输出转义和 BSON 文档没有 fuzz 目标。 | 已增加 `json_escape_fuzz` 和 `bson_doc_fuzz`，均接入 `tests/fuzz/run.sh`。 |
 
 ## 已执行验证
 
@@ -34,6 +34,7 @@ CSV 追加：只写一次表头
 Linux 构建/selftest：PASS
 MSVC 构建：PASS
 json_escape_fuzz：3 秒 398k 次执行，fuzz smoke passed
+bson_doc_fuzz：3 秒 3.3M 次执行，fuzz smoke passed
 ```
 
 ## 下一步

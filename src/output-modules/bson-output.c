@@ -13,6 +13,33 @@
 #include "../util-data/fine-malloc.h"
 #include "../pixie/pixie-file.h"
 
+static void bson_put_binary(bson_t *doc, const char *name, bson_subtype_t subtype,
+                       const uint8_t *data, uint32_t len) {
+    if (!BSON_APPEND_BINARY(doc, name, subtype, data, len))
+        LOG(LEVEL_ERROR, "(BsonOutput) BSON binary append failed.\n");
+}
+
+static void bson_put_int32(bson_t *doc, const char *name, int32_t v) {
+    if (!BSON_APPEND_INT32(doc, name, v))
+        LOG(LEVEL_ERROR, "(BsonOutput) BSON int32 append failed.\n");
+}
+static void bson_put_int64(bson_t *doc, const char *name, int64_t v) {
+    if (!BSON_APPEND_INT64(doc, name, v))
+        LOG(LEVEL_ERROR, "(BsonOutput) BSON int64 append failed.\n");
+}
+static void bson_put_double(bson_t *doc, const char *name, double v) {
+    if (!BSON_APPEND_DOUBLE(doc, name, v))
+        LOG(LEVEL_ERROR, "(BsonOutput) BSON double append failed.\n");
+}
+static void bson_put_bool(bson_t *doc, const char *name, bool v) {
+    if (!BSON_APPEND_BOOL(doc, name, v))
+        LOG(LEVEL_ERROR, "(BsonOutput) BSON bool append failed.\n");
+}
+static void bson_put_date(bson_t *doc, const char *name, int64_t v) {
+    if (!BSON_APPEND_DATE_TIME(doc, name, v))
+        LOG(LEVEL_ERROR, "(BsonOutput) BSON date append failed.\n");
+}
+
 extern Output BsonOutput; /*for internal x-ref*/
 
 static FILE *file;
@@ -82,20 +109,20 @@ static void bsonout_result(OutItem *item) {
     bson_t    output_report_doc;
 
     if (bson_conf.is_compact) {
-        BSON_APPEND_DATE_TIME(res_doc, "time",
+        bson_put_date(res_doc, "time",
                               (uint64_t)item->timestamp * 1000);
-        BSON_APPEND_INT32(res_doc, "level", item->level);
-        BSON_APPEND_INT32(res_doc, "ip_proto", item->target.ip_proto);
+        bson_put_int32(res_doc, "level", item->level);
+        bson_put_int32(res_doc, "ip_proto", item->target.ip_proto);
         if (item->target.ip_them.version == 4) {
-            BSON_APPEND_INT32(res_doc, "ip_them", item->target.ip_them.ipv4);
-            BSON_APPEND_INT32(res_doc, "ip_me", item->target.ip_me.ipv4);
+            bson_put_int32(res_doc, "ip_them", item->target.ip_them.ipv4);
+            bson_put_int32(res_doc, "ip_me", item->target.ip_me.ipv4);
         } else {
-            BSON_APPEND_INT64(res_doc, "ip_them_hi",
+            bson_put_int64(res_doc, "ip_them_hi",
                               item->target.ip_them.ipv6.hi);
-            BSON_APPEND_INT64(res_doc, "ip_them_lo",
+            bson_put_int64(res_doc, "ip_them_lo",
                               item->target.ip_them.ipv6.lo);
-            BSON_APPEND_INT64(res_doc, "ip_me_hi", item->target.ip_me.ipv6.hi);
-            BSON_APPEND_INT64(res_doc, "ip_me_lo", item->target.ip_me.ipv6.lo);
+            bson_put_int64(res_doc, "ip_me_hi", item->target.ip_me.ipv6.hi);
+            bson_put_int64(res_doc, "ip_me_lo", item->target.ip_me.ipv6.lo);
         }
     } else {
         safe_iso8601_time(format_time, sizeof(format_time), &item->timestamp);
@@ -110,8 +137,8 @@ static void bsonout_result(OutItem *item) {
     }
 
     if (!item->no_port) {
-        BSON_APPEND_INT32(res_doc, "port_them", item->target.port_them);
-        BSON_APPEND_INT32(res_doc, "port_me", item->target.port_me);
+        bson_put_int32(res_doc, "port_them", item->target.port_them);
+        bson_put_int32(res_doc, "port_me", item->target.port_me);
     }
 
     if (item->classification[0]) {
@@ -131,16 +158,16 @@ static void bsonout_result(OutItem *item) {
                 bson_put_utf8(&scan_report_doc, pre->next->name,
                                  (char *)pre->next->value_data);
             } else if (pre->next->link_type == LinkType_Int) {
-                BSON_APPEND_INT64(&scan_report_doc, pre->next->name,
+                bson_put_int64(&scan_report_doc, pre->next->name,
                                   pre->next->value_int);
             } else if (pre->next->link_type == LinkType_Double) {
-                BSON_APPEND_DOUBLE(&scan_report_doc, pre->next->name,
+                bson_put_double(&scan_report_doc, pre->next->name,
                                    pre->next->value_double);
             } else if (pre->next->link_type == LinkType_Bool) {
-                BSON_APPEND_BOOL(&scan_report_doc, pre->next->name,
+                bson_put_bool(&scan_report_doc, pre->next->name,
                                  pre->next->value_bool);
             } else if (pre->next->link_type == LinkType_Binary) {
-                BSON_APPEND_BINARY(&scan_report_doc, pre->next->name,
+                bson_put_binary(&scan_report_doc, pre->next->name,
                                    BSON_SUBTYPE_BINARY, pre->next->value_data,
                                    pre->next->data_len);
             }
@@ -160,16 +187,16 @@ static void bsonout_result(OutItem *item) {
                 bson_put_utf8(&probe_report_doc, pre->next->name,
                                  (char *)pre->next->value_data);
             } else if (pre->next->link_type == LinkType_Int) {
-                BSON_APPEND_INT64(&probe_report_doc, pre->next->name,
+                bson_put_int64(&probe_report_doc, pre->next->name,
                                   pre->next->value_int);
             } else if (pre->next->link_type == LinkType_Double) {
-                BSON_APPEND_DOUBLE(&probe_report_doc, pre->next->name,
+                bson_put_double(&probe_report_doc, pre->next->name,
                                    pre->next->value_double);
             } else if (pre->next->link_type == LinkType_Bool) {
-                BSON_APPEND_BOOL(&probe_report_doc, pre->next->name,
+                bson_put_bool(&probe_report_doc, pre->next->name,
                                  pre->next->value_bool);
             } else if (pre->next->link_type == LinkType_Binary) {
-                BSON_APPEND_BINARY(&probe_report_doc, pre->next->name,
+                bson_put_binary(&probe_report_doc, pre->next->name,
                                    BSON_SUBTYPE_BINARY, pre->next->value_data,
                                    pre->next->data_len);
             }
@@ -189,16 +216,16 @@ static void bsonout_result(OutItem *item) {
                 bson_put_utf8(&output_report_doc, pre->next->name,
                                  (char *)pre->next->value_data);
             } else if (pre->next->link_type == LinkType_Int) {
-                BSON_APPEND_INT64(&output_report_doc, pre->next->name,
+                bson_put_int64(&output_report_doc, pre->next->name,
                                   pre->next->value_int);
             } else if (pre->next->link_type == LinkType_Double) {
-                BSON_APPEND_DOUBLE(&output_report_doc, pre->next->name,
+                bson_put_double(&output_report_doc, pre->next->name,
                                    pre->next->value_double);
             } else if (pre->next->link_type == LinkType_Bool) {
-                BSON_APPEND_BOOL(&output_report_doc, pre->next->name,
+                bson_put_bool(&output_report_doc, pre->next->name,
                                  pre->next->value_bool);
             } else if (pre->next->link_type == LinkType_Binary) {
-                BSON_APPEND_BINARY(&output_report_doc, pre->next->name,
+                bson_put_binary(&output_report_doc, pre->next->name,
                                    BSON_SUBTYPE_BINARY, pre->next->value_data,
                                    pre->next->data_len);
             }

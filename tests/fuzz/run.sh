@@ -16,9 +16,11 @@ ARTIFACTS="$ROOT/tests/fuzz/artifacts"
 mkdir -p "$BUILD" "$ARTIFACTS" \
     "$CORPUS/preprocess" "$CORPUS/target-parse" "$CORPUS/targetset" "$CORPUS/targetfile" \
     "$CORPUS/h3-qpack" "$CORPUS/h2-hpack" "$CORPUS/json-escape" \
+    "$CORPUS/bson-doc" \
     "$WORK_CORPUS/preprocess" "$WORK_CORPUS/target-parse" \
     "$WORK_CORPUS/targetset" "$WORK_CORPUS/targetfile" \
-    "$WORK_CORPUS/h3-qpack" "$WORK_CORPUS/h2-hpack" "$WORK_CORPUS/json-escape"
+    "$WORK_CORPUS/h3-qpack" "$WORK_CORPUS/h2-hpack" "$WORK_CORPUS/json-escape" \
+    "$WORK_CORPUS/bson-doc"
 
 if ! command -v "$CC" >/dev/null 2>&1; then
     echo "SKIP: $CC not available (install clang to run the fuzzers)" >&2
@@ -75,6 +77,17 @@ echo "==> building json_escape_fuzz"
     "$ROOT/tests/fuzz/json_escape_fuzz.c" \
     "$ROOT/src/util-data/json-escape.c" \
     -o "$BUILD/json_escape_fuzz"
+
+if pkg-config --exists libbson-1.0; then
+    echo "==> building bson_doc_fuzz"
+    "$CC" "${COMMON[@]}" \
+        $(pkg-config --cflags libbson-1.0) \
+        "$ROOT/tests/fuzz/bson_doc_fuzz.c" \
+        $(pkg-config --libs libbson-1.0) \
+        -o "$BUILD/bson_doc_fuzz"
+else
+    echo "==> skipping bson_doc_fuzz (libbson not found)"
+fi
 
 echo "==> building targetfile_fuzz"
 "$CC" "${COMMON[@]}" \
@@ -146,5 +159,15 @@ echo "==> fuzzing JSON escape for ${FUZZ_TIME}s"
     -timeout=5 \
     -artifact_prefix="$ARTIFACTS/json-escape-" \
     "$WORK_CORPUS/json-escape" "$CORPUS/json-escape"
+
+if [[ -x "$BUILD/bson_doc_fuzz" ]]; then
+    echo "==> fuzzing BSON parser for ${FUZZ_TIME}s"
+    "$BUILD/bson_doc_fuzz" \
+        -max_total_time="$FUZZ_TIME" \
+        -max_len=65536 \
+        -timeout=5 \
+        -artifact_prefix="$ARTIFACTS/bson-doc-" \
+        "$WORK_CORPUS/bson-doc" "$CORPUS/bson-doc"
+fi
 
 echo "fuzz smoke passed"
