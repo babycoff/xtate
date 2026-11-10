@@ -156,8 +156,8 @@ void rawsock_diag_target(ipaddress target, bool check, const char *forced_if) {
     printf("Firewall:     %s\n",
            has_iptables_rule("iptables -S OUTPUT 2>/dev/null",
                              "--tcp-flags RST RST")
-               ? "RST suppression installed"
-               : "RST suppression missing (run firewall/add_rules.sh)");
+               ? "RST suppression installed (stateful scans only)"
+               : "RST suppression missing (needed by zbanner/tcp-state only)");
 #endif
     if (check) {
         printf("Check:        interface=%s source=%s gateway=%s\n",
@@ -231,19 +231,32 @@ static bool has_iptables_rule(const char *cmd, const char *needle) {
     return found;
 }
 
-void rawsock_firewall_warn(void) {
+void rawsock_firewall_warn(const char *scanner, const char *probe) {
+    bool need_rst = scanner && (!strcmp(scanner, "zbanner") ||
+                                !strcmp(scanner, "tcp-state"));
+    bool need_icmp = need_rst ||
+                     (scanner && !strcmp(scanner, "udp") && probe &&
+                      !strcmp(probe, "dns"));
+    if (!need_rst && !need_icmp)
+        return;
     bool rst4 = has_iptables_rule("iptables -S OUTPUT 2>/dev/null",
                                   "--tcp-flags RST RST");
     bool rst6 = has_iptables_rule("ip6tables -S OUTPUT 2>/dev/null",
                                   "--tcp-flags RST RST");
     bool icmp4 = has_iptables_rule("iptables -S OUTPUT 2>/dev/null",
                                    "--icmp-type 3/3");
-    if (rst4 && rst6 && icmp4)
-        return;
-    LOG(LEVEL_WARN,
-        "firewall RST/ICMP suppression rules are not fully installed\n");
-    LOG(LEVEL_HINT,
-        "run: sudo ./firewall/add_rules.sh   (Linux; zbanner/tcp-state/state probes need it)\n");
+    if (need_rst && !(rst4 && rst6)) {
+        LOG(LEVEL_WARN,
+            "tcp-state/zbanner need TCP RST suppression; rules missing\n");
+    }
+    if (need_icmp && !icmp4) {
+        LOG(LEVEL_WARN,
+            "dns/UDP scans benefit from ICMP port-unreachable suppression; rule missing\n");
+    }
+    if ((need_rst && !(rst4 && rst6)) || (need_icmp && !icmp4)) {
+        LOG(LEVEL_HINT,
+            "run: sudo ./firewall/add_rules.sh   (Linux scanner host; never leave it installed)\n");
+    }
 }
 #else
 void rawsock_firewall_warn(void) {}

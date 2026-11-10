@@ -6,6 +6,8 @@
 #endif
 
 #include "../rawsock/rawsock.h"
+#include "../scan-modules/scan-modules.h"
+#include "../probe-modules/probe-modules.h"
 #include "../stub/stub-pcap-dlt.h"
 #include "../stack/stack-arpv4.h"
 #include "../stack/stack-ndpv6.h"
@@ -33,7 +35,8 @@ int init_nic(XConf *xconf, bool has_ipv4_targets, bool has_ipv6_targets) {
     bool          is_usable_ipv4 = !has_ipv4_targets;
     bool          is_usable_ipv6 = !has_ipv6_targets;
 
-    rawsock_firewall_warn();
+    rawsock_firewall_warn(xconf->scanner ? xconf->scanner->name : NULL,
+                          xconf->probe ? xconf->probe->name : NULL);
 
     /*
      * ADAPTER/NETWORK-INTERFACE

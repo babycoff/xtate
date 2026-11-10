@@ -24,7 +24,7 @@
 
 > **Linux prerequisite:** `zbanner`, `tcp-state`, `tls-state` and every state
 > sub-probe require `sudo ./firewall/add_rules.sh` on the scanner host before
-> scanning. Missing rules produce `open` with no banner/TLS/probe output.
+> scanning (not `tcp-syn`/stateless port scans). Missing rules produce `open` with no banner/TLS/probe output.
 > See [Linux firewall](./docs/firewall.md).
 
 Xtate is a network scanner for large-scale active measurement. It splits the scanning stack into four pluggable module types — **Scan** (L3/L4 packets), **Probe** (L5+ payloads and parsers), **Generate** (targets) and **Output** (results) — and ships two original engines:

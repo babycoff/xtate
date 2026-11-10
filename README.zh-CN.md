@@ -25,7 +25,7 @@
 > **God is Stateless.** —— Xtate 的格言
 
 > **Linux 前置条件：** `zbanner`、`tcp-state`、`tls-state` 和所有 state 子探针
-> 在扫描端必须先执行 `sudo ./firewall/add_rules.sh`。缺失规则会出现
+> 在扫描端必须先执行 `sudo ./firewall/add_rules.sh`（`tcp-syn` 等无状态扫描不需要）。缺失规则会出现
 > `open` 但没有 banner/TLS/探针输出。见 [Linux 防火墙](./docs/firewall.md)。
 
 Xtate 是一款面向大规模主动测量的网络扫描器。它把扫描栈拆成四种可插拔的模块类型——**扫描**（L3/L4 数据包）、**探测**（L5 及以上载荷与解析器）、**生成**（目标）和**输出**（结果）——并自带两个原创引擎：

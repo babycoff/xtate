@@ -7,6 +7,26 @@ state sub-probe complete TCP handshakes with raw packets. The Linux kernel does
 not know about those connections and will send its own RST, killing the flow
 before the banner/TLS/probe response arrives.
 
+## Who needs it
+
+Required:
+
+```text
+zbanner
+tcp-state (and every tls-state/state sub-probe)
+```
+
+Not required:
+
+```text
+tcp-syn
+stateless TCP port scans
+```
+
+UDP DNS is different: it does not need TCP RST suppression, but the ICMP
+port-unreachable rule avoids useless retransmissions. Other stateless scans do
+not need these rules.
+
 ## Required
 
 On the **scanner host** (not the target), while scanning:
@@ -44,7 +64,7 @@ This is the first thing to check for any "open but no application data" result.
 
 ## Runtime reminder
 
-Xtate now checks Linux iptables at startup and prints:
+Xtate now checks Linux iptables only for the scans that need it and prints:
 
 ```text
 [WRN] firewall RST/ICMP suppression rules are not fully installed
@@ -55,7 +75,8 @@ Xtate now checks Linux iptables at startup and prints:
 
 ## Agent / operator checklist
 
-- Linux scanner: install rules before scans, remove after.
+- Linux scanner: install rules before stateful scans, remove after. `tcp-syn` and
+  other stateless scans do not need them.
 - Docker/GitHub Actions scanner container: install `iptables`, strip `sudo`
   from the script, normalize CRLF, run it, and verify the rule exists.
 - Target containers do not need the rules.
