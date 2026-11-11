@@ -276,6 +276,7 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
     const char *jid = strstr(line, "\"job_id\":");
     if (!jid) { send_json(out, id, NULL, "INVALID_ARGUMENT", "missing job_id"); return; }
     jid += 9; while (*jid == ' ') jid++;
+    if (*jid == '"') jid++;
     char jidbuf[64]; size_t jn = 0;
     while (jid[jn] && jid[jn] != '"' && jn < sizeof(jidbuf)-1) { jidbuf[jn] = jid[jn]; jn++; }
     jidbuf[jn] = 0;

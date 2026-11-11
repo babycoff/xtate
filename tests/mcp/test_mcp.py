@@ -74,10 +74,19 @@ try:
     cid2 = json.loads(cs["result"]["content"][0]["text"])["result"]["job_id"]
     time.sleep(1)
     st2 = rpc({"jsonrpc":"2.0","id":18,"method":"tools/call","params":{"name":"job_status","arguments":{"job_id":cid2}}})
+    st2t = st2["result"]["content"][0]["text"]
+    assert "JOB_NOT_FOUND" not in st2t, st2t
     assert not st2["result"]["isError"]
+    mm = rpc({"jsonrpc":"2.0","id":19,"method":"tools/call","params":{"name":"job_result_manifest","arguments":{"job_id":cid2}}})
+    mt = mm["result"]["content"][0]["text"]
+    assert "manifest_path" in mt, mt
+    # manifest file content depends on worker completing; API metadata is asserted above
     print("MCP server tests: PASS")
 finally:
     mp.terminate(); ctlp.terminate()
+
+
+
 
 
 

@@ -312,8 +312,10 @@ const char *job_result_path(const Job *j) { return j ? j->result_path : NULL; }
 const char *job_log_path(const Job *j) { return j ? j->log_path : NULL; }
 unsigned job_exit_code(const Job *j) { return j ? j->exit_code : 0; }
 unsigned job_elapsed_ms(const Job *j) {
-    if (!j) return 0;
-    long long end = j->end_ms ? j->end_ms : now_ms();
+    if (!j || j->start_ms == 0) return 0;
+    long long end = j->end_ms ? j->end_ms
+                              : (job_is_terminal(j) ? j->start_ms : now_ms());
+    if (end < j->start_ms) return 0;
     return (unsigned)(end - j->start_ms);
 }
 
@@ -323,6 +325,9 @@ static Job *new_job(JobManager *m, const char *result_path,
     if (!j) return NULL;
     snprintf(j->id, sizeof(j->id), "job-%u", ++m->seq);
     j->state = JOB_QUEUED;
+    j->start_ms = now_ms();
+    j->last_progress_ms = j->start_ms;
+    j->last_heartbeat_ms = j->start_ms;
     j->timeout_sec = timeout_sec;
     j->heartbeat_timeout_sec = 30;
     j->result_path = result_path ? dupstr(result_path) : NULL;
