@@ -1,0 +1,28 @@
+#ifndef ERROR_CODE_H
+#define ERROR_CODE_H
+#include <stdbool.h>
+typedef enum ErrorCode {
+    ERR_NONE = 0,
+    ERR_INVALID_JSON,
+    ERR_INVALID_ARGUMENT,
+    ERR_UNSUPPORTED_SCAN,
+    ERR_UNSUPPORTED_PROBE,
+    ERR_TARGET_INVALID,
+    ERR_PERMISSION_DENIED,
+    ERR_FIREWALL_RULES_MISSING,
+    ERR_OUTPUT_WRITE_FAILED,
+    ERR_IO_ERROR,
+    ERR_CONFIG_ERROR,
+    ERR_SCAN_TIMEOUT,
+    ERR_SCAN_CANCELLED,
+    ERR_JOB_NOT_FOUND,
+    ERR_JOB_ALREADY_RUNNING,
+    ERR_JOB_LIMIT_REACHED,
+    ERR_UNSUPPORTED_OPERATION,
+    ERR_NOT_FOUND,
+    ERR_INVALID_STATE,
+    ERR_INTERNAL_ERROR,
+} ErrorCode;
+const char *error_code_name(ErrorCode code);
+bool        error_code_retryable(ErrorCode code);
+#endif

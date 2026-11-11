@@ -47,7 +47,8 @@ int LOGopenssl(int level);
 
 void LOG_add_level(int level);
 void LOG_set_json_errors(bool enabled);
-void LOG_set_json_error_code(const char *code);
+#include "error-code.h"
+void LOG_set_json_error(ErrorCode code);
 
 int LOG_get_level();
 

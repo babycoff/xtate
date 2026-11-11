@@ -893,7 +893,7 @@ int main(int argc, char *argv[]) {
         if (file) {
             request_mode = true;
             LOG_set_json_errors(true);
-            LOG_set_json_error_code("INVALID_ARGUMENT");
+            LOG_set_json_error(ERR_INVALID_ARGUMENT);
             int  rac = 0;
             char **rargv = NULL;
             if (scan_request_build_argv(file, &rac, &rargv) != 0)
@@ -908,13 +908,13 @@ int main(int argc, char *argv[]) {
     err = xconf_command_line(xconf, argc, argv);
     if (err) {
         if (request_mode)
-            LOG_set_json_error_code("INVALID_ARGUMENT");
+            LOG_set_json_error(ERR_INVALID_ARGUMENT);
         LOG(LEVEL_ERROR, "failed to parse cmdline parameters.\n");
         xcmd_try_reboot();
         exit(1);
     }
     if (request_mode)
-        LOG_set_json_error_code("INTERNAL_ERROR");
+        LOG_set_json_error(ERR_INTERNAL_ERROR);
 
     /* entropy for randomness */
     if (xconf->seed == 0)

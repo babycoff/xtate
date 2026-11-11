@@ -30,6 +30,18 @@
       "retryable": false
     },
     {
+      "code": "OUTPUT_WRITE_FAILED",
+      "retryable": false
+    },
+    {
+      "code": "IO_ERROR",
+      "retryable": true
+    },
+    {
+      "code": "CONFIG_ERROR",
+      "retryable": false
+    },
+    {
       "code": "SCAN_TIMEOUT",
       "retryable": true
     },
@@ -38,7 +50,27 @@
       "retryable": false
     },
     {
-      "code": "OUTPUT_WRITE_FAILED",
+      "code": "JOB_NOT_FOUND",
+      "retryable": false
+    },
+    {
+      "code": "JOB_ALREADY_RUNNING",
+      "retryable": true
+    },
+    {
+      "code": "JOB_LIMIT_REACHED",
+      "retryable": true
+    },
+    {
+      "code": "UNSUPPORTED_OPERATION",
+      "retryable": false
+    },
+    {
+      "code": "NOT_FOUND",
+      "retryable": false
+    },
+    {
+      "code": "INVALID_STATE",
       "retryable": false
     },
     {

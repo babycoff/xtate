@@ -24,6 +24,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 | DNS over HTTPS | [DNS over HTTPS](./dns-over-https.md) |
 | DNS over TLS | [DNS over TLS](./dns-over-tls.md) |
 | Input/output audit | [Input/output audit](./input-output-audit.md) |
+| Error codes | [Error codes](./error-codes.md) |
 | JSON contracts | [JSON contracts](./json-contracts.md) |
 | AI integration design | [AI integration design](./ai-integration.md) |
 | Linux firewall | [Linux firewall prerequisite](./firewall.md) |

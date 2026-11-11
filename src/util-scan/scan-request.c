@@ -5,13 +5,15 @@
 #include "../crypto/crypto-json.h"
 #include "../util-data/fine-malloc.h"
 #include "../util-out/logger.h"
+#include "../util-out/error-code.h"
 #include "../scan-modules/scan-modules.h"
 #include "../probe-modules/probe-modules.h"
 
-static void req_error(const char *code, const char *msg) {
+static void req_error(ErrorCode code, const char *msg) {
     char *esc = json_encode_string(msg ? msg : "");
     fprintf(stderr, "{\"error\":{\"code\":\"%s\",\"message\":%s,"
-                    "\"retryable\":false}}\n", code, esc ? esc : "\"\"");
+                    "\"retryable\":%s}}\n", error_code_name(code),
+            esc ? esc : "\"\"", error_code_retryable(code) ? "true" : "false");
     if (esc) free(esc);
 }
 
@@ -88,23 +90,23 @@ static char *args_string(JsonNode *obj) {
 int scan_request_build_argv(const char *filename, int *argc_out,
                             char ***argv_out) {
     FILE *fp = fopen(filename, "rb");
-    if (!fp) { req_error("INVALID_ARGUMENT", "cannot open scan request"); return -1; }
+    if (!fp) { req_error(ERR_IO_ERROR, "cannot open scan request"); return -1; }
     fseek(fp, 0, SEEK_END); long sz = ftell(fp); rewind(fp);
-    if (sz <= 0 || sz > 1024*1024) { fclose(fp); req_error("INVALID_ARGUMENT","bad request size"); return -1; }
+    if (sz <= 0 || sz > 1024*1024) { fclose(fp); req_error(ERR_INVALID_ARGUMENT,"bad request size"); return -1; }
     char *buf = MALLOC((size_t)sz + 1);
-    if (!buf || fread(buf,1,(size_t)sz,fp)!=(size_t)sz) { fclose(fp); FREE(buf); req_error("INVALID_ARGUMENT","read failed"); return -1; }
+    if (!buf || fread(buf,1,(size_t)sz,fp)!=(size_t)sz) { fclose(fp); FREE(buf); req_error(ERR_IO_ERROR,"read failed"); return -1; }
     fclose(fp); buf[sz]=0;
     JsonNode *root = json_decode(buf);
     FREE(buf);
-    if (!root || root->tag != JSON_OBJECT) { req_error("INVALID_JSON","request must be a JSON object"); if(root) json_delete(root); return -1; }
+    if (!root || root->tag != JSON_OBJECT) { req_error(ERR_INVALID_JSON,"request must be a JSON object"); if(root) json_delete(root); return -1; }
     for (JsonNode *n=root->children.head; n; n=n->next)
-        if (!allowed(n->key ? n->key : "")) { req_error("INVALID_ARGUMENT","unknown field"); json_delete(root); return -1; }
+        if (!allowed(n->key ? n->key : "")) { req_error(ERR_INVALID_ARGUMENT,"unknown field"); json_delete(root); return -1; }
     JsonNode *scan=json_find_member(root,"scan"), *targets=json_find_member(root,"targets");
     if (!scan || scan->tag!=JSON_STRING || !targets || targets->tag!=JSON_ARRAY || !targets->children.head) {
-        req_error("INVALID_ARGUMENT","scan and non-empty targets are required"); json_delete(root); return -1;
+        req_error(ERR_INVALID_ARGUMENT,"scan and non-empty targets are required"); json_delete(root); return -1;
     }
     if (!get_scan_module_by_name(scan->string_)) {
-        req_error("UNSUPPORTED_SCAN", "unknown scan module");
+        req_error(ERR_UNSUPPORTED_SCAN, "unknown scan module");
         json_delete(root);
         return -1;
     }
@@ -112,20 +114,20 @@ int scan_request_build_argv(const char *filename, int *argc_out,
     if (probe_check) {
         if (probe_check->tag != JSON_STRING ||
             !get_probe_module_by_name(probe_check->string_)) {
-            req_error("UNSUPPORTED_PROBE", "unknown probe module");
+            req_error(ERR_UNSUPPORTED_PROBE, "unknown probe module");
             json_delete(root);
             return -1;
         }
     }
-    char *ip=join_array(targets,false); if (!ip) { req_error("TARGET_INVALID","invalid targets"); json_delete(root); return -1; }
+    char *ip=join_array(targets,false); if (!ip) { req_error(ERR_TARGET_INVALID,"invalid targets"); json_delete(root); return -1; }
     char **argv = CALLOC(32, sizeof(char*)); int ac=0;
     argv[ac++] = STRDUP("xtate");
     argv[ac++] = STRDUP("-scan"); argv[ac++] = STRDUP(scan->string_);
     JsonNode *probe=json_find_member(root,"probe");
-    if (probe) { if(probe->tag!=JSON_STRING){req_error("INVALID_ARGUMENT","probe must be string");} argv[ac++]=STRDUP("-probe"); argv[ac++]=STRDUP(probe->string_); }
+    if (probe) { if(probe->tag!=JSON_STRING){req_error(ERR_INVALID_ARGUMENT,"probe must be string");} argv[ac++]=STRDUP("-probe"); argv[ac++]=STRDUP(probe->string_); }
     argv[ac++]=STRDUP("-ip"); argv[ac++]=ip;
     JsonNode *ports=json_find_member(root,"ports");
-    if (ports) { char *p=join_array(ports,true); if(!p){req_error("INVALID_ARGUMENT","invalid ports");} argv[ac++]=STRDUP("-p"); argv[ac++]=p; }
+    if (ports) { char *p=join_array(ports,true); if(!p){req_error(ERR_INVALID_ARGUMENT,"invalid ports");} argv[ac++]=STRDUP("-p"); argv[ac++]=p; }
     JsonNode *rate=json_find_member(root,"rate");
     if (rate && rate->tag==JSON_NUMBER) { char t[32]; snprintf(t,sizeof(t),"%d",(int)rate->number_); argv[ac++]=STRDUP("-rate"); argv[ac++]=STRDUP(t); }
     JsonNode *pa=json_find_member(root,"probe_args"); char *pas=args_string(pa);

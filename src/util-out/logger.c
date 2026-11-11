@@ -21,7 +21,7 @@
 
 static int   _debug_level = 0;
 static bool  _json_errors = false;
-static const char *_json_error_code = "INTERNAL_ERROR";
+static ErrorCode _json_error_code = ERR_INTERNAL_ERROR;
 static void *_log_mutex   = NULL;
 static bool  _no_ansi     = true; /*don't use ansi until setting*/
 
@@ -61,9 +61,7 @@ void LOG_init() {
  ***************************************************************************/
 void LOG_set_ansi(bool no_ansi) { _no_ansi = no_ansi; }
 void LOG_set_json_errors(bool enabled) { _json_errors = enabled; }
-void LOG_set_json_error_code(const char *code) {
-    _json_error_code = code ? code : "INTERNAL_ERROR";
-}
+void LOG_set_json_error(ErrorCode code) { _json_error_code = code; }
 
 /***************************************************************************
  ***************************************************************************/
@@ -101,7 +99,7 @@ static void _vLOG(int level, const char *fmt, va_list marker) {
             fprintf(stderr,
                     "{\"error\":{\"code\":\"%s\",\"message\":%s,"
                     "\"retryable\":false}}\n",
-                    _json_error_code, esc ? esc : "\"\"");
+                    error_code_name(_json_error_code), esc ? esc : "\"\"");
             if (esc) free(esc);
         } else {
             fputs(_level_to_string(level), stderr);
