@@ -34,8 +34,10 @@ after a schema revision; removing or renaming a field is a breaking change.
 ## Validation
 
 ```bash
-python3 -c "import json,glob; [json.load(open(f)) for f in glob.glob('schemas/*.json')]"
+python3 -m pip install jsonschema
+python3 tests/schema/validate_schemas.py
 ```
 
-The MCP server must validate both requests and generated result lines before
-returning them.
+The test checks schema metaschema validity, positive/negative fixtures, and a
+real NDJSON result line. The MCP server must validate both requests and
+generated result lines before returning them.

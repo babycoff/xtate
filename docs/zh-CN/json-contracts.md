@@ -31,7 +31,9 @@ Schema 随 Xtate 版本发布。新增字段必须先修订 schema；删除或�
 ## 校验
 
 ```bash
-python3 -c "import json,glob; [json.load(open(f)) for f in glob.glob('schemas/*.json')]"
+python3 -m pip install jsonschema
+python3 tests/schema/validate_schemas.py
 ```
 
-MCP server 必须在返回前校验请求和生成的结果行。
+测试覆盖 schema 元校验、正反例 fixture 和真实 NDJSON 结果。MCP server 必须在
+返回前校验请求和生成的结果行。

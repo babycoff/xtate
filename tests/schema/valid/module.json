@@ -1,0 +1,13 @@
+{
+  "name": "doh-h2",
+  "kind": "probe",
+  "short_description": "DoH over HTTP/2",
+  "probe_type": "state",
+  "parameters": [
+    {
+      "name": "dns-name",
+      "type": "arg",
+      "description": "DNS name"
+    }
+  ]
+}

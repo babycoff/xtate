@@ -1,0 +1,1 @@
+{"time":"2026-11-11T00:00:00Z","level":"success","ip_proto":"TCP","ip_them":"172.20.0.2","port_them":8080,"ip_me":"172.20.0.3","port_me":40000,"classification":"","reason":"","probe report":{"http_chunked":false,"http_content_length":910,"http_body_len":0,"http_header_count":4,"http_reason":"OK","http_minor_version":0,"http_status":200}}

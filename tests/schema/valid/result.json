@@ -1,0 +1,16 @@
+{
+  "time": "2026-11-11T00:00:00Z",
+  "level": "success",
+  "ip_proto": "TCP",
+  "ip_them": "203.0.113.10",
+  "port_them": 443,
+  "ip_me": "192.0.2.1",
+  "port_me": 40000,
+  "classification": "doh",
+  "reason": "NOERROR",
+  "probe report": {
+    "doh_status": 200,
+    "doh_rcode": 0,
+    "doh_answer": "1.2.3.4"
+  }
+}

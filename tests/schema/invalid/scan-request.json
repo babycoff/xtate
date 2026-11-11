@@ -1,0 +1,4 @@
+{
+  "scan": "tcp-state",
+  "targets": []
+}

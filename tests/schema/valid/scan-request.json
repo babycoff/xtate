@@ -1,0 +1,16 @@
+{
+  "scan": "tcp-state",
+  "probe": "doh-h2",
+  "targets": [
+    "203.0.113.10"
+  ],
+  "ports": [
+    443
+  ],
+  "probe_args": {
+    "dns_name": "example.com"
+  },
+  "rate": 100,
+  "timeout_sec": 30,
+  "dry_run": true
+}

@@ -1,0 +1,8 @@
+{
+  "time": "x",
+  "level": "success",
+  "ip_proto": "TCP",
+  "ip_them": "x",
+  "ip_me": "y",
+  "extra": 1
+}
