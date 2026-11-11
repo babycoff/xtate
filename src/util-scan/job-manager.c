@@ -262,7 +262,7 @@ void job_manager_prune(JobManager *m) {
     Job **pp = &m->head;
     while (*pp) {
         Job *j = *pp;
-        bool old = m->ttl_sec && job_is_terminal(j) &&
+        bool old = m->ttl_sec && job_is_terminal(j) && j->end_ms > 0 &&
                    now - j->end_ms >= (long long)m->ttl_sec * 1000;
         if (old || terminal > m->max_retained) {
             *pp = j->next;

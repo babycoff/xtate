@@ -5,7 +5,7 @@ ep = ("\\\\.\\pipe\\xtate-mcp-test-" + str(os.getpid())) if sys.platform == "win
 env = dict(os.environ, XTATE_CONTROL_TOKEN=TOKEN)
 ctlp = subprocess.Popen([BIN, "--control-plane=" + ep], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
-mp = subprocess.Popen([BIN, "--mcp", "--control-connect=" + ep], env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+mp = subprocess.Popen([BIN, "--mcp", "--control-connect=" + ep], env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, encoding="utf-8", text=True)
 def rpc(obj):
     mp.stdin.write(json.dumps(obj) + "\n"); mp.stdin.flush()
     line = mp.stdout.readline()
@@ -44,6 +44,40 @@ try:
     if rg > 1:
         mixed = rpc({"jsonrpc":"2.0","id":12,"method":"tools/call","params":{"name":"start_scan","arguments":{"scan":"tcp-syn","targets":["8.8.8.8","2001:4860:4860::8888"],"result_path":out,"authorized":True}}})
         assert mixed["result"]["isError"]
+    rr = rpc({"jsonrpc":"2.0","id":13,"method":"resources/read","params":{"uri":"xtate://docs/overview"}})
+    assert rr["result"]["contents"][0]["text"]
+    pr = rpc({"jsonrpc":"2.0","id":14,"method":"prompts/get","params":{"name":"plan-safe-scan"}})
+    assert pr["result"]["messages"]
+    badenv = dict(os.environ, XTATE_CONTROL_TOKEN="wrong-token")
+    mp_bad = subprocess.Popen([BIN, "--mcp", "--control-connect=" + ep], env=badenv,
+                              stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                              stderr=subprocess.DEVNULL, encoding="utf-8", text=True)
+    try:
+        mp_bad.stdin.write(json.dumps({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"job_list","arguments":{}}})+"\n")
+        mp_bad.stdin.flush()
+        bad = json.loads(mp_bad.stdout.readline())
+        assert "UNAUTHORIZED" in bad["result"]["content"][0]["text"]
+    finally:
+        mp_bad.terminate()
+    cj = rpc({"jsonrpc":"2.0","id":15,"method":"tools/call","params":{"name":"start_scan","arguments":{
+        "scan":"tcp-syn","targets":["127.0.0.1"],"ports":[1],
+        "result_path":out,"authorized":True}}})
+    cid = json.loads(cj["result"]["content"][0]["text"])["result"]["job_id"]
+    cc = rpc({"jsonrpc":"2.0","id":16,"method":"tools/call","params":{"name":"job_cancel","arguments":{"job_id":cid}}})
+    assert not cc["result"]["isError"]
+    out2 = os.path.join(tempfile.mkdtemp(), "mcp-chunk.ndjson")
+    cs = rpc({"jsonrpc":"2.0","id":17,"method":"tools/call","params":{"name":"start_scan","arguments":{
+        "scan":"tcp-syn","targets":["127.0.0.1"],"ports":[1],
+        "result_path":out2,"chunk_size":100,"index":True,"quota_bytes":100000,
+        "authorized":True}}})
+    assert not cs["result"]["isError"]
+    cid2 = json.loads(cs["result"]["content"][0]["text"])["result"]["job_id"]
+    time.sleep(1)
+    st2 = rpc({"jsonrpc":"2.0","id":18,"method":"tools/call","params":{"name":"job_status","arguments":{"job_id":cid2}}})
+    assert not st2["result"]["isError"]
     print("MCP server tests: PASS")
 finally:
     mp.terminate(); ctlp.terminate()
+
+
+
