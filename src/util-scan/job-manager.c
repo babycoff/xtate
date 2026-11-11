@@ -377,6 +377,14 @@ Job *job_start(JobManager *m, char *const argv[], const char *result_path,
     HANDLE err = CreateFileA(log_path ? log_path : "NUL",
                              GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
                              &sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (out == INVALID_HANDLE_VALUE) {
+        out = CreateFileA("NUL", GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                          &sa, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    }
+    if (err == INVALID_HANDLE_VALUE) {
+        err = CreateFileA("NUL", GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                          &sa, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    }
     if (out == INVALID_HANDLE_VALUE || err == INVALID_HANDLE_VALUE) {
         if (out != INVALID_HANDLE_VALUE) CloseHandle(out);
         if (err != INVALID_HANDLE_VALUE) CloseHandle(err);

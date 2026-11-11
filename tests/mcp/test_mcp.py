@@ -31,7 +31,7 @@ try:
     text = exp["result"]["content"][0]["text"]; assert '"route_groups"' in text and '"groups"' in text
     bad = rpc({"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"start_scan","arguments":{"scan":"tcp-syn","targets":["127.0.0.1"]}}})
     assert bad["result"]["isError"]
-    out = os.path.join(tempfile.mkdtemp(), "mcp.ndjson")
+    out = os.environ.get("XTATE_TEST_OUT", "mcp-test.ndjson")
     started = rpc({"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"start_scan","arguments":{"scan":"tcp-syn","targets":["127.0.0.1"],"ports":[1],"result_path":out,"authorized":True}}})
     assert not started["result"]["isError"], started
     job = json.loads(started["result"]["content"][0]["text"])["result"]["job_id"]
@@ -65,7 +65,7 @@ try:
     cid = json.loads(cj["result"]["content"][0]["text"])["result"]["job_id"]
     cc = rpc({"jsonrpc":"2.0","id":16,"method":"tools/call","params":{"name":"job_cancel","arguments":{"job_id":cid}}})
     assert not cc["result"]["isError"]
-    out2 = os.path.join(tempfile.mkdtemp(), "mcp-chunk.ndjson")
+    out2 = os.environ.get("XTATE_TEST_CHUNK", "mcp-chunk.ndjson")
     cs = rpc({"jsonrpc":"2.0","id":17,"method":"tools/call","params":{"name":"start_scan","arguments":{
         "scan":"tcp-syn","targets":["8.8.8.8"],"ports":[53],
         "result_path":out2,"chunk_size":100,"index":True,"quota_bytes":100000,

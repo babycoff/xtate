@@ -170,6 +170,20 @@ static bool extract_object(const char *line, const char *key, char *out,
     return depth == 0 && n > 1;
 }
 
+static void json_unescape_inplace(char *s) {
+    char *w = s;
+    for (const char *r = s; *r; r++) {
+        if (*r == '\\' && r[1]) {
+            r++;
+            if (*r == 'n') *w++ = '\n';
+            else if (*r == 'r') *w++ = '\r';
+            else if (*r == 't') *w++ = '\t';
+            else *w++ = *r;
+        } else *w++ = *r;
+    }
+    *w = 0;
+}
+
 static void handle(JobManager *m, const char *line, ControlResponse *out) {
     char id[32] = "null";
     const char *p = strstr(line, "\"id\":");
@@ -215,6 +229,7 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
         if (!field_str(line, "result_path", res, sizeof(res))) {
             snprintf(res, sizeof(res), "xtate-job-%lld.ndjson", (long long)time(NULL));
         }
+        json_unescape_inplace(res);
 #ifdef _WIN32
         char exe[MAX_PATH];
         GetModuleFileNameA(NULL, exe, sizeof(exe));
@@ -232,6 +247,8 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
                             (unsigned long long)quota);
         char iface[256] = {0};
         bool has_iface = field_str(line, "interface", iface, sizeof(iface)) != NULL;
+        if (has_iface) json_unescape_inplace(iface);
+
         char *argv[20];
         int ac = 0;
         argv[ac++] = exe; argv[ac++] = "--scan-request"; argv[ac++] = req;
@@ -244,7 +261,9 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
         if (has_iface) { argv[ac++] = "-if"; argv[ac++] = iface; }
         argv[ac] = NULL;
         job_manager_lock(m);
-        Job *j = job_start(m, argv, res, NULL, 0);
+        char logpath[1100];
+        snprintf(logpath, sizeof(logpath), "%s.log", res);
+        Job *j = job_start(m, argv, res, logpath, 0);
         if (j) {
             job_set_heartbeat(j, hb, 30);
             job_set_result_config(j, (uint64_t)field_int(line, "chunk_size", 0),

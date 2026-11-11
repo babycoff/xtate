@@ -430,9 +430,11 @@ static void tool_call(const char *id, const char *name, const char *args,
     char iface[256] = {0};
     if (strcmp(name, "start_scan") == 0) {
         char targets[4096] = {0}; size_t off = 0;
-        JsonNode *root = json_decode(args ? args : "{}");
-        JsonNode *cfg = root ? json_find_member(root, "arguments") : NULL;
-        JsonNode *ta = cfg ? json_find_member(cfg, "targets") : NULL;
+        char argsobj[7168];
+        JsonNode *root = NULL;
+        if (extract_object(args ? args : "", "arguments", argsobj, sizeof(argsobj)))
+            root = json_decode(argsobj);
+        JsonNode *ta = root ? json_find_member(root, "targets") : NULL;
         for (JsonNode *t = ta ? ta->children.head : NULL; t; t = t->next) {
             if (t->tag != JSON_STRING) continue;
             if (off + strlen(t->string_) + 2 >= sizeof(targets)) break;
