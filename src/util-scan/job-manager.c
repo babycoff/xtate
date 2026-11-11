@@ -319,6 +319,17 @@ unsigned job_elapsed_ms(const Job *j) {
     return (unsigned)(end - j->start_ms);
 }
 
+#ifdef _WIN32
+static HANDLE create_file_utf8(const char *path, DWORD access, DWORD share,
+                               DWORD creation, DWORD flags) {
+    if (!path || !path[0]) return INVALID_HANDLE_VALUE;
+    wchar_t wpath[2048];
+    int n = MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath,
+                                (int)(sizeof(wpath) / sizeof(wpath[0])));
+    if (n <= 0) return INVALID_HANDLE_VALUE;
+    return CreateFileW(wpath, access, share, NULL, creation, flags, NULL);
+}
+#endif
 static Job *new_job(JobManager *m, const char *result_path,
                     const char *log_path, unsigned timeout_sec) {
     Job *j = calloc(1, sizeof(*j));
@@ -371,12 +382,13 @@ Job *job_start(JobManager *m, char *const argv[], const char *result_path,
     if (!j) return NULL;
 
     SECURITY_ATTRIBUTES sa = {sizeof(sa), NULL, TRUE};
-    HANDLE out = CreateFileA(result_path ? result_path : "NUL",
-                             GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                             &sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    HANDLE err = CreateFileA(log_path ? log_path : "NUL",
-                             GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                             &sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    HANDLE out = create_file_utf8(result_path, GENERIC_WRITE,
+                                  FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                  CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL);
+    HANDLE err = create_file_utf8(log_path, GENERIC_WRITE,
+                                  FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                  CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL);
+    (void)sa;
     if (out == INVALID_HANDLE_VALUE) {
         out = CreateFileA("NUL", GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
                           &sa, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -400,7 +412,7 @@ Job *job_start(JobManager *m, char *const argv[], const char *result_path,
         append_quoted(&cmd, &len, &cap, argv[i]);
     }
 
-    STARTUPINFOA si;
+    STARTUPINFOW si;
     ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);
     si.dwFlags = STARTF_USESTDHANDLES;
@@ -417,9 +429,14 @@ Job *job_start(JobManager *m, char *const argv[], const char *result_path,
                                 &li, sizeof(li));
     }
 
-    BOOL ok = CreateProcessA(NULL, cmd, NULL, NULL, TRUE,
+    wchar_t wcmd[8192];
+    int cn = MultiByteToWideChar(CP_UTF8, 0, cmd, -1, wcmd,
+                        (int)(sizeof(wcmd) / sizeof(wcmd[0])));
+    BOOL ok = CreateProcessW(NULL, wcmd, NULL, NULL, TRUE,
                              CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP, NULL,
                              NULL, &si, &j->pi);
+    if (!ok) fprintf(stderr, "CreateProcessW failed cn=%d gle=%lu cmd=%s\n",
+                     cn, (unsigned long)GetLastError(), cmd);
     CloseHandle(out); CloseHandle(err); free(cmd);
     if (!ok) {
         j->state = JOB_FAILED;

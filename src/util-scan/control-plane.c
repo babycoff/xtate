@@ -178,6 +178,27 @@ static void json_unescape_inplace(char *s) {
             if (*r == 'n') *w++ = '\n';
             else if (*r == 'r') *w++ = '\r';
             else if (*r == 't') *w++ = '\t';
+            else if (*r == 'u' && r[1] && r[2] && r[3] && r[4]) {
+                unsigned cp = 0;
+                for (int i = 0; i < 4; i++) {
+                    char c = r[1 + i];
+                    cp <<= 4;
+                    if (c >= '0' && c <= '9') cp |= (unsigned)(c - '0');
+                    else if (c >= 'a' && c <= 'f') cp |= (unsigned)(c - 'a' + 10);
+                    else if (c >= 'A' && c <= 'F') cp |= (unsigned)(c - 'A' + 10);
+                    else { cp = 0; break; }
+                }
+                r += 4;
+                if (cp < 0x80) *w++ = (char)cp;
+                else if (cp < 0x800) {
+                    *w++ = (char)(0xC0 | (cp >> 6));
+                    *w++ = (char)(0x80 | (cp & 0x3F));
+                } else {
+                    *w++ = (char)(0xE0 | (cp >> 12));
+                    *w++ = (char)(0x80 | ((cp >> 6) & 0x3F));
+                    *w++ = (char)(0x80 | (cp & 0x3F));
+                }
+            }
             else *w++ = *r;
         } else *w++ = *r;
     }
@@ -231,8 +252,11 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
         }
         json_unescape_inplace(res);
 #ifdef _WIN32
-        char exe[MAX_PATH];
-        GetModuleFileNameA(NULL, exe, sizeof(exe));
+        char exe[MAX_PATH * 4];
+        wchar_t wexe[MAX_PATH];
+        DWORD wn = GetModuleFileNameW(NULL, wexe, MAX_PATH);
+        if (wn == 0) { send_json(out, id, NULL, "INTERNAL_ERROR", "cannot find executable"); return; }
+        WideCharToMultiByte(CP_UTF8, 0, wexe, -1, exe, sizeof(exe), NULL, NULL);
 #else
         char exe[512];
         ssize_t el = readlink("/proc/self/exe", exe, sizeof(exe) - 1);
