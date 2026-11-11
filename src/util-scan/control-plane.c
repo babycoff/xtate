@@ -1,5 +1,7 @@
 #include "control-plane.h"
 #include "job-manager.h"
+#include "result-store.h"
+#include "../util-out/logger.h"
 #include "../crypto/crypto-json.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,6 +50,11 @@ static const char *field_str(const char *s, const char *key, char *out,
     return out;
 }
 
+static const char *field_str2(const char *s, const char *key) {
+    static char buf[64];
+    return field_str(s, key, buf, sizeof(buf));
+}
+
 static int64_t field_int(const char *s, const char *key, int64_t def) {
     char pat[64];
     snprintf(pat, sizeof(pat), "\"%s\":", key);
@@ -91,6 +98,23 @@ static void send_json(ControlResponse *out, const char *id, const char *result,
     }
 }
 
+static void finalize_job(Job *j) {
+    if (!j || !job_is_terminal(j) || job_result_finalized(j)) return;
+    const char *result = job_result_path(j);
+    uint64_t quota = job_result_quota(j);
+    if (result && quota && job_result_bytes(j) > quota) {
+        LOG(LEVEL_WARN, "job %s result %llu exceeds quota %llu; chunks will be incomplete\n",
+            job_id(j), (unsigned long long)job_result_bytes(j),
+            (unsigned long long)quota);
+    }
+    if (result && job_result_chunk_bytes(j)) {
+        result_store_build(result, job_result_chunk_bytes(j),
+                           job_result_index_enabled(j),
+                           job_result_compression(j));
+    }
+    job_mark_result_finalized(j);
+}
+
 static void handle(JobManager *m, const char *line, ControlResponse *out) {
     char id[32] = "null";
     const char *p = strstr(line, "\"id\":");
@@ -102,6 +126,7 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
         }
         id[n] = 0;
     }
+    job_manager_prune(m);
     if (!token_ok(line)) {
         send_json(out, id, NULL, "UNAUTHORIZED", "invalid or missing token");
         return;
@@ -133,7 +158,13 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
                         "--no-status", hbarg, NULL};
         job_manager_lock(m);
         Job *j = job_start(m, argv, res, NULL, 0);
-        if (j) job_set_heartbeat(j, hb, 30);
+        if (j) {
+            job_set_heartbeat(j, hb, 30);
+            job_set_result_config(j, (uint64_t)field_int(line, "chunk_size", 0),
+                                  strstr(line, "\"index\":true") != NULL,
+                                  field_str2(line, "compression"),
+                                  (uint64_t)field_int(line, "quota_bytes", 0));
+        }
         job_manager_unlock(m);
         if (!j) { send_json(out, id, NULL, "JOB_LIMIT_REACHED", "too many jobs"); return; }
         char r[128]; snprintf(r, sizeof(r), "{\"job_id\":\"%s\"}", job_id(j));
@@ -156,6 +187,7 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
             if ((int64_t)idx < offset) continue;
             if ((int64_t)emitted >= limit) break;
             job_poll(j);
+            finalize_job(j);
             off += (size_t)snprintf(buf + off, sizeof(buf) - off,
                 "%s{\"job_id\":\"%s\",\"state\":\"%s\",\"result\":\"%s\"}",
                 first ? "" : ",", job_id(j), job_state_string(job_state(j)),
@@ -184,6 +216,7 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
     Job *j = job_find(m, jidbuf);
     if (!j) { job_manager_unlock(m); send_json(out, id, NULL, "JOB_NOT_FOUND", "unknown job"); return; }
     job_poll(j);
+    finalize_job(j);
     if (strstr(line, "\"job.cancel\"")) {
         bool ok = job_cancel(j);
         job_manager_unlock(m);

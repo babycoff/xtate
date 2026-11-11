@@ -68,3 +68,9 @@ Windows: `\\.\pipe\xtate-control`
 
 `-DWITH_ZSTD=ON` 启用 zstd 检测。缺少 zstd 时定义 `NOT_FOUND_ZSTD`；
 `--result-compress=zstd` 会退化为未压缩分片。压缩默认关闭。
+
+## 每 job 结果配置
+
+`job.start` 支持 `chunk_size`、`compression`、`index`、`quota_bytes`。
+完成的 job 在下一次控制请求时自动完成分片和 manifest。`quota_bytes` 在完成后
+检查并输出警告；扫描过程中的强制配额仍是后续工作。

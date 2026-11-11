@@ -70,3 +70,10 @@ the manifest path; control messages never carry result bytes.
 `-DWITH_ZSTD=ON` enables zstd detection. If zstd is missing, the build defines
 `NOT_FOUND_ZSTD`; `--result-compress=zstd` then falls back to uncompressed
 chunks. Compression is opt-in; default is `none`.
+
+## Per-job result config
+
+`job.start` accepts `chunk_size`, `compression`, `index`, `quota_bytes`.
+Completed jobs are finalized on the next control request: chunks and manifest
+are written automatically. `quota_bytes` is checked after completion and
+reported as a warning; enforcement during scanning is future work.

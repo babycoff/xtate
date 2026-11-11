@@ -39,6 +39,11 @@ struct Job {
     unsigned long long last_sent;
     unsigned long long last_targets;
     char     *heartbeat_path;
+    uint64_t  result_chunk_bytes;
+    uint64_t  result_quota_bytes;
+    char     *result_compression;
+    bool      result_index;
+    bool      result_finalized;
     unsigned  exit_code;
     long long start_ms;
     long long end_ms;
@@ -97,6 +102,22 @@ void job_set_stall_timeout(Job *job, unsigned seconds) {
     if (job) job->stall_timeout_sec = seconds;
 }
 
+void job_set_result_config(Job *job, uint64_t chunk_bytes, bool index,
+                           const char *compression, uint64_t quota_bytes) {
+    if (!job) return;
+    free(job->result_compression);
+    job->result_chunk_bytes = chunk_bytes;
+    job->result_index = index;
+    job->result_quota_bytes = quota_bytes;
+    job->result_compression = compression ? dupstr(compression) : NULL;
+}
+uint64_t job_result_chunk_bytes(const Job *job) { return job ? job->result_chunk_bytes : 0; }
+bool job_result_index_enabled(const Job *job) { return job ? job->result_index : false; }
+const char *job_result_compression(const Job *job) { return job ? job->result_compression : NULL; }
+uint64_t job_result_quota(const Job *job) { return job ? job->result_quota_bytes : 0; }
+bool job_result_finalized(const Job *job) { return job ? job->result_finalized : false; }
+void job_mark_result_finalized(Job *job) { if (job) job->result_finalized = true; }
+
 void job_set_heartbeat(Job *job, const char *path, unsigned timeout_sec) {
     if (!job) return;
     free(job->heartbeat_path);
@@ -145,6 +166,7 @@ static void job_free(Job *j) {
     free(j->result_path);
     free(j->log_path);
     free(j->heartbeat_path);
+    free(j->result_compression);
     free(j);
 }
 

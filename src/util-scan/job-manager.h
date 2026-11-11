@@ -29,6 +29,14 @@ JobState job_poll(Job *job);
 bool     job_cancel(Job *job);
 void     job_set_stall_timeout(Job *job, unsigned seconds);
 void     job_set_heartbeat(Job *job, const char *path, unsigned timeout_sec);
+void     job_set_result_config(Job *job, uint64_t chunk_bytes, bool index,
+                               const char *compression, uint64_t quota_bytes);
+uint64_t job_result_chunk_bytes(const Job *job);
+bool     job_result_index_enabled(const Job *job);
+const char *job_result_compression(const Job *job);
+uint64_t job_result_quota(const Job *job);
+bool     job_result_finalized(const Job *job);
+void     job_mark_result_finalized(Job *job);
 bool     job_wait(Job *job, unsigned timeout_ms);
 
 const char *job_id(const Job *job);

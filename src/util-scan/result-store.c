@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include "../util-out/logger.h"
 #ifndef NOT_FOUND_ZSTD
 #include <zstd.h>
 #endif
@@ -33,9 +34,22 @@ static int compress_file(const char *path, uint64_t *size) {
 }
 #endif
 
+bool result_store_zstd_available(void) {
+#ifdef NOT_FOUND_ZSTD
+    return false;
+#else
+    return true;
+#endif
+}
+
 int result_store_build(const char *result_path, uint64_t chunk_bytes,
                        bool build_index, const char *compression) {
     if (!result_path || chunk_bytes == 0) return 0;
+    bool use_zstd = compression && strcmp(compression, "zstd") == 0;
+    if (use_zstd && !result_store_zstd_available()) {
+        LOG(LEVEL_WARN, "zstd is not built; writing uncompressed chunks\n");
+        use_zstd = false;
+    }
     FILE *in = fopen(result_path, "rb");
     if (!in) return -1;
     char manifest[1200], index[1200];
@@ -45,7 +59,7 @@ int result_store_build(const char *result_path, uint64_t chunk_bytes,
     FILE *ix = build_index ? fopen(index, "w") : NULL;
     if (!mf) { fclose(in); return -1; }
     fprintf(mf, "{\"format\":\"ndjson\",\"compression\":\"%s\","
-                "\"chunks\":[", compression ? compression : "none");
+                "\"chunks\":[", use_zstd ? "zstd" : "none");
     if (ix) fprintf(ix, "{\"chunks\":[");
     char line[65536];
     uint64_t cid = 0, total = 0, records = 0;
@@ -59,7 +73,7 @@ int result_store_build(const char *result_path, uint64_t chunk_bytes,
             if (out) {
                 fclose(out);
 #ifndef NOT_FOUND_ZSTD
-                if (compression && strcmp(compression, "zstd") == 0)
+                if (use_zstd)
                     compress_file(cpath, &cbytes);
 #endif
                 fprintf(mf, "%s{\"id\":%llu,\"path\":\"%s\","
@@ -86,7 +100,7 @@ int result_store_build(const char *result_path, uint64_t chunk_bytes,
     if (out) {
         fclose(out);
 #ifndef NOT_FOUND_ZSTD
-            if (compression && strcmp(compression, "zstd") == 0)
+            if (use_zstd)
                 compress_file(cpath, &cbytes);
 #endif
             if (ix) fprintf(ix, "%s{\"id\":%llu,\"path\":\"%s\","
