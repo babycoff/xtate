@@ -221,6 +221,7 @@ typedef struct XtateConf {
      * */
     enum Operation   op;
     ipaddress        diag_target;
+    char            *diag_targets;
     uint64_t         seed;
     uint64_t         repeat;
     double           max_rate;

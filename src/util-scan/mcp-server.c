@@ -213,7 +213,7 @@ static bool safe_target(const char *t) {
     for (const char *p = t; *p; p++)
         if (!((*p >= '0' && *p <= '9') || (*p >= 'a' && *p <= 'f') ||
               (*p >= 'A' && *p <= 'F') || *p == '.' || *p == ':' ||
-              *p == '/' || *p == '-')) return false;
+              *p == '/' || *p == '-' || *p == ',')) return false;
     return true;
 }
 

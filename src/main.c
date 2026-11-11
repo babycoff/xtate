@@ -35,6 +35,7 @@
 #include "util-scan/control-client.h"
 #include "util-scan/result-store.h"
 #include "util-scan/mcp-server.h"
+#include "util-scan/explain-target.h"
 #include <sys/stat.h>
 
 static bool request_mode = false;
@@ -1220,11 +1221,12 @@ int main(int argc, char *argv[]) {
             break;
 
         case Op_ExplainTarget:
-            rawsock_diag_target(xconf->diag_target, false, xconf->nic.ifname);
+            explain_targets(xconf->diag_targets, false, xconf->nic.ifname);
             break;
 
         case Op_CheckNetwork:
-            rawsock_diag_target(xconf->diag_target, true, xconf->nic.ifname);
+            explain_targets(xconf->diag_targets ? xconf->diag_targets : "8.8.8.8",
+                            true, xconf->nic.ifname);
             break;
 
         case Op_ListScanModules:

@@ -77,3 +77,10 @@ chunks. Compression is opt-in; default is `none`.
 Completed jobs are finalized on the next control request: chunks and manifest
 are written automatically. `quota_bytes` is checked after completion and
 reported as a warning; enforcement during scanning is future work.
+
+## Batch explain
+
+`--explain-target` accepts a target set (CIDR, ranges, comma list). Output is
+grouped by interface/source/gateway with target counts and a warning when the
+set spans multiple routes. `check` uses the same grouping. MCP `explain_target`
+accepts the same target-set string.
