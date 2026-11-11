@@ -165,6 +165,22 @@ void job_manager_unlock(JobManager *m) {
 #endif
 }
 
+static bool read_heartbeat(Job *j, long long *sent, long long *targets,
+                           long long *stamp, char *phase, size_t phase_len);
+
+bool job_heartbeat_info(Job *job, char *phase, size_t phase_cap,
+                        uint64_t *sent, uint64_t *targets,
+                        uint64_t *age_ms) {
+    long long s = 0, t = 0, stamp = 0;
+    char ph[32] = "unknown";
+    if (!read_heartbeat(job, &s, &t, &stamp, ph, sizeof(ph))) return false;
+    if (phase && phase_cap) snprintf(phase, phase_cap, "%s", ph);
+    if (sent) *sent = (uint64_t)s;
+    if (targets) *targets = (uint64_t)t;
+    if (age_ms) *age_ms = stamp ? (uint64_t)((long long)time(NULL) - stamp) * 1000 : 0;
+    return true;
+}
+
 uint64_t job_result_bytes(Job *job) {
     if (!job || !job->result_path) return 0;
 #ifdef _WIN32

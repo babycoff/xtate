@@ -171,12 +171,20 @@ static void handle(JobManager *m, const char *line, FILE *out) {
         return;
     }
 
-    char res[512];
+    char phase[32] = "unknown";
+    uint64_t sent = 0, targets = 0, hb_age = 0;
+    bool hb = job_heartbeat_info(j, phase, sizeof(phase), &sent, &targets, &hb_age);
+    char res[768];
     snprintf(res, sizeof(res),
-             "{\"job_id\":\"%s\",\"state\":\"%s\",\"exit_code\":%u,"
+             "{\"job_id\":\"%s\",\"state\":\"%s\",\"phase\":\"%s\","
+             "\"sent\":%llu,\"targets\":%llu,\"heartbeat_age_ms\":%llu,"
+             "\"heartbeat\":%s,\"exit_code\":%u,"
              "\"result\":\"%s\",\"elapsed_ms\":%u}",
-             job_id(j), job_state_string(job_state(j)), job_exit_code(j),
-             job_result_path(j) ? job_result_path(j) : "", job_elapsed_ms(j));
+             job_id(j), job_state_string(job_state(j)), phase,
+             (unsigned long long)sent, (unsigned long long)targets,
+             (unsigned long long)hb_age, hb ? "true" : "false",
+             job_exit_code(j), job_result_path(j) ? job_result_path(j) : "",
+             job_elapsed_ms(j));
     job_manager_unlock(m);
     send_json(out, id, res, NULL, NULL);
 }
