@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -21,8 +22,13 @@ struct Job {
     JobState  state;
     unsigned  timeout_sec;
     unsigned  stall_timeout_sec;
+    unsigned  heartbeat_timeout_sec;
     long long last_progress_ms;
+    long long last_heartbeat_ms;
     long long last_size;
+    unsigned long long last_sent;
+    unsigned long long last_targets;
+    char     *heartbeat_path;
     unsigned  exit_code;
     long long start_ms;
     long long end_ms;
@@ -74,6 +80,13 @@ void job_set_stall_timeout(Job *job, unsigned seconds) {
     if (job) job->stall_timeout_sec = seconds;
 }
 
+void job_set_heartbeat(Job *job, const char *path, unsigned timeout_sec) {
+    if (!job) return;
+    free(job->heartbeat_path);
+    job->heartbeat_path = path ? dupstr(path) : NULL;
+    job->heartbeat_timeout_sec = timeout_sec;
+}
+
 static long long now_ms(void) {
 #ifdef _WIN32
     return (long long)GetTickCount64();
@@ -105,6 +118,7 @@ static void job_free(Job *j) {
     close_handles(j);
     free(j->result_path);
     free(j->log_path);
+    free(j->heartbeat_path);
     free(j);
 }
 
@@ -153,8 +167,15 @@ static Job *new_job(JobManager *m, const char *result_path,
     snprintf(j->id, sizeof(j->id), "job-%u", ++m->seq);
     j->state = JOB_QUEUED;
     j->timeout_sec = timeout_sec;
+    j->heartbeat_timeout_sec = 30;
     j->result_path = result_path ? dupstr(result_path) : NULL;
     j->log_path = log_path ? dupstr(log_path) : NULL;
+    if (result_path) {
+        size_t n = strlen(result_path) + 16;
+        j->heartbeat_path = malloc(n);
+        if (j->heartbeat_path)
+            snprintf(j->heartbeat_path, n, "%s.heartbeat", result_path);
+    }
     j->next = m->head;
     m->head = j;
     return j;
@@ -240,6 +261,7 @@ Job *job_start(JobManager *m, char *const argv[], const char *result_path,
     j->state = JOB_RUNNING;
     j->start_ms = now_ms();
     j->last_progress_ms = j->start_ms;
+    j->last_heartbeat_ms = j->start_ms;
     j->last_progress_ms = j->start_ms;
     return j;
 }
@@ -285,6 +307,7 @@ Job *job_start(JobManager *m, char *const argv[], const char *result_path,
     j->state = JOB_RUNNING;
     j->start_ms = now_ms();
     j->last_progress_ms = j->start_ms;
+    j->last_heartbeat_ms = j->start_ms;
     j->last_progress_ms = j->start_ms;
     return j;
 }
@@ -299,34 +322,51 @@ static void terminate_job(Job *j) {
 #endif
 }
 
-static long long result_size(const Job *j) {
-#ifdef _WIN32
-    WIN32_FILE_ATTRIBUTE_DATA fa;
-    if (j->result_path &&
-        GetFileAttributesExA(j->result_path, GetFileExInfoStandard, &fa))
-        return ((long long)fa.nFileSizeHigh << 32) | fa.nFileSizeLow;
-#else
-    struct stat st;
-    if (j->result_path && stat(j->result_path, &st) == 0)
-        return (long long)st.st_size;
-#endif
-    return 0;
+static bool read_heartbeat(Job *j, long long *sent, long long *targets,
+                           long long *stamp) {
+    if (!j->heartbeat_path) return false;
+    FILE *fp = fopen(j->heartbeat_path, "r");
+    if (!fp) return false;
+    char line[256];
+    *stamp = 0;
+    while (fgets(line, sizeof(line), fp)) {
+        long long v;
+        if (sscanf(line, "sent=%lld", &v) == 1) *sent = v;
+        else if (sscanf(line, "targets=%lld", &v) == 1) *targets = v;
+        else if (sscanf(line, "time=%lld", &v) == 1) *stamp = v;
+    }
+    fclose(fp);
+    return *stamp > 0;
 }
 
 JobState job_poll(Job *j) {
     if (!j || job_is_terminal(j)) return j ? j->state : JOB_FAILED;
     if (j->state != JOB_RUNNING) return j->state;
 
-    long long size = result_size(j);
-    if (size != j->last_size) {
-        j->last_size = size;
-        j->last_progress_ms = now_ms();
+    long long sent = 0, targets = 0, stamp = 0;
+    bool hb = read_heartbeat(j, &sent, &targets, &stamp);
+    if (hb && time(NULL) - stamp <= 2) {
+        j->last_heartbeat_ms = now_ms();
+        if (sent != (long long)j->last_sent ||
+            targets != (long long)j->last_targets) {
+            j->last_sent = (unsigned long long)sent;
+            j->last_targets = (unsigned long long)targets;
+            j->last_progress_ms = now_ms();
+        }
     }
-    if (!j->cancel_requested && j->stall_timeout_sec &&
-        now_ms() - j->last_progress_ms >= (long long)j->stall_timeout_sec * 1000) {
+    long long now = now_ms();
+    if (!j->cancel_requested && j->heartbeat_timeout_sec &&
+        now - j->last_heartbeat_ms >= (long long)j->heartbeat_timeout_sec * 1000) {
         terminate_job(j);
         j->state = JOB_STALLED;
-        j->end_ms = now_ms();
+        j->end_ms = now;
+        return j->state;
+    }
+    if (!j->cancel_requested && j->stall_timeout_sec &&
+        now - j->last_progress_ms >= (long long)j->stall_timeout_sec * 1000) {
+        terminate_job(j);
+        j->state = JOB_STALLED;
+        j->end_ms = now;
         return j->state;
     }
     if (!j->cancel_requested && j->timeout_sec &&

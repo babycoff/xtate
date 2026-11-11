@@ -74,3 +74,22 @@ XTATE_BIN=bin/xtate bash tests/job/test_cli.sh
 ```
 
 Covers a completed job, a result file, and a `timed_out` job.
+
+## Heartbeat and stall detection
+
+The worker writes `<result>.heartbeat` while the status loop runs:
+
+```text
+time=...
+sent=...
+targets=...
+success=...
+failed=...
+info=...
+```
+
+The manager treats a stale heartbeat as a wedged worker. Scan progress is
+`packets_sent`/`targets_done` movement, not result-file growth; a scan with no
+live targets can still be healthy. Result-file growth is only auxiliary.
+`--job-heartbeat-timeout` defaults to 30 seconds; `--job-stall-timeout` tracks
+no progress while the heartbeat stays alive.

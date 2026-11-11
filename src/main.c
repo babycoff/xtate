@@ -637,6 +637,19 @@ static int _main_scan(XConf *xconf) {
         status_item.max_count     = scan_range;
         status_item.print_in_json = xconf->is_status_ndjson;
 
+        if (xconf->job_heartbeat_file) {
+            FILE *hb = fopen(xconf->job_heartbeat_file, "w");
+            if (hb) {
+                fprintf(hb, "time=%lld\nsent=%" PRIu64 "\ntargets=%" PRIu64
+                            "\nsuccess=%" PRIu64 "\nfailed=%" PRIu64
+                            "\ninfo=%" PRIu64 "\n",
+                        (long long)time(NULL), status_item.total_sent,
+                        status_item.cur_count, status_item.total_successed,
+                        status_item.total_failed, status_item.total_info);
+                fclose(hb);
+            }
+        }
+
         if (!xconf->is_no_status)
             xtatus_print(&status, &status_item);
 
@@ -737,6 +750,19 @@ static int _main_scan(XConf *xconf) {
             pixie_locked_fetch_u64(&xconf->out_conf.total_info);
         status_item.max_count     = scan_range;
         status_item.print_in_json = xconf->is_status_ndjson;
+
+        if (xconf->job_heartbeat_file) {
+            FILE *hb = fopen(xconf->job_heartbeat_file, "w");
+            if (hb) {
+                fprintf(hb, "time=%lld\nsent=%" PRIu64 "\ntargets=%" PRIu64
+                            "\nsuccess=%" PRIu64 "\nfailed=%" PRIu64
+                            "\ninfo=%" PRIu64 "\n",
+                        (long long)time(NULL), status_item.total_sent,
+                        status_item.cur_count, status_item.total_successed,
+                        status_item.total_failed, status_item.total_info);
+                fclose(hb);
+            }
+        }
         status_item.exiting_secs  = xconf->wait - (time(0) - now);
 
         if (!xconf->is_no_status)
@@ -871,6 +897,9 @@ static int run_job_cli(XConf *xconf, const char *exe) {
     argv[ac++] = "--show"; argv[ac++] = "all";
     argv[ac++] = "--wait"; argv[ac++] = "1";
     argv[ac++] = "--no-status";
+    char heartbeat[1200];
+    snprintf(heartbeat, sizeof(heartbeat), "--job-heartbeat=%s.heartbeat", result);
+    argv[ac++] = heartbeat;
     if (xconf->nic.ifname[0]) {
         argv[ac++] = "-if";
         argv[ac++] = xconf->nic.ifname;
@@ -882,6 +911,11 @@ static int run_job_cli(XConf *xconf, const char *exe) {
     if (!timeout) timeout = scan_request_timeout(xconf->job_run_file);
     Job *job = job_start(m, argv, result, log, timeout);
     job_set_stall_timeout(job, xconf->job_stall_timeout);
+    char hbpath[1200];
+    snprintf(hbpath, sizeof(hbpath), "%s.heartbeat", result);
+    job_set_heartbeat(job, hbpath,
+                      xconf->job_heartbeat_timeout ? xconf->job_heartbeat_timeout
+                                                   : 30);
     if (!job) {
         printf("{\"error\":{\"code\":\"JOB_LIMIT_REACHED\"}}\n");
         job_manager_destroy(m);

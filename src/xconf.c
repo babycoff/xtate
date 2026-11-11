@@ -877,6 +877,21 @@ static ConfRes SET_job_result(void *conf, const char *name, const char *value) {
     xconf->job_result_file = STRDUP(value);
     return Conf_OK;
 }
+static ConfRes SET_job_heartbeat_timeout(void *conf, const char *name,
+                                         const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    xconf->job_heartbeat_timeout = (unsigned)conf_parse_int(value);
+    return Conf_OK;
+}
+static ConfRes SET_job_heartbeat_file(void *conf, const char *name,
+                                      const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    if (!value) return Conf_ERR;
+    xconf->job_heartbeat_file = STRDUP(value);
+    return Conf_OK;
+}
 static ConfRes SET_job_stall_timeout(void *conf, const char *name,
                                      const char *value) {
     XConf *xconf = (XConf *)conf;
@@ -3327,6 +3342,18 @@ ConfParam config_parameters[] = {
      {0},
      "Result file for --job-run (default: <request>.ndjson).",
      "Job result file."},
+    {"job-heartbeat-timeout",
+     SET_job_heartbeat_timeout,
+     Type_ARG,
+     {0},
+     "Fail a job when its worker heartbeat is older than this many seconds (default 30).",
+     "Heartbeat timeout."},
+    {"job-heartbeat",
+     SET_job_heartbeat_file,
+     Type_ARG,
+     {0},
+     "Internal: worker heartbeat file path.",
+     "Worker heartbeat path."},
     {"job-stall-timeout",
      SET_job_stall_timeout,
      Type_ARG,

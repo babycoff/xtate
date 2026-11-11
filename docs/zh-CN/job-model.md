@@ -72,3 +72,22 @@ XTATE_BIN=bin/xtate bash tests/job/test_cli.sh
 ```
 
 覆盖 completed job、结果文件和 timed_out job。
+
+## Heartbeat 与 stall 检测
+
+worker 在状态循环中写 `<result>.heartbeat`：
+
+```text
+time=...
+sent=...
+targets=...
+success=...
+failed=...
+info=...
+```
+
+manager 把 heartbeat 过期视为 worker 卡死。扫描进展看
+`packets_sent`/`targets_done` 是否变化，不看结果文件增长；没有存活目标时
+结果不增长仍然可能是正常扫描。结果文件增长只作为辅助信息。
+`--job-heartbeat-timeout` 默认 30 秒；`--job-stall-timeout` 检测 heartbeat
+正常但无进展的情况。

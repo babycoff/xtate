@@ -9,6 +9,7 @@ JSON
 "$BIN" --job-run="$TMP/req.json" --job-result="$TMP/out.ndjson" --job-timeout=5 >"$TMP/job.txt"
 grep -q '"state":"completed"' "$TMP/job.txt"
 test -s "$TMP/out.ndjson"
+test -s "$TMP/out.ndjson.heartbeat"
 "$BIN" --job-run="$TMP/req.json" --job-result="$TMP/to.ndjson" --job-timeout=1 >"$TMP/to.txt" || true
 grep -q '"state":"timed_out"' "$TMP/to.txt"
 echo "job CLI: PASS"

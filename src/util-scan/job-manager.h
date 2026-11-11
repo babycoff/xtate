@@ -27,6 +27,7 @@ Job *job_start(JobManager *m, char *const argv[], const char *result_path,
 JobState job_poll(Job *job);
 bool     job_cancel(Job *job);
 void     job_set_stall_timeout(Job *job, unsigned seconds);
+void     job_set_heartbeat(Job *job, const char *path, unsigned timeout_sec);
 bool     job_wait(Job *job, unsigned timeout_ms);
 
 const char *job_id(const Job *job);
