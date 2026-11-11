@@ -899,6 +899,13 @@ static ConfRes SET_result_chunk_size(void *conf, const char *name,
     xconf->result_chunk_size = conf_parse_size(value);
     return Conf_OK;
 }
+static ConfRes SET_result_quota(void *conf, const char *name,
+                                const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    xconf->result_quota = conf_parse_size(value);
+    return Conf_OK;
+}
 static ConfRes SET_result_compress(void *conf, const char *name,
                                    const char *value) {
     XConf *xconf = (XConf *)conf;
@@ -3402,6 +3409,12 @@ ConfParam config_parameters[] = {
      {0},
      "Split job results into chunks of this size (0: single file).",
      "Result chunk size."},
+    {"result-quota",
+     SET_result_quota,
+     Type_ARG,
+     {0},
+     "Stop a scan when the result file exceeds this size (0: off).",
+     "Result quota."},
     {"result-compress",
      SET_result_compress,
      Type_ARG,

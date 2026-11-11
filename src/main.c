@@ -34,6 +34,7 @@
 #include "util-scan/control-plane.h"
 #include "util-scan/control-client.h"
 #include "util-scan/result-store.h"
+#include <sys/stat.h>
 
 static bool request_mode = false;
 #include "scan-modules/scan-modules.h"
@@ -651,6 +652,15 @@ static int _main_scan(XConf *xconf) {
                             stop_tx ? "draining" : "tx");
         }
 
+        if (xconf->result_quota && xconf->out_conf.output_filename[0]) {
+            struct stat st;
+            if (stat(xconf->out_conf.output_filename, &st) == 0 &&
+                (uint64_t)st.st_size > xconf->result_quota) {
+                LOG(LEVEL_ERROR, "result file exceeds quota; stopping scan\n");
+                output_mark_fatal();
+                pixie_locked_cas_u32(&time_to_finish_tx, 1, 0);
+            }
+        }
         if (!xconf->is_no_status)
             xtatus_print(&status, &status_item);
 

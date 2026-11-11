@@ -299,6 +299,7 @@ typedef struct XtateConf {
     uint64_t result_chunk_size;
     unsigned result_index : 1;
     char    *result_compress;
+    uint64_t result_quota;
 } XConf;
 
 /**

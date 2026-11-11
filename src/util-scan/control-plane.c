@@ -17,6 +17,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <pthread.h>
 #endif
 
 static const char *g_token = NULL;
@@ -115,6 +116,33 @@ static void finalize_job(Job *j) {
     job_mark_result_finalized(j);
 }
 
+static void maintenance(JobManager *m) {
+    job_manager_lock(m);
+    for (Job *j = job_first(m); j; j = job_next(j)) {
+        job_poll(j);
+        finalize_job(j);
+    }
+    job_manager_prune(m);
+    job_manager_unlock(m);
+}
+
+#ifndef _WIN32
+static void *maintenance_thread(void *arg) {
+    JobManager *m = (JobManager *)arg;
+    for (;;) {
+        maintenance(m);
+        usleep(500000);
+    }
+    return NULL;
+}
+#else
+static DWORD WINAPI maintenance_thread(LPVOID arg) {
+    JobManager *m = (JobManager *)arg;
+    for (;;) { maintenance(m); Sleep(500); }
+    return 0;
+}
+#endif
+
 static void handle(JobManager *m, const char *line, ControlResponse *out) {
     char id[32] = "null";
     const char *p = strstr(line, "\"id\":");
@@ -153,9 +181,13 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
 #endif
         char hb[600]; snprintf(hb, sizeof(hb), "%s.heartbeat", res);
         char hbarg[600]; snprintf(hbarg, sizeof(hbarg), "--job-heartbeat=%s", hb);
+        uint64_t quota = (uint64_t)field_int(line, "quota_bytes", 0);
+        char quotarg[64] = {0};
+        if (quota) snprintf(quotarg, sizeof(quotarg), "--result-quota=%llu",
+                            (unsigned long long)quota);
         char *argv[] = {exe, "--scan-request", req, "--output-module", "ndjson",
                         "--output-file", res, "--show", "all", "--wait", "1",
-                        "--no-status", hbarg, NULL};
+                        "--no-status", hbarg, quota ? quotarg : NULL, NULL};
         job_manager_lock(m);
         Job *j = job_start(m, argv, res, NULL, 0);
         if (j) {
@@ -267,6 +299,10 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
 int control_plane_serve(const char *endpoint) {
     g_token = getenv("XTATE_CONTROL_TOKEN");
     JobManager *m = job_manager_create(16);
+#ifndef _WIN32
+    pthread_t mt;
+    pthread_create(&mt, NULL, maintenance_thread, m);
+#endif
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) return 1;
     struct sockaddr_un addr = {0};
@@ -308,6 +344,7 @@ int control_plane_serve(const char *endpoint) {
     g_token = getenv("XTATE_CONTROL_TOKEN");
     g_token = getenv("XTATE_CONTROL_TOKEN");
     JobManager *m = job_manager_create(16);
+    CreateThread(NULL, 0, maintenance_thread, m, 0, NULL);
     for (;;) {
         HANDLE p = CreateNamedPipeA(endpoint, PIPE_ACCESS_DUPLEX,
             PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,

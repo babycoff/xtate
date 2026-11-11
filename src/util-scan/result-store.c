@@ -67,6 +67,7 @@ int result_store_build(const char *result_path, uint64_t chunk_bytes,
     uint64_t cbytes = 0, crecords = 0;
     char cpath[1200] = {0};
     int first = 1;
+    bool chunk_written = false;
     while (fgets(line, sizeof(line), in)) {
         size_t n = strlen(line);
         if (!out || (cbytes && cbytes + n > chunk_bytes)) {
@@ -94,7 +95,7 @@ int result_store_build(const char *result_path, uint64_t chunk_bytes,
             out = fopen(cpath, "wb");
             if (!out) break;
         }
-        fwrite(line, 1, n, out); cbytes += n; crecords++;
+        fwrite(line, 1, n, out); cbytes += n; crecords++; chunk_written = true;
         total += n; records++;
     }
     if (out) {
@@ -117,5 +118,6 @@ int result_store_build(const char *result_path, uint64_t chunk_bytes,
             (unsigned long long)total, (unsigned long long)records);
     fclose(mf);
     if (ix) { fprintf(ix, "]}"); fclose(ix); }
+    if (chunk_written) remove(result_path);
     return 0;
 }
