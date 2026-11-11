@@ -122,7 +122,6 @@ static void maintenance(JobManager *m) {
         job_poll(j);
         finalize_job(j);
     }
-    job_manager_prune(m);
     job_manager_unlock(m);
 }
 
@@ -154,7 +153,6 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
         }
         id[n] = 0;
     }
-    job_manager_prune(m);
     if (!token_ok(line)) {
         send_json(out, id, NULL, "UNAUTHORIZED", "invalid or missing token");
         return;
