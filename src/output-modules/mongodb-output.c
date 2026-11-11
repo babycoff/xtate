@@ -14,34 +14,46 @@
 #include "../util-data/fine-malloc.h"
 #include "../util-misc/misc.h"
 #include "../pixie/pixie-timer.h"
+#include <stdarg.h>
 
 #define DFT_BULK_SIZE 200;
+
+static void mongo_fail(const char *fmt, ...) {
+    va_list ap;
+    LOG_set_json_error(ERR_OUTPUT_WRITE_FAILED);
+    output_mark_fatal();
+    char buf[1024];
+    va_start(ap, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+    LOG(LEVEL_ERROR, "%s", buf);
+}
 
 static void mongo_put_binary(bson_t *doc, const char *name, bson_subtype_t subtype,
                        const uint8_t *data, uint32_t len) {
     if (!BSON_APPEND_BINARY(doc, name, subtype, data, len))
-        LOG(LEVEL_ERROR, "(MongodbOut) BSON binary append failed.\n");
+        mongo_fail( "(MongodbOut) BSON binary append failed.\n");
 }
 
 static void mongo_put_int32(bson_t *doc, const char *name, int32_t v) {
     if (!BSON_APPEND_INT32(doc, name, v))
-        LOG(LEVEL_ERROR, "(MongodbOut) BSON int32 append failed.\n");
+        mongo_fail( "(MongodbOut) BSON int32 append failed.\n");
 }
 static void mongo_put_int64(bson_t *doc, const char *name, int64_t v) {
     if (!BSON_APPEND_INT64(doc, name, v))
-        LOG(LEVEL_ERROR, "(MongodbOut) BSON int64 append failed.\n");
+        mongo_fail( "(MongodbOut) BSON int64 append failed.\n");
 }
 static void mongo_put_double(bson_t *doc, const char *name, double v) {
     if (!BSON_APPEND_DOUBLE(doc, name, v))
-        LOG(LEVEL_ERROR, "(MongodbOut) BSON double append failed.\n");
+        mongo_fail( "(MongodbOut) BSON double append failed.\n");
 }
 static void mongo_put_bool(bson_t *doc, const char *name, bool v) {
     if (!BSON_APPEND_BOOL(doc, name, v))
-        LOG(LEVEL_ERROR, "(MongodbOut) BSON bool append failed.\n");
+        mongo_fail( "(MongodbOut) BSON bool append failed.\n");
 }
 static void mongo_put_date(bson_t *doc, const char *name, int64_t v) {
     if (!BSON_APPEND_DATE_TIME(doc, name, v))
-        LOG(LEVEL_ERROR, "(MongodbOut) BSON date append failed.\n");
+        mongo_fail( "(MongodbOut) BSON date append failed.\n");
 }
 
 extern Output MongodbOutput; /*for internal x-ref*/
@@ -228,7 +240,7 @@ static bool _init_and_test_db(const char *uri_name, const char *db_name,
      */
     mongodb_conf.uri = mongoc_uri_new_with_error(uri_name, &error);
     if (!mongodb_conf.uri) {
-        LOG(LEVEL_ERROR, "(MongoDB) failed to parse URI[%s]: %s\n", uri_name,
+        mongo_fail( "(MongoDB) failed to parse URI[%s]: %s\n", uri_name,
             error.message);
         return false;
     }
@@ -255,7 +267,7 @@ static bool _init_and_test_db(const char *uri_name, const char *db_name,
      */
     mongodb_conf.client = mongoc_client_new_from_uri(mongodb_conf.uri);
     if (!mongodb_conf.client) {
-        LOG(LEVEL_ERROR, "(MongoDB) failed to create a new client instance.\n");
+        mongo_fail( "(MongoDB) failed to create a new client instance.\n");
         return false;
     }
 
@@ -269,7 +281,7 @@ static bool _init_and_test_db(const char *uri_name, const char *db_name,
         final_app_name = XTATE_WITH_VERSION;
     }
     if (!mongoc_client_set_appname(mongodb_conf.client, final_app_name)) {
-        LOG(LEVEL_ERROR, "(MongoDB) failed to set appname: %s\n",
+        mongo_fail( "(MongoDB) failed to set appname: %s\n",
             final_app_name);
         return false;
     }
@@ -303,7 +315,7 @@ static bool _init_and_test_db(const char *uri_name, const char *db_name,
     retval    = mongoc_client_command_simple(mongodb_conf.client, "admin",
                                              test_ping, NULL, &reply, &error);
     if (!retval) {
-        LOG(LEVEL_ERROR, "(MongoDB ping test) %s(%u)\n", error.message,
+        mongo_fail( "(MongoDB ping test) %s(%u)\n", error.message,
             error.code);
         return false;
     }
@@ -318,7 +330,7 @@ static bool _init_and_test_db(const char *uri_name, const char *db_name,
     BSON_APPEND_OID(test_insert, "_id", &oid);
     if (!mongoc_collection_insert_one(mongodb_conf.collection, test_insert,
                                       NULL, NULL, &error)) {
-        LOG(LEVEL_ERROR, "(MongoDB insert test) %s(%u)\n", error.message,
+        mongo_fail( "(MongoDB insert test) %s(%u)\n", error.message,
             error.code);
         return false;
     }
@@ -330,7 +342,7 @@ static bool _init_and_test_db(const char *uri_name, const char *db_name,
     BSON_APPEND_OID(test_remove, "_id", &oid);
     if (!mongoc_collection_delete_one(mongodb_conf.collection, test_remove,
                                       NULL, &reply, &error)) {
-        LOG(LEVEL_ERROR, "(MongoDB remove test) %s(%u)\n", error.message,
+        mongo_fail( "(MongoDB remove test) %s(%u)\n", error.message,
             error.code);
         return false;
     }
@@ -361,7 +373,7 @@ static bool _init_and_test_db(const char *uri_name, const char *db_name,
 
 static void _close_and_clean_db() {
     if (mongodb_conf.bulk_failed)
-        LOG(LEVEL_ERROR, "(MongodbOut) %" PRIu64
+        mongo_fail( "(MongodbOut) %" PRIu64
                          " documents were not stored\n",
             mongodb_conf.bulk_failed);
     if (mongodb_conf.bulk) {
@@ -371,7 +383,7 @@ static void _close_and_clean_db() {
                 mongoc_bulk_operation_execute(mongodb_conf.bulk, NULL, &error);
             if (!ret) {
                 mongodb_conf.bulk_failed += mongodb_conf.bulk_idx;
-                LOG(LEVEL_ERROR, "(MongoDB %s) %s\n", __func__, error.message);
+                mongo_fail( "(MongoDB %s) %s\n", __func__, error.message);
             }
         }
         mongoc_bulk_operation_destroy(mongodb_conf.bulk);
@@ -433,13 +445,13 @@ static bool _mongo_bulk_execute_with_retry(void) {
         if (mongoc_bulk_operation_execute(mongodb_conf.bulk, NULL, &error))
             return true;
 
-        LOG(LEVEL_ERROR, "(MongodbOut execute) attempt %u/%u: %s\n",
+        mongo_fail( "(MongodbOut execute) attempt %u/%u: %s\n",
             attempt + 1, attempts, error.message);
         if (attempt + 1 < attempts)
             _mongo_retry_sleep(mongodb_conf.retry_delay_ms);
     }
 
-    LOG(LEVEL_ERROR,
+    mongo_fail(
         "(MongodbOut execute) retries exhausted; output is incomplete\n");
     output_mark_fatal();
     return false;
@@ -454,13 +466,13 @@ static bool _mongo_insert_one_with_retry(const bson_t *doc) {
                                          NULL, &error))
             return true;
 
-        LOG(LEVEL_ERROR, "(MongodbOut insert) attempt %u/%u: %s: %u\n",
+        mongo_fail( "(MongodbOut insert) attempt %u/%u: %s: %u\n",
             attempt + 1, attempts, error.message, error.code);
         if (attempt + 1 < attempts)
             _mongo_retry_sleep(mongodb_conf.retry_delay_ms);
     }
 
-    LOG(LEVEL_ERROR,
+    mongo_fail(
         "(MongodbOut insert) retries exhausted; output is incomplete\n");
     output_mark_fatal();
     return false;
@@ -468,7 +480,7 @@ static bool _mongo_insert_one_with_retry(const bson_t *doc) {
 
 static void mongo_put_utf8(bson_t *doc, const char *name, const char *value) {
     if (!BSON_APPEND_UTF8(doc, name, value))
-        LOG(LEVEL_ERROR, "(MongodbOut) could not append UTF-8 field %s.\n", name);
+        mongo_fail( "(MongodbOut) could not append UTF-8 field %s.\n", name);
 }
 
 static void mongodbout_result(OutItem *item) {
@@ -485,7 +497,7 @@ static void mongodbout_result(OutItem *item) {
     bson_t       output_report_doc;
     bson_t      *res_doc = bson_new();
     if (!res_doc) {
-        LOG(LEVEL_ERROR, "(MongodbOut) could not allocate result document.\n");
+        mongo_fail( "(MongodbOut) could not allocate result document.\n");
         return;
     }
 
@@ -644,7 +656,7 @@ static void mongodbout_result(OutItem *item) {
             mongodb_conf.bulk, res_doc, mongodb_conf.bulk_insert_opts, &error);
         if (!ret) {
             mongodb_conf.bulk_failed++;
-            LOG(LEVEL_ERROR, "(MongodbOut bulk insert) %s\n", error.message);
+            mongo_fail( "(MongodbOut bulk insert) %s\n", error.message);
         } else {
             mongodb_conf.bulk_idx++;
         }
@@ -693,7 +705,7 @@ static bool _store_bson_to_db(const uint8_t *bson_data, size_t bson_len) {
     bool         is_success = true;
 
     if (!bson_init_static(&bson_doc, bson_data, bson_len)) {
-        LOG(LEVEL_ERROR, "(StoreBson) Failed to initialize BSON document.\n");
+        mongo_fail( "(StoreBson) Failed to initialize BSON document.\n");
         is_success = false;
         goto bson_to_db_err1;
     }
@@ -701,7 +713,7 @@ static bool _store_bson_to_db(const uint8_t *bson_data, size_t bson_len) {
     /*Insert the documantation*/
     if (!mongoc_collection_insert_one(mongodb_conf.collection, &bson_doc, NULL,
                                       NULL, &error)) {
-        LOG(LEVEL_ERROR, "(StoreBson insert) %s: %u\n", error.message,
+        mongo_fail( "(StoreBson insert) %s: %u\n", error.message,
             error.code);
         is_success = false;
     }
@@ -718,7 +730,7 @@ void store_bson_file(const char *filename, const char *uri_name,
 
     FILE *bsonfile = fopen(filename, "rb");
     if (bsonfile == NULL) {
-        LOG(LEVEL_ERROR, "(StoreBson) could not open BSON file %s.\n",
+        mongo_fail( "(StoreBson) could not open BSON file %s.\n",
             filename);
         LOGPERROR(filename);
         return;
@@ -740,7 +752,7 @@ void store_bson_file(const char *filename, const char *uri_name,
             /*EOF*/
             break;
         } else if (read_size < 4) {
-            LOG(LEVEL_ERROR,
+            mongo_fail(
                 "(StoreBson) Incomplete length field. Corrupted file?\n");
             break;
         }
@@ -750,7 +762,7 @@ void store_bson_file(const char *filename, const char *uri_name,
 
         /*the shortest doc len; cap to avoid a corrupt 4GB allocation*/
         if (doc_length < 5 || doc_length > 16 * 1024 * 1024) {
-            LOG(LEVEL_ERROR, "(StoreBson) Invalid BSON document length: %u\n",
+            mongo_fail( "(StoreBson) Invalid BSON document length: %u\n",
                 doc_length);
             break;
         }
@@ -759,7 +771,7 @@ void store_bson_file(const char *filename, const char *uri_name,
         size_t   remaining = doc_length - 4;
         uint8_t *bson_data = MALLOC(doc_length);
         if (!bson_data) {
-            LOG(LEVEL_ERROR, "(StoreBson) out of memory for BSON document\n");
+            mongo_fail( "(StoreBson) out of memory for BSON document\n");
             break;
         }
 
@@ -768,7 +780,7 @@ void store_bson_file(const char *filename, const char *uri_name,
 
         read_size = fread(bson_data + 4, 1, remaining, bsonfile);
         if (read_size < remaining) {
-            LOG(LEVEL_ERROR,
+            mongo_fail(
                 "(StoreBson) Incomplete BSON document. Expected %zu bytes, got "
                 "%zu bytes.\n",
                 remaining, read_size);
@@ -787,7 +799,8 @@ void store_bson_file(const char *filename, const char *uri_name,
         store_count);
 
     _close_and_clean_db();
-    fclose(bsonfile);
+    if (fclose(bsonfile) != 0)
+        mongo_fail("(StoreBson) could not close BSON file.\n");
 }
 
 /**
@@ -800,7 +813,7 @@ static bool _store_json_to_db(const char *json_string) {
 
     bson_doc = bson_new_from_json((const uint8_t *)json_string, -1, &error);
     if (!bson_doc) {
-        LOG(LEVEL_ERROR, "(StoreJson transform) %s\n", error.message);
+        mongo_fail( "(StoreJson transform) %s\n", error.message);
         is_success = false;
         goto json_to_db_err1;
     }
@@ -808,7 +821,7 @@ static bool _store_json_to_db(const char *json_string) {
     /*Insert the documantation*/
     if (!mongoc_collection_insert_one(mongodb_conf.collection, bson_doc, NULL,
                                       NULL, &error)) {
-        LOG(LEVEL_ERROR, "(StoreJson insert) %s: %u\n", error.message,
+        mongo_fail( "(StoreJson insert) %s: %u\n", error.message,
             error.code);
     }
 
@@ -824,7 +837,7 @@ void store_json_file(const char *filename, const char *uri_name,
 
     FILE *jsonfile = fopen(filename, "rb");
     if (jsonfile == NULL) {
-        LOG(LEVEL_ERROR, "(StoreJson) could not open NDJSON file %s.\n",
+        mongo_fail( "(StoreJson) could not open NDJSON file %s.\n",
             filename);
         LOGPERROR(filename);
         return;
@@ -864,7 +877,8 @@ void store_json_file(const char *filename, const char *uri_name,
         store_count);
 
     _close_and_clean_db();
-    fclose(jsonfile);
+    if (fclose(jsonfile) != 0)
+        mongo_fail("(StoreJson) could not close NDJSON file.\n");
 }
 
 #endif

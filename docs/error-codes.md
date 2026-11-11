@@ -42,7 +42,8 @@ Stable codes used by JSON error envelopes. The machine-readable list is
   rule aborts the scan with this code; normal CLI mode remains a warning.
 - `PERMISSION_DENIED`: set by raw socket/PCAP permission failures; other NIC
   failures may still be `INTERNAL_ERROR`.
-- `OUTPUT_WRITE_FAILED`: output initialization/open, per-result write,
-  flush and close failures now use `output_error()`; the callback also marks
-  the output sink fatal so the scan exits non-zero.
+- `OUTPUT_WRITE_FAILED`: all file output modules (text/csv/bson/ndjson/list)
+  use `output_error()` for write, flush and close failures; MongoDB uses
+  `mongo_fail()` for insert/execute/store failures.
+
 

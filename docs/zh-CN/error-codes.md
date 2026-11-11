@@ -40,6 +40,8 @@ JSON 错误信封使用的稳定错误码。机器可读列表：
   直接中止扫描；普通 CLI 仍只是警告。
 - `PERMISSION_DENIED`：由 raw socket/PCAP 权限失败设置；其他 NIC 失败仍可能
   是 `INTERNAL_ERROR`。
-- `OUTPUT_WRITE_FAILED`：输出初始化/打开、每次结果写入、flush、close 失败
-  现在统一走 `output_error()`，并把输出标记为 fatal，扫描以非零退出。
+- `OUTPUT_WRITE_FAILED`：所有文件输出模块（text/csv/bson/ndjson/list）的写入、
+  flush、close 失败统一走 `output_error()`；MongoDB 的 insert/execute/store
+  失败走 `mongo_fail()`。
+
 
