@@ -46,6 +46,10 @@
       "retryable": true
     },
     {
+      "code": "SCAN_STALLED",
+      "retryable": false
+    },
+    {
       "code": "SCAN_CANCELLED",
       "retryable": false
     },

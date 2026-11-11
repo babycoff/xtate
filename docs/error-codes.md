@@ -18,6 +18,7 @@ Stable codes used by JSON error envelopes. The machine-readable list is
 | `IO_ERROR` | yes | transient file/IO failure |
 | `CONFIG_ERROR` | no | configuration rejected |
 | `SCAN_TIMEOUT` | yes | job deadline reached |
+| `SCAN_STALLED` | no | no output progress before stall timeout |
 | `SCAN_CANCELLED` | no | job cancelled |
 | `JOB_NOT_FOUND` | no | unknown job id |
 | `JOB_ALREADY_RUNNING` | yes | job already active |

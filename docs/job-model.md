@@ -17,7 +17,11 @@ bool job_wait(Job *, unsigned timeout_ms);
 ```
 
 Status: `queued`, `running`, `completed`, `failed`, `cancelled`,
-`timed_out`.
+`timed_out`, `stalled`.
+
+`timeout_sec` is optional (0 = unlimited) and is read by `--job-run` when
+`--job-timeout` is absent. `--job-stall-timeout` detects no output progress and
+does not require predicting total scan duration.
 
 ## Platform mapping
 

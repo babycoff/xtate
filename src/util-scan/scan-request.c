@@ -90,6 +90,27 @@ static char *args_string(JsonNode *obj) {
     return len ? out : NULL;
 }
 
+unsigned scan_request_timeout(const char *filename) {
+    FILE *fp = fopen(filename, "rb");
+    if (!fp) return 0;
+    fseek(fp, 0, SEEK_END); long sz = ftell(fp); rewind(fp);
+    if (sz <= 0 || sz > 1024*1024) { fclose(fp); return 0; }
+    char *buf = MALLOC((size_t)sz + 1);
+    if (!buf) { fclose(fp); return 0; }
+    size_t n = fread(buf, 1, (size_t)sz, fp);
+    fclose(fp); buf[n] = 0;
+    JsonNode *root = json_decode(buf);
+    FREE(buf);
+    unsigned out = 0;
+    if (root && root->tag == JSON_OBJECT) {
+        JsonNode *t = json_find_member(root, "timeout_sec");
+        if (t && t->tag == JSON_NUMBER && t->number_ > 0)
+            out = (unsigned)t->number_;
+    }
+    if (root) json_delete(root);
+    return out;
+}
+
 int scan_request_build_argv(const char *filename, int *argc_out,
                             char ***argv_out) {
     FILE *fp = fopen(filename, "rb");

@@ -18,6 +18,7 @@ JSON 错误信封使用的稳定错误码。机器可读列表：
 | `IO_ERROR` | 是 | 临时文件/IO 失败 |
 | `CONFIG_ERROR` | 否 | 配置被拒绝 |
 | `SCAN_TIMEOUT` | 是 | job 超时 |
+| `SCAN_STALLED` | 否 | stall 超时前无输出进展 |
 | `SCAN_CANCELLED` | 否 | job 被取消 |
 | `JOB_NOT_FOUND` | 否 | job 不存在 |
 | `JOB_ALREADY_RUNNING` | 是 | job 已运行 |

@@ -289,6 +289,7 @@ typedef struct XtateConf {
     char    *job_run_file;
     char    *job_result_file;
     unsigned job_timeout;
+    unsigned job_stall_timeout;
 } XConf;
 
 /**

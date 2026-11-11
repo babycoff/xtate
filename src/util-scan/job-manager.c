@@ -11,6 +11,7 @@
 #include <sys/prctl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 #endif
@@ -19,6 +20,9 @@ struct Job {
     char      id[32];
     JobState  state;
     unsigned  timeout_sec;
+    unsigned  stall_timeout_sec;
+    long long last_progress_ms;
+    long long last_size;
     unsigned  exit_code;
     long long start_ms;
     long long end_ms;
@@ -55,13 +59,19 @@ const char *job_state_string(JobState s) {
         case JOB_FAILED: return "failed";
         case JOB_CANCELLED: return "cancelled";
         case JOB_TIMED_OUT: return "timed_out";
+        case JOB_STALLED: return "stalled";
         default: return "unknown";
     }
 }
 
 bool job_is_terminal(const Job *job) {
     return job && (job->state == JOB_COMPLETED || job->state == JOB_FAILED ||
-                   job->state == JOB_CANCELLED || job->state == JOB_TIMED_OUT);
+                   job->state == JOB_CANCELLED || job->state == JOB_TIMED_OUT ||
+                   job->state == JOB_STALLED);
+}
+
+void job_set_stall_timeout(Job *job, unsigned seconds) {
+    if (job) job->stall_timeout_sec = seconds;
 }
 
 static long long now_ms(void) {
@@ -229,6 +239,8 @@ Job *job_start(JobManager *m, char *const argv[], const char *result_path,
         AssignProcessToJobObject(j->job_object, j->pi.hProcess);
     j->state = JOB_RUNNING;
     j->start_ms = now_ms();
+    j->last_progress_ms = j->start_ms;
+    j->last_progress_ms = j->start_ms;
     return j;
 }
 #else
@@ -272,6 +284,8 @@ Job *job_start(JobManager *m, char *const argv[], const char *result_path,
     j->pid = pid;
     j->state = JOB_RUNNING;
     j->start_ms = now_ms();
+    j->last_progress_ms = j->start_ms;
+    j->last_progress_ms = j->start_ms;
     return j;
 }
 #endif
@@ -285,10 +299,36 @@ static void terminate_job(Job *j) {
 #endif
 }
 
+static long long result_size(const Job *j) {
+#ifdef _WIN32
+    WIN32_FILE_ATTRIBUTE_DATA fa;
+    if (j->result_path &&
+        GetFileAttributesExA(j->result_path, GetFileExInfoStandard, &fa))
+        return ((long long)fa.nFileSizeHigh << 32) | fa.nFileSizeLow;
+#else
+    struct stat st;
+    if (j->result_path && stat(j->result_path, &st) == 0)
+        return (long long)st.st_size;
+#endif
+    return 0;
+}
+
 JobState job_poll(Job *j) {
     if (!j || job_is_terminal(j)) return j ? j->state : JOB_FAILED;
     if (j->state != JOB_RUNNING) return j->state;
 
+    long long size = result_size(j);
+    if (size != j->last_size) {
+        j->last_size = size;
+        j->last_progress_ms = now_ms();
+    }
+    if (!j->cancel_requested && j->stall_timeout_sec &&
+        now_ms() - j->last_progress_ms >= (long long)j->stall_timeout_sec * 1000) {
+        terminate_job(j);
+        j->state = JOB_STALLED;
+        j->end_ms = now_ms();
+        return j->state;
+    }
     if (!j->cancel_requested && j->timeout_sec &&
         job_elapsed_ms(j) >= j->timeout_sec * 1000) {
         terminate_job(j);

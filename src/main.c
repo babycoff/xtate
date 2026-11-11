@@ -878,7 +878,10 @@ static int run_job_cli(XConf *xconf, const char *exe) {
     argv[ac] = NULL;
     char log[1024];
     snprintf(log, sizeof(log), "%s.log", result);
-    Job *job = job_start(m, argv, result, log, xconf->job_timeout);
+    unsigned timeout = xconf->job_timeout;
+    if (!timeout) timeout = scan_request_timeout(xconf->job_run_file);
+    Job *job = job_start(m, argv, result, log, timeout);
+    job_set_stall_timeout(job, xconf->job_stall_timeout);
     if (!job) {
         printf("{\"error\":{\"code\":\"JOB_LIMIT_REACHED\"}}\n");
         job_manager_destroy(m);

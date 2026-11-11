@@ -13,6 +13,7 @@ static const struct { ErrorCode code; const char *name; bool retryable; } k[] = 
     {ERR_IO_ERROR,"IO_ERROR",true},
     {ERR_CONFIG_ERROR,"CONFIG_ERROR",false},
     {ERR_SCAN_TIMEOUT,"SCAN_TIMEOUT",true},
+    {ERR_SCAN_STALLED,"SCAN_STALLED",false},
     {ERR_SCAN_CANCELLED,"SCAN_CANCELLED",false},
     {ERR_JOB_NOT_FOUND,"JOB_NOT_FOUND",false},
     {ERR_JOB_ALREADY_RUNNING,"JOB_ALREADY_RUNNING",true},

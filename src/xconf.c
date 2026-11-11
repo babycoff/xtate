@@ -877,6 +877,13 @@ static ConfRes SET_job_result(void *conf, const char *name, const char *value) {
     xconf->job_result_file = STRDUP(value);
     return Conf_OK;
 }
+static ConfRes SET_job_stall_timeout(void *conf, const char *name,
+                                     const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    xconf->job_stall_timeout = (unsigned)conf_parse_int(value);
+    return Conf_OK;
+}
 static ConfRes SET_job_timeout(void *conf, const char *name, const char *value) {
     XConf *xconf = (XConf *)conf;
     UNUSEDPARM(name);
@@ -3320,6 +3327,12 @@ ConfParam config_parameters[] = {
      {0},
      "Result file for --job-run (default: <request>.ndjson).",
      "Job result file."},
+    {"job-stall-timeout",
+     SET_job_stall_timeout,
+     Type_ARG,
+     {0},
+     "Fail a job when it makes no output progress for this many seconds (0: off).",
+     "Job stall timeout."},
     {"job-timeout",
      SET_job_timeout,
      Type_ARG,

@@ -16,7 +16,11 @@ bool job_cancel(Job *);
 bool job_wait(Job *, unsigned timeout_ms);
 ```
 
-状态：`queued`、`running`、`completed`、`failed`、`cancelled`、`timed_out`。
+状态：`queued`、`running`、`completed`、`failed`、`cancelled`、`timed_out`、
+`stalled`。
+
+`timeout_sec` 可选（0 = 不限制）；没有 `--job-timeout` 时 `--job-run` 会读取它。
+`--job-stall-timeout` 检测无输出进展，不要求预先知道扫描总时长。
 
 ## 平台映射
 

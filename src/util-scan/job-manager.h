@@ -10,6 +10,7 @@ typedef enum JobState {
     JOB_FAILED,
     JOB_CANCELLED,
     JOB_TIMED_OUT,
+    JOB_STALLED,
 } JobState;
 
 typedef struct Job Job;
@@ -25,6 +26,7 @@ Job *job_start(JobManager *m, char *const argv[], const char *result_path,
                const char *log_path, unsigned timeout_sec);
 JobState job_poll(Job *job);
 bool     job_cancel(Job *job);
+void     job_set_stall_timeout(Job *job, unsigned seconds);
 bool     job_wait(Job *job, unsigned timeout_ms);
 
 const char *job_id(const Job *job);
