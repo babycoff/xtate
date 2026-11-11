@@ -224,7 +224,7 @@ int control_plane_serve(const char *endpoint) {
         DWORD got = 0;
         while (ReadFile(p, buf, sizeof(buf)-1, &got, NULL) && got) {
             buf[got] = 0;
-            FILE *out = tmpfile();
+            FILE *out = fopen("xtate-ctl-resp.tmp", "w+b");
             handle(m, buf, out);
             if (out) {
                 fflush(out); rewind(out);
@@ -232,6 +232,7 @@ int control_plane_serve(const char *endpoint) {
                 DWORD wrote = 0;
                 WriteFile(p, resp, (DWORD)rn, &wrote, NULL);
                 fclose(out);
+                remove("xtate-ctl-resp.tmp");
             }
             got = 0;
         }

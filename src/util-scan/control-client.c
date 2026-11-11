@@ -15,7 +15,9 @@ int control_client_request(const char *endpoint, const char *request,
 #ifdef _WIN32
     HANDLE p = CreateFileA(endpoint, GENERIC_READ | GENERIC_WRITE, 0, NULL,
                            OPEN_EXISTING, 0, NULL);
-    if (p == INVALID_HANDLE_VALUE) return -1;
+    if (p == INVALID_HANDLE_VALUE) {
+        return -1;
+    }
     DWORD wrote = 0;
     if (!WriteFile(p, request, (DWORD)strlen(request), &wrote, NULL)) {
         CloseHandle(p); return -1;
