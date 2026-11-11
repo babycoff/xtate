@@ -44,6 +44,7 @@ JobState    job_state(const Job *job);
 const char *job_state_string(JobState s);
 const char *job_result_path(const Job *job);
 const char *job_log_path(const Job *job);
+const char *job_error(const Job *job);
 unsigned    job_exit_code(const Job *job);
 unsigned    job_elapsed_ms(const Job *job);
 bool        job_is_terminal(const Job *job);

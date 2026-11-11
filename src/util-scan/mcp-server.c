@@ -352,6 +352,25 @@ static int explain_group_count(const char *endpoint, const char *cfg) {
     const char *pg = strstr(text, "Route groups:");
     return pg ? atoi(pg + 13) : -1;
 }
+static bool result_path_writable(const char *path) {
+    if (!path || !path[0]) return false;
+#ifdef _WIN32
+    wchar_t wpath[2048];
+    if (MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath,
+                            (int)(sizeof(wpath) / sizeof(wpath[0]))) <= 0)
+        return false;
+    FILE *f = _wfopen(wpath, L"ab");
+    if (!f) return false;
+    fclose(f);
+    return true;
+#else
+    FILE *f = fopen(path, "ab");
+    if (!f) return false;
+    fclose(f);
+    return true;
+#endif
+}
+
 static void tool_call(const char *id, const char *name, const char *args,
                       const char *endpoint) {
     if (strcmp(name, "list_modules") == 0) {
@@ -414,6 +433,13 @@ static void tool_call(const char *id, const char *name, const char *args,
         if (!authorized) {
             text_result(id, "target authorization required: set authorized=true", true); return;
         }
+        JsonNode *ar2 = json_decode(cfg);
+        JsonNode *rp = ar2 ? json_find_member(ar2, "result_path") : NULL;
+        if (rp && rp->tag == JSON_STRING && !result_path_writable(rp->string_)) {
+            text_result(id, "result_path is not writable", true);
+            json_delete(ar2); return;
+        }
+        if (ar2) json_delete(ar2);
         char verr[256] = {0}; unsigned targets = 0, rate = 0;
         if (!validate_cfg(cfg, verr, sizeof(verr), &targets, &rate)) {
             text_result(id, verr, true); return;

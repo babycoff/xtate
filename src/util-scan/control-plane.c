@@ -205,6 +205,20 @@ static void json_unescape_inplace(char *s) {
     *w = 0;
 }
 
+static void jesc(const char *s, char *out, size_t cap) {
+    size_t n = 0;
+    if (!out || !cap) return;
+    for (; s && *s && n + 2 < cap; s++) {
+        unsigned char c = (unsigned char)*s;
+        if (c == '"' || c == '\\') { if (n + 3 < cap) { out[n++]='\\'; out[n++]=(char)c; } }
+        else if (c == '\n') { out[n++]='\\'; out[n++]='n'; }
+        else if (c == '\r') { out[n++]='\\'; out[n++]='r'; }
+        else if (c < 0x20) out[n++]=' ';
+        else out[n++]=(char)c;
+    }
+    out[n]=0;
+}
+
 static void handle(JobManager *m, const char *line, ControlResponse *out) {
     char id[32] = "null";
     const char *p = strstr(line, "\"id\":");
@@ -379,16 +393,20 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
     char phase[32] = "unknown";
     uint64_t sent = 0, targets = 0, hb_age = 0;
     bool hb = job_heartbeat_info(j, phase, sizeof(phase), &sent, &targets, &hb_age);
-    char res[768];
+    char res[2048], esres[512], eslog[512], eserr[512];
+    jesc(job_result_path(j), esres, sizeof(esres));
+    jesc(job_log_path(j), eslog, sizeof(eslog));
+    jesc(job_error(j), eserr, sizeof(eserr));
     snprintf(res, sizeof(res),
              "{\"job_id\":\"%s\",\"state\":\"%s\",\"phase\":\"%s\","
              "\"sent\":%llu,\"targets\":%llu,\"heartbeat_age_ms\":%llu,"
              "\"heartbeat\":%s,\"exit_code\":%u,"
-             "\"result\":\"%s\",\"elapsed_ms\":%u}",
+             "\"result\":\"%s\",\"log_path\":\"%s\",\"error\":\"%s\","
+             "\"elapsed_ms\":%u}",
              job_id(j), job_state_string(job_state(j)), phase,
              (unsigned long long)sent, (unsigned long long)targets,
              (unsigned long long)hb_age, hb ? "true" : "false",
-             job_exit_code(j), job_result_path(j) ? job_result_path(j) : "",
+             job_exit_code(j), esres, eslog, eserr,
              job_elapsed_ms(j));
     job_manager_unlock(m);
     send_json(out, id, res, NULL, NULL);

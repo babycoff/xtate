@@ -45,6 +45,7 @@ struct Job {
     bool      result_index;
     bool      result_finalized;
     unsigned  exit_code;
+    char      error[256];
     long long start_ms;
     long long end_ms;
     bool      cancel_requested;
@@ -310,6 +311,7 @@ const char *job_id(const Job *j) { return j ? j->id : ""; }
 JobState job_state(const Job *j) { return j ? j->state : JOB_FAILED; }
 const char *job_result_path(const Job *j) { return j ? j->result_path : NULL; }
 const char *job_log_path(const Job *j) { return j ? j->log_path : NULL; }
+const char *job_error(const Job *j) { return j ? j->error : ""; }
 unsigned job_exit_code(const Job *j) { return j ? j->exit_code : 0; }
 unsigned job_elapsed_ms(const Job *j) {
     if (!j || j->start_ms == 0) return 0;
@@ -402,6 +404,7 @@ Job *job_start(JobManager *m, char *const argv[], const char *result_path,
         if (err != INVALID_HANDLE_VALUE) CloseHandle(err);
         j->state = JOB_FAILED;
         j->exit_code = 1;
+        snprintf(j->error, sizeof(j->error), "cannot create result/log file");
         return j;
     }
 
@@ -441,6 +444,7 @@ Job *job_start(JobManager *m, char *const argv[], const char *result_path,
     if (!ok) {
         j->state = JOB_FAILED;
         j->exit_code = 1;
+        snprintf(j->error, sizeof(j->error), "cannot start worker process");
         return j;
     }
     if (j->job_object)
@@ -537,6 +541,8 @@ JobState job_poll(Job *j) {
     if (WaitForSingleObject(j->pi.hProcess, 0) == WAIT_OBJECT_0) {
         GetExitCodeProcess(j->pi.hProcess, &code);
         j->exit_code = code;
+        if (code && !j->error[0])
+            snprintf(j->error, sizeof(j->error), "worker exited with code %u", code);
         j->end_ms = now_ms();
         j->state = j->cancel_requested ? JOB_CANCELLED
                                        : (code == 0 ? JOB_COMPLETED : JOB_FAILED);
