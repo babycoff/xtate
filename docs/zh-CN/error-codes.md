@@ -33,3 +33,12 @@ JSON 错误信封使用的稳定错误码。机器可读列表：
 - `retryable` 是给 Agent 的提示。
 - 只有存在真实返回路径时才加入；生命周期错误码在 job/timeout 模型中启用。
 - 尚未细分的运行时错误暂用 `INTERNAL_ERROR`。
+## 当前行为
+
+- `TARGET_INVALID`：单个 IP、CIDR/range 语法错误在 CLI 解析前拒绝。
+- `FIREWALL_RULES_MISSING`：`--scan-request` 模式缺少 Linux RST/ICMP 规则时
+  直接中止扫描；普通 CLI 仍只是警告。
+- `PERMISSION_DENIED`：由 raw socket/PCAP 权限失败设置；其他 NIC 失败仍可能
+  是 `INTERNAL_ERROR`。
+- `OUTPUT_WRITE_FAILED`：覆盖输出模块初始化和打开失败；扫描过程中的每次写入
+  失败尚未全部映射。

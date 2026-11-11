@@ -34,3 +34,13 @@ Stable codes used by JSON error envelopes. The machine-readable list is
 - A code is added only when a real path can emit it; lifecycle codes become
   active with the job/timeout model.
 - Runtime paths not yet specialized use `INTERNAL_ERROR`.
+## Current behavior
+
+- `TARGET_INVALID`: invalid single IP and invalid CIDR/range syntax are
+  rejected before the CLI parser runs.
+- `FIREWALL_RULES_MISSING`: in `--scan-request` mode a missing Linux RST/ICMP
+  rule aborts the scan with this code; normal CLI mode remains a warning.
+- `PERMISSION_DENIED`: set by raw socket/PCAP permission failures; other NIC
+  failures may still be `INTERNAL_ERROR`.
+- `OUTPUT_WRITE_FAILED`: covers output-module initialization/open failures;
+  later per-write failures are not all mapped yet.

@@ -99,6 +99,9 @@ void rawsock_prepare(void) {
 }
 
 
+static ErrorCode _rawsock_last_error = ERR_INTERNAL_ERROR;
+ErrorCode rawsock_last_error(void) { return _rawsock_last_error; }
+
 #ifndef _WIN32
 static bool has_iptables_rule(const char *cmd, const char *needle);
 #endif
@@ -217,6 +220,7 @@ int rawsock_count_default_interfaces(void) {
 }
 
 
+
 #ifndef _WIN32
 static bool has_iptables_rule(const char *cmd, const char *needle) {
     FILE *fp = popen(cmd, "r");
@@ -231,14 +235,14 @@ static bool has_iptables_rule(const char *cmd, const char *needle) {
     return found;
 }
 
-void rawsock_firewall_warn(const char *scanner, const char *probe) {
+bool rawsock_firewall_warn(const char *scanner, const char *probe) {
     bool need_rst = scanner && (!strcmp(scanner, "zbanner") ||
                                 !strcmp(scanner, "tcp-state"));
     bool need_icmp = need_rst ||
                      (scanner && !strcmp(scanner, "udp") && probe &&
                       !strcmp(probe, "dns"));
     if (!need_rst && !need_icmp)
-        return;
+        return true;
     bool rst4 = has_iptables_rule("iptables -S OUTPUT 2>/dev/null",
                                   "--tcp-flags RST RST");
     bool rst6 = has_iptables_rule("ip6tables -S OUTPUT 2>/dev/null",
@@ -253,24 +257,29 @@ void rawsock_firewall_warn(const char *scanner, const char *probe) {
         LOG(LEVEL_WARN,
             "dns/UDP scans benefit from ICMP port-unreachable suppression; rule missing\n");
     }
-    if ((need_rst && !(rst4 && rst6)) || (need_icmp && !icmp4)) {
+    bool missing = (need_rst && !(rst4 && rst6)) || (need_icmp && !icmp4);
+    if (missing) {
         if (LOG_json_errors_enabled()) {
             LOG_set_json_error(ERR_FIREWALL_RULES_MISSING);
             LOG(LEVEL_ERROR, "firewall RST/ICMP suppression rules are missing\n");
+            _rawsock_last_error = ERR_FIREWALL_RULES_MISSING;
+            return false;
         } else {
             LOG(LEVEL_HINT,
                 "run: sudo ./firewall/add_rules.sh   (Linux scanner host; never leave it installed)\n");
         }
     }
+    return true;
 }
 #else
-void rawsock_firewall_warn(const char *scanner, const char *probe) {
+bool rawsock_firewall_warn(const char *scanner, const char *probe) {
     UNUSEDPARM(probe);
     if (scanner && strcmp(scanner, "tcp-syn") == 0) {
         LOG(LEVEL_HINT,
             "Windows: tcp-syn can add -scan-arg \"--send-rst\" to close "
             "half-open connections explicitly\n");
     }
+    return true;
 }
 #endif
 
@@ -948,6 +957,7 @@ Adapter *rawsock_init_adapter(const char *adapter_name, bool is_pfring,
                 LOG(LEVEL_ERROR, "(if:%s) can't open adapter: %s\n",
                     adapter_name, errbuf);
                 if (strstr(errbuf, "perm")) {
+                    _rawsock_last_error = ERR_PERMISSION_DENIED;
                     LOG(LEVEL_ERROR, "permission denied\n");
                     LOG(LEVEL_HINT,
                         "need to sudo or run as root or administrator\n");
@@ -1004,6 +1014,7 @@ Adapter *rawsock_init_adapter(const char *adapter_name, bool is_pfring,
                     /* drop down below */
                     break;
                 case PCAP_ERROR_PERM_DENIED:
+                    _rawsock_last_error = ERR_PERMISSION_DENIED;
                     LOG(LEVEL_ERROR,
                         "(%s) permission denied while activating PCAP\n",
                         __func__);

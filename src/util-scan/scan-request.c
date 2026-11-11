@@ -9,6 +9,8 @@
 #include "../scan-modules/scan-modules.h"
 #include "../probe-modules/probe-modules.h"
 #include "../target/target-parse.h"
+#include "../target/target-rangev4.h"
+#include "../target/target-rangev6.h"
 
 static void req_error(ErrorCode code, const char *msg) {
     char *esc = json_encode_string(msg ? msg : "");
@@ -126,11 +128,15 @@ int scan_request_build_argv(const char *filename, int *argc_out,
             json_delete(root); return -1;
         }
         const char *t = n->string_;
-        bool range = strchr(t, '/') || strchr(t, ':') ||
-                     (strchr(t, '-') && strchr(t, '.'));
-        if (!range && target_parse_ip(t).version == 0) {
-            req_error(ERR_TARGET_INVALID, "invalid target address");
-            json_delete(root); return -1;
+        size_t off = 0;
+        struct Range  r4;
+        struct Range6 r6;
+        while (off < strlen(t)) {
+            if (target_parse_range(t, &off, strlen(t), &r4, &r6) ==
+                Bad_Address) {
+                req_error(ERR_TARGET_INVALID, "invalid target address/range");
+                json_delete(root); return -1;
+            }
         }
     }
     char *ip=join_array(targets,false); if (!ip) { req_error(ERR_TARGET_INVALID,"invalid targets"); json_delete(root); return -1; }

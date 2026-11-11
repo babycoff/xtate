@@ -222,6 +222,8 @@ static int _main_scan(XConf *xconf) {
         LOG_set_json_error(ERR_PERMISSION_DENIED);
     /*init NIC & rawsock*/
     if (init_nic(xconf, init_ipv4, init_ipv6) != 0) {
+        if (request_mode)
+            LOG_set_json_error(rawsock_last_error());
         xcmd_try_reboot();
         exit(1);
     }
