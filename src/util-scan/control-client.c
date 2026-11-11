@@ -1,5 +1,6 @@
 #include "control-client.h"
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #ifdef _WIN32
 #include <windows.h>
@@ -39,7 +40,11 @@ int control_client_request(const char *endpoint, const char *request,
         close(fd); return -1;
     }
     size_t len = strlen(request);
+    bool add_nl = len == 0 || request[len - 1] != '\n';
     if (send(fd, request, len, 0) != (ssize_t)len) {
+        close(fd); return -1;
+    }
+    if (add_nl && send(fd, "\n", 1, 0) != 1) {
         close(fd); return -1;
     }
     size_t n = 0;

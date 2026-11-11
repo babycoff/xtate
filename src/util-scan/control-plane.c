@@ -6,6 +6,7 @@
 #include <string.h>
 #include <time.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <stdlib.h>
 
 #ifdef _WIN32
@@ -57,20 +58,40 @@ static int64_t field_int(const char *s, const char *key, int64_t def) {
     return atoll(p);
 }
 
-static void send_json(FILE *out, const char *id, const char *result,
+typedef struct {
+    char  *data;
+    size_t len;
+    size_t cap;
+    bool   overflow;
+} ControlResponse;
+
+static void resp_printf(ControlResponse *r, const char *fmt, ...) {
+    if (r->overflow || r->len + 1 >= r->cap) { r->overflow = true; return; }
+    va_list ap;
+    va_start(ap, fmt);
+    int n = vsnprintf(r->data + r->len, r->cap - r->len, fmt, ap);
+    va_end(ap);
+    if (n < 0 || (size_t)n >= r->cap - r->len) {
+        r->overflow = true;
+        return;
+    }
+    r->len += (size_t)n;
+}
+
+static void send_json(ControlResponse *out, const char *id, const char *result,
                       const char *code, const char *msg) {
     if (code) {
         char *esc = json_encode_string(msg ? msg : "");
-        fprintf(out, "{\"id\":%s,\"error\":{\"code\":\"%s\",\"message\":%s,"
-                     "\"retryable\":false}}\n", id, code, esc ? esc : "\"\"");
+        resp_printf(out, "{\"id\":%s,\"error\":{\"code\":\"%s\","
+                         "\"message\":%s,\"retryable\":false}}\n",
+                    id, code, esc ? esc : "\"\"");
         free(esc);
     } else {
-        fprintf(out, "{\"id\":%s,\"result\":%s}\n", id, result);
+        resp_printf(out, "{\"id\":%s,\"result\":%s}\n", id, result);
     }
-    fflush(out);
 }
 
-static void handle(JobManager *m, const char *line, FILE *out) {
+static void handle(JobManager *m, const char *line, ControlResponse *out) {
     char id[32] = "null";
     const char *p = strstr(line, "\"id\":");
     if (p) {
@@ -120,21 +141,36 @@ static void handle(JobManager *m, const char *line, FILE *out) {
         return;
     }
     if (strstr(line, "\"job.list\"")) {
-        char buf[4096]; size_t off = 0;
-        off += (size_t)snprintf(buf + off, sizeof(buf) - off, "{\"jobs\":[");
+        int64_t offset = field_int(line, "offset", 0);
+        int64_t limit  = field_int(line, "limit", 100);
+        if (offset < 0) offset = 0;
+        if (limit < 1 || limit > 1000) limit = 100;
+        size_t total = 0;
         job_manager_lock(m);
+        for (Job *j = job_first(m); j; j = job_next(j)) total++;
+        char buf[32768]; size_t off = 0;
+        off += (size_t)snprintf(buf + off, sizeof(buf) - off, "{\"jobs\":[");
+        size_t idx = 0, emitted = 0;
         int first = 1;
-        for (Job *j = job_first(m); j; j = job_next(j)) {
+        for (Job *j = job_first(m); j; j = job_next(j), idx++) {
+            if ((int64_t)idx < offset) continue;
+            if ((int64_t)emitted >= limit) break;
             job_poll(j);
             off += (size_t)snprintf(buf + off, sizeof(buf) - off,
                 "%s{\"job_id\":\"%s\",\"state\":\"%s\",\"result\":\"%s\"}",
                 first ? "" : ",", job_id(j), job_state_string(job_state(j)),
                 job_result_path(j) ? job_result_path(j) : "");
-            first = 0;
-            if (off > sizeof(buf) - 256) break;
+            first = 0; emitted++;
+            if (off > sizeof(buf) - 512) break;
         }
         job_manager_unlock(m);
-        snprintf(buf + off, sizeof(buf) - off, "]}");
+        snprintf(buf + off, sizeof(buf) - off,
+                 "],\"offset\":%lld,\"limit\":%lld,\"next_offset\":%lld,"
+                 "\"truncated\":%s,\"total\":%zu}",
+                 (long long)offset, (long long)limit,
+                 (long long)(offset + (int64_t)emitted),
+                 (offset + (int64_t)emitted) < (int64_t)total ? "true" : "false",
+                 total);
         send_json(out, id, buf, NULL, NULL);
         return;
     }
@@ -205,11 +241,26 @@ int control_plane_serve(const char *endpoint) {
         int c = accept(fd, NULL, NULL);
         if (c < 0) break;
         FILE *in = fdopen(c, "r");
-        FILE *out = fdopen(dup(c), "w");
-        if (!in || !out) { close(c); continue; }
+        if (!in) { close(c); continue; }
         char line[8192];
-        while (fgets(line, sizeof(line), in)) handle(m, line, out);
-        fclose(in); fclose(out);
+        while (fgets(line, sizeof(line), in)) {
+            char data[65536];
+            ControlResponse out = {data, 0, sizeof(data), false};
+            handle(m, line, &out);
+            if (out.overflow) {
+                snprintf(data, sizeof(data),
+                         "{\"id\":null,\"error\":{\"code\":\"RESPONSE_TOO_LARGE\","
+                         "\"message\":\"use paging\",\"retryable\":false}}\n");
+                out.len = strlen(data);
+            }
+            size_t sent = 0;
+            while (sent < out.len) {
+                ssize_t n = write(c, data + sent, out.len - sent);
+                if (n <= 0) break;
+                sent += (size_t)n;
+            }
+        }
+        fclose(in);
     }
     close(fd); unlink(endpoint); job_manager_destroy(m);
     return 0;
@@ -231,16 +282,17 @@ int control_plane_serve(const char *endpoint) {
         DWORD got = 0;
         while (ReadFile(p, buf, sizeof(buf)-1, &got, NULL) && got) {
             buf[got] = 0;
-            FILE *out = fopen("xtate-ctl-resp.tmp", "w+b");
-            handle(m, buf, out);
-            if (out) {
-                fflush(out); rewind(out);
-                char resp[8192]; size_t rn = fread(resp, 1, sizeof(resp), out);
-                DWORD wrote = 0;
-                WriteFile(p, resp, (DWORD)rn, &wrote, NULL);
-                fclose(out);
-                remove("xtate-ctl-resp.tmp");
+            char data[65536];
+            ControlResponse out = {data, 0, sizeof(data), false};
+            handle(m, buf, &out);
+            if (out.overflow) {
+                snprintf(data, sizeof(data),
+                         "{\"id\":null,\"error\":{\"code\":\"RESPONSE_TOO_LARGE\","
+                         "\"message\":\"use paging\",\"retryable\":false}}\n");
+                out.len = strlen(data);
             }
+            DWORD wrote = 0;
+            WriteFile(p, data, (DWORD)out.len, &wrote, NULL);
             got = 0;
         }
         DisconnectNamedPipe(p);
