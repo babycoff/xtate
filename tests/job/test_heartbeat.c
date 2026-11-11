@@ -14,7 +14,7 @@ static void beat(const char *path, unsigned long long n, const char *phase) {
 
 static int run_case(const char *result, const char *phase) {
     JobManager *m = job_manager_create(1);
-    char *a[] = {"/bin/sleep", "6", NULL};
+    char *a[] = {"/bin/sleep", "30", NULL};
     Job *j = job_start(m, a, result, "/tmp/hb-test.log", 0);
     if (!j) return 10;
     char hb[512];
@@ -48,3 +48,4 @@ int main(void) {
     printf("heartbeat tests: PASS\\n");
     return 0;
 }
+
