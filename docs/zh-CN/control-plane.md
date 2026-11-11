@@ -1,0 +1,45 @@
+# Job 控制平面
+
+[English](../control-plane.md) · **中文**
+
+MCP、TUI、GUI 共用的 P0 契约。仅本地传输：Linux Unix domain socket，
+Windows Named Pipe。一行一个 JSON 对象，不经过 shell。
+
+## 端点
+
+Linux: `$XDG_RUNTIME_DIR/xtate/control.sock`
+Windows: `\\.\pipe\xtate-control`
+
+本地 token 文件鉴权。
+
+## 方法
+
+- `ping`
+- `job.start`（scan-request 对象）
+- `job.list`
+- `job.status`（`job_id`）
+- `job.results`（`job_id`、`offset`、`limit`）
+- `job.cancel`（`job_id`）
+- `job.events`（`after`）
+
+## 状态
+
+`job_id`、`state`、`phase`、`sent`、`targets`、`success`、`failed`、
+`elapsed_ms`、`result_path`、`heartbeat_age_ms`。
+
+状态：`queued`、`running`、`completed`、`failed`、`cancelled`、`timed_out`、
+`stalled`。
+
+## 错误
+
+错误码来自 `schemas/error-codes.json`，格式：
+`{"id":1,"error":{"code":"JOB_NOT_FOUND","message":"...","retryable":false}}`。
+
+## 规则
+
+- 控制面单线程，manager 调用串行。
+- 结果使用游标，客户端不直接读文件。
+- `job.start` 必须有明确目标与 timeout/stall 策略。
+- daemon 拥有 worker；MCP/TUI/GUI 只是客户端。
+- server 重启终止 job，不声称可恢复。
+- 本地 token 鉴权，不监听网络。
