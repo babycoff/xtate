@@ -88,6 +88,10 @@ failed=...
 info=...
 ```
 
+The heartbeat includes `phase=tx|draining`; a non-`tx` phase is exempt from the
+no-progress rule because it means the scan has stopped sending and is draining
+responses. The heartbeat is written atomically (temp + rename).
+
 The manager treats a stale heartbeat as a wedged worker. Scan progress is
 `packets_sent`/`targets_done` movement, not result-file growth; a scan with no
 live targets can still be healthy. Result-file growth is only auxiliary.

@@ -30,6 +30,7 @@
 #include "util-out/module-json.h"
 #include "util-scan/scan-request.h"
 #include "util-scan/job-manager.h"
+#include "util-scan/heartbeat.h"
 
 static bool request_mode = false;
 #include "scan-modules/scan-modules.h"
@@ -638,16 +639,10 @@ static int _main_scan(XConf *xconf) {
         status_item.print_in_json = xconf->is_status_ndjson;
 
         if (xconf->job_heartbeat_file) {
-            FILE *hb = fopen(xconf->job_heartbeat_file, "w");
-            if (hb) {
-                fprintf(hb, "time=%lld\nsent=%" PRIu64 "\ntargets=%" PRIu64
-                            "\nsuccess=%" PRIu64 "\nfailed=%" PRIu64
-                            "\ninfo=%" PRIu64 "\n",
-                        (long long)time(NULL), status_item.total_sent,
-                        status_item.cur_count, status_item.total_successed,
-                        status_item.total_failed, status_item.total_info);
-                fclose(hb);
-            }
+            heartbeat_write(xconf->job_heartbeat_file, status_item.total_sent,
+                            status_item.cur_count, status_item.total_successed,
+                            status_item.total_failed, status_item.total_info,
+                            stop_tx ? "draining" : "tx");
         }
 
         if (!xconf->is_no_status)
@@ -752,16 +747,10 @@ static int _main_scan(XConf *xconf) {
         status_item.print_in_json = xconf->is_status_ndjson;
 
         if (xconf->job_heartbeat_file) {
-            FILE *hb = fopen(xconf->job_heartbeat_file, "w");
-            if (hb) {
-                fprintf(hb, "time=%lld\nsent=%" PRIu64 "\ntargets=%" PRIu64
-                            "\nsuccess=%" PRIu64 "\nfailed=%" PRIu64
-                            "\ninfo=%" PRIu64 "\n",
-                        (long long)time(NULL), status_item.total_sent,
-                        status_item.cur_count, status_item.total_successed,
-                        status_item.total_failed, status_item.total_info);
-                fclose(hb);
-            }
+            heartbeat_write(xconf->job_heartbeat_file, status_item.total_sent,
+                            status_item.cur_count, status_item.total_successed,
+                            status_item.total_failed, status_item.total_info,
+                            stop_tx ? "draining" : "tx");
         }
         status_item.exiting_secs  = xconf->wait - (time(0) - now);
 

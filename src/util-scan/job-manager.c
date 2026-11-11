@@ -323,7 +323,7 @@ static void terminate_job(Job *j) {
 }
 
 static bool read_heartbeat(Job *j, long long *sent, long long *targets,
-                           long long *stamp) {
+                           long long *stamp, char *phase, size_t phase_len) {
     if (!j->heartbeat_path) return false;
     FILE *fp = fopen(j->heartbeat_path, "r");
     if (!fp) return false;
@@ -334,6 +334,7 @@ static bool read_heartbeat(Job *j, long long *sent, long long *targets,
         if (sscanf(line, "sent=%lld", &v) == 1) *sent = v;
         else if (sscanf(line, "targets=%lld", &v) == 1) *targets = v;
         else if (sscanf(line, "time=%lld", &v) == 1) *stamp = v;
+        else if (sscanf(line, "phase=%31s", phase) == 1) phase[31] = 0;
     }
     fclose(fp);
     return *stamp > 0;
@@ -369,10 +370,15 @@ JobState job_poll(Job *j) {
 #endif
 
     long long sent = 0, targets = 0, stamp = 0;
-    bool hb = read_heartbeat(j, &sent, &targets, &stamp);
+    char phase[32] = "tx";
+    bool hb = read_heartbeat(j, &sent, &targets, &stamp, phase, sizeof(phase));
     if (hb && time(NULL) - stamp <= 2) {
         j->last_heartbeat_ms = now_ms();
-        if (sent != (long long)j->last_sent ||
+        if (strcmp(phase, "tx") != 0) {
+            j->last_progress_ms = now_ms();
+            j->last_sent = (unsigned long long)sent;
+            j->last_targets = (unsigned long long)targets;
+        } else if (sent != (long long)j->last_sent ||
             targets != (long long)j->last_targets) {
             j->last_sent = (unsigned long long)sent;
             j->last_targets = (unsigned long long)targets;

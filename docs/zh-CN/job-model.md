@@ -86,6 +86,9 @@ failed=...
 info=...
 ```
 
+heartbeat 带 `phase=tx|draining`；非 `tx` 阶段表示已停止发包、正在收尾，
+不参与“无进展”判定。heartbeat 使用临时文件 + rename 原子写入。
+
 manager 把 heartbeat 过期视为 worker 卡死。扫描进展看
 `packets_sent`/`targets_done` 是否变化，不看结果文件增长；没有存活目标时
 结果不增长仍然可能是正常扫描。结果文件增长只作为辅助信息。
