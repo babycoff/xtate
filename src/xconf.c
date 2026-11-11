@@ -892,6 +892,22 @@ static ConfRes SET_job_heartbeat_file(void *conf, const char *name,
     xconf->job_heartbeat_file = STRDUP(value);
     return Conf_OK;
 }
+static ConfRes SET_control_connect(void *conf, const char *name,
+                                  const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    if (!value) return Conf_ERR;
+    xconf->control_connect = STRDUP(value);
+    return Conf_OK;
+}
+static ConfRes SET_control_request(void *conf, const char *name,
+                                  const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    if (!value) return Conf_ERR;
+    xconf->control_request = STRDUP(value);
+    return Conf_OK;
+}
 static ConfRes SET_control_ping(void *conf, const char *name,
                                const char *value) {
     XConf *xconf = (XConf *)conf;
@@ -3358,6 +3374,18 @@ ConfParam config_parameters[] = {
      {0},
      "Result file for --job-run (default: <request>.ndjson).",
      "Job result file."},
+    {"control-connect",
+     SET_control_connect,
+     Type_ARG,
+     {0},
+     "Control endpoint for a raw request.",
+     "Control endpoint."},
+    {"control-request",
+     SET_control_request,
+     Type_ARG,
+     {0},
+     "Raw JSON control request (used with --control-connect).",
+     "Raw control request."},
     {"control-ping",
      SET_control_ping,
      Type_ARG,

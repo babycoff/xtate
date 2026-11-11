@@ -1030,6 +1030,20 @@ int main(int argc, char *argv[]) {
     if (request_mode)
         LOG_set_json_error(ERR_INTERNAL_ERROR);
 
+    if (xconf->control_connect && xconf->control_request) {
+        char resp[8192];
+        char req[8192];
+        const char *tok = getenv("XTATE_CONTROL_TOKEN");
+        if (tok && tok[0])
+            snprintf(req, sizeof(req), "{\"token\":\"%s\",%s", tok,
+                     xconf->control_request + 1);
+        else
+            snprintf(req, sizeof(req), "%s", xconf->control_request);
+        if (control_client_request(xconf->control_connect, req, resp, sizeof(resp)) < 0)
+            return 1;
+        fputs(resp, stdout);
+        return 0;
+    }
     if (xconf->control_ping) {
         char req[512], resp[8192];
         const char *tok = getenv("XTATE_CONTROL_TOKEN");

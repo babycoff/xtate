@@ -294,6 +294,8 @@ typedef struct XtateConf {
     char    *job_heartbeat_file;
     char    *control_endpoint;
     char    *control_ping;
+    char    *control_connect;
+    char    *control_request;
 } XConf;
 
 /**
