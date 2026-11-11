@@ -271,7 +271,9 @@ bool rawsock_firewall_warn(const char *scanner, const char *probe) {
     }
     return true;
 }
+bool rawsock_firewall_ok(void) { return true; }
 #else
+bool rawsock_firewall_ok(void) { return true; }
 bool rawsock_firewall_warn(const char *scanner, const char *probe) {
     UNUSEDPARM(probe);
     if (scanner && strcmp(scanner, "tcp-syn") == 0) {

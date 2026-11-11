@@ -130,6 +130,7 @@ int rawsock_is_adapter_names_equal(const char *lhs, const char *rhs);
 int rawsock_resolve_ifname(const char *hint, char *out, size_t out_size);
 int rawsock_count_default_interfaces(void);
 bool rawsock_firewall_warn(const char *scanner, const char *probe);
+bool rawsock_firewall_ok(void);
 ErrorCode rawsock_last_error(void);
 
 /**

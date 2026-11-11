@@ -2,6 +2,19 @@
 #include "control-client.h"
 #include "../util-out/module-json.h"
 #include "../crypto/crypto-json.h"
+#include "../scan-modules/scan-modules.h"
+#include "../probe-modules/probe-modules.h"
+#include "../rawsock/rawsock.h"
+#include "../target/target-parse.h"
+#include "../target/target-rangev4.h"
+#include "../target/target-rangev6.h"
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <arpa/inet.h>
+#endif
+#include "../crypto/crypto-json.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -146,6 +159,73 @@ static int control_call(const char *endpoint, const char *method,
     return control_client_request(endpoint, req, resp, cap);
 }
 
+static bool validate_cfg(const char *cfg, char *err, size_t errcap,
+                         unsigned *ntargets, unsigned *rate) {
+    JsonNode *root = json_decode(cfg);
+    if (!root || root->tag != JSON_OBJECT) {
+        snprintf(err, errcap, "config must be a JSON object"); if (root) json_delete(root); return false;
+    }
+    JsonNode *scan = json_find_member(root, "scan");
+    if (!scan || scan->tag != JSON_STRING || !get_scan_module_by_name(scan->string_)) {
+        snprintf(err, errcap, "unknown or missing scan"); json_delete(root); return false;
+    }
+    JsonNode *probe = json_find_member(root, "probe");
+    if (probe && (probe->tag != JSON_STRING || !get_probe_module_by_name(probe->string_))) {
+        snprintf(err, errcap, "unknown probe"); json_delete(root); return false;
+    }
+    JsonNode *targets = json_find_member(root, "targets");
+    if (!targets || targets->tag != JSON_ARRAY || !targets->children.head) {
+        snprintf(err, errcap, "targets must be a non-empty array"); json_delete(root); return false;
+    }
+    unsigned count = 0;
+    for (JsonNode *t = targets->children.head; t; t = t->next) {
+        if (t->tag != JSON_STRING) { snprintf(err, errcap, "target must be a string"); json_delete(root); return false; }
+        size_t off = 0, len = strlen(t->string_);
+        struct Range r4; struct Range6 r6;
+        while (off < len) {
+            if (target_parse_range(t->string_, &off, len, &r4, &r6) == Bad_Address) {
+                snprintf(err, errcap, "invalid target"); json_delete(root); return false;
+            }
+        }
+        count++;
+    }
+    if (count > 20000) { snprintf(err, errcap, "too many targets"); json_delete(root); return false; }
+    JsonNode *ports = json_find_member(root, "ports");
+    if (ports) {
+        if (ports->tag != JSON_ARRAY) { snprintf(err, errcap, "ports must be an array"); json_delete(root); return false; }
+        for (JsonNode *p = ports->children.head; p; p = p->next)
+            if (p->tag != JSON_NUMBER || p->number_ < 0 || p->number_ > 65535) {
+                snprintf(err, errcap, "invalid port"); json_delete(root); return false;
+            }
+    }
+    unsigned r = 0;
+    JsonNode *rn = json_find_member(root, "rate");
+    if (rn && rn->tag == JSON_NUMBER) r = (unsigned)rn->number_;
+    if (r > 10000) { snprintf(err, errcap, "rate exceeds 10000 pps"); json_delete(root); return false; }
+    if (ntargets) *ntargets = count;
+    if (rate) *rate = r;
+    json_delete(root);
+    return true;
+}
+
+static void net_info(const char *id, const char *target) {
+    char ifname[256] = {0}; unsigned ip = 0, gw = 0;
+    rawsock_get_default_interface(ifname, sizeof(ifname));
+    ip = rawsock_get_adapter_ip(ifname);
+    rawsock_get_default_gateway(ifname, &gw);
+    char ips[32] = "0.0.0.0", gws[32] = "0.0.0.0";
+    struct in_addr a; a.s_addr = htonl(ip); inet_ntop(AF_INET, &a, ips, sizeof(ips));
+    a.s_addr = htonl(gw); inet_ntop(AF_INET, &a, gws, sizeof(gws));
+    char out[1024], *esc_if = json_encode_string(ifname), *esc_t = json_encode_string(target ? target : "");
+    snprintf(out, sizeof(out),
+             "{\"target\":%s,\"interface\":%s,\"source_ipv4\":\"%s\","
+             "\"gateway\":\"%s\",\"firewall_ok\":%s}",
+             esc_t ? esc_t : "\"\"", esc_if ? esc_if : "\"\"", ips, gws,
+             rawsock_firewall_ok() ? "true" : "false");
+    free(esc_if); free(esc_t);
+    text_result(id, out, false);
+}
+
 static void tool_call(const char *id, const char *name, const char *args,
                       const char *endpoint) {
     if (strcmp(name, "list_modules") == 0) {
@@ -165,15 +245,25 @@ static void tool_call(const char *id, const char *name, const char *args,
         return;
     }
     if (strcmp(name, "validate_config") == 0) {
-        char cfg[8192];
-        bool ok = extract_object(args ? args : "", "config", cfg, sizeof(cfg));
-        bool valid = ok && strstr(cfg, "\"scan\"") && strstr(cfg, "\"targets\"");
-        text_result(id, valid ? "{\"valid\":true}" : "{\"valid\":false,\"reason\":\"scan and targets required\"}",
-                    !valid);
+        char cfg[8192], err[256] = {0};
+        unsigned nt = 0, rate = 0;
+        if (!extract_object(args ? args : "", "config", cfg, sizeof(cfg))) {
+            text_result(id, "{\"valid\":false,\"reason\":\"config object required\"}", true); return;
+        }
+        if (!validate_cfg(cfg, err, sizeof(err), &nt, &rate)) {
+            char out[512]; snprintf(out, sizeof(out), "{\"valid\":false,\"reason\":\"%s\"}", err);
+            text_result(id, out, true);
+        } else {
+            char out[256]; snprintf(out, sizeof(out),
+                "{\"valid\":true,\"targets\":%u,\"rate\":%u}", nt, rate);
+            text_result(id, out, false);
+        }
         return;
     }
     if (strcmp(name, "explain_target") == 0 || strcmp(name, "check") == 0) {
-        text_result(id, "local preflight tool is not implemented in MCP yet; use the CLI --explain-target / --check", true);
+        char target[256] = {0};
+        json_str(args ? args : "", "target", target, sizeof(target));
+        net_info(id, target);
         return;
     }
     if (!endpoint || !endpoint[0]) {
@@ -194,16 +284,9 @@ static void tool_call(const char *id, const char *name, const char *args,
         if (!strstr(cfg, "\"authorized\":true")) {
             text_result(id, "target authorization required: set authorized=true", true); return;
         }
-        unsigned long targets = 0;
-        for (const char *q = cfg; (q = strchr(q, '"')); q++) targets++;
-        unsigned rate = 0;
-        const char *pr = strstr(cfg, "\"rate\":");
-        if (pr) rate = (unsigned)atoi(pr + 7);
-        if (targets > 20000) {
-            text_result(id, "too many targets", true); return;
-        }
-        if (rate > 10000) {
-            text_result(id, "rate exceeds MCP limit (10000 pps)", true); return;
+        char verr[256] = {0}; unsigned targets = 0, rate = 0;
+        if (!validate_cfg(cfg, verr, sizeof(verr), &targets, &rate)) {
+            text_result(id, verr, true); return;
         }
         FILE *audit = fopen("xtate-mcp-audit.log", "a");
         if (audit) {
