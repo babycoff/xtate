@@ -117,7 +117,7 @@ int explain_targets(const char *targets, bool check, const char *forced_if) {
         } else printf("  Gateway: on-link\n");
         printf("  Samples: ");
         for (unsigned si = 0; si < groups[k].nsamples; si++) {
-            if (si) printf(", ");
+            if (si) printf(",");
             printf("%s", groups[k].samples[si]);
         }
         if (groups[k].count && groups[k].nsamples == 8) printf(" ...");
