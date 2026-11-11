@@ -179,8 +179,17 @@ int rawsock_route_lookup(ipaddress target, RawRoute *out) {
     }
 
     DWORD ifindex = 0;
-    if (GetBestInterfaceEx((const SOCKADDR *)&dst, &ifindex) != NO_ERROR)
+    MIB_IPFORWARD_ROW2 best;
+    SOCKADDR_INET       best_src;
+    memset(&best, 0, sizeof(best));
+    memset(&best_src, 0, sizeof(best_src));
+    bool have_best = GetBestRoute2(NULL, 0, NULL, &dst, 0, &best, &best_src) ==
+                     NO_ERROR;
+    if (have_best) {
+        ifindex = best.InterfaceIndex;
+    } else if (GetBestInterfaceEx((const SOCKADDR *)&dst, &ifindex) != NO_ERROR) {
         return -1;
+    }
 
     /* Find the matching pcap device for the interface. */
     PIP_ADAPTER_ADDRESSES a = NULL;
@@ -204,7 +213,20 @@ int rawsock_route_lookup(ipaddress target, RawRoute *out) {
 
     unsigned v4src = 0;
     ipaddress v6src = {0};
-    adapter_addr_for_index(ifindex, &v4src, &v6src);
+    if (have_best && target.version == 4 && best_src.si_family == AF_INET)
+        v4src = ntohl(best_src.Ipv4.sin_addr.s_addr);
+    else if (have_best && target.version == 6 && best_src.si_family == AF_INET6) {
+        unsigned char b[16];
+        memcpy(b, &best_src.Ipv6.sin6_addr, 16);
+        v6src.version = 6;
+        v6src.ipv6.hi = 0; v6src.ipv6.lo = 0;
+        for (int i = 0; i < 8; i++) {
+            v6src.ipv6.hi = (v6src.ipv6.hi << 8) | b[i];
+            v6src.ipv6.lo = (v6src.ipv6.lo << 8) | b[8 + i];
+        }
+    } else {
+        adapter_addr_for_index(ifindex, &v4src, &v6src);
+    }
     out->source_ip = target.version == 6 ? v6src : (ipaddress){0};
     if (target.version == 4) {
         out->source_ip.version = 4;
@@ -227,7 +249,13 @@ int rawsock_route_lookup(ipaddress target, RawRoute *out) {
             out->source_ip.ipv6 = rawsock_get_adapter_ipv6(name);
     }
 
-    if (target.version == 4) {
+    if (have_best && best.NextHop.si_family == AF_INET) {
+        out->gateway.version = 4;
+        out->gateway.ipv4 = ntohl(best.NextHop.Ipv4.sin_addr.s_addr);
+    } else if (have_best && best.NextHop.si_family == AF_INET6) {
+        out->gateway.version = 6;
+        memcpy(&out->gateway.ipv6, &best.NextHop.Ipv6.sin6_addr, 16);
+    } else if (target.version == 4) {
         out->gateway.version = 4;
         unsigned gw = 0;
         if (rawsock_get_default_gateway(out->ifname, &gw) == 0)

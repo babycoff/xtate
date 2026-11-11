@@ -46,10 +46,18 @@ int explain_targets(const char *targets, bool check, const char *forced_if) {
                 unsigned prefix = 32;
                 struct Range cidr = range_first_cidr(r, &prefix);
                 groups[gi].samples[groups[gi].nsamples][0] = 0;
-                snprintf(groups[gi].samples[groups[gi].nsamples], 64,
-                         "%u.%u.%u.%u-%u.%u.%u.%u/%u",
-                         (cidr.begin>>24)&255,(cidr.begin>>16)&255,(cidr.begin>>8)&255,cidr.begin&255,
-                         (cidr.end>>24)&255,(cidr.end>>16)&255,(cidr.end>>8)&255,cidr.end&255,prefix);
+                if (cidr.begin == cidr.end)
+                    snprintf(groups[gi].samples[groups[gi].nsamples], 64,
+                             "%u.%u.%u.%u/%u",
+                             (cidr.begin>>24)&255,(cidr.begin>>16)&255,
+                             (cidr.begin>>8)&255,cidr.begin&255,prefix);
+                else
+                    snprintf(groups[gi].samples[groups[gi].nsamples], 64,
+                             "%u.%u.%u.%u-%u.%u.%u.%u/%u",
+                             (cidr.begin>>24)&255,(cidr.begin>>16)&255,
+                             (cidr.begin>>8)&255,cidr.begin&255,
+                             (cidr.end>>24)&255,(cidr.end>>16)&255,
+                             (cidr.end>>8)&255,cidr.end&255,prefix);
                 groups[gi].nsamples++;
             }
         }
