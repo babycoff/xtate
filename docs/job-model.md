@@ -62,3 +62,11 @@ Starts the same binary as a managed worker, waits for completion and prints:
 
 Worker output is NDJSON (`--show all`, `--wait 1`). `--job-timeout` is the total
 wall-clock limit.
+
+## Tests
+
+```bash
+XTATE_BIN=bin/xtate bash tests/job/test_cli.sh
+```
+
+Covers a completed job, a result file, and a `timed_out` job.

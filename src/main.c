@@ -862,9 +862,20 @@ static int run_job_cli(XConf *xconf, const char *exe) {
         snprintf(result, sizeof(result), "%s.ndjson", xconf->job_run_file);
 
     JobManager *m = job_manager_create(1);
-    char *argv[] = {(char *)exe, "--scan-request", xconf->job_run_file,
-                    "--output-module", "ndjson", "--output-file", result,
-                    "--show", "all", "--wait", "1", "--no-status", NULL};
+    char *argv[16];
+    int ac = 0;
+    argv[ac++] = (char *)exe;
+    argv[ac++] = "--scan-request"; argv[ac++] = xconf->job_run_file;
+    argv[ac++] = "--output-module"; argv[ac++] = "ndjson";
+    argv[ac++] = "--output-file"; argv[ac++] = result;
+    argv[ac++] = "--show"; argv[ac++] = "all";
+    argv[ac++] = "--wait"; argv[ac++] = "1";
+    argv[ac++] = "--no-status";
+    if (xconf->nic.ifname[0]) {
+        argv[ac++] = "-if";
+        argv[ac++] = xconf->nic.ifname;
+    }
+    argv[ac] = NULL;
     char log[1024];
     snprintf(log, sizeof(log), "%s.log", result);
     Job *job = job_start(m, argv, result, log, xconf->job_timeout);

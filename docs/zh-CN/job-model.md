@@ -60,3 +60,11 @@ xtate --job-run=request.json --job-result=out.ndjson --job-timeout=30
 ```
 
 worker 输出 NDJSON（`--show all`、`--wait 1`）。`--job-timeout` 是总墙钟上限。
+
+## 测试
+
+```bash
+XTATE_BIN=bin/xtate bash tests/job/test_cli.sh
+```
+
+覆盖 completed job、结果文件和 timed_out job。
