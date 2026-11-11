@@ -166,6 +166,11 @@ bool output_init(const XConf *xconf, OutConf *out_conf) {
         return false;
     }
 
+    if (out_conf->output_module && !out_conf->show_set) {
+        LOG(LEVEL_HINT,
+            "OutputModule selected without --show; only success results are "
+            "written. Use --show failed/info/all to include others.\n");
+    }
     if (out_conf->output_module) {
         if (out_conf->output_module->need_file &&
             !out_conf->output_filename[0]) {

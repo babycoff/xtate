@@ -60,6 +60,7 @@ struct OutputConfig {
     unsigned         output_as_info  : 1;
     unsigned         is_append       : 1;
     unsigned         is_out_screen   : 1;
+    unsigned         show_set       : 1;
     unsigned         is_show_failed  : 1;
     unsigned         is_show_info    : 1;
     unsigned         no_show_success : 1;

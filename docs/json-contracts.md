@@ -84,3 +84,9 @@ In `--scan-request` mode every `LOG(LEVEL_ERROR)` is emitted as:
 
 No colored `[ERR]` text is used for these errors. Hints/warnings remain human
 text. Runtime errors use `INTERNAL_ERROR` until they are given dedicated codes.
+
+## Output module visibility
+
+When an output module is selected without `--show`, only success results are
+written. Xtate prints a hint at startup. Use `--show failed`, `--show info`, or
+`--show all`; the output failure test uses `--show failed` deliberately.

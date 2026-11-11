@@ -615,7 +615,12 @@ static ConfRes SET_show_output(void *conf, const char *name,
         return 0;
     }
 
-    if (conf_equals("failed", value) || conf_equals("fail", value) ||
+    xconf->out_conf.show_set = true;
+    if (conf_equals("all", value)) {
+        xconf->out_conf.is_show_failed  = true;
+        xconf->out_conf.is_show_info    = true;
+        xconf->out_conf.no_show_success = false;
+    } else if (conf_equals("failed", value) || conf_equals("fail", value) ||
         conf_equals("failure", value)) {
         xconf->out_conf.is_show_failed = true;
     } else if (conf_equals("info", value) ||
@@ -640,6 +645,7 @@ static ConfRes SET_no_show_output(void *conf, const char *name,
         return 0;
     }
 
+    xconf->out_conf.show_set = true;
     if (conf_equals("failed", value) || conf_equals("fail", value)) {
         xconf->out_conf.is_show_failed = false;
     } else if (conf_equals("info", value) ||

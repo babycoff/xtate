@@ -78,3 +78,9 @@ python3 tests/schema/validate_schemas.py
 
 不再使用彩色 `[ERR]` 文本。提示/警告仍为人类文本；运行时错误暂用
 `INTERNAL_ERROR`，后续再细分为专用错误码。
+
+## 输出模块可见性
+
+选择 OutputModule 但未指定 `--show` 时，只写入 success 结果。Xtate 启动时会提示。
+使用 `--show failed`、`--show info` 或 `--show all`；输出失败测试特意使用
+`--show failed`。
