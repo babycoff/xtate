@@ -2,11 +2,11 @@
 
 **English** · [中文](zh-CN/README.md)
 
-This directory is the user manual for **Xtate v2.41.1** — a modular all-stack network scanner for Internet-scale surveys.
+This directory is the user manual for **Xtate v2.41.2** — a modular all-stack network scanner for Internet-scale surveys.
 
 The [README](../README.md) is the landing page. Start here if you want to use Xtate rather than skim its feature list.
 
-**Release notes:** [2.41.1](./release-notes/2.41.1.md) — README protocol coverage and AI integration plan.
+**Release notes:** [2.41.2](./release-notes/2.41.2.md) — JSON contracts, scan-request runtime and error handling.
 
 ## Where to start
 
