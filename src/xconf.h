@@ -293,6 +293,7 @@ typedef struct XtateConf {
     unsigned job_heartbeat_timeout;
     char    *job_heartbeat_file;
     char    *control_endpoint;
+    char    *control_ping;
 } XConf;
 
 /**

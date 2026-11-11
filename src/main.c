@@ -32,6 +32,7 @@
 #include "util-scan/job-manager.h"
 #include "util-scan/heartbeat.h"
 #include "util-scan/control-plane.h"
+#include "util-scan/control-client.h"
 
 static bool request_mode = false;
 #include "scan-modules/scan-modules.h"
@@ -1028,6 +1029,19 @@ int main(int argc, char *argv[]) {
     }
     if (request_mode)
         LOG_set_json_error(ERR_INTERNAL_ERROR);
+
+    if (xconf->control_ping) {
+        char req[512], resp[8192];
+        const char *tok = getenv("XTATE_CONTROL_TOKEN");
+        if (tok && tok[0])
+            snprintf(req, sizeof(req), "{\"id\":1,\"method\":\"ping\",\"token\":\"%s\"}\n", tok);
+        else
+            snprintf(req, sizeof(req), "{\"id\":1,\"method\":\"ping\"}\n");
+        if (control_client_request(xconf->control_ping, req, resp, sizeof(resp)) < 0)
+            return 1;
+        fputs(resp, stdout);
+        return 0;
+    }
 
     if (xconf->control_endpoint)
         return control_plane_serve(xconf->control_endpoint);

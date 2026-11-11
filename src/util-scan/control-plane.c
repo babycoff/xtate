@@ -214,7 +214,7 @@ int control_plane_serve(const char *endpoint) {
     JobManager *m = job_manager_create(16);
     for (;;) {
         HANDLE p = CreateNamedPipeA(endpoint, PIPE_ACCESS_DUPLEX,
-            PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+            PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
             1, 65536, 65536, 0, NULL);
         if (p == INVALID_HANDLE_VALUE) break;
         if (!ConnectNamedPipe(p, NULL) && GetLastError() != ERROR_PIPE_CONNECTED) {

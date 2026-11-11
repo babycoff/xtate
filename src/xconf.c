@@ -892,6 +892,14 @@ static ConfRes SET_job_heartbeat_file(void *conf, const char *name,
     xconf->job_heartbeat_file = STRDUP(value);
     return Conf_OK;
 }
+static ConfRes SET_control_ping(void *conf, const char *name,
+                               const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    if (!value) return Conf_ERR;
+    xconf->control_ping = STRDUP(value);
+    return Conf_OK;
+}
 static ConfRes SET_control_endpoint(void *conf, const char *name,
                                     const char *value) {
     XConf *xconf = (XConf *)conf;
@@ -3350,6 +3358,12 @@ ConfParam config_parameters[] = {
      {0},
      "Result file for --job-run (default: <request>.ndjson).",
      "Job result file."},
+    {"control-ping",
+     SET_control_ping,
+     Type_ARG,
+     {0},
+     "Send a ping to a control endpoint and print the response.",
+     "Ping control endpoint."},
     {"control-plane",
      SET_control_endpoint,
      Type_ARG,
