@@ -238,7 +238,7 @@ static void bsonout_result(OutItem *item) {
 
     size_t written = fwrite(bson_get_data(res_doc), 1, res_doc->len, file);
     if (written != res_doc->len)
-        LOG(LEVEL_ERROR, "(BsonOutput) could not write result to file.\n");
+        output_error("BsonOutput", "could not write result to file.");
     bson_destroy(res_doc);
 
     return;
@@ -246,9 +246,9 @@ static void bsonout_result(OutItem *item) {
 
 static void bsonout_close(const OutConf *out) {
     if (fflush(file) != 0)
-        LOG(LEVEL_ERROR, "(BsonOutput) could not flush output file.\n");
+        output_error("BsonOutput", "could not flush output file.");
     if (file != stdout && fclose(file) != 0)
-        LOG(LEVEL_ERROR, "(BsonOutput) could not close output file.\n");
+        output_error("BsonOutput", "could not close output file.");
 }
 
 Output BsonOutput = {

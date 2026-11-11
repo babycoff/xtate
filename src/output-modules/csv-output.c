@@ -153,14 +153,14 @@ static void csv_result(OutItem *item) {
     fputc('\n', file);
 
     if (ferror(file))
-        LOG(LEVEL_ERROR, "(CsvOutput) could not write result to file.\n");
+        output_error("CsvOutput", "could not write result to file.");
 }
 
 static void csv_close(const OutConf *out) {
     if (fflush(file) != 0)
-        LOG(LEVEL_ERROR, "(CsvOutput) could not flush output file.\n");
+        output_error("CsvOutput", "could not flush output file.");
     if (file != stdout && fclose(file) != 0)
-        LOG(LEVEL_ERROR, "(CsvOutput) could not close output file.\n");
+        output_error("CsvOutput", "could not close output file.");
 }
 
 Output CsvOutput = {

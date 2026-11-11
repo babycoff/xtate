@@ -52,6 +52,7 @@ void output_close(OutConf *out);
  * non-zero instead of silently losing more results.
  */
 void output_mark_fatal(void);
+void output_error(const char *module, const char *message);
 bool output_has_fatal_error(void);
 
 Output *get_output_module_by_name(const char *name);

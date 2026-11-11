@@ -42,5 +42,7 @@ Stable codes used by JSON error envelopes. The machine-readable list is
   rule aborts the scan with this code; normal CLI mode remains a warning.
 - `PERMISSION_DENIED`: set by raw socket/PCAP permission failures; other NIC
   failures may still be `INTERNAL_ERROR`.
-- `OUTPUT_WRITE_FAILED`: covers output-module initialization/open failures;
-  later per-write failures are not all mapped yet.
+- `OUTPUT_WRITE_FAILED`: output initialization/open, per-result write,
+  flush and close failures now use `output_error()`; the callback also marks
+  the output sink fatal so the scan exits non-zero.
+

@@ -160,14 +160,14 @@ static void text_result(OutItem *item) {
     return;
 
 error:
-    LOG(LEVEL_ERROR, "(TextOutput) could not write result to file.\n");
+    output_error("TextOutput", "could not write result to file.");
 }
 
 static void text_close(const OutConf *out) {
     if (fflush(file) != 0)
-        LOG(LEVEL_ERROR, "(TextOutput) could not flush output file.\n");
+        output_error("TextOutput", "could not flush output file.");
     if (file != stdout && fclose(file) != 0)
-        LOG(LEVEL_ERROR, "(TextOutput) could not close output file.\n");
+        output_error("TextOutput", "could not close output file.");
 }
 
 Output TextOutput = {

@@ -203,6 +203,12 @@ bool output_init(const XConf *xconf, OutConf *out_conf) {
  * mess*/
 void output_mark_fatal(void) { _output_fatal_error = 1; }
 
+void output_error(const char *module, const char *message) {
+    LOG_set_json_error(ERR_OUTPUT_WRITE_FAILED);
+    output_mark_fatal();
+    LOG(LEVEL_ERROR, "(%s) %s\n", module, message);
+}
+
 bool output_has_fatal_error(void) { return _output_fatal_error != 0; }
 
 static void output_result_to_stdout(OutItem *item) {

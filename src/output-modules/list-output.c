@@ -92,14 +92,14 @@ static void list_result(OutItem *item) {
     return;
 
 error:
-    LOG(LEVEL_ERROR, "(ListOutput) could not write result to file.\n");
+    output_error("ListOutput", "could not write result to file.");
 }
 
 static void list_close(const OutConf *out) {
-    fflush(file);
-    if (file != stdout) {
-        fclose(file);
-    }
+    if (fflush(file) != 0)
+        output_error("ListOutput", "could not flush output file.");
+    if (file != stdout && fclose(file) != 0)
+        output_error("ListOutput", "could not close output file.");
 }
 
 Output ListOutput = {
