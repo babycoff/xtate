@@ -254,8 +254,13 @@ void rawsock_firewall_warn(const char *scanner, const char *probe) {
             "dns/UDP scans benefit from ICMP port-unreachable suppression; rule missing\n");
     }
     if ((need_rst && !(rst4 && rst6)) || (need_icmp && !icmp4)) {
-        LOG(LEVEL_HINT,
-            "run: sudo ./firewall/add_rules.sh   (Linux scanner host; never leave it installed)\n");
+        if (LOG_json_errors_enabled()) {
+            LOG_set_json_error(ERR_FIREWALL_RULES_MISSING);
+            LOG(LEVEL_ERROR, "firewall RST/ICMP suppression rules are missing\n");
+        } else {
+            LOG(LEVEL_HINT,
+                "run: sudo ./firewall/add_rules.sh   (Linux scanner host; never leave it installed)\n");
+        }
     }
 }
 #else

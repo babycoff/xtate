@@ -29,6 +29,8 @@
 #include "output-modules/output-modules.h"
 #include "util-out/module-json.h"
 #include "util-scan/scan-request.h"
+
+static bool request_mode = false;
 #include "scan-modules/scan-modules.h"
 #include "probe-modules/probe-modules.h"
 #include "generate-modules/generate-modules.h"
@@ -216,6 +218,8 @@ static int _main_scan(XConf *xconf) {
     /*before rawsock initing*/
     rawsock_prepare();
 
+    if (request_mode)
+        LOG_set_json_error(ERR_PERMISSION_DENIED);
     /*init NIC & rawsock*/
     if (init_nic(xconf, init_ipv4, init_ipv6) != 0) {
         xcmd_try_reboot();
@@ -314,11 +318,15 @@ static int _main_scan(XConf *xconf) {
     /*
      * Do init for OutputModule
      */
+    if (request_mode)
+        LOG_set_json_error(ERR_OUTPUT_WRITE_FAILED);
     if (!output_init(xconf, &xconf->out_conf)) {
         LOG(LEVEL_ERROR, "OutputModule initializing\n");
         xcmd_try_reboot();
         exit(1);
     }
+    if (request_mode)
+        LOG_set_json_error(ERR_INTERNAL_ERROR);
 
     /*
      * BPF filter
@@ -881,7 +889,6 @@ int main(int argc, char *argv[]) {
     xconf_global_refresh(xconf);
 
     // C-native JSON scan request (no shell/subprocess)
-    bool request_mode = false;
     for (int i = 1; i < argc; i++) {
         const char *arg = argv[i];
         const char *file = NULL;

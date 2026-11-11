@@ -8,6 +8,7 @@
 #include "../util-out/error-code.h"
 #include "../scan-modules/scan-modules.h"
 #include "../probe-modules/probe-modules.h"
+#include "../target/target-parse.h"
 
 static void req_error(ErrorCode code, const char *msg) {
     char *esc = json_encode_string(msg ? msg : "");
@@ -117,6 +118,19 @@ int scan_request_build_argv(const char *filename, int *argc_out,
             req_error(ERR_UNSUPPORTED_PROBE, "unknown probe module");
             json_delete(root);
             return -1;
+        }
+    }
+    for (JsonNode *n = targets->children.head; n; n = n->next) {
+        if (n->tag != JSON_STRING) {
+            req_error(ERR_TARGET_INVALID, "target must be a string");
+            json_delete(root); return -1;
+        }
+        const char *t = n->string_;
+        bool range = strchr(t, '/') || strchr(t, ':') ||
+                     (strchr(t, '-') && strchr(t, '.'));
+        if (!range && target_parse_ip(t).version == 0) {
+            req_error(ERR_TARGET_INVALID, "invalid target address");
+            json_delete(root); return -1;
         }
     }
     char *ip=join_array(targets,false); if (!ip) { req_error(ERR_TARGET_INVALID,"invalid targets"); json_delete(root); return -1; }

@@ -62,6 +62,7 @@ void LOG_init() {
 void LOG_set_ansi(bool no_ansi) { _no_ansi = no_ansi; }
 void LOG_set_json_errors(bool enabled) { _json_errors = enabled; }
 void LOG_set_json_error(ErrorCode code) { _json_error_code = code; }
+bool LOG_json_errors_enabled(void) { return _json_errors; }
 
 /***************************************************************************
  ***************************************************************************/

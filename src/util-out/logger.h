@@ -49,6 +49,7 @@ void LOG_add_level(int level);
 void LOG_set_json_errors(bool enabled);
 #include "error-code.h"
 void LOG_set_json_error(ErrorCode code);
+bool LOG_json_errors_enabled(void);
 
 int LOG_get_level();
 
