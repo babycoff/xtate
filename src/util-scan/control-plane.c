@@ -219,6 +219,28 @@ static void jesc(const char *s, char *out, size_t cap) {
     out[n]=0;
 }
 
+static void read_log_tail(const char *path, char *out, size_t cap) {
+    out[0] = 0;
+    if (!path || !path[0] || cap < 8) return;
+#ifdef _WIN32
+    wchar_t wpath[2048];
+    if (MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath,
+                            (int)(sizeof(wpath) / sizeof(wpath[0]))) <= 0) return;
+    FILE *f = _wfopen(wpath, L"rb");
+#else
+    FILE *f = fopen(path, "rb");
+#endif
+    if (!f) return;
+    fseek(f, 0, SEEK_END);
+    long n = ftell(f);
+    if (n < 0) { fclose(f); return; }
+    long keep = n > 1024 ? 1024 : n;
+    fseek(f, n - keep, SEEK_SET);
+    size_t got = fread(out, 1, (size_t)keep, f);
+    out[got] = 0;
+    fclose(f);
+}
+
 static void handle(JobManager *m, const char *line, ControlResponse *out) {
     char id[32] = "null";
     const char *p = strstr(line, "\"id\":");
@@ -393,20 +415,22 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
     char phase[32] = "unknown";
     uint64_t sent = 0, targets = 0, hb_age = 0;
     bool hb = job_heartbeat_info(j, phase, sizeof(phase), &sent, &targets, &hb_age);
-    char res[2048], esres[512], eslog[512], eserr[512];
+    char res[4096], esres[512], eslog[512], eserr[512], tail[1100], estail[1400];
     jesc(job_result_path(j), esres, sizeof(esres));
     jesc(job_log_path(j), eslog, sizeof(eslog));
     jesc(job_error(j), eserr, sizeof(eserr));
+    read_log_tail(job_log_path(j), tail, sizeof(tail));
+    jesc(tail, estail, sizeof(estail));
     snprintf(res, sizeof(res),
              "{\"job_id\":\"%s\",\"state\":\"%s\",\"phase\":\"%s\","
              "\"sent\":%llu,\"targets\":%llu,\"heartbeat_age_ms\":%llu,"
              "\"heartbeat\":%s,\"exit_code\":%u,"
              "\"result\":\"%s\",\"log_path\":\"%s\",\"error\":\"%s\","
-             "\"elapsed_ms\":%u}",
+             "\"stderr_tail\":\"%s\",\"elapsed_ms\":%u}",
              job_id(j), job_state_string(job_state(j)), phase,
              (unsigned long long)sent, (unsigned long long)targets,
              (unsigned long long)hb_age, hb ? "true" : "false",
-             job_exit_code(j), esres, eslog, eserr,
+             job_exit_code(j), esres, eslog, eserr, estail,
              job_elapsed_ms(j));
     job_manager_unlock(m);
     send_json(out, id, res, NULL, NULL);

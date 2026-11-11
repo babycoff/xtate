@@ -490,7 +490,7 @@ static void tool_call(const char *id, const char *name, const char *args,
     else if (strcmp(name, "start_scan") == 0) method = "job.start";
     int n = control_call(endpoint, method, args, iface, resp, sizeof(resp));
     if (n < 0) { text_result(id, "control request failed", true); return; }
-    text_result(id, resp, strstr(resp, "\"error\"") != NULL);
+    text_result(id, resp, strstr(resp, "\"error\":{\"") != NULL);
 }
 
 int mcp_server_run(const char *control_endpoint) {
