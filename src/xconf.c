@@ -892,6 +892,14 @@ static ConfRes SET_job_heartbeat_file(void *conf, const char *name,
     xconf->job_heartbeat_file = STRDUP(value);
     return Conf_OK;
 }
+static ConfRes SET_control_endpoint(void *conf, const char *name,
+                                    const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    if (!value) return Conf_ERR;
+    xconf->control_endpoint = STRDUP(value);
+    return Conf_OK;
+}
 static ConfRes SET_job_stall_timeout(void *conf, const char *name,
                                      const char *value) {
     XConf *xconf = (XConf *)conf;
@@ -3342,6 +3350,12 @@ ConfParam config_parameters[] = {
      {0},
      "Result file for --job-run (default: <request>.ndjson).",
      "Job result file."},
+    {"control-plane",
+     SET_control_endpoint,
+     Type_ARG,
+     {"control-serve", 0},
+     "Serve the local job control endpoint (Unix socket or Windows named pipe).",
+     "Serve job control."},
     {"job-heartbeat-timeout",
      SET_job_heartbeat_timeout,
      Type_ARG,
