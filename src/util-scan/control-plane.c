@@ -122,6 +122,7 @@ static void maintenance(JobManager *m) {
         job_poll(j);
         finalize_job(j);
     }
+    job_manager_prune(m);
     job_manager_unlock(m);
 }
 
