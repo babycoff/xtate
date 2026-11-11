@@ -899,6 +899,14 @@ static ConfRes SET_result_chunk_size(void *conf, const char *name,
     xconf->result_chunk_size = conf_parse_size(value);
     return Conf_OK;
 }
+static ConfRes SET_result_compress(void *conf, const char *name,
+                                   const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    if (!value) return Conf_ERR;
+    xconf->result_compress = STRDUP(value);
+    return Conf_OK;
+}
 static ConfRes SET_result_index(void *conf, const char *name,
                                 const char *value) {
     XConf *xconf = (XConf *)conf;
@@ -3394,6 +3402,12 @@ ConfParam config_parameters[] = {
      {0},
      "Split job results into chunks of this size (0: single file).",
      "Result chunk size."},
+    {"result-compress",
+     SET_result_compress,
+     Type_ARG,
+     {0},
+     "Result chunk compression: none or zstd (if built).",
+     "Result compression."},
     {"result-index",
      SET_result_index,
      Type_FLAG,

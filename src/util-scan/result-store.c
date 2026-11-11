@@ -3,9 +3,38 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#ifndef NOT_FOUND_ZSTD
+#include <zstd.h>
+#endif
+
+#ifndef NOT_FOUND_ZSTD
+static int compress_file(const char *path, uint64_t *size) {
+    FILE *in = fopen(path, "rb");
+    if (!in) return -1;
+    fseek(in, 0, SEEK_END); long n = ftell(in); rewind(in);
+    if (n <= 0) { fclose(in); return -1; }
+    void *src = malloc((size_t)n);
+    if (!src || fread(src, 1, (size_t)n, in) != (size_t)n) { fclose(in); free(src); return -1; }
+    fclose(in);
+    size_t bound = ZSTD_compressBound((size_t)n);
+    void *dst = malloc(bound);
+    if (!dst) { free(src); return -1; }
+    size_t c = ZSTD_compress(dst, bound, src, (size_t)n, 3);
+    free(src);
+    if (ZSTD_isError(c)) { free(dst); return -1; }
+    char zp[1200]; snprintf(zp, sizeof(zp), "%s.zst", path);
+    FILE *out = fopen(zp, "wb");
+    if (!out) { free(dst); return -1; }
+    fwrite(dst, 1, c, out); fclose(out); free(dst);
+    remove(path);
+    snprintf((char *)path, 1200, "%s", zp);
+    *size = c;
+    return 0;
+}
+#endif
 
 int result_store_build(const char *result_path, uint64_t chunk_bytes,
-                       bool build_index) {
+                       bool build_index, const char *compression) {
     if (!result_path || chunk_bytes == 0) return 0;
     FILE *in = fopen(result_path, "rb");
     if (!in) return -1;
@@ -15,8 +44,8 @@ int result_store_build(const char *result_path, uint64_t chunk_bytes,
     FILE *mf = fopen(manifest, "w");
     FILE *ix = build_index ? fopen(index, "w") : NULL;
     if (!mf) { fclose(in); return -1; }
-    fprintf(mf, "{\"format\":\"ndjson\",\"compression\":\"none\","
-                "\"chunks\":[");
+    fprintf(mf, "{\"format\":\"ndjson\",\"compression\":\"%s\","
+                "\"chunks\":[", compression ? compression : "none");
     if (ix) fprintf(ix, "{\"chunks\":[");
     char line[65536];
     uint64_t cid = 0, total = 0, records = 0;
@@ -29,6 +58,15 @@ int result_store_build(const char *result_path, uint64_t chunk_bytes,
         if (!out || (cbytes && cbytes + n > chunk_bytes)) {
             if (out) {
                 fclose(out);
+#ifndef NOT_FOUND_ZSTD
+                if (compression && strcmp(compression, "zstd") == 0)
+                    compress_file(cpath, &cbytes);
+#endif
+                fprintf(mf, "%s{\"id\":%llu,\"path\":\"%s\","
+                            "\"bytes\":%llu,\"records\":%llu}",
+                        first ? "" : ",", (unsigned long long)cid, cpath,
+                        (unsigned long long)cbytes,
+                        (unsigned long long)crecords);
                 if (ix) fprintf(ix, "%s{\"id\":%llu,\"path\":\"%s\","
                                     "\"bytes\":%llu,\"records\":%llu}",
                                 first ? "" : ",", (unsigned long long)cid, cpath,
@@ -47,14 +85,18 @@ int result_store_build(const char *result_path, uint64_t chunk_bytes,
     }
     if (out) {
         fclose(out);
-        if (ix) fprintf(ix, "%s{\"id\":%llu,\"path\":\"%s\","
+#ifndef NOT_FOUND_ZSTD
+            if (compression && strcmp(compression, "zstd") == 0)
+                compress_file(cpath, &cbytes);
+#endif
+            if (ix) fprintf(ix, "%s{\"id\":%llu,\"path\":\"%s\","
                             "\"bytes\":%llu,\"records\":%llu}",
                         first ? "" : ",", (unsigned long long)cid, cpath,
                         (unsigned long long)cbytes, (unsigned long long)crecords);
-        fprintf(mf, "{\"id\":%llu,\"path\":\"%s\",\"bytes\":%llu,"
+        fprintf(mf, "%s{\"id\":%llu,\"path\":\"%s\",\"bytes\":%llu,"
                     "\"records\":%llu}",
-                (unsigned long long)cid, cpath, (unsigned long long)cbytes,
-                (unsigned long long)crecords);
+                first ? "" : ",", (unsigned long long)cid, cpath,
+                (unsigned long long)cbytes, (unsigned long long)crecords);
     }
     fclose(in);
     fprintf(mf, "],\"total_bytes\":%llu,\"total_records\":%llu}",

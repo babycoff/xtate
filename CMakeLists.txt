@@ -22,6 +22,7 @@ option(WITH_LIBXML2        "Build with LibXml2 library"                   ON)
 option(WITH_BSON           "Build with libbson library"                   ON)
 option(WITH_MONGOC         "Build with libmongoc library"                 ON)
 option(WITH_NGTCP2         "Build with ngtcp2/GnuTLS QUIC transport"          ON)
+option(WITH_ZSTD           "Build with zstd result compression"              ON)
 # option(WITH_FANN           "Build with Fann library"                      ON)
 
 
@@ -407,3 +408,16 @@ endif ()
 
 
 configure_file(${CMAKE_SOURCE_DIR}/src/version.h.in ${CMAKE_SOURCE_DIR}/src/version.h @ONLY)
+
+if (WITH_ZSTD)
+    find_path(ZSTD_INCLUDE_DIR zstd.h)
+    find_library(ZSTD_LIBRARY NAMES zstd)
+    if (ZSTD_INCLUDE_DIR AND ZSTD_LIBRARY)
+        target_include_directories(${exe_name} PRIVATE ${ZSTD_INCLUDE_DIR})
+        target_link_libraries(${exe_name} ${ZSTD_LIBRARY})
+    else()
+        add_definitions(-DNOT_FOUND_ZSTD)
+    endif()
+else()
+    add_definitions(-DNOT_FOUND_ZSTD)
+endif()

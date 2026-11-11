@@ -938,7 +938,7 @@ static int run_job_cli(XConf *xconf, const char *exe) {
            result);
     if (job_state(job) == JOB_COMPLETED && xconf->result_chunk_size)
         result_store_build(result, xconf->result_chunk_size,
-                           xconf->result_index);
+                           xconf->result_index, xconf->result_compress);
     int rc = job_state(job) == JOB_COMPLETED ? 0 : 1;
     job_manager_destroy(m);
     return rc;

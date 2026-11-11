@@ -63,3 +63,8 @@ Windows: `\\.\pipe\xtate-control`
 `--result-chunk-size=N --result-index` 会把完成的 CLI job 结果拆成
 `<result>.<id>.ndjson` 分片，并写 `<result>.manifest.json` 和可选 index。
 当前压缩仅 `none`。`job.result_manifest` 返回 manifest 路径；控制消息不携带结果字节。
+
+### 可选 zstd
+
+`-DWITH_ZSTD=ON` 启用 zstd 检测。缺少 zstd 时定义 `NOT_FOUND_ZSTD`；
+`--result-compress=zstd` 会退化为未压缩分片。压缩默认关闭。

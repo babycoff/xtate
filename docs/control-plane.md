@@ -64,3 +64,9 @@ workstream before `start_scan`:
 `<result>.<id>.ndjson` chunks and writes `<result>.manifest.json` plus an
 optional index. Compression is currently `none`. `job.result_manifest` returns
 the manifest path; control messages never carry result bytes.
+
+### Optional zstd
+
+`-DWITH_ZSTD=ON` enables zstd detection. If zstd is missing, the build defines
+`NOT_FOUND_ZSTD`; `--result-compress=zstd` then falls back to uncompressed
+chunks. Compression is opt-in; default is `none`.
