@@ -57,3 +57,9 @@ Windows: `\\.\pipe\xtate-control`
 - daemon 拥有 worker；MCP/TUI/GUI 只是客户端。
 - server 重启终止 job，不声称可恢复。
 - 本地 token 鉴权，不监听网络。
+
+## 结果存储
+
+`--result-chunk-size=N --result-index` 会把完成的 CLI job 结果拆成
+`<result>.<id>.ndjson` 分片，并写 `<result>.manifest.json` 和可选 index。
+当前压缩仅 `none`。`job.result_manifest` 返回 manifest 路径；控制消息不携带结果字节。

@@ -33,6 +33,7 @@
 #include "util-scan/heartbeat.h"
 #include "util-scan/control-plane.h"
 #include "util-scan/control-client.h"
+#include "util-scan/result-store.h"
 
 static bool request_mode = false;
 #include "scan-modules/scan-modules.h"
@@ -935,6 +936,9 @@ static int run_job_cli(XConf *xconf, const char *exe) {
            "\"exit_code\":%u,\"result\":\"%s\"}}\n",
            job_id(job), job_state_string(job_state(job)), job_exit_code(job),
            result);
+    if (job_state(job) == JOB_COMPLETED && xconf->result_chunk_size)
+        result_store_build(result, xconf->result_chunk_size,
+                           xconf->result_index);
     int rc = job_state(job) == JOB_COMPLETED ? 0 : 1;
     job_manager_destroy(m);
     return rc;

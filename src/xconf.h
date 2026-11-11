@@ -296,6 +296,8 @@ typedef struct XtateConf {
     char    *control_ping;
     char    *control_connect;
     char    *control_request;
+    uint64_t result_chunk_size;
+    unsigned result_index : 1;
 } XConf;
 
 /**

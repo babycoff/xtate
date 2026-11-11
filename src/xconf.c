@@ -892,6 +892,20 @@ static ConfRes SET_job_heartbeat_file(void *conf, const char *name,
     xconf->job_heartbeat_file = STRDUP(value);
     return Conf_OK;
 }
+static ConfRes SET_result_chunk_size(void *conf, const char *name,
+                                     const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    xconf->result_chunk_size = conf_parse_size(value);
+    return Conf_OK;
+}
+static ConfRes SET_result_index(void *conf, const char *name,
+                                const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    xconf->result_index = conf_parse_bool(value);
+    return Conf_OK;
+}
 static ConfRes SET_control_connect(void *conf, const char *name,
                                   const char *value) {
     XConf *xconf = (XConf *)conf;
@@ -3374,6 +3388,18 @@ ConfParam config_parameters[] = {
      {0},
      "Result file for --job-run (default: <request>.ndjson).",
      "Job result file."},
+    {"result-chunk-size",
+     SET_result_chunk_size,
+     Type_ARG,
+     {0},
+     "Split job results into chunks of this size (0: single file).",
+     "Result chunk size."},
+    {"result-index",
+     SET_result_index,
+     Type_FLAG,
+     {0},
+     "Write a result chunk index file.",
+     "Write result index."},
     {"control-connect",
      SET_control_connect,
      Type_ARG,

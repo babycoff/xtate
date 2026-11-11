@@ -193,15 +193,20 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
     if (strstr(line, "\"job.results\"") ||
         strstr(line, "\"job.result_manifest\"")) {
         char *path = json_encode_string(job_result_path(j) ? job_result_path(j) : "");
-        char res[1024];
+        char manifest_path[1200];
+        snprintf(manifest_path, sizeof(manifest_path), "%s.manifest.json",
+                 job_result_path(j) ? job_result_path(j) : "");
+        char *mpath = json_encode_string(manifest_path);
+        char res[1600];
         snprintf(res, sizeof(res),
                  "{\"job_id\":\"%s\",\"state\":\"%s\","
-                 "\"result_path\":%s,\"result_bytes\":%llu,"
-                 "\"complete\":%s}",
+                 "\"result_path\":%s,\"manifest_path\":%s,"
+                 "\"result_bytes\":%llu,\"complete\":%s}",
                  jidbuf, job_state_string(job_state(j)), path ? path : "\"\"",
+                 mpath ? mpath : "\"\"",
                  (unsigned long long)job_result_bytes(j),
                  job_is_terminal(j) ? "true" : "false");
-        free(path);
+        free(path); free(mpath);
         job_manager_unlock(m);
         send_json(out, id, res, NULL, NULL);
         return;

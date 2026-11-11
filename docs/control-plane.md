@@ -57,3 +57,10 @@ workstream before `start_scan`:
 - Daemon owns workers; MCP/TUI/GUI are clients.
 - Server restart terminates jobs; no false persistence claim.
 - Local token authentication; no network listener.
+
+## Result store
+
+`--result-chunk-size=N --result-index` splits a completed CLI job result into
+`<result>.<id>.ndjson` chunks and writes `<result>.manifest.json` plus an
+optional index. Compression is currently `none`. `job.result_manifest` returns
+the manifest path; control messages never carry result bytes.
