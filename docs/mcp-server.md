@@ -7,6 +7,12 @@ xtate --mcp --control-connect=<endpoint>
 MCP stdio JSON-RPC. Current tools:
 
 ```text
+list_modules
+describe_probe
+explain_target
+check
+validate_config
+start_scan
 job_list
 job_status
 job_result_manifest

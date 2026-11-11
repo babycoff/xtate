@@ -72,7 +72,12 @@ static const char *tools_json =
 "{\"name\":\"job_list\",\"description\":\"List managed scan jobs with pagination. Returns job id, state and result path only; use job_result_manifest for result metadata.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"offset\":{\"type\":\"integer\",\"minimum\":0},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":1000}}},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"job_status\",\"description\":\"Return a job's state, phase, sent/targets progress, success/failed counts, heartbeat age and elapsed time. Does not return result records.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"job_id\":{\"type\":\"string\",\"description\":\"Job id returned by job.start\"}},\"required\":[\"job_id\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"job_result_manifest\",\"description\":\"Return result_path, manifest_path, size and completion for a job. Does not carry result data; read chunks from the manifest path.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"job_id\":{\"type\":\"string\"}},\"required\":[\"job_id\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
-"{\"name\":\"job_cancel\",\"description\":\"Request cancellation of a running job. The result file is preserved.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"job_id\":{\"type\":\"string\"}},\"required\":[\"job_id\"]},\"annotations\":{\"readOnlyHint\":false,\"destructiveHint\":true,\"openWorldHint\":false}}"
+"{\"name\":\"job_cancel\",\"description\":\"Request cancellation of a running job. The result file is preserved.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"job_id\":{\"type\":\"string\"}},\"required\":[\"job_id\"]},\"annotations\":{\"readOnlyHint\":false,\"destructiveHint\":true,\"openWorldHint\":false}},"
+"{\"name\":\"describe_probe\",\"description\":\"Return module metadata (parameters, probe type, description) for a scan or probe. Use before choosing options.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"Module name, e.g. doh-h2\"}},\"required\":[\"name\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
+"{\"name\":\"explain_target\",\"description\":\"Describe the interface, source address and route Xtate would use for a target. No packets are sent.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"target\":{\"type\":\"string\"}},\"required\":[\"target\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
+"{\"name\":\"check\",\"description\":\"Read-only preflight: interface, source, gateway and Linux firewall prerequisites. No scan is started.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{}},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
+"{\"name\":\"validate_config\",\"description\":\"Validate a scan-request object (scan, targets, probe, ports, args) before starting a job.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"config\":{\"type\":\"object\",\"description\":\"Scan-request object\"}},\"required\":[\"config\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
+"{\"name\":\"start_scan\",\"description\":\"Start a scan job from a closed scan-request object. Returns a job id; results are read via job_result_manifest. Only use with authorized targets.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"arguments\":{\"type\":\"object\",\"description\":\"Scan-request object with scan, targets, optional probe/ports/result_path, timeout_sec\"}},\"required\":[\"arguments\"]},\"annotations\":{\"readOnlyHint\":false,\"destructiveHint\":false,\"openWorldHint\":true}}"
 "]}";
 
 static const char *resources_json =
@@ -85,35 +90,58 @@ static const char *resources_json =
 static const char *prompts_json =
 "{\"prompts\":[{\"name\":\"plan-safe-scan\",\"description\":\"Plan a scan with target authorization, protocol choice, timeout and firewall checks.\"}]}";
 
+static bool extract_object(const char *line, const char *key, char *out,
+                           size_t cap) {
+    char pat[64]; snprintf(pat, sizeof(pat), "\"%s\":", key);
+    const char *p = strstr(line, pat);
+    if (!p) return false;
+    p += strlen(pat); while (*p == ' ' || *p == '\t') p++;
+    if (*p != '{') return false;
+    int depth = 0; bool in = false, esc = false; size_t n = 0;
+    for (; *p; p++) {
+        char c = *p;
+        if (n + 1 < cap) out[n++] = c;
+        if (in) {
+            if (esc) esc = false;
+            else if (c == '\\') esc = true;
+            else if (c == '"') in = false;
+        } else {
+            if (c == '"') in = true;
+            else if (c == '{') depth++;
+            else if (c == '}') { depth--; if (depth == 0) break; }
+        }
+    }
+    out[n] = 0;
+    return depth == 0 && n > 1;
+}
+
 static int control_call(const char *endpoint, const char *method,
                         const char *args, char *resp, size_t cap) {
-    char req[4096];
+    char req[8192], token[256] = "";
     const char *tok = getenv("XTATE_CONTROL_TOKEN");
+    if (tok && tok[0]) snprintf(token, sizeof(token), ",\"token\":\"%s\"", tok);
     char jid[128] = {0};
     json_str(args ? args : "", "job_id", jid, sizeof(jid));
-    int off = 0, lim = 100;
-    const char *po = args ? strstr(args, "\"offset\":") : NULL;
-    const char *pl = args ? strstr(args, "\"limit\":") : NULL;
-    if (po) off = atoi(po + 9);
-    if (pl) lim = atoi(pl + 8);
     if (strcmp(method, "job.list") == 0) {
+        int off = 0, lim = 100;
+        const char *po = args ? strstr(args, "\"offset\":") : NULL;
+        const char *pl = args ? strstr(args, "\"limit\":") : NULL;
+        if (po) off = atoi(po + 9);
+        if (pl) lim = atoi(pl + 8);
         snprintf(req, sizeof(req),
                  "{\"id\":1,\"method\":\"job.list\",\"offset\":%d,"
-                 "\"limit\":%d%s%s}\n", off, lim,
-                 tok ? ",\"token\":\"" : "", tok ? tok : "");
-        if (tok) {
-            size_t l = strlen(req);
-            req[l - 2] = '"'; req[l - 1] = '}'; req[l] = '\n'; req[l + 1] = 0;
-        }
+                 "\"limit\":%d%s}\n", off, lim, token);
+    } else if (strcmp(method, "job.start") == 0) {
+        char params[7168];
+        if (!extract_object(args ? args : "", "arguments", params, sizeof(params)))
+            return -1;
+        snprintf(req, sizeof(req),
+                 "{\"id\":1,\"method\":\"job.start\",\"params\":%s%s}\n",
+                 params, token);
     } else {
         snprintf(req, sizeof(req),
-                 "{\"id\":1,\"method\":\"%s\",\"job_id\":\"%s\""
-                 "%s%s}\n", method, jid,
-                 tok ? ",\"token\":\"" : "", tok ? tok : "");
-        if (tok) {
-            size_t l = strlen(req);
-            req[l - 2] = '"'; req[l - 1] = '}'; req[l] = '\n'; req[l + 1] = 0;
-        }
+                 "{\"id\":1,\"method\":\"%s\",\"job_id\":\"%s\"%s}\n",
+                 method, jid, token);
     }
     return control_client_request(endpoint, req, resp, cap);
 }
@@ -127,13 +155,32 @@ static void tool_call(const char *id, const char *name, const char *args,
         free(m);
         return;
     }
+    if (strcmp(name, "describe_probe") == 0) {
+        char *m = module_json_string();
+        if (!m) { text_result(id, "cannot read module metadata", true); return; }
+        text_result(id, m, false);
+        free(m);
+        return;
+    }
+    if (strcmp(name, "validate_config") == 0) {
+        char cfg[8192];
+        bool ok = extract_object(args ? args : "", "config", cfg, sizeof(cfg));
+        bool valid = ok && strstr(cfg, "\"scan\"") && strstr(cfg, "\"targets\"");
+        text_result(id, valid ? "{\"valid\":true}" : "{\"valid\":false,\"reason\":\"scan and targets required\"}",
+                    !valid);
+        return;
+    }
+    if (strcmp(name, "explain_target") == 0 || strcmp(name, "check") == 0) {
+        text_result(id, "local preflight tool is not implemented in MCP yet; use the CLI --explain-target / --check", true);
+        return;
+    }
     if (!endpoint || !endpoint[0]) {
         text_result(id, "control endpoint not configured", true);
         return;
     }
     if (strcmp(name, "job_list") != 0 && strcmp(name, "job_status") != 0 &&
         strcmp(name, "job_result_manifest") != 0 &&
-        strcmp(name, "job_cancel") != 0) {
+        strcmp(name, "job_cancel") != 0 && strcmp(name, "start_scan") != 0) {
         text_result(id, "unknown or unsupported tool", true);
         return;
     }
@@ -143,6 +190,7 @@ static void tool_call(const char *id, const char *name, const char *args,
     else if (strcmp(name, "job_status") == 0) method = "job.status";
     else if (strcmp(name, "job_cancel") == 0) method = "job.cancel";
     else if (strcmp(name, "job_list") == 0) method = "job.list";
+    else if (strcmp(name, "start_scan") == 0) method = "job.start";
     int n = control_call(endpoint, method, args, resp, sizeof(resp));
     if (n < 0) { text_result(id, "control request failed", true); return; }
     text_result(id, resp, false);
