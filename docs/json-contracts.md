@@ -1,0 +1,41 @@
+# JSON contracts
+
+**English** · [中文](zh-CN/json-contracts.md)
+
+These schemas are the machine-readable boundary for AI/MCP integration. The
+CLI and NDJSON output remain the source of truth; schemas describe them.
+
+## Schemas
+
+| File | Purpose |
+|:---|:---|
+| [`schemas/module.schema.json`](../schemas/module.schema.json) | module metadata (scan/probe/output/generate) |
+| [`schemas/scan-request.schema.json`](../schemas/scan-request.schema.json) | closed scan request object used by agents/MCP |
+| [`schemas/result.schema.json`](../schemas/result.schema.json) | one NDJSON result line |
+| [`schemas/error.schema.json`](../schemas/error.schema.json) | stable error envelope |
+
+## Rules
+
+- JSON is UTF-8 and one object per line for results.
+- Unknown fields are rejected (`additionalProperties: false`) at the request
+  boundary.
+- `scan-request` is data, never a shell string. No command substitution, pipes
+  or redirection.
+- `targets` are exactly what the caller supplied; no implicit expansion.
+- `dry_run` defaults to `true` for agent-originated requests.
+- Results must validate against `result.schema.json`; report values are scalar.
+- Errors use stable uppercase `code` values, not localized prose.
+
+## Versioning
+
+Schemas are versioned with the Xtate release. Additive fields are allowed only
+after a schema revision; removing or renaming a field is a breaking change.
+
+## Validation
+
+```bash
+python3 -c "import json,glob; [json.load(open(f)) for f in glob.glob('schemas/*.json')]"
+```
+
+The MCP server must validate both requests and generated result lines before
+returning them.

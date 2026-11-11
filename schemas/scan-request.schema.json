@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/babycoff/xtate/schemas/scan-request.schema.json",
+  "title": "Xtate scan request",
+  "type": "object",
+  "required": ["scan", "targets"],
+  "properties": {
+    "scan": {"type": "string", "minLength": 1},
+    "probe": {"type": "string"},
+    "targets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "ports": {
+      "type": "array",
+      "items": {"type": "integer", "minimum": 0, "maximum": 65535}
+    },
+    "probe_args": {
+      "type": "object",
+      "additionalProperties": {"type": ["string", "number", "boolean"]}
+    },
+    "scan_args": {
+      "type": "object",
+      "additionalProperties": {"type": ["string", "number", "boolean"]}
+    },
+    "rate": {"type": "integer", "minimum": 1},
+    "timeout_sec": {"type": "integer", "minimum": 1, "maximum": 86400},
+    "dry_run": {"type": "boolean", "default": true}
+  },
+  "additionalProperties": false
+}

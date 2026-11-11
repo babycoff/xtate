@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/babycoff/xtate/schemas/result.schema.json",
+  "title": "Xtate NDJSON result line",
+  "type": "object",
+  "required": ["time", "level", "ip_proto", "ip_them", "ip_me"],
+  "properties": {
+    "time": {"type": "string"},
+    "level": {"enum": ["information", "failure", "success"]},
+    "ip_proto": {"type": "string"},
+    "ip_them": {"type": "string"},
+    "ip_me": {"type": "string"},
+    "port_them": {"type": "integer", "minimum": 0, "maximum": 65535},
+    "port_me": {"type": "integer", "minimum": 0, "maximum": 65535},
+    "classification": {"type": "string"},
+    "reason": {"type": "string"},
+    "scan report": {"$ref": "#/$defs/report"},
+    "probe report": {"$ref": "#/$defs/report"},
+    "output report": {"$ref": "#/$defs/report"}
+  },
+  "$defs": {
+    "report": {
+      "type": "object",
+      "additionalProperties": {
+        "type": ["string", "integer", "number", "boolean", "null"]
+      }
+    }
+  },
+  "additionalProperties": false
+}

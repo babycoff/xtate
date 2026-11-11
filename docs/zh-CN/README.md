@@ -24,6 +24,7 @@
 | DNS over HTTPS | [DNS over HTTPS](./dns-over-https.md) |
 | DNS over TLS | [DNS over TLS](./dns-over-tls.md) |
 | 输入/输出审查 | [输入/输出审查](./input-output-audit.md) |
+| JSON 契约 | [JSON 契约](./json-contracts.md) |
 | AI 集成设计 | [AI 集成设计](./ai-integration.md) |
 | Linux 防火墙 | [Linux 防火墙前置条件](./firewall.md) |
 | 想了解内部原理 | [架构](./architecture.md) → [ZBanner](./zbanner.md) / [HLTCP](./hltcp.md) |
