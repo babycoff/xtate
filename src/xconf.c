@@ -846,6 +846,10 @@ static ConfRes SET_explain_target(void *conf, const char *name,
                                   const char *value) {
     XConf *xconf = (XConf *)conf;
     UNUSEDPARM(name);
+    if (strchr(value, ',')) {
+        LOG(LEVEL_ERROR, "explain-target accepts one address, not a list\n");
+        return Conf_ERR;
+    }
     ipaddress ip = target_parse_ip(value);
     if (ip.version != 4 && ip.version != 6)
         return Conf_ERR;
