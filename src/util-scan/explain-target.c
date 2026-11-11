@@ -10,7 +10,8 @@ typedef struct Group {
     char ifname[256];
     ipaddress source, gateway;
     uint64_t count;
-    unsigned sample_begin, sample_end;
+    char samples[8][64];
+    unsigned nsamples;
     bool used;
 } Group;
 
@@ -38,8 +39,20 @@ int explain_targets(const char *targets, bool check, const char *forced_if) {
                 groups[k].gateway.version == route.gateway.version &&
                 (route.gateway.version != 4 || groups[k].gateway.ipv4 == route.gateway.ipv4)) { gi = k; break; }
         }
-        if (gi < 0 && ng < 32) { gi = ng++; snprintf(groups[gi].ifname, sizeof(groups[gi].ifname), "%s", route.ifname); groups[gi].gateway = route.gateway; groups[gi].source = route.source_ip; groups[gi].sample_begin = r.begin; }
-        if (gi >= 0) { groups[gi].used = true; groups[gi].count += count; groups[gi].sample_end = r.end; total += count; }
+        if (gi < 0 && ng < 32) { gi = ng++; snprintf(groups[gi].ifname, sizeof(groups[gi].ifname), "%s", route.ifname); groups[gi].gateway = route.gateway; groups[gi].source = route.source_ip; }
+        if (gi >= 0) {
+            groups[gi].used = true; groups[gi].count += count; total += count;
+            if (groups[gi].nsamples < 8) {
+                unsigned prefix = 32;
+                struct Range cidr = range_first_cidr(r, &prefix);
+                groups[gi].samples[groups[gi].nsamples][0] = 0;
+                snprintf(groups[gi].samples[groups[gi].nsamples], 64,
+                         "%u.%u.%u.%u-%u.%u.%u.%u/%u",
+                         (cidr.begin>>24)&255,(cidr.begin>>16)&255,(cidr.begin>>8)&255,cidr.begin&255,
+                         (cidr.end>>24)&255,(cidr.end>>16)&255,(cidr.end>>8)&255,cidr.end&255,prefix);
+                groups[gi].nsamples++;
+            }
+        }
     }
     printf("Targets: %llu\nRoute groups: %d\n", (unsigned long long)total, ng);
     for (int k = 0; k < ng; k++) {
@@ -55,8 +68,11 @@ int explain_targets(const char *targets, bool check, const char *forced_if) {
             if (g) printf("  Gateway: %u.%u.%u.%u\n",(g>>24)&255,(g>>16)&255,(g>>8)&255,g&255);
             else printf("  Gateway: on-link\n");
         } else printf("  Gateway: on-link\n");
-        unsigned b = groups[k].sample_begin, e = groups[k].sample_end;
-        printf("  Sample: %u.%u.%u.%u-%u.%u.%u.%u\n",(b>>24)&255,(b>>16)&255,(b>>8)&255,b&255,(e>>24)&255,(e>>16)&255,(e>>8)&255,e&255);
+        printf("  Samples:");
+        for (unsigned si = 0; si < groups[k].nsamples; si++)
+            printf(" %s", groups[k].samples[si]);
+        if (groups[k].count && groups[k].nsamples == 8) printf(" ...");
+        printf("\n");
     }
     if (ng > 1) printf("\nWARNING: targets span %d routes; split into separate jobs.\n", ng);
     rangelist_rm_all(&set.ipv4); range6list_rm_all(&set.ipv6);
