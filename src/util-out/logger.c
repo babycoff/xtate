@@ -9,6 +9,7 @@
 
 #include "../pixie/pixie-threads.h"
 #include "../util-out/xprint.h"
+#include "../crypto/crypto-json.h"
 
 #define PREFIX_OUT    ""
 #define PREFIX_HINT   "[HIN] "
@@ -19,6 +20,8 @@
 #define PREFIX_DETAIL "[DTL] "
 
 static int   _debug_level = 0;
+static bool  _json_errors = false;
+static const char *_json_error_code = "INTERNAL_ERROR";
 static void *_log_mutex   = NULL;
 static bool  _no_ansi     = true; /*don't use ansi until setting*/
 
@@ -57,6 +60,10 @@ void LOG_init() {
 /***************************************************************************
  ***************************************************************************/
 void LOG_set_ansi(bool no_ansi) { _no_ansi = no_ansi; }
+void LOG_set_json_errors(bool enabled) { _json_errors = enabled; }
+void LOG_set_json_error_code(const char *code) {
+    _json_error_code = code ? code : "INTERNAL_ERROR";
+}
 
 /***************************************************************************
  ***************************************************************************/
@@ -84,8 +91,22 @@ static void _vLOG(int level, const char *fmt, va_list marker) {
         if (!_no_ansi)
             fputs(XPRINT_CLEAR_LINE, stderr);
 
-        fputs(_level_to_string(level), stderr);
-        vfprintf(stderr, fmt, marker);
+        if (level == LEVEL_ERROR && _json_errors) {
+            char msg[2048];
+            vsnprintf(msg, sizeof(msg), fmt, marker);
+            size_t n = strlen(msg);
+            while (n && (msg[n - 1] == '\n' || msg[n - 1] == '\r'))
+                msg[--n] = 0;
+            char *esc = json_encode_string(msg);
+            fprintf(stderr,
+                    "{\"error\":{\"code\":\"%s\",\"message\":%s,"
+                    "\"retryable\":false}}\n",
+                    _json_error_code, esc ? esc : "\"\"");
+            if (esc) free(esc);
+        } else {
+            fputs(_level_to_string(level), stderr);
+            vfprintf(stderr, fmt, marker);
+        }
         fflush(stderr);
 
         pixie_release_mutex(_log_mutex);

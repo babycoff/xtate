@@ -74,3 +74,13 @@ python3 tests/schema/validate_schemas.py
 The test checks schema metaschema validity, positive/negative fixtures, and a
 real NDJSON result line. The MCP server must validate both requests and
 generated result lines before returning them.
+## JSON error mode
+
+In `--scan-request` mode every `LOG(LEVEL_ERROR)` is emitted as:
+
+```json
+{"error":{"code":"INVALID_ARGUMENT","message":"...","retryable":false}}
+```
+
+No colored `[ERR]` text is used for these errors. Hints/warnings remain human
+text. Runtime errors use `INTERNAL_ERROR` until they are given dedicated codes.

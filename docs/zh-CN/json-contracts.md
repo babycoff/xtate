@@ -68,3 +68,13 @@ python3 tests/schema/validate_schemas.py
 
 测试覆盖 schema 元校验、正反例 fixture 和真实 NDJSON 结果。MCP server 必须在
 返回前校验请求和生成的结果行。
+## JSON 错误模式
+
+`--scan-request` 模式下所有 `LOG(LEVEL_ERROR)` 输出为：
+
+```json
+{"error":{"code":"INVALID_ARGUMENT","message":"...","retryable":false}}
+```
+
+不再使用彩色 `[ERR]` 文本。提示/警告仍为人类文本；运行时错误暂用
+`INTERNAL_ERROR`，后续再细分为专用错误码。

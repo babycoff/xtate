@@ -46,6 +46,8 @@ void LOGnet(ipaddress ip_them, unsigned port_them, const char *fmt, ...);
 int LOGopenssl(int level);
 
 void LOG_add_level(int level);
+void LOG_set_json_errors(bool enabled);
+void LOG_set_json_error_code(const char *code);
 
 int LOG_get_level();
 
