@@ -97,3 +97,11 @@ The manager treats a stale heartbeat as a wedged worker. Scan progress is
 live targets can still be healthy. Result-file growth is only auxiliary.
 `--job-heartbeat-timeout` defaults to 30 seconds; `--job-stall-timeout` tracks
 no progress while the heartbeat stays alive.
+
+## Tests
+
+Linux: `tests/job/test_heartbeat.c` covers fresh heartbeat/progress, stale
+heartbeat, and `phase=draining` exemption. Windows:
+`tests/job/test_heartbeat.ps1` starts a job, checks completion and heartbeat
+contents. The current worker phases are `tx` and `draining`; no separate
+`waiting` phase exists yet.

@@ -94,3 +94,10 @@ manager 把 heartbeat 过期视为 worker 卡死。扫描进展看
 结果不增长仍然可能是正常扫描。结果文件增长只作为辅助信息。
 `--job-heartbeat-timeout` 默认 30 秒；`--job-stall-timeout` 检测 heartbeat
 正常但无进展的情况。
+
+## 测试
+
+Linux：`tests/job/test_heartbeat.c` 覆盖 heartbeat 新鲜/进展、过期 heartbeat、
+以及 `phase=draining` 豁免。Windows：`tests/job/test_heartbeat.ps1` 启动 job，
+检查 completed 和 heartbeat 内容。当前 worker phase 只有 `tx` 和 `draining`，
+尚未引入单独的 `waiting` 阶段。
