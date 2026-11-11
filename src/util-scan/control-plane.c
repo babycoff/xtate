@@ -6,6 +6,7 @@
 #include <string.h>
 #include <time.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -14,6 +15,37 @@
 #include <sys/un.h>
 #include <unistd.h>
 #endif
+
+static const char *g_token = NULL;
+
+static bool token_ok(const char *line) {
+    if (!g_token || !g_token[0]) return true;
+    const char *p = strstr(line, "\"token\"");
+    if (!p) return false;
+    p += 7;
+    while (*p == ' ' || *p == '\t') p++;
+    if (*p != ':') return false;
+    p++;
+    while (*p == ' ' || *p == '\t') p++;
+    if (*p != '"') return false;
+    p++;
+    size_t n = strlen(g_token);
+    return strncmp(p, g_token, n) == 0 && p[n] == '"';
+}
+
+static const char *field_str(const char *s, const char *key, char *out,
+                             size_t cap) {
+    char pat[64];
+    snprintf(pat, sizeof(pat), "\"%s\":", key);
+    const char *p = strstr(s, pat);
+    if (!p) return NULL;
+    p += strlen(pat); while (*p == ' ') p++;
+    if (*p != '"') return NULL;
+    p++; size_t n = 0;
+    while (p[n] && p[n] != '"' && n + 1 < cap) { out[n] = p[n]; n++; }
+    out[n] = 0;
+    return out;
+}
 
 static int64_t field_int(const char *s, const char *key, int64_t def) {
     char pat[64];
@@ -49,8 +81,42 @@ static void handle(JobManager *m, const char *line, FILE *out) {
         }
         id[n] = 0;
     }
+    if (!token_ok(line)) {
+        send_json(out, id, NULL, "UNAUTHORIZED", "invalid or missing token");
+        return;
+    }
     if (strstr(line, "\"ping\"")) {
         send_json(out, id, "{\"pong\":true}", NULL, NULL);
+        return;
+    }
+    if (strstr(line, "\"job.start\"")) {
+        char req[512], res[512];
+        if (!field_str(line, "request_path", req, sizeof(req)) ||
+            !field_str(line, "result_path", res, sizeof(res))) {
+            send_json(out, id, NULL, "INVALID_ARGUMENT", "request_path and result_path required");
+            return;
+        }
+#ifdef _WIN32
+        char exe[MAX_PATH];
+        GetModuleFileNameA(NULL, exe, sizeof(exe));
+#else
+        char exe[512];
+        ssize_t el = readlink("/proc/self/exe", exe, sizeof(exe) - 1);
+        if (el <= 0) { send_json(out, id, NULL, "INTERNAL_ERROR", "cannot find executable"); return; }
+        exe[el] = 0;
+#endif
+        char hb[600]; snprintf(hb, sizeof(hb), "%s.heartbeat", res);
+        char hbarg[600]; snprintf(hbarg, sizeof(hbarg), "--job-heartbeat=%s", hb);
+        char *argv[] = {exe, "--scan-request", req, "--output-module", "ndjson",
+                        "--output-file", res, "--show", "all", "--wait", "1",
+                        "--no-status", hbarg, NULL};
+        job_manager_lock(m);
+        Job *j = job_start(m, argv, res, NULL, 0);
+        if (j) job_set_heartbeat(j, hb, 30);
+        job_manager_unlock(m);
+        if (!j) { send_json(out, id, NULL, "JOB_LIMIT_REACHED", "too many jobs"); return; }
+        char r[128]; snprintf(r, sizeof(r), "{\"job_id\":\"%s\"}", job_id(j));
+        send_json(out, id, r, NULL, NULL);
         return;
     }
     if (strstr(line, "\"job.list\"")) {
@@ -118,6 +184,7 @@ static void handle(JobManager *m, const char *line, FILE *out) {
 
 #ifndef _WIN32
 int control_plane_serve(const char *endpoint) {
+    g_token = getenv("XTATE_CONTROL_TOKEN");
     JobManager *m = job_manager_create(16);
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) return 1;
@@ -142,6 +209,8 @@ int control_plane_serve(const char *endpoint) {
 }
 #else
 int control_plane_serve(const char *endpoint) {
+    g_token = getenv("XTATE_CONTROL_TOKEN");
+    g_token = getenv("XTATE_CONTROL_TOKEN");
     JobManager *m = job_manager_create(16);
     for (;;) {
         HANDLE p = CreateNamedPipeA(endpoint, PIPE_ACCESS_DUPLEX,
