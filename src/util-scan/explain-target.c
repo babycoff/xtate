@@ -115,9 +115,11 @@ int explain_targets(const char *targets, bool check, const char *forced_if) {
             ipaddress_formatted_t f = ipaddress_fmt(groups[k].gateway);
             printf("  Gateway: %s\n", f.string);
         } else printf("  Gateway: on-link\n");
-        printf("  Samples:");
-        for (unsigned si = 0; si < groups[k].nsamples; si++)
-            printf(" %s", groups[k].samples[si]);
+        printf("  Samples: ");
+        for (unsigned si = 0; si < groups[k].nsamples; si++) {
+            if (si) printf(", ");
+            printf("%s", groups[k].samples[si]);
+        }
         if (groups[k].count && groups[k].nsamples == 8) printf(" ...");
         printf("\n");
     }
@@ -125,3 +127,4 @@ int explain_targets(const char *targets, bool check, const char *forced_if) {
     rangelist_rm_all(&set.ipv4); range6list_rm_all(&set.ipv6);
     return 0;
 }
+
