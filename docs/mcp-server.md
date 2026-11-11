@@ -47,3 +47,10 @@ module metadata.
 `targets`, `route_groups` and `groups` (interface/source/gateway/samples).
 `start_scan` runs the same route grouping and refuses targets that span more
 than one route; split those into separate jobs.
+
+## Tests
+
+`tests/mcp/test_mcp.py` covers initialize/instructions, tools/list schemas,
+resources/list, describe_probe, structured explain_target, validate/start
+guards, start_scan -> job_status/job_result_manifest/job_list, and mixed-route
+rejection when the target set actually spans routes.
