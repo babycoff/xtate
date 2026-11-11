@@ -57,6 +57,7 @@ enum Operation {
     Op_ListAdapters,        /* list all usable interfaces */
     Op_ExplainTarget,       /* read-only target/interface diagnostic */
     Op_CheckNetwork,        /* read-only preflight check */
+    Op_ListModulesJson,     /* machine-readable module metadata */
     Op_ListScanModules,     /* list all scan modules */
     Op_HelpScanModule,      /* print help of specified scan module */
     Op_ListProbeModules,    /* list all probes */

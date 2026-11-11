@@ -13,6 +13,28 @@ schema 只是描述它们。
 | [`schemas/scan-request.schema.json`](../schemas/scan-request.schema.json) | Agent/MCP 使用的封闭扫描请求 |
 | [`schemas/result.schema.json`](../schemas/result.schema.json) | 一行 NDJSON 结果 |
 | [`schemas/error.schema.json`](../schemas/error.schema.json) | 稳定错误信封 |
+| [`schemas/error-codes.json`](../schemas/error-codes.json) | 已知错误码 |
+
+## 运行时元数据
+
+```bash
+xtate --list-modules-json
+```
+
+输出所有 scan/probe/output/generate 模块的 `name`、`kind`、`probe_type`、
+描述和参数。覆盖检查：
+
+```bash
+XTATE_BIN=build/bin/xtate python3 tests/schema/validate_modules.py
+```
+
+参考 scan-request 适配器：
+
+```bash
+python3 tools/scan_request_to_cli.py < request.json
+```
+
+它会按 `scan-request.schema.json` 校验并输出 argv 数组，不执行任何命令。
 
 ## 规则
 

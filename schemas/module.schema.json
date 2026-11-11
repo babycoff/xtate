@@ -3,23 +3,70 @@
   "$id": "https://github.com/babycoff/xtate/schemas/module.schema.json",
   "title": "Xtate module metadata",
   "type": "object",
-  "required": ["name", "kind"],
+  "required": [
+    "name",
+    "kind"
+  ],
   "properties": {
-    "name": {"type": "string", "minLength": 1},
-    "kind": {"enum": ["scan", "probe", "output", "generate"]},
-    "short_description": {"type": "string"},
-    "description": {"type": "string"},
-    "probe_type": {"enum": ["udp", "tcp", "state"]},
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "enum": [
+        "scan",
+        "probe",
+        "output",
+        "generate"
+      ]
+    },
+    "short_description": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "probe_type": {
+      "enum": [
+        "udp",
+        "tcp",
+        "state",
+        "none"
+      ]
+    },
     "parameters": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["name", "type"],
+        "required": [
+          "name",
+          "type"
+        ],
         "properties": {
-          "name": {"type": "string"},
-          "aliases": {"type": "array", "items": {"type": "string"}},
-          "type": {"enum": ["flag", "arg"]},
-          "description": {"type": "string"}
+          "name": {
+            "type": "string"
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "type": {
+            "enum": [
+              "flag",
+              "arg"
+            ]
+          },
+          "description": {
+            "type": "string"
+          }
         },
         "additionalProperties": false
       }

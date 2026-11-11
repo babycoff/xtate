@@ -857,6 +857,15 @@ static ConfRes SET_check_network(void *conf, const char *name,
 }
 
 
+static ConfRes SET_modules_json(void *conf, const char *name,
+                                const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    if (conf_parse_bool(value))
+        xconf->op = Op_ListModulesJson;
+    return Conf_OK;
+}
+
 static ConfRes SET_listif(void *conf, const char *name, const char *value) {
     XConf *xconf = (XConf *)conf;
     UNUSEDPARM(name);
@@ -3265,6 +3274,12 @@ ConfParam config_parameters[] = {
      {"net-check", "preflight", 0},
      "Read-only: check interface, source IP, gateway and Linux firewall rules.",
      "Check network prerequisites."},
+    {"list-modules-json",
+     SET_modules_json,
+     Type_FLAG,
+     {"json-modules", 0},
+     "Print all scan/probe/output/generate modules and their parameters as JSON.",
+     "Print module metadata as JSON."},
     {"list-if",
      SET_listif,
      Type_FLAG,

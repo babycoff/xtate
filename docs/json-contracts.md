@@ -13,6 +13,29 @@ CLI and NDJSON output remain the source of truth; schemas describe them.
 | [`schemas/scan-request.schema.json`](../schemas/scan-request.schema.json) | closed scan request object used by agents/MCP |
 | [`schemas/result.schema.json`](../schemas/result.schema.json) | one NDJSON result line |
 | [`schemas/error.schema.json`](../schemas/error.schema.json) | stable error envelope |
+| [`schemas/error-codes.json`](../schemas/error-codes.json) | known error codes |
+
+## Runtime metadata
+
+```bash
+xtate --list-modules-json
+```
+
+emits every scan/probe/output/generate module with `name`, `kind`,
+`probe_type`, descriptions and parameters. Coverage validation:
+
+```bash
+XTATE_BIN=build/bin/xtate python3 tests/schema/validate_modules.py
+```
+
+Reference scan-request adapter:
+
+```bash
+python3 tools/scan_request_to_cli.py < request.json
+```
+
+It validates against `scan-request.schema.json` and prints an argv array; it
+does not execute anything.
 
 ## Rules
 

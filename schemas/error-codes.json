@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "codes": [
+    {
+      "code": "INVALID_ARGUMENT",
+      "retryable": false
+    },
+    {
+      "code": "UNSUPPORTED_SCAN",
+      "retryable": false
+    },
+    {
+      "code": "UNSUPPORTED_PROBE",
+      "retryable": false
+    },
+    {
+      "code": "TARGET_INVALID",
+      "retryable": false
+    },
+    {
+      "code": "PERMISSION_DENIED",
+      "retryable": false
+    },
+    {
+      "code": "FIREWALL_RULES_MISSING",
+      "retryable": false
+    },
+    {
+      "code": "SCAN_TIMEOUT",
+      "retryable": true
+    },
+    {
+      "code": "SCAN_CANCELLED",
+      "retryable": false
+    },
+    {
+      "code": "OUTPUT_WRITE_FAILED",
+      "retryable": false
+    },
+    {
+      "code": "INTERNAL_ERROR",
+      "retryable": false
+    }
+  ]
+}

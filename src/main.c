@@ -27,6 +27,7 @@
 #include "util-out/logger.h"
 #include "util-misc/i18n.h"
 #include "output-modules/output-modules.h"
+#include "util-out/module-json.h"
 #include "scan-modules/scan-modules.h"
 #include "probe-modules/probe-modules.h"
 #include "generate-modules/generate-modules.h"
@@ -1020,6 +1021,10 @@ int main(int argc, char *argv[]) {
 
         case Op_ListAdapters:
             rawsock_list_adapters();
+            break;
+
+        case Op_ListModulesJson:
+            list_modules_json();
             break;
 
         case Op_ExplainTarget:
