@@ -20,7 +20,7 @@ try:
     rc,o=rpc({"id":3,"method":"job.list"}); assert o["result"]["jobs"]==[]
     req=os.path.join(tempfile.mkdtemp(),"req.json"); res=req+".ndjson"
     open(req,"w").write('{"scan":"tcp-syn","targets":["127.0.0.1"],"ports":[1]}')
-    rc,o=rpc({"id":4,"method":"job.start","request_path":req,"result_path":res}); assert "job_id" in o["result"]
+    rc,o=rpc({"id":4,"method":"job.start","params":{"scan":"tcp-syn","targets":["127.0.0.1"],"ports":[1],"result_path":res}}); assert "job_id" in o["result"]
     rc,o=rpc({"id":5,"method":"job.list"}); assert o["result"]["jobs"]
     print("control plane: PASS")
 finally:

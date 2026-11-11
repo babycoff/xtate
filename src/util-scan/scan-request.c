@@ -22,7 +22,8 @@ static void req_error(ErrorCode code, const char *msg) {
 
 static bool allowed(const char *name) {
     static const char *ok[] = {"scan","probe","targets","ports","probe_args",
-                               "scan_args","rate","timeout_sec","dry_run",0};
+                               "scan_args","rate","timeout_sec","dry_run","result_path",
+                               "chunk_size","compression","index","quota_bytes",0};
     for (int i=0; ok[i]; i++) if (strcmp(name, ok[i]) == 0) return true;
     return false;
 }

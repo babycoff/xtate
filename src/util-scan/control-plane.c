@@ -143,6 +143,33 @@ static DWORD WINAPI maintenance_thread(LPVOID arg) {
 }
 #endif
 
+static bool extract_object(const char *line, const char *key, char *out,
+                           size_t cap) {
+    char pat[64];
+    snprintf(pat, sizeof(pat), "\"%s\":", key);
+    const char *p = strstr(line, pat);
+    if (!p) return false;
+    p += strlen(pat);
+    while (*p == ' ' || *p == '\t') p++;
+    if (*p != '{') return false;
+    int depth = 0; bool in_str = false, esc = false; size_t n = 0;
+    for (; *p; p++) {
+        char c = *p;
+        if (n + 1 < cap) out[n++] = c;
+        if (in_str) {
+            if (esc) esc = false;
+            else if (c == '\\') esc = true;
+            else if (c == '"') in_str = false;
+        } else {
+            if (c == '"') in_str = true;
+            else if (c == '{') depth++;
+            else if (c == '}') { depth--; if (depth == 0) break; }
+        }
+    }
+    out[n] = 0;
+    return depth == 0 && n > 1;
+}
+
 static void handle(JobManager *m, const char *line, ControlResponse *out) {
     char id[32] = "null";
     const char *p = strstr(line, "\"id\":");
@@ -163,11 +190,20 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
         return;
     }
     if (strstr(line, "\"job.start\"")) {
-        char req[512], res[512];
-        if (!field_str(line, "request_path", req, sizeof(req)) ||
-            !field_str(line, "result_path", res, sizeof(res))) {
-            send_json(out, id, NULL, "INVALID_ARGUMENT", "request_path and result_path required");
+        char req[600], res[600], params[16384];
+        if (extract_object(line, "params", params, sizeof(params))) {
+            snprintf(req, sizeof(req), "xtate-job-%lld.request.json",
+                     (long long)time(NULL));
+            FILE *rf = fopen(req, "wb");
+            if (!rf) { send_json(out, id, NULL, "IO_ERROR", "cannot write request"); return; }
+            fwrite(params, 1, strlen(params), rf);
+            fclose(rf);
+        } else if (!field_str(line, "request_path", req, sizeof(req))) {
+            send_json(out, id, NULL, "INVALID_ARGUMENT", "params or request_path required");
             return;
+        }
+        if (!field_str(line, "result_path", res, sizeof(res))) {
+            snprintf(res, sizeof(res), "xtate-job-%lld.ndjson", (long long)time(NULL));
         }
 #ifdef _WIN32
         char exe[MAX_PATH];
