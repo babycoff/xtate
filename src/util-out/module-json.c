@@ -7,6 +7,7 @@
 #include "../output-modules/output-modules.h"
 #include "../generate-modules/generate-modules.h"
 #include "../util-data/json-escape.h"
+#include "../crypto/crypto-json.h"
 
 static FILE *g_out = NULL;
 
@@ -101,4 +102,24 @@ char *module_json_string(void) {
     else { free(buf); buf = NULL; }
     fclose(f); remove("xtate-modules.tmp"); g_out = old ? old : stdout;
     return buf;
+}
+
+char *module_json_describe(const char *name) {
+    char *all = module_json_string();
+    if (!all || !name) { free(all); return NULL; }
+    JsonNode *root = json_decode(all);
+    free(all);
+    char *out = NULL;
+    if (root && root->tag == JSON_OBJECT) {
+        JsonNode *mods = json_find_member(root, "modules");
+        for (JsonNode *m = mods ? mods->children.head : NULL; m; m = m->next) {
+            JsonNode *n = json_find_member(m, "name");
+            if (n && n->tag == JSON_STRING && strcmp(n->string_, name) == 0) {
+                out = json_encode(m);
+                break;
+            }
+        }
+    }
+    if (root) json_delete(root);
+    return out;
 }

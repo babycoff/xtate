@@ -33,3 +33,10 @@ model. `tools/list` includes descriptions, JSON input schemas and read-only /
 destructive annotations. Resources expose overview, firewall and scan-request
 schema; a `plan-safe-scan` prompt is provided. `list_modules` returns full
 module metadata.
+
+## Tool behavior
+
+- `describe_probe` filters module metadata by name.
+- `validate_config` checks scan/targets presence.
+- `start_scan` requires `authorized:true`; rejects more than 20000 quoted fields and rate > 10000; writes `xtate-mcp-audit.log`.
+- `explain_target` / `check` are still placeholders in MCP; use CLI for now.

@@ -77,7 +77,7 @@ static const char *tools_json =
 "{\"name\":\"explain_target\",\"description\":\"Describe the interface, source address and route Xtate would use for a target. No packets are sent.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"target\":{\"type\":\"string\"}},\"required\":[\"target\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"check\",\"description\":\"Read-only preflight: interface, source, gateway and Linux firewall prerequisites. No scan is started.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{}},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"validate_config\",\"description\":\"Validate a scan-request object (scan, targets, probe, ports, args) before starting a job.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"config\":{\"type\":\"object\",\"description\":\"Scan-request object\"}},\"required\":[\"config\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
-"{\"name\":\"start_scan\",\"description\":\"Start a scan job from a closed scan-request object. Returns a job id; results are read via job_result_manifest. Only use with authorized targets.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"arguments\":{\"type\":\"object\",\"description\":\"Scan-request object with scan, targets, optional probe/ports/result_path, timeout_sec\"}},\"required\":[\"arguments\"]},\"annotations\":{\"readOnlyHint\":false,\"destructiveHint\":false,\"openWorldHint\":true}}"
+"{\"name\":\"start_scan\",\"description\":\"Start a scan job from a closed scan-request object. Returns a job id; results are read via job_result_manifest. Only use with authorized targets.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"arguments\":{\"type\":\"object\",\"description\":\"Scan-request object with scan, targets, optional probe/ports/result_path, timeout_sec, rate and authorized=true\"}}, \"authorized\":{\"type\":\"boolean\",\"description\":\"Caller confirms target authorization\"}},\"required\":[\"arguments\",\"authorized\"]},\"annotations\":{\"readOnlyHint\":false,\"destructiveHint\":false,\"openWorldHint\":true}}"
 "]}";
 
 static const char *resources_json =
@@ -156,8 +156,10 @@ static void tool_call(const char *id, const char *name, const char *args,
         return;
     }
     if (strcmp(name, "describe_probe") == 0) {
-        char *m = module_json_string();
-        if (!m) { text_result(id, "cannot read module metadata", true); return; }
+        char mod[128] = {0};
+        json_str(args ? args : "", "name", mod, sizeof(mod));
+        char *m = module_json_describe(mod);
+        if (!m) { text_result(id, "probe/scan not found", true); return; }
         text_result(id, m, false);
         free(m);
         return;
@@ -183,6 +185,31 @@ static void tool_call(const char *id, const char *name, const char *args,
         strcmp(name, "job_cancel") != 0 && strcmp(name, "start_scan") != 0) {
         text_result(id, "unknown or unsupported tool", true);
         return;
+    }
+    if (strcmp(name, "start_scan") == 0) {
+        char cfg[8192];
+        if (!extract_object(args ? args : "", "arguments", cfg, sizeof(cfg))) {
+            text_result(id, "arguments object required", true); return;
+        }
+        if (!strstr(cfg, "\"authorized\":true")) {
+            text_result(id, "target authorization required: set authorized=true", true); return;
+        }
+        unsigned long targets = 0;
+        for (const char *q = cfg; (q = strchr(q, '"')); q++) targets++;
+        unsigned rate = 0;
+        const char *pr = strstr(cfg, "\"rate\":");
+        if (pr) rate = (unsigned)atoi(pr + 7);
+        if (targets > 20000) {
+            text_result(id, "too many targets", true); return;
+        }
+        if (rate > 10000) {
+            text_result(id, "rate exceeds MCP limit (10000 pps)", true); return;
+        }
+        FILE *audit = fopen("xtate-mcp-audit.log", "a");
+        if (audit) {
+            fprintf(audit, "start_scan rate=%u cfg=%.*s\n", rate, 500, cfg);
+            fclose(audit);
+        }
     }
     char resp[65536];
     const char *method = name;
