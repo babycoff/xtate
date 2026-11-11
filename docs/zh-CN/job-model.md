@@ -57,6 +57,10 @@ bool job_wait(Job *, unsigned timeout_ms);
 xtate --job-run=request.json --job-result=out.ndjson --job-timeout=30
 ```
 
+只有 `--job-run` 的 worker 会写 heartbeat。普通 CLI 扫描
+（`xtate -ip ... -scan ...`）不会写 heartbeat，不改变行为，也不产生额外文件。
+`--job-heartbeat` 是内部 worker 参数。
+
 以受管 worker 启动同一二进制，等待完成并输出：
 
 ```json
@@ -74,6 +78,8 @@ XTATE_BIN=bin/xtate bash tests/job/test_cli.sh
 覆盖 completed job、结果文件和 timed_out job。
 
 ## Heartbeat 与 stall 检测
+
+普通 CLI 扫描不会写 heartbeat 文件；只有 `--job-run` worker 会写。
 
 worker 在状态循环中写 `<result>.heartbeat`：
 

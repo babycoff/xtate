@@ -58,6 +58,11 @@ Core manager + Linux/Windows implementations + a Linux smoke test:
 xtate --job-run=request.json --job-result=out.ndjson --job-timeout=30
 ```
 
+Heartbeat is written only by the `--job-run` worker. A normal CLI scan
+(`xtate -ip ... -scan ...`) does **not** write a heartbeat and does not change
+its behavior or create extra files. `--job-heartbeat` is an internal worker
+parameter.
+
 Starts the same binary as a managed worker, waits for completion and prints:
 
 ```json
@@ -76,6 +81,8 @@ XTATE_BIN=bin/xtate bash tests/job/test_cli.sh
 Covers a completed job, a result file, and a `timed_out` job.
 
 ## Heartbeat and stall detection
+
+Normal CLI scans never write heartbeat files; only `--job-run` workers do.
 
 The worker writes `<result>.heartbeat` while the status loop runs:
 
