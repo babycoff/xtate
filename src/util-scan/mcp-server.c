@@ -208,21 +208,56 @@ static bool validate_cfg(const char *cfg, char *err, size_t errcap,
     return true;
 }
 
+static bool safe_target(const char *t) {
+    if (!t || !t[0] || strlen(t) > 128) return false;
+    for (const char *p = t; *p; p++)
+        if (!((*p >= '0' && *p <= '9') || (*p >= 'a' && *p <= 'f') ||
+              (*p >= 'A' && *p <= 'F') || *p == '.' || *p == ':' ||
+              *p == '/' || *p == '-' || *p == ',')) return false;
+    return true;
+}
+
+static bool self_path(char *out, size_t cap) {
+#ifdef _WIN32
+    return GetModuleFileNameA(NULL, out, (DWORD)cap) > 0;
+#else
+    ssize_t n = readlink("/proc/self/exe", out, cap - 1);
+    if (n <= 0) return false;
+    out[n] = 0;
+    return true;
+#endif
+}
+
+static bool run_self(const char *args, char *out, size_t cap) {
+    char exe[1024];
+    if (!self_path(exe, sizeof(exe))) return false;
+    char cmd[1400];
+    snprintf(cmd, sizeof(cmd), "\"%s\" %s", exe, args);
+#ifdef _WIN32
+    FILE *p = _popen(cmd, "r");
+#else
+    FILE *p = popen(cmd, "r");
+#endif
+    if (!p) return false;
+    size_t n = fread(out, 1, cap - 1, p);
+    out[n] = 0;
+#ifdef _WIN32
+    _pclose(p);
+#else
+    pclose(p);
+#endif
+    return true;
+}
+
 static void net_info(const char *id, const char *target) {
-    char ifname[256] = {0}; unsigned ip = 0, gw = 0;
-    rawsock_get_default_interface(ifname, sizeof(ifname));
-    ip = rawsock_get_adapter_ip(ifname);
-    rawsock_get_default_gateway(ifname, &gw);
-    char ips[32] = "0.0.0.0", gws[32] = "0.0.0.0";
-    struct in_addr a; a.s_addr = htonl(ip); inet_ntop(AF_INET, &a, ips, sizeof(ips));
-    a.s_addr = htonl(gw); inet_ntop(AF_INET, &a, gws, sizeof(gws));
-    char out[1024], *esc_if = json_encode_string(ifname), *esc_t = json_encode_string(target ? target : "");
-    snprintf(out, sizeof(out),
-             "{\"target\":%s,\"interface\":%s,\"source_ipv4\":\"%s\","
-             "\"gateway\":\"%s\",\"firewall_ok\":%s}",
-             esc_t ? esc_t : "\"\"", esc_if ? esc_if : "\"\"", ips, gws,
-             rawsock_firewall_ok() ? "true" : "false");
-    free(esc_if); free(esc_t);
+    char out[16384], args[256];
+    if (strcmp(target, "") == 0) {
+        snprintf(args, sizeof(args), "--check --explain-target=8.8.8.8");
+    } else {
+        if (!safe_target(target)) { text_result(id, "invalid target", true); return; }
+        snprintf(args, sizeof(args), "--explain-target=%s", target);
+    }
+    if (!run_self(args, out, sizeof(out))) { text_result(id, "preflight failed", true); return; }
     text_result(id, out, false);
 }
 
