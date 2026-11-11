@@ -1,4 +1,5 @@
 #include "output-modules.h"
+#include "output-write.h"
 
 #include "../xconf.h"
 #include "../util-out/logger.h"
@@ -53,21 +54,21 @@ static bool ndjson_init(const XConf *xconf, const OutConf *out) {
 }
 
 static void ndjson_file_sink(void *ctx, const char *data, size_t len) {
-    fwrite(data, 1, len, (FILE *)ctx);
+    out_fwrite(data, 1, len, (FILE *)ctx);
 }
 
 static void ndjson_quote(FILE *fp, const char *s, size_t len) {
-    fputc('"', fp);
+    out_fputc('"', fp);
     json_escape_to(ndjson_file_sink, fp, (const unsigned char *)s, len);
-    fputc('"', fp);
+    out_fputc('"', fp);
 }
 
 static void ndjson_key(FILE *fp, unsigned *first, const char *name) {
     if (!*first)
-        fputc(',', fp);
+        out_fputc(',', fp);
     *first = 0;
     ndjson_quote(fp, name, strlen(name));
-    fputc(':', fp);
+    out_fputc(':', fp);
 }
 
 static void ndjson_str(FILE *fp, const char *name, const char *value) {
@@ -81,7 +82,7 @@ static void ndjson_result(OutItem *item) {
     ipaddress_formatted_t ip_me_fmt   = ipaddress_fmt(item->target.ip_me);
     safe_iso8601_time(format_time, sizeof(format_time), &item->timestamp);
 
-    fputc('{', file);
+    out_fputc('{', file);
     fputs("\"time\":", file);
     ndjson_quote(file, format_time, strlen(format_time));
     fputs(",\"level\":", file);
@@ -93,11 +94,11 @@ static void ndjson_result(OutItem *item) {
     fputs(",\"ip_them\":", file);
     ndjson_quote(file, ip_them_fmt.string, strlen(ip_them_fmt.string));
     if (!item->no_port)
-        fprintf(file, ",\"port_them\":%u", item->target.port_them);
+        out_fprintf(file, ",\"port_them\":%u", item->target.port_them);
     fputs(",\"ip_me\":", file);
     ndjson_quote(file, ip_me_fmt.string, strlen(ip_me_fmt.string));
     if (!item->no_port)
-        fprintf(file, ",\"port_me\":%u", item->target.port_me);
+        out_fprintf(file, ",\"port_me\":%u", item->target.port_me);
     fputs(",\"classification\":", file);
     ndjson_quote(file, item->classification,
                  strnlen(item->classification, OUT_CLS_SIZE));
@@ -118,10 +119,10 @@ static void ndjson_result(OutItem *item) {
         while (pre->next) {
             DataLink *l = pre->next;
             if (!first)
-                fputc(',', file);
+                out_fputc(',', file);
             first = 0;
             ndjson_quote(file, l->name, strlen(l->name));
-            fputc(':', file);
+            out_fputc(':', file);
             switch (l->link_type) {
                 case LinkType_String:
                     ndjson_quote(file, (const char *)l->value_data,
@@ -129,23 +130,23 @@ static void ndjson_result(OutItem *item) {
                                          l->data_len));
                     break;
                 case LinkType_Int:
-                    fprintf(file, "%" PRIu64, l->value_int);
+                    out_fprintf(file, "%" PRIu64, l->value_int);
                     break;
                 case LinkType_Double:
-                    fprintf(file, "%.2f", l->value_double);
+                    out_fprintf(file, "%.2f", l->value_double);
                     break;
                 case LinkType_Bool:
                     fputs(l->value_bool ? "true" : "false", file);
                     break;
                 case LinkType_Binary:
-                    fprintf(file, "\"(%u bytes bin)\"", l->data_len);
+                    out_fprintf(file, "\"(%u bytes bin)\"", l->data_len);
                     break;
                 default:
                     fputs("null", file);
             }
             pre = l;
         }
-        fputc('}', file);
+        out_fputc('}', file);
     }
     fputs("}\n", file);
 

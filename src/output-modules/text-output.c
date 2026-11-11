@@ -1,4 +1,5 @@
 #include "output-modules.h"
+#include "output-write.h"
 
 #include <string.h>
 
@@ -50,39 +51,39 @@ static void text_result(OutItem *item) {
 
     switch (item->level) {
         case OUT_SUCCESS:
-            err = fprintf(file, fmt_host, "[+]", ip_them_fmt.string);
+            err = out_fprintf(file, fmt_host, "[+]", ip_them_fmt.string);
             break;
         case OUT_FAILURE:
-            err = fprintf(file, fmt_host, "[x]", ip_them_fmt.string);
+            err = out_fprintf(file, fmt_host, "[x]", ip_them_fmt.string);
             break;
         case OUT_INFO:
-            err = fprintf(file, fmt_host, "[*]", ip_them_fmt.string);
+            err = out_fprintf(file, fmt_host, "[*]", ip_them_fmt.string);
             break;
         default:
-            err = fprintf(file, fmt_host, "[?]", ip_them_fmt.string);
+            err = out_fprintf(file, fmt_host, "[?]", ip_them_fmt.string);
     }
 
     if (err < 0)
         goto error;
 
     if (!item->no_port) {
-        err = fprintf(file, fmt_port, item->target.port_them);
+        err = out_fprintf(file, fmt_port, item->target.port_them);
         if (err < 0)
             goto error;
     }
 
-    err = fprintf(file, fmt_proto, ip_proto_to_string(item->target.ip_proto));
+    err = out_fprintf(file, fmt_proto, ip_proto_to_string(item->target.ip_proto));
     if (err < 0)
         goto error;
 
     if (item->classification[0]) {
-        err = fprintf(file, fmt_cls, item->classification);
+        err = out_fprintf(file, fmt_cls, item->classification);
         if (err < 0)
             goto error;
     }
 
     if (item->reason[0]) {
-        err = fprintf(file, fmt_reason, item->reason);
+        err = out_fprintf(file, fmt_reason, item->reason);
         if (err < 0)
             goto error;
     }
@@ -90,20 +91,20 @@ static void text_result(OutItem *item) {
     pre = item->scan_report.link;
     while (pre->next) {
         if (pre->next->link_type == LinkType_String) {
-            fprintf(file, fmt_report_str, pre->next->name,
+            out_fprintf(file, fmt_report_str, pre->next->name,
                     pre->next->value_data);
         } else if (pre->next->link_type == LinkType_Int) {
-            fprintf(file, fmt_report_int, pre->next->name,
+            out_fprintf(file, fmt_report_int, pre->next->name,
                     pre->next->value_int);
         } else if (pre->next->link_type == LinkType_Double) {
-            fprintf(file, fmt_report_double, pre->next->name,
+            out_fprintf(file, fmt_report_double, pre->next->name,
                     pre->next->value_double);
         } else if (pre->next->link_type == LinkType_Bool) {
-            fprintf(file,
+            out_fprintf(file,
                     pre->next->value_bool ? fmt_report_true : fmt_report_false,
                     pre->next->name);
         } else if (pre->next->link_type == LinkType_Binary) {
-            fprintf(file, fmt_report_bin, pre->next->name, pre->next->data_len);
+            out_fprintf(file, fmt_report_bin, pre->next->name, pre->next->data_len);
         }
 
         pre = pre->next;
@@ -112,20 +113,20 @@ static void text_result(OutItem *item) {
     pre = item->probe_report.link;
     while (pre->next) {
         if (pre->next->link_type == LinkType_String) {
-            fprintf(file, fmt_report_str, pre->next->name,
+            out_fprintf(file, fmt_report_str, pre->next->name,
                     pre->next->value_data);
         } else if (pre->next->link_type == LinkType_Int) {
-            fprintf(file, fmt_report_int, pre->next->name,
+            out_fprintf(file, fmt_report_int, pre->next->name,
                     pre->next->value_int);
         } else if (pre->next->link_type == LinkType_Double) {
-            fprintf(file, fmt_report_double, pre->next->name,
+            out_fprintf(file, fmt_report_double, pre->next->name,
                     pre->next->value_double);
         } else if (pre->next->link_type == LinkType_Bool) {
-            fprintf(file,
+            out_fprintf(file,
                     pre->next->value_bool ? fmt_report_true : fmt_report_false,
                     pre->next->name);
         } else if (pre->next->link_type == LinkType_Binary) {
-            fprintf(file, fmt_report_bin, pre->next->name, pre->next->data_len);
+            out_fprintf(file, fmt_report_bin, pre->next->name, pre->next->data_len);
         }
 
         pre = pre->next;
@@ -134,26 +135,26 @@ static void text_result(OutItem *item) {
     pre = item->output_report.link;
     while (pre->next) {
         if (pre->next->link_type == LinkType_String) {
-            fprintf(file, fmt_report_str, pre->next->name,
+            out_fprintf(file, fmt_report_str, pre->next->name,
                     pre->next->value_data);
         } else if (pre->next->link_type == LinkType_Int) {
-            fprintf(file, fmt_report_int, pre->next->name,
+            out_fprintf(file, fmt_report_int, pre->next->name,
                     pre->next->value_int);
         } else if (pre->next->link_type == LinkType_Double) {
-            fprintf(file, fmt_report_double, pre->next->name,
+            out_fprintf(file, fmt_report_double, pre->next->name,
                     pre->next->value_double);
         } else if (pre->next->link_type == LinkType_Bool) {
-            fprintf(file,
+            out_fprintf(file,
                     pre->next->value_bool ? fmt_report_true : fmt_report_false,
                     pre->next->name);
         } else if (pre->next->link_type == LinkType_Binary) {
-            fprintf(file, fmt_report_bin, pre->next->name, pre->next->data_len);
+            out_fprintf(file, fmt_report_bin, pre->next->name, pre->next->data_len);
         }
 
         pre = pre->next;
     }
 
-    err = fprintf(file, "\n");
+    err = out_fprintf(file, "\n");
     if (err < 0)
         goto error;
 

@@ -1,4 +1,5 @@
 #include "output-modules.h"
+#include "output-write.h"
 
 #include "../xconf.h"
 #include "../util-out/logger.h"
@@ -53,14 +54,14 @@ static bool csv_init(const XConf *xconf, const OutConf *out) {
 }
 
 static void csv_field(FILE *fp, const char *value) {
-    fputc('"', fp);
+    out_fputc('"', fp);
     for (const unsigned char *p = (const unsigned char *)value; *p; p++) {
         if (*p == '"')
             fputs("\"\"", fp);
         else
-            fputc(*p, fp);
+            out_fputc(*p, fp);
     }
-    fputc('"', fp);
+    out_fputc('"', fp);
 }
 
 static void csv_json_sink(void *ctx, const char *data, size_t len) {
@@ -69,7 +70,7 @@ static void csv_json_sink(void *ctx, const char *data, size_t len) {
         if (data[i] == '"')
             fputs("\"\"", fp);
         else
-            fputc(data[i], fp);
+            out_fputc(data[i], fp);
     }
 }
 
@@ -82,16 +83,16 @@ static void csv_json_string(FILE *fp, const char *value, size_t len) {
 
 static void csv_report(FILE *fp, DataChain *chain) {
     DataLink *pre = chain->link;
-    fputc('"', fp);
-    fputc('{', fp);
+    out_fputc('"', fp);
+    out_fputc('{', fp);
     unsigned first = 1;
     while (pre->next) {
         DataLink *l = pre->next;
         if (!first)
-            fputc(',', fp);
+            out_fputc(',', fp);
         first = 0;
         csv_json_string(fp, l->name, strlen(l->name));
-        fputc(':', fp);
+        out_fputc(':', fp);
         switch (l->link_type) {
             case LinkType_String:
                 csv_json_string(fp, (const char *)l->value_data,
@@ -99,24 +100,24 @@ static void csv_report(FILE *fp, DataChain *chain) {
                                         l->data_len));
                 break;
             case LinkType_Int:
-                fprintf(fp, "%" PRIu64, l->value_int);
+                out_fprintf(fp, "%" PRIu64, l->value_int);
                 break;
             case LinkType_Double:
-                fprintf(fp, "%.2f", l->value_double);
+                out_fprintf(fp, "%.2f", l->value_double);
                 break;
             case LinkType_Bool:
                 fputs(l->value_bool ? "true" : "false", fp);
                 break;
             case LinkType_Binary:
-                fprintf(fp, "\"(%u bytes bin)\"", l->data_len);
+                out_fprintf(fp, "\"(%u bytes bin)\"", l->data_len);
                 break;
             default:
                 fputs("null", fp);
         }
         pre = l;
     }
-    fputc('}', fp);
-    fputc('"', fp);
+    out_fputc('}', fp);
+    out_fputc('"', fp);
 }
 
 static void csv_result(OutItem *item) {
@@ -126,31 +127,31 @@ static void csv_result(OutItem *item) {
     safe_iso8601_time(format_time, sizeof(format_time), &item->timestamp);
 
     csv_field(file, format_time);
-    fputc(',', file);
+    out_fputc(',', file);
     csv_field(file, output_level_to_string(item->level));
-    fputc(',', file);
+    out_fputc(',', file);
     csv_field(file, ip_proto_to_string(item->target.ip_proto));
-    fputc(',', file);
+    out_fputc(',', file);
     csv_field(file, ip_them_fmt.string);
-    fputc(',', file);
+    out_fputc(',', file);
     if (!item->no_port)
-        fprintf(file, "%u", item->target.port_them);
-    fputc(',', file);
+        out_fprintf(file, "%u", item->target.port_them);
+    out_fputc(',', file);
     csv_field(file, ip_me_fmt.string);
-    fputc(',', file);
+    out_fputc(',', file);
     if (!item->no_port)
-        fprintf(file, "%u", item->target.port_me);
-    fputc(',', file);
+        out_fprintf(file, "%u", item->target.port_me);
+    out_fputc(',', file);
     csv_field(file, item->classification);
-    fputc(',', file);
+    out_fputc(',', file);
     csv_field(file, item->reason);
-    fputc(',', file);
+    out_fputc(',', file);
     csv_report(file, &item->scan_report);
-    fputc(',', file);
+    out_fputc(',', file);
     csv_report(file, &item->probe_report);
-    fputc(',', file);
+    out_fputc(',', file);
     csv_report(file, &item->output_report);
-    fputc('\n', file);
+    out_fputc('\n', file);
 
     if (ferror(file))
         output_error("CsvOutput", "could not write result to file.");

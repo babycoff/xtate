@@ -1,4 +1,5 @@
 #include "output-modules.h"
+#include "output-write.h"
 
 #include <string.h>
 
@@ -61,7 +62,7 @@ static bool list_init(const XConf *xconf, const OutConf *out) {
 static void list_result(OutItem *item) {
     ipaddress_formatted_t ip_them_fmt = ipaddress_fmt(item->target.ip_them);
 
-    int err = fprintf(file, fmt_host, ip_them_fmt.string);
+    int err = out_fprintf(file, fmt_host, ip_them_fmt.string);
 
     if (err < 0)
         goto error;
@@ -69,23 +70,23 @@ static void list_result(OutItem *item) {
     if (!item->no_port && !list_conf.no_port) {
         switch (item->target.ip_proto) {
             case IP_PROTO_TCP:
-                err = fprintf(file, fmt_port, "", item->target.port_them);
+                err = out_fprintf(file, fmt_port, "", item->target.port_them);
                 break;
             case IP_PROTO_UDP:
-                err = fprintf(file, fmt_port, "u:", item->target.port_them);
+                err = out_fprintf(file, fmt_port, "u:", item->target.port_them);
                 break;
             case IP_PROTO_SCTP:
-                err = fprintf(file, fmt_port, "s:", item->target.port_them);
+                err = out_fprintf(file, fmt_port, "s:", item->target.port_them);
                 break;
             default:
-                err = fprintf(file, fmt_port, "o:", item->target.port_them);
+                err = out_fprintf(file, fmt_port, "o:", item->target.port_them);
                 break;
         }
         if (err < 0)
             goto error;
     }
 
-    err = fprintf(file, "\n");
+    err = out_fprintf(file, "\n");
     if (err < 0)
         goto error;
 

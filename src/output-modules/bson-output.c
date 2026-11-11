@@ -1,6 +1,7 @@
 #ifndef NOT_FOUND_BSON
 
 #include "output-modules.h"
+#include "output-write.h"
 #include "bson-output.h"
 
 #include <bson/bson.h>
@@ -236,7 +237,7 @@ static void bsonout_result(OutItem *item) {
         bson_destroy(&output_report_doc);
     }
 
-    size_t written = fwrite(bson_get_data(res_doc), 1, res_doc->len, file);
+    size_t written = out_fwrite(bson_get_data(res_doc), 1, res_doc->len, file);
     if (written != res_doc->len)
         output_error("BsonOutput", "could not write result to file.");
     bson_destroy(res_doc);
