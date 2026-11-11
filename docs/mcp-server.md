@@ -40,3 +40,10 @@ module metadata.
 - `validate_config` checks scan/targets presence.
 - `start_scan` requires `authorized:true`; rejects more than 20000 quoted fields and rate > 10000; writes `xtate-mcp-audit.log`.
 - `explain_target` / `check` return interface, source IPv4, gateway and Linux firewall status from the default interface. Per-target route selection is not yet mirrored from CLI.
+
+## Route-aware tools
+
+`explain_target` and `check` accept a target set and return structured
+`targets`, `route_groups` and `groups` (interface/source/gateway/samples).
+`start_scan` runs the same route grouping and refuses targets that span more
+than one route; split those into separate jobs.

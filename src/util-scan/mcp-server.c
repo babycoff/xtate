@@ -19,6 +19,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#ifdef _WIN32
+#define strtok_r strtok_s
+#endif
 
 static const char *json_id(const char *line) {
     static char id[64];
@@ -88,9 +91,9 @@ static const char *tools_json =
 "{\"name\":\"job_cancel\",\"description\":\"Request cancellation of a running job. The result file is preserved.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"job_id\":{\"type\":\"string\"}},\"required\":[\"job_id\"]},\"annotations\":{\"readOnlyHint\":false,\"destructiveHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"describe_probe\",\"description\":\"Return module metadata (parameters, probe type, description) for a scan or probe. Use before choosing options.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"Module name, e.g. doh-h2\"}},\"required\":[\"name\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"explain_target\",\"description\":\"Describe the interface, source address and route Xtate would use for a target. No packets are sent.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"target\":{\"type\":\"string\"}},\"required\":[\"target\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
-"{\"name\":\"check\",\"description\":\"Read-only preflight: interface, source, gateway and Linux firewall prerequisites. No scan is started.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{}},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
+"{\"name\":\"check\",\"description\":\"Read-only preflight for a target set: interfaces, sources, gateways and Linux firewall prerequisites.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"IP, CIDR, range, or comma-separated set\"}}},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"validate_config\",\"description\":\"Validate a scan-request object (scan, targets, probe, ports, args) before starting a job.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"config\":{\"type\":\"object\",\"description\":\"Scan-request object\"}},\"required\":[\"config\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
-"{\"name\":\"start_scan\",\"description\":\"Start a scan job from a closed scan-request object. Returns a job id; results are read via job_result_manifest. Only use with authorized targets.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"arguments\":{\"type\":\"object\",\"description\":\"Scan-request object with scan, targets, optional probe/ports/result_path, timeout_sec, rate and authorized=true\"}}, \"authorized\":{\"type\":\"boolean\",\"description\":\"Caller confirms target authorization\"}},\"required\":[\"arguments\",\"authorized\"]},\"annotations\":{\"readOnlyHint\":false,\"destructiveHint\":false,\"openWorldHint\":true}}"
+"{\"name\":\"start_scan\",\"description\":\"Start a scan job from a closed scan-request object. Returns a job id; results are read via job_result_manifest. Only use with authorized targets.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"arguments\":{\"type\":\"object\",\"description\":\"Scan-request object with scan, targets, optional probe/ports/result_path, timeout_sec, rate and authorized=true\"}},\"required\":[\"arguments\"]},\"annotations\":{\"readOnlyHint\":false,\"destructiveHint\":false,\"openWorldHint\":true}}"
 "]}";
 
 static const char *resources_json =
@@ -249,6 +252,8 @@ static bool run_self(const char *args, char *out, size_t cap) {
     return true;
 }
 
+static void structured_explain(const char *id, const char *text);
+
 static void net_info(const char *id, const char *target) {
     char out[16384], args[256];
     if (strcmp(target, "") == 0) {
@@ -258,9 +263,86 @@ static void net_info(const char *id, const char *target) {
         snprintf(args, sizeof(args), "--explain-target=%s", target);
     }
     if (!run_self(args, out, sizeof(out))) { text_result(id, "preflight failed", true); return; }
+    structured_explain(id, out);
+}
+
+
+static void structured_explain(const char *id, const char *text) {
+    char copy[16384]; snprintf(copy, sizeof(copy), "%s", text);
+    unsigned long long targets = 0; int groups = 0;
+    const char *pt = strstr(copy, "Targets:");
+    if (pt) targets = strtoull(pt + 8, NULL, 10);
+    const char *pg = strstr(copy, "Route groups:");
+    if (pg) groups = atoi(pg + 13);
+    char out[16384]; size_t off = 0;
+    off += (size_t)snprintf(out + off, sizeof(out) - off,
+        "{\"targets\":%llu,\"route_groups\":%d,\"groups\":[",
+        targets, groups);
+    int emitted = 0;
+    char *save = NULL;
+    char *line = strtok_r(copy, "\n", &save);
+    char ifname[256] = {0}, src[64] = {0}, gw[64] = {0}, samples[1024] = {0};
+    while (line) {
+        while (*line == ' ') line++;
+        if (strncmp(line, "Route group", 11) == 0) {
+            if (emitted > 0 && ifname[0]) {
+                char *ei = json_encode_string(ifname);
+                off += (size_t)snprintf(out + off, sizeof(out) - off,
+                    "%s{\"interface\":%s,\"source\":\"%s\",\"gateway\":\"%s\",\"samples\":\"%s\"}",
+                    emitted == 1 ? "" : ",", ei ? ei : "\"\"", src, gw, samples);
+                free(ei); emitted++;
+            }
+            ifname[0] = src[0] = gw[0] = samples[0] = 0;
+        } else if (strncmp(line, "Interface:", 10) == 0) {
+            snprintf(ifname, sizeof(ifname), "%s", line + 10);
+            char *p = ifname; while (*p == ' ') p++;
+            memmove(ifname, p, strlen(p) + 1);
+        } else if (strncmp(line, "Source IPv4:", 12) == 0) {
+            snprintf(src, sizeof(src), "%s", line + 12);
+            char *p = src; while (*p == ' ') p++; memmove(src, p, strlen(p) + 1);
+        } else if (strncmp(line, "Source IPv6:", 12) == 0) {
+            snprintf(src, sizeof(src), "%s", line + 12);
+            char *p = src; while (*p == ' ') p++; memmove(src, p, strlen(p) + 1);
+        } else if (strncmp(line, "Gateway:", 8) == 0) {
+            snprintf(gw, sizeof(gw), "%s", line + 8);
+            char *p = gw; while (*p == ' ') p++; memmove(gw, p, strlen(p) + 1);
+        } else if (strncmp(line, "Samples:", 8) == 0) {
+            snprintf(samples, sizeof(samples), "%s", line + 8);
+            char *p = samples; while (*p == ' ') p++; memmove(samples, p, strlen(p) + 1);
+        }
+        line = strtok_r(NULL, "\n", &save);
+    }
+    if (ifname[0]) {
+        char *ei = json_encode_string(ifname);
+        off += (size_t)snprintf(out + off, sizeof(out) - off,
+            "%s{\"interface\":%s,\"source\":\"%s\",\"gateway\":\"%s\",\"samples\":\"%s\"}",
+            emitted == 0 ? "" : ",", ei ? ei : "\"\"", src, gw, samples);
+        free(ei);
+    }
+    snprintf(out + off, sizeof(out) - off, "]}");
     text_result(id, out, false);
 }
 
+static int explain_group_count(const char *endpoint, const char *cfg) {
+    (void)endpoint;
+    char targets[4096] = {0}; size_t off = 0;
+    JsonNode *root = json_decode(cfg);
+    if (!root) return -1;
+    JsonNode *ta = json_find_member(root, "targets");
+    for (JsonNode *t = ta ? ta->children.head : NULL; t; t = t->next) {
+        if (t->tag != JSON_STRING) continue;
+        if (off + strlen(t->string_) + 2 >= sizeof(targets)) break;
+        off += (size_t)snprintf(targets + off, sizeof(targets) - off, "%s%s",
+                                off ? "," : "", t->string_);
+    }
+    json_delete(root);
+    if (!targets[0]) return -1;
+    char text[16384];
+    char args[4300]; snprintf(args, sizeof(args), "--explain-target=%s", targets);
+    if (!run_self(args, text, sizeof(text))) return -1;
+    const char *pg = strstr(text, "Route groups:");
+    return pg ? atoi(pg + 13) : -1;
+}
 static void tool_call(const char *id, const char *name, const char *args,
                       const char *endpoint) {
     if (strcmp(name, "list_modules") == 0) {
@@ -316,13 +398,20 @@ static void tool_call(const char *id, const char *name, const char *args,
         if (!extract_object(args ? args : "", "arguments", cfg, sizeof(cfg))) {
             text_result(id, "arguments object required", true); return;
         }
-        if (!strstr(cfg, "\"authorized\":true")) {
+        JsonNode *aroot = json_decode(cfg);
+        JsonNode *auth = aroot ? json_find_member(aroot, "authorized") : NULL;
+        bool authorized = auth && auth->tag == JSON_BOOL && auth->bool_;
+        if (aroot) json_delete(aroot);
+        if (!authorized) {
             text_result(id, "target authorization required: set authorized=true", true); return;
         }
         char verr[256] = {0}; unsigned targets = 0, rate = 0;
         if (!validate_cfg(cfg, verr, sizeof(verr), &targets, &rate)) {
             text_result(id, verr, true); return;
         }
+        int rg = explain_group_count(endpoint, cfg);
+        if (rg < 0) { text_result(id, "cannot determine route groups", true); return; }
+        if (rg > 1) { text_result(id, "targets span multiple routes; split into separate jobs", true); return; }
         FILE *audit = fopen("xtate-mcp-audit.log", "a");
         if (audit) {
             fprintf(audit, "start_scan rate=%u cfg=%.*s\n", rate, 500, cfg);
