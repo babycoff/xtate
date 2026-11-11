@@ -2,6 +2,10 @@
   "version": 1,
   "codes": [
     {
+      "code": "INVALID_JSON",
+      "retryable": false
+    },
+    {
       "code": "INVALID_ARGUMENT",
       "retryable": false
     },

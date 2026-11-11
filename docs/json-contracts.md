@@ -28,6 +28,16 @@ emits every scan/probe/output/generate module with `name`, `kind`,
 XTATE_BIN=build/bin/xtate python3 tests/schema/validate_modules.py
 ```
 
+Direct C runtime:
+
+```bash
+xtate --scan-request=request.json
+```
+
+It builds the internal configuration without a shell or subprocess. `dry_run`
+maps to a target-listing operation, so no packets are sent. Errors are emitted
+as `{"error":{"code":"...","message":"..."}}`.
+
 Reference scan-request adapter:
 
 ```bash

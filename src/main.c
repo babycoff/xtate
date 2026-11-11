@@ -28,6 +28,7 @@
 #include "util-misc/i18n.h"
 #include "output-modules/output-modules.h"
 #include "util-out/module-json.h"
+#include "util-scan/scan-request.h"
 #include "scan-modules/scan-modules.h"
 #include "probe-modules/probe-modules.h"
 #include "generate-modules/generate-modules.h"
@@ -880,9 +881,35 @@ int main(int argc, char *argv[]) {
     // Define default params
     xconf_global_refresh(xconf);
 
+    // C-native JSON scan request (no shell/subprocess)
+    bool request_mode = false;
+    for (int i = 1; i < argc; i++) {
+        const char *arg = argv[i];
+        const char *file = NULL;
+        if (strcmp(arg, "--scan-request") == 0 || strcmp(arg, "-scan-request") == 0) {
+            if (i + 1 < argc) file = argv[i + 1];
+        } else if (strncmp(arg, "--scan-request=", 15) == 0) {
+            file = arg + 15;
+        }
+        if (file) {
+            request_mode = true;
+            int  rac = 0;
+            char **rargv = NULL;
+            if (scan_request_build_argv(file, &rac, &rargv) != 0)
+                exit(1);
+            argc = rac;
+            argv = rargv;
+            break;
+        }
+    }
+
     // read conf from args
     err = xconf_command_line(xconf, argc, argv);
     if (err) {
+        if (request_mode)
+            fprintf(stderr, "{\"error\":{\"code\":\"INVALID_ARGUMENT\","
+                            "\"message\":\"scan request rejected\","
+                            "\"retryable\":false}}\n");
         LOG(LEVEL_ERROR, "failed to parse cmdline parameters.\n");
         xcmd_try_reboot();
         exit(1);

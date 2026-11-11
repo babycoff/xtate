@@ -28,6 +28,15 @@ xtate --list-modules-json
 XTATE_BIN=build/bin/xtate python3 tests/schema/validate_modules.py
 ```
 
+C 运行时直连：
+
+```bash
+xtate --scan-request=request.json
+```
+
+不经过 shell/子进程，直接生成内部配置。`dry_run` 映射为目标列表操作，不发送报文。
+错误以 `{"error":{"code":"...","message":"..."}}` 返回。
+
 参考 scan-request 适配器：
 
 ```bash

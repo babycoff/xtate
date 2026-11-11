@@ -857,6 +857,13 @@ static ConfRes SET_check_network(void *conf, const char *name,
 }
 
 
+static ConfRes SET_scan_request(void *conf, const char *name,
+                                const char *value) {
+    UNUSEDPARM(conf);
+    UNUSEDPARM(name);
+    return value ? Conf_OK : Conf_ERR;
+}
+
 static ConfRes SET_modules_json(void *conf, const char *name,
                                 const char *value) {
     XConf *xconf = (XConf *)conf;
@@ -3274,6 +3281,12 @@ ConfParam config_parameters[] = {
      {"net-check", "preflight", 0},
      "Read-only: check interface, source IP, gateway and Linux firewall rules.",
      "Check network prerequisites."},
+    {"scan-request",
+     SET_scan_request,
+     Type_ARG,
+     {"scan-request-file", 0},
+     "Read a closed JSON scan request from a file and run it without a shell.",
+     "Run a JSON scan request."},
     {"list-modules-json",
      SET_modules_json,
      Type_FLAG,
