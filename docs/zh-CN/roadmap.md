@@ -217,3 +217,17 @@ CLI 仍是唯一事实来源；AI 集成是带类型、可审计的封装层。
 ```
 
 见 [AI 集成设计](./ai-integration.md)。
+
+## 互联网规模 job 数据面
+
+MCP `start_scan` 之前加固结果路径：
+
+- [ ] 64 位结果 offset（`uint64_t`、`fseeko`/`_fseeki64`）；
+- [ ] 有界 `job.results(offset,max_bytes)`，返回 next offset/truncated；
+- [ ] 结果分片 NDJSON、可选 zstd、索引；
+- [ ] 单 job 磁盘配额，ENOSPC -> OUTPUT_WRITE_FAILED；
+- [ ] 完成 job TTL 和最大保留数；
+- [ ] heartbeat 约 1 秒一次；
+- [ ] 控制面/数据面分离，供 MCP/TUI/GUI 使用。
+
+见 [控制平面](./control-plane.md)。

@@ -35,6 +35,19 @@ Windows: `\\.\pipe\xtate-control`
 错误码来自 `schemas/error-codes.json`，格式：
 `{"id":1,"error":{"code":"JOB_NOT_FOUND","message":"...","retryable":false}}`。
 
+## 数据面（互联网规模结果）
+
+控制消息不携带无界结果数据。在 `start_scan` 之前增加 Result Store 工作流：
+
+- `uint64_t` offset 和 64 位文件 seek，不使用 32 位 `long`/`fseek`；
+- `job.results(offset, max_bytes)` 返回有界 chunk、`next_offset`、`truncated` 和
+  chunk 元数据；
+- 结果分片、可选 zstd 压缩和索引；
+- 单 job 磁盘配额；ENOSPC 使用 `OUTPUT_WRITE_FAILED`；
+- 完成 job 的 TTL 和最大保留数；
+- heartbeat 约 1 秒一次，不做每次 fsync；
+- 控制面与数据面分离：MCP/TUI/GUI 读 chunk，不读整文件。
+
 ## 规则
 
 - 控制面单线程，manager 调用串行。

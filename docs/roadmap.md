@@ -262,3 +262,17 @@ Phases:
 ```
 
 See [AI integration design](./ai-integration.md).
+
+## Internet-scale job data plane
+
+Before MCP `start_scan`, harden the result path:
+
+- [ ] 64-bit result offsets (`uint64_t`, `fseeko`/`_fseeki64`);
+- [ ] bounded `job.results(offset,max_bytes)` with next offset/truncated;
+- [ ] chunked NDJSON, optional zstd, index;
+- [ ] per-job disk quota and ENOSPC -> OUTPUT_WRITE_FAILED;
+- [ ] completed-job TTL and max retained jobs;
+- [ ] heartbeat throttled to ~1s;
+- [ ] control/data plane separation for MCP/TUI/GUI.
+
+See [control plane](./control-plane.md).

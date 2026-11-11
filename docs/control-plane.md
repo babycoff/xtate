@@ -35,6 +35,20 @@ States: `queued`, `running`, `completed`, `failed`, `cancelled`,
 Stable codes from `schemas/error-codes.json`; error response:
 `{"id":1,"error":{"code":"JOB_NOT_FOUND","message":"...","retryable":false}}`.
 
+## Data plane (Internet-scale results)
+
+Control messages never carry unbounded result data. Add a result store
+workstream before `start_scan`:
+
+- `uint64_t` offsets and 64-bit file seeks (no 32-bit `long`/`fseek`);
+- `job.results(offset, max_bytes)` returns a bounded chunk plus `next_offset`,
+  `truncated`, and chunk metadata;
+- chunked result files, optional zstd compression and an index;
+- per-job disk quota / ENOSPC failure with `OUTPUT_WRITE_FAILED`;
+- completed-job TTL and max retained jobs;
+- heartbeat throttled to ~1s, no fsync per update;
+- control plane and data plane separated: MCP/TUI/GUI read chunks, not whole files.
+
 ## Rules
 
 - One control-plane thread; manager calls serialized.
