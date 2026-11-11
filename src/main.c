@@ -29,6 +29,7 @@
 #include "output-modules/output-modules.h"
 #include "util-out/module-json.h"
 #include "util-scan/scan-request.h"
+#include "util-scan/job-manager.h"
 
 static bool request_mode = false;
 #include "scan-modules/scan-modules.h"
@@ -853,6 +854,47 @@ static int _main_scan(XConf *xconf) {
     return output_has_fatal_error() ? 1 : 0;
 }
 
+static int run_job_cli(XConf *xconf, const char *exe) {
+    char result[1024];
+    if (xconf->job_result_file)
+        snprintf(result, sizeof(result), "%s", xconf->job_result_file);
+    else
+        snprintf(result, sizeof(result), "%s.ndjson", xconf->job_run_file);
+
+    JobManager *m = job_manager_create(1);
+    char *argv[] = {(char *)exe, "--scan-request", xconf->job_run_file,
+                    "--output-module", "ndjson", "--output-file", result,
+                    "--show", "all", "--wait", "1", "--no-status", NULL};
+    char log[1024];
+    snprintf(log, sizeof(log), "%s.log", result);
+    Job *job = job_start(m, argv, result, log, xconf->job_timeout);
+    if (!job) {
+        printf("{\"error\":{\"code\":\"JOB_LIMIT_REACHED\"}}\n");
+        job_manager_destroy(m);
+        return 1;
+    }
+    while (!job_is_terminal(job)) {
+        job_poll(job);
+        if (job_is_terminal(job)) break;
+        if (xconf->job_timeout &&
+            job_elapsed_ms(job) >= (xconf->job_timeout + 2) * 1000)
+            break;
+#ifdef _WIN32
+        Sleep(100);
+#else
+        struct timespec ts = {0, 100 * 1000000};
+        nanosleep(&ts, NULL);
+#endif
+    }
+    printf("{\"job\":{\"id\":\"%s\",\"state\":\"%s\","
+           "\"exit_code\":%u,\"result\":\"%s\"}}\n",
+           job_id(job), job_state_string(job_state(job)), job_exit_code(job),
+           result);
+    int rc = job_state(job) == JOB_COMPLETED ? 0 : 1;
+    job_manager_destroy(m);
+    return rc;
+}
+
 /***************************************************************************
  ***************************************************************************/
 int main(int argc, char *argv[]) {
@@ -891,6 +933,8 @@ int main(int argc, char *argv[]) {
     xconf_global_refresh(xconf);
 
     // C-native JSON scan request (no shell/subprocess)
+    char **orig_argv = argv;
+    int    orig_argc = argc;
     for (int i = 1; i < argc; i++) {
         const char *arg = argv[i];
         const char *file = NULL;
@@ -907,8 +951,24 @@ int main(int argc, char *argv[]) {
             char **rargv = NULL;
             if (scan_request_build_argv(file, &rac, &rargv) != 0)
                 exit(1);
-            argc = rac;
-            argv = rargv;
+            char **merged = CALLOC((size_t)rac + (size_t)orig_argc + 1,
+                                   sizeof(char *));
+            int mc = 0;
+            for (int k = 0; k < rac; k++) merged[mc++] = rargv[k];
+            for (int k = 1; k < orig_argc; k++) {
+                const char *a = orig_argv[k];
+                if (strcmp(a, "--scan-request") == 0 ||
+                    strcmp(a, "-scan-request") == 0) {
+                    k++;
+                    continue;
+                }
+                if (strncmp(a, "--scan-request=", 15) == 0)
+                    continue;
+                merged[mc++] = (char *)a;
+            }
+            merged[mc] = NULL;
+            argc = mc;
+            argv = merged;
             break;
         }
     }
@@ -924,6 +984,9 @@ int main(int argc, char *argv[]) {
     }
     if (request_mode)
         LOG_set_json_error(ERR_INTERNAL_ERROR);
+
+    if (xconf->job_run_file)
+        return run_job_cli(xconf, argv[0]);
 
     /* entropy for randomness */
     if (xconf->seed == 0)

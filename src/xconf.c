@@ -863,6 +863,27 @@ static ConfRes SET_check_network(void *conf, const char *name,
 }
 
 
+static ConfRes SET_job_run(void *conf, const char *name, const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    if (!value) return Conf_ERR;
+    xconf->job_run_file = STRDUP(value);
+    return Conf_OK;
+}
+static ConfRes SET_job_result(void *conf, const char *name, const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    if (!value) return Conf_ERR;
+    xconf->job_result_file = STRDUP(value);
+    return Conf_OK;
+}
+static ConfRes SET_job_timeout(void *conf, const char *name, const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    xconf->job_timeout = (unsigned)conf_parse_int(value);
+    return Conf_OK;
+}
+
 static ConfRes SET_scan_request(void *conf, const char *name,
                                 const char *value) {
     UNUSEDPARM(conf);
@@ -3287,6 +3308,24 @@ ConfParam config_parameters[] = {
      {"net-check", "preflight", 0},
      "Read-only: check interface, source IP, gateway and Linux firewall rules.",
      "Check network prerequisites."},
+    {"job-run",
+     SET_job_run,
+     Type_ARG,
+     {"job", 0},
+     "Run a JSON scan request as a managed job and print its final status.",
+     "Run a JSON scan request as a job."},
+    {"job-result",
+     SET_job_result,
+     Type_ARG,
+     {0},
+     "Result file for --job-run (default: <request>.ndjson).",
+     "Job result file."},
+    {"job-timeout",
+     SET_job_timeout,
+     Type_ARG,
+     {0},
+     "Total job timeout in seconds for --job-run (0: none).",
+     "Job timeout."},
     {"scan-request",
      SET_scan_request,
      Type_ARG,

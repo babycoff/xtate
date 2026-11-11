@@ -47,3 +47,18 @@ No shell is used. `argv` is passed directly.
 
 Core manager + Linux/Windows implementations + a Linux smoke test:
 `tests/job/test_job.c` (timeout, cancel, complete). CLI/MCP wiring is next.
+
+## CLI
+
+```bash
+xtate --job-run=request.json --job-result=out.ndjson --job-timeout=30
+```
+
+Starts the same binary as a managed worker, waits for completion and prints:
+
+```json
+{"job":{"id":"job-1","state":"completed","exit_code":0,"result":"out.ndjson"}}
+```
+
+Worker output is NDJSON (`--show all`, `--wait 1`). `--job-timeout` is the total
+wall-clock limit.

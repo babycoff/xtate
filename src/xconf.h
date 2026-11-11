@@ -286,6 +286,9 @@ typedef struct XtateConf {
 #ifndef NOT_FOUND_PCRE2
     char *nmap_file;
 #endif
+    char    *job_run_file;
+    char    *job_result_file;
+    unsigned job_timeout;
 } XConf;
 
 /**

@@ -46,3 +46,17 @@ bool job_wait(Job *, unsigned timeout_ms);
 
 核心 manager + Linux/Windows 实现 + Linux smoke test：
 `tests/job/test_job.c`（timeout、cancel、complete）。CLI/MCP 接线是下一步。
+
+## CLI
+
+```bash
+xtate --job-run=request.json --job-result=out.ndjson --job-timeout=30
+```
+
+以受管 worker 启动同一二进制，等待完成并输出：
+
+```json
+{"job":{"id":"job-1","state":"completed","exit_code":0,"result":"out.ndjson"}}
+```
+
+worker 输出 NDJSON（`--show all`、`--wait 1`）。`--job-timeout` 是总墙钟上限。
