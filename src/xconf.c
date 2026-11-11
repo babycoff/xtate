@@ -937,6 +937,12 @@ static ConfRes SET_control_request(void *conf, const char *name,
     xconf->control_request = STRDUP(value);
     return Conf_OK;
 }
+static ConfRes SET_mcp_mode(void *conf, const char *name, const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    xconf->mcp_mode = (unsigned)conf_parse_bool(value);
+    return Conf_OK;
+}
 static ConfRes SET_control_ping(void *conf, const char *name,
                                const char *value) {
     XConf *xconf = (XConf *)conf;
@@ -3427,6 +3433,12 @@ ConfParam config_parameters[] = {
      {0},
      "Write a result chunk index file.",
      "Write result index."},
+    {"mcp",
+     SET_mcp_mode,
+     Type_FLAG,
+     {0},
+     "Run the MCP stdio server (use --control-connect for the control endpoint).",
+     "Run MCP server."},
     {"control-connect",
      SET_control_connect,
      Type_ARG,

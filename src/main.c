@@ -34,6 +34,7 @@
 #include "util-scan/control-plane.h"
 #include "util-scan/control-client.h"
 #include "util-scan/result-store.h"
+#include "util-scan/mcp-server.h"
 #include <sys/stat.h>
 
 static bool request_mode = false;
@@ -1058,6 +1059,8 @@ int main(int argc, char *argv[]) {
         fputs(resp, stdout);
         return 0;
     }
+    if (xconf->mcp_mode)
+        return mcp_server_run(xconf->control_connect);
     if (xconf->control_ping) {
         char req[512], resp[8192];
         const char *tok = getenv("XTATE_CONTROL_TOKEN");
