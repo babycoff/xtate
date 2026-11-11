@@ -47,3 +47,8 @@ Stable codes used by JSON error envelopes. The machine-readable list is
 
 
 
+End-to-end failure check (Linux):
+
+```bash
+XTATE_BIN=build/bin/xtate bash tests/schema/test_output_failure.sh
+```

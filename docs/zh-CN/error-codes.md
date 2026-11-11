@@ -45,3 +45,8 @@ JSON 错误信封使用的稳定错误码。机器可读列表：
 
 
 
+端到端失败检查（Linux）：
+
+```bash
+XTATE_BIN=build/bin/xtate bash tests/schema/test_output_failure.sh
+```
