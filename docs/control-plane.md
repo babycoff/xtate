@@ -84,3 +84,7 @@ reported as a warning; enforcement during scanning is future work.
 grouped by interface/source/gateway with target counts and a warning when the
 set spans multiple routes. `check` uses the same grouping. MCP `explain_target`
 accepts the same target-set string.
+
+### IPv4/IPv6 explain
+
+Single addresses are printed without `/32` or `/128`. IPv6 targets are grouped too; targets with no route appear in a `(no route)` group and still count. Mixed IPv4/IPv6 sets can produce multiple groups and a split warning.
