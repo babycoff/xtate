@@ -41,6 +41,9 @@ bool        job_is_terminal(const Job *job);
 
 Job  *job_find(JobManager *m, const char *id);
 Job  *job_first(JobManager *m);
+void  job_manager_lock(JobManager *m);
+void  job_manager_unlock(JobManager *m);
+long  job_read_results(Job *job, long offset, char *buf, size_t cap);
 Job  *job_next(Job *job);
 unsigned job_count(JobManager *m);
 #endif

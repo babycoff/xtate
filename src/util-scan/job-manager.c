@@ -3,6 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <pthread.h>
+#endif
 
 #ifdef _WIN32
 #include <windows.h>
@@ -14,6 +19,11 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <time.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <pthread.h>
+#endif
 #include <unistd.h>
 #endif
 
@@ -48,6 +58,11 @@ struct JobManager {
     Job     *head;
     unsigned max_jobs;
     unsigned seq;
+#ifdef _WIN32
+    CRITICAL_SECTION mutex;
+#else
+    pthread_mutex_t mutex;
+#endif
 };
 
 static char *dupstr(const char *s) {
@@ -99,7 +114,14 @@ static long long now_ms(void) {
 
 JobManager *job_manager_create(unsigned max_jobs) {
     JobManager *m = calloc(1, sizeof(*m));
-    if (m) m->max_jobs = max_jobs ? max_jobs : 4;
+    if (m) {
+        m->max_jobs = max_jobs ? max_jobs : 4;
+#ifdef _WIN32
+        InitializeCriticalSection(&m->mutex);
+#else
+        pthread_mutex_init(&m->mutex, NULL);
+#endif
+    }
     return m;
 }
 
@@ -122,6 +144,34 @@ static void job_free(Job *j) {
     free(j);
 }
 
+void job_manager_lock(JobManager *m) {
+    if (!m) return;
+#ifdef _WIN32
+    EnterCriticalSection(&m->mutex);
+#else
+    pthread_mutex_lock(&m->mutex);
+#endif
+}
+void job_manager_unlock(JobManager *m) {
+    if (!m) return;
+#ifdef _WIN32
+    LeaveCriticalSection(&m->mutex);
+#else
+    pthread_mutex_unlock(&m->mutex);
+#endif
+}
+
+long job_read_results(Job *job, long offset, char *buf, size_t cap) {
+    if (!job || !job->result_path || !buf || cap == 0 || offset < 0) return 0;
+    FILE *fp = fopen(job->result_path, "rb");
+    if (!fp) return 0;
+    if (fseek(fp, offset, SEEK_SET) != 0) { fclose(fp); return 0; }
+    size_t n = fread(buf, 1, cap - 1, fp);
+    fclose(fp);
+    buf[n] = 0;
+    return (long)n;
+}
+
 void job_manager_destroy(JobManager *m) {
     if (!m) return;
     Job *j = m->head;
@@ -131,6 +181,11 @@ void job_manager_destroy(JobManager *m) {
         job_free(j);
         j = next;
     }
+#ifdef _WIN32
+    DeleteCriticalSection(&m->mutex);
+#else
+    pthread_mutex_destroy(&m->mutex);
+#endif
     free(m);
 }
 
