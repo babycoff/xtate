@@ -1,5 +1,6 @@
 #include "mcp-server.h"
 #include "control-client.h"
+#include "../util-out/module-json.h"
 #include "../crypto/crypto-json.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,13 +51,39 @@ static void rpc_error(const char *id, int code, const char *msg) {
     fflush(stdout); free(esc);
 }
 
+static const char *instructions =
+"Xtate is a modular Internet-scale network scanner. It supports stateless TCP "
+"banner scanning, hybrid-state TCP/TLS, HTTP/1.1, HTTP/2 (HPACK/Huffman), "
+"HTTP/3 over QUIC, DNS over UDP, DNSSEC evidence, DoT and DoH over HTTP/1.1 "
+"and HTTP/2. Scans run as jobs managed by the Xtate control plane.\n\n"
+"Safety rules:\n"
+"- Only scan targets the user has explicitly authorized.\n"
+"- Use job_status/job_list to observe jobs; results are NOT in tool responses. "
+"Read job_result_manifest and fetch result chunks from the returned path.\n"
+"- On Linux, stateful scans (tcp-state, tls-state, state sub-probes) need the "
+"firewall RST/ICMP rules; tcp-syn and UDP do not.\n"
+"- Use timeouts or stall timeouts for long jobs; never start unbounded scans.\n"
+"- This server exposes read-only and job-lifecycle tools; start_scan is not "
+"enabled yet.\n";
+
 static const char *tools_json =
 "{\"tools\":["
-"{\"name\":\"job_list\",\"description\":\"List jobs, paginated\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"offset\":{\"type\":\"integer\"},\"limit\":{\"type\":\"integer\"}}}},"
-"{\"name\":\"job_status\",\"description\":\"Get job status and heartbeat\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"job_id\":{\"type\":\"string\"}},\"required\":[\"job_id\"]}},"
-"{\"name\":\"job_result_manifest\",\"description\":\"Get result manifest metadata\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"job_id\":{\"type\":\"string\"}},\"required\":[\"job_id\"]}},"
-"{\"name\":\"job_cancel\",\"description\":\"Cancel a running job\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"job_id\":{\"type\":\"string\"}},\"required\":[\"job_id\"]}}"
+"{\"name\":\"list_modules\",\"description\":\"List Xtate scan, probe, output and generate modules with their parameters. Use this before choosing a scanner/probe.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{}},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
+"{\"name\":\"job_list\",\"description\":\"List managed scan jobs with pagination. Returns job id, state and result path only; use job_result_manifest for result metadata.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"offset\":{\"type\":\"integer\",\"minimum\":0},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":1000}}},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
+"{\"name\":\"job_status\",\"description\":\"Return a job's state, phase, sent/targets progress, success/failed counts, heartbeat age and elapsed time. Does not return result records.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"job_id\":{\"type\":\"string\",\"description\":\"Job id returned by job.start\"}},\"required\":[\"job_id\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
+"{\"name\":\"job_result_manifest\",\"description\":\"Return result_path, manifest_path, size and completion for a job. Does not carry result data; read chunks from the manifest path.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"job_id\":{\"type\":\"string\"}},\"required\":[\"job_id\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
+"{\"name\":\"job_cancel\",\"description\":\"Request cancellation of a running job. The result file is preserved.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"job_id\":{\"type\":\"string\"}},\"required\":[\"job_id\"]},\"annotations\":{\"readOnlyHint\":false,\"destructiveHint\":true,\"openWorldHint\":false}}"
 "]}";
+
+static const char *resources_json =
+"{\"resources\":["
+"{\"uri\":\"xtate://docs/overview\",\"name\":\"Xtate overview\",\"mimeType\":\"text/markdown\"},"
+"{\"uri\":\"xtate://docs/firewall\",\"name\":\"Linux firewall prerequisite\",\"mimeType\":\"text/markdown\"},"
+"{\"uri\":\"xtate://schemas/scan-request\",\"name\":\"Scan request schema\",\"mimeType\":\"application/json\"}"
+"]}";
+
+static const char *prompts_json =
+"{\"prompts\":[{\"name\":\"plan-safe-scan\",\"description\":\"Plan a scan with target authorization, protocol choice, timeout and firewall checks.\"}]}";
 
 static int control_call(const char *endpoint, const char *method,
                         const char *args, char *resp, size_t cap) {
@@ -93,6 +120,13 @@ static int control_call(const char *endpoint, const char *method,
 
 static void tool_call(const char *id, const char *name, const char *args,
                       const char *endpoint) {
+    if (strcmp(name, "list_modules") == 0) {
+        char *m = module_json_string();
+        if (!m) { text_result(id, "cannot read module metadata", true); return; }
+        text_result(id, m, false);
+        free(m);
+        return;
+    }
     if (!endpoint || !endpoint[0]) {
         text_result(id, "control endpoint not configured", true);
         return;
@@ -122,8 +156,13 @@ int mcp_server_run(const char *control_endpoint) {
         char method[128] = {0};
         json_str(line, "method", method, sizeof(method));
         if (strcmp(method, "initialize") == 0) {
-            printf("{\"jsonrpc\":\"2.0\",\"id\":%s,\"result\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{\"tools\":{}},\"serverInfo\":{\"name\":\"xtate\",\"version\":\"0.1\"}}}\n", id);
-            fflush(stdout);
+            char *ins = json_encode_string(instructions);
+            printf("{\"jsonrpc\":\"2.0\",\"id\":%s,\"result\":{"
+                   "\"protocolVersion\":\"2024-11-05\","
+                   "\"capabilities\":{\"tools\":{},\"resources\":{},\"prompts\":{}},"
+                   "\"serverInfo\":{\"name\":\"xtate\",\"title\":\"Xtate network scanner\",\"version\":\"2.42.0\"},"
+                   "\"instructions\":%s}}\n", id, ins ? ins : "\"\"");
+            free(ins); fflush(stdout);
         } else if (strcmp(method, "ping") == 0) {
             printf("{\"jsonrpc\":\"2.0\",\"id\":%s,\"result\":{}}\n", id);
             fflush(stdout);
@@ -135,6 +174,40 @@ int mcp_server_run(const char *control_endpoint) {
             json_str(line, "name", name, sizeof(name));
             const char *args = strstr(line, "\"arguments\":");
             tool_call(id, name, args, control_endpoint);
+        } else if (strcmp(method, "resources/list") == 0) {
+            printf("{\"jsonrpc\":\"2.0\",\"id\":%s,\"result\":%s}\n", id, resources_json);
+            fflush(stdout);
+        } else if (strcmp(method, "resources/read") == 0) {
+            char uri[256] = {0};
+            json_str(line, "uri", uri, sizeof(uri));
+            const char *path = NULL;
+            if (strstr(uri, "docs/overview")) path = "docs/README.md";
+            else if (strstr(uri, "docs/firewall")) path = "docs/firewall.md";
+            else if (strstr(uri, "schemas/scan-request")) path = "schemas/scan-request.json";
+            char *text = NULL;
+            if (path) {
+                FILE *f = fopen(path, "rb");
+                if (f) {
+                    fseek(f, 0, SEEK_END); long n = ftell(f); rewind(f);
+                    text = malloc((size_t)n + 1);
+                    if (text && fread(text, 1, (size_t)n, f) == (size_t)n) text[n] = 0;
+                    else { free(text); text = NULL; }
+                    fclose(f);
+                }
+            }
+            if (!text) { rpc_error(id, -32002, "resource not found"); continue; }
+            char *esc = json_encode_string(text);
+            printf("{\"jsonrpc\":\"2.0\",\"id\":%s,\"result\":{\"contents\":[{\"uri\":\"%s\",\"mimeType\":\"text/plain\",\"text\":%s}]}}\n",
+                   id, uri, esc ? esc : "\"\"");
+            free(esc); free(text); fflush(stdout);
+        } else if (strcmp(method, "prompts/list") == 0) {
+            printf("{\"jsonrpc\":\"2.0\",\"id\":%s,\"result\":%s}\n", id, prompts_json);
+            fflush(stdout);
+        } else if (strcmp(method, "prompts/get") == 0) {
+            char name[64] = {0}; json_str(line, "name", name, sizeof(name));
+            char *esc = json_encode_string("First call list_modules. Then plan an authorized scan with explicit targets, timeout/stall policy, and Linux firewall check for stateful scans. Use job tools; read results via job_result_manifest.");
+            printf("{\"jsonrpc\":\"2.0\",\"id\":%s,\"result\":{\"description\":\"Plan a safe scan\",\"messages\":[{\"role\":\"user\",\"content\":{\"type\":\"text\",\"text\":%s}}]}}\n", id, esc ? esc : "\"\"");
+            free(esc); fflush(stdout);
         } else {
             rpc_error(id, -32601, "method not found");
         }

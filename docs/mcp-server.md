@@ -18,3 +18,12 @@ result data; clients fetch chunks via the result manifest.
 
 Still planned: `list_modules`, `describe_probe`, `explain_target`, `check`,
 `validate_config`, and controlled `start_scan`.
+
+## Model-facing metadata
+
+`initialize` returns `serverInfo` plus an `instructions` string describing
+Xtate, supported protocols, authorization, firewall prerequisites and the job
+model. `tools/list` includes descriptions, JSON input schemas and read-only /
+destructive annotations. Resources expose overview, firewall and scan-request
+schema; a `plan-safe-scan` prompt is provided. `list_modules` returns full
+module metadata.
