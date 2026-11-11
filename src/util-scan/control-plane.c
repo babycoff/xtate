@@ -154,24 +154,23 @@ static void handle(JobManager *m, const char *line, FILE *out) {
         send_json(out, id, ok ? "{\"cancelled\":true}" : "{\"cancelled\":false}", NULL, NULL);
         return;
     }
-    if (strstr(line, "\"job.results\"")) {
-        int64_t off = field_int(line, "offset", 0);
-        int64_t cap = field_int(line, "max_bytes", 65536);
-        if (cap < 1 || cap > 1048576) cap = 65536;
-        char *data = malloc((size_t)cap + 1);
-        uint64_t next = 0; bool trunc = false;
-        uint64_t n = data ? job_read_results(j, (uint64_t)off, data, (size_t)cap + 1,
-                                             &next, &trunc) : 0;
-        char *esc = json_encode_string(data ? data : "");
-        char res[128];
-        snprintf(res, sizeof(res), "{\"job_id\":\"%s\",\"next_offset\":%llu,"
-                                   "\"truncated\":%s,\"data\":",
-                 jidbuf, (unsigned long long)next, trunc ? "true" : "false");
+    if (strstr(line, "\"job.results\"") ||
+        strstr(line, "\"job.result_manifest\"")) {
+        char *path = json_encode_string(job_result_path(j) ? job_result_path(j) : "");
+        char res[1024];
+        snprintf(res, sizeof(res),
+                 "{\"job_id\":\"%s\",\"state\":\"%s\","
+                 "\"result_path\":%s,\"result_bytes\":%llu,"
+                 "\"complete\":%s}",
+                 jidbuf, job_state_string(job_state(j)), path ? path : "\"\"",
+                 (unsigned long long)job_result_bytes(j),
+                 job_is_terminal(j) ? "true" : "false");
+        free(path);
         job_manager_unlock(m);
-        fprintf(out, "{\"id\":%s,\"result\":%s%s}}\n", id, res, esc ? esc : "\"\"");
-        fflush(out); free(esc); free(data);
+        send_json(out, id, res, NULL, NULL);
         return;
     }
+
     char res[512];
     snprintf(res, sizeof(res),
              "{\"job_id\":\"%s\",\"state\":\"%s\",\"exit_code\":%u,"

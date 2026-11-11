@@ -51,7 +51,8 @@ Windows: `\\.\pipe\xtate-control`
 ## 规则
 
 - 控制面单线程，manager 调用串行。
-- 结果使用游标，客户端不直接读文件。
+- 控制面不携带结果数据。`job.result_manifest` 返回路径、大小和完成状态；
+  客户端直接读取结果分块。
 - `job.start` 必须有明确目标与 timeout/stall 策略。
 - daemon 拥有 worker；MCP/TUI/GUI 只是客户端。
 - server 重启终止 job，不声称可恢复。

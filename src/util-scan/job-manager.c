@@ -165,6 +165,19 @@ void job_manager_unlock(JobManager *m) {
 #endif
 }
 
+uint64_t job_result_bytes(Job *job) {
+    if (!job || !job->result_path) return 0;
+#ifdef _WIN32
+    WIN32_FILE_ATTRIBUTE_DATA fa;
+    if (GetFileAttributesExA(job->result_path, GetFileExInfoStandard, &fa))
+        return ((uint64_t)fa.nFileSizeHigh << 32) | fa.nFileSizeLow;
+#else
+    struct stat st;
+    if (stat(job->result_path, &st) == 0) return (uint64_t)st.st_size;
+#endif
+    return 0;
+}
+
 uint64_t job_read_results(Job *job, uint64_t offset, char *buf, size_t cap,
                           uint64_t *next_offset, bool *truncated) {
     if (next_offset) *next_offset = offset;
