@@ -1,6 +1,12 @@
 #include "module-json.h"
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef _WIN32
+#include <process.h>
+#define getpid _getpid
+#else
+#include <unistd.h>
+#endif
 #include <string.h>
 #include "../probe-modules/probe-modules.h"
 #include "../scan-modules/scan-modules.h"
@@ -90,7 +96,19 @@ void list_modules_json(void) {
 }
 
 char *module_json_string(void) {
-    FILE *f = fopen("xtate-modules.tmp", "w+b");
+    const char *tmpdir = getenv("TMPDIR");
+#ifdef _WIN32
+    if (!tmpdir || !tmpdir[0]) tmpdir = getenv("TEMP");
+#endif
+    if (!tmpdir || !tmpdir[0]) tmpdir = "/tmp";
+    char tmppath[1200];
+    snprintf(tmppath, sizeof(tmppath), "%s/xtate-modules-%ld.tmp", tmpdir,
+             (long)getpid());
+    FILE *f = fopen(tmppath, "w+b");
+    if (!f) {
+        snprintf(tmppath, sizeof(tmppath), "xtate-modules-%ld.tmp", (long)getpid());
+        f = fopen(tmppath, "w+b");
+    }
     if (!f) return NULL;
     FILE *old = g_out;
     g_out = f;
@@ -100,7 +118,7 @@ char *module_json_string(void) {
     char *buf = malloc((size_t)n + 1);
     if (buf && fread(buf, 1, (size_t)n, f) == (size_t)n) buf[n] = 0;
     else { free(buf); buf = NULL; }
-    fclose(f); remove("xtate-modules.tmp"); g_out = old ? old : stdout;
+    fclose(f); remove(tmppath); g_out = old ? old : stdout;
     return buf;
 }
 

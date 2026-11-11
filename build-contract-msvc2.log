@@ -1,0 +1,291 @@
+
+Xtate Windows build
+  Source     : C:\Users\shine\Documents\xtate提升\xtate
+  Stage copy : C:\Users\shine\AppData\Local\xtate-build\src
+  Artifacts  : C:\Users\shine\AppData\Local\xtate-build\artifacts
+  Project bin: C:\Users\shine\Documents\xtate提升\xtate\bin
+  Toolchains : msvc (Release)
+
+The source is copied to the stage path above (without .git, build, bin or results),
+built there, and the staged source/build tree is removed after the build.
+The primary binary is written to bin\; per-toolchain copies stay in bin\ and artifacts\.
+
+Why stage at all? The MinGW Makefiles generator can fail when the source path
+contains non-ASCII characters. Staging gives every toolchain an ASCII path.
+
+vcpkg toolchain: C:\Users\shine\scoop\apps\vcpkg\current\scripts\buildsystems\vcpkg.cmake
+Copying source to the stage path...
+=== MSVC (Visual Studio 18 2026) ===
+-- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.19045.
+-- The C compiler identification is MSVC 19.51.36260.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: C:/Program Files/Microsoft Visual Studio/18/Professional/VC/Tools/MSVC/14.51.36231/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- No CMAKE_BUILD_TYPE selected, defaulting to Release
+-- Found OpenSSL: optimized;C:/Users/shine/scoop/apps/openssl-lts/current/lib/VC/x64/MD/libcrypto.lib;debug;C:/Users/shine/scoop/apps/openssl-lts/current/lib/VC/x64/MDd/libcrypto.lib (found suitable version "3.0.22", minimum required is "1.1.1")
+-- Found PCRE2: C:/Users/shine/scoop/apps/vcpkg/current/installed/x64-windows/debug/bin/pcre2-8d.dll
+-- Found LibXml2: C:/Users/shine/scoop/apps/vcpkg/current/installed/x64-windows/debug/bin/libxml2.dll
+-- Found libbson (2.x): bson::bson
+-- Found libmongoc (2.x): mongoc::mongoc
+-- Configuring done (7.2s)
+-- Generating done (0.1s)
+-- Build files have been written to: C:/Users/shine/AppData/Local/xtate-build/build-msvc
+适用于 .NET Framework MSBuild 版本 18.11.1-1.26513.3+940033be3
+
+  Checking File Globs
+  1>Checking Build System
+  Building Custom Rule C:/Users/shine/AppData/Local/xtate-build/src/CMakeLists.txt
+  as-query.c
+  crossline.c
+  crypto-base64.c
+  crypto-blackrock.c
+  crypto-blackrock2.c
+  crypto-hex.c
+  crypto-json.c
+  crypto-lcg.c
+  crypto-nmapprobe.c
+  crypto-primegen.c
+  crypto-siphash24.c
+  dedup.c
+  addr-list-gen.c
+  addr-stream-gen.c
+  blackrock-gen.c
+  generate-modules.c
+  ip-list-gen.c
+  ip-stream-gen.c
+  main.c
+  nmap-service.c
+  正在生成代码...
+  正在编译...
+  bson-output.c
+  csv-output.c
+  list-output.c
+  mongodb-output.c
+  ndjson-output.c
+  null-output.c
+  output-modules.c
+  output-write.c
+  text-output.c
+  pixie-backtrace.c
+  pixie-file.c
+  pixie-threads.c
+  pixie-timer.c
+  amqp-probe.c
+  close-state-probe.c
+  dns-probe.c
+  doh-probe.c
+  dot-probe.c
+C:\Users\shine\AppData\Local\xtate-build\src\src\probe-modules\doh-probe.c(241,9): warning C4013: “output_result”未定义；假设外部返回 int [C:\Users\shine\AppData\Local\xtate-build\build-msvc\xtate.vcxproj]
+C:\Users\shine\AppData\Local\xtate-build\src\src\probe-modules\dot-probe.c(203,5): warning C4013: “output_result”未定义；假设外部返回 int [C:\Users\shine\AppData\Local\xtate-build\build-msvc\xtate.vcxproj]
+  echo-probe.c
+  ftp-probe.c
+  正在生成代码...
+  正在编译...
+  get-state-probe.c
+  h2-probe.c
+  h2c-probe.c
+  hello-probe.c
+  hello-state-probe.c
+  hello-udp-probe.c
+  http-probe.c
+  http-state-probe.c
+  http3-state-probe.c
+  imap-probe.c
+  ipp-probe.c
+  jarm-probe.c
+  lua-tcp-probe.c
+  lua-udp-probe.c
+  managesieve-probe.c
+  memcached-probe.c
+  mongodb-probe.c
+C:\Users\shine\AppData\Local\xtate-build\src\src\probe-modules\mongodb-probe.c(198,5): warning C4013: “output_result”未定义；假设外部返回 int [C:\Users\shine\AppData\Local\xtate-build\build-msvc\xtate.vcxproj]
+  mqtt-probe.c
+  mysql-probe.c
+  nmap-probe.c
+  正在生成代码...
+  正在编译...
+  nmap-udp-probe.c
+  ntp-probe.c
+  null-probe.c
+  pop3-probe.c
+  postgres-probe.c
+  pptp-probe.c
+  probe-modules.c
+  quic-probe.c
+  recog-probe.c
+  recog-state-probe.c
+  recog-udp-probe.c
+  redis-probe.c
+  slot-test-probe.c
+  slot-test-udp-probe.c
+  smtp-probe.c
+  snmp-probe.c
+  socks5-probe.c
+  ssh-kex-probe.c
+  ssh-probe.c
+  telnet-probe.c
+  正在生成代码...
+  正在编译...
+  tls-hello-probe.c
+  tls-state-probe.c
+  proto-datapass.c
+  proto-dns.c
+  proto-http-maker.c
+  proto-http-parser.c
+  proto-http-result.c
+  proto-jarm.c
+  proto-match.c
+  proto-preprocess.c
+  proto-quic.c
+  proto-tls.c
+  rawsock-getif.c
+  rawsock-getip.c
+  rawsock-getip6.c
+  rawsock-getmac.c
+  rawsock-getroute.c
+  rawsock-route.c
+C:\Users\shine\AppData\Local\xtate-build\src\src\rawsock\rawsock-route.c(182,46): warning C4090: “函数”: 不同的“const”限定符 [C:\Users\shine\AppData\Local\xtate-build\build-msvc\xtate.vcxproj]
+C:\Users\shine\AppData\Local\xtate-build\src\src\rawsock\rawsock-route.c(199,27): warning C4133: “函数”: 从“PCHAR”到“const wchar_t *”的类型不兼容 [C:\Users\shine\AppData\Local\xtate-build\build-msvc\xtate.vcxproj]
+  rawsock.c
+  receive.c
+  正在生成代码...
+  正在编译...
+  recog-fingerprint.c
+  arp-req-scan.c
+  icmp-echo-scan.c
+  icmp-time-scan.c
+  ndp-ns-scan.c
+  quic-state-scan.c
+  scan-modules.c
+  sctp-init-scan.c
+  tcp-state-scan.c
+  tcp-syn-scan.c
+  udp-scan.c
+  yarrp-echo-scan.c
+  yarrp-udp-scan.c
+  zbanner-policy.c
+  zbanner-scan.c
+  smack1.c
+  smackqueue.c
+  stack-arpv4.c
+  stack-ndpv6.c
+  stack-queue.c
+  正在生成代码...
+  正在编译...
+  stack-src.c
+  stack-tcp-core.c
+  stub-lua.c
+  stub-pcap.c
+  stub-pfring.c
+  target-cookie.c
+  target-ipaddress.c
+  target-parse.c
+  target-rangeport.c
+  target-rangev4.c
+  target-rangev6.c
+  target-set.c
+  target.c
+  templ-arp.c
+  templ-icmp.c
+  templ-init.c
+  templ-ndp.c
+  templ-sctp.c
+  templ-tcp.c
+  templ-udp.c
+  正在生成代码...
+  正在编译...
+  event-timeout.c
+  fast-timeout.c
+  transmit.c
+  data-chain.c
+  data-extract.c
+  fine-malloc.c
+  json-escape.c
+  lfqueue.c
+  rte-ring.c
+  safe-string.c
+  checksum.c
+  configer.c
+  i18n.c
+  ssl-help.c
+  error-code.c
+  logger.c
+  module-json.c
+  pcapfile.c
+  xprint.c
+  xtatus.c
+  正在生成代码...
+  正在编译...
+  control-client.c
+  control-plane.c
+  heartbeat.c
+  init-nic.c
+  job-manager.c
+  list-targets.c
+  ptrace.c
+  result-store.c
+  rst-filter.c
+  scan-request.c
+  throttle.c
+  xcmd.c
+  xconf.c
+  正在生成代码...
+  xtate.vcxproj -> C:\Users\shine\AppData\Local\xtate-build\build-msvc\Release\xtate.exe
+  C:\Users\shine\scoop\apps\vcpkg\current\installed\x64-windows\bin\pcre2-8.dll -> C:\Users\shine\AppData\Local\xtate-build\build-msvc\Release\pcre2-8.dll done
+  C:\Users\shine\scoop\apps\vcpkg\current\installed\x64-windows\bin\libxml2.dll -> C:\Users\shine\AppData\Local\xtate-build\build-msvc\Release\libxml2.dll done
+  C:\Users\shine\scoop\apps\vcpkg\current\installed\x64-windows\bin\z.dll -> C:\Users\shine\AppData\Local\xtate-build\build-msvc\Release\z.dll done
+  C:\Users\shine\scoop\apps\vcpkg\current\installed\x64-windows\bin\iconv-2.dll -> C:\Users\shine\AppData\Local\xtate-build\build-msvc\Release\iconv-2.dll done
+  C:\Users\shine\scoop\apps\vcpkg\current\installed\x64-windows\bin\mongoc2.dll -> C:\Users\shine\AppData\Local\xtate-build\build-msvc\Release\mongoc2.dll done
+  C:\Users\shine\scoop\apps\vcpkg\current\installed\x64-windows\bin\bson2.dll -> C:\Users\shine\AppData\Local\xtate-build\build-msvc\Release\bson2.dll done
+  C:\Users\shine\scoop\apps\vcpkg\current\installed\x64-windows\bin\utf8proc.dll -> C:\Users\shine\AppData\Local\xtate-build\build-msvc\Release\utf8proc.dll done
+  Building Custom Rule C:/Users/shine/AppData/Local/xtate-build/src/CMakeLists.txt
+
+=== MSVC smoke test: C:\Users\shine\AppData\Local\xtate-build\build-msvc\Release\xtate.exe ===
+
+  Xtate version 2.41.2 in Release
+
+  Author : Alvin Chen
+  Github : https://github.com/babycoff/xtate
+  Contact: shineccy@aliyun.com
+
+  Compiled on: Nov 11 2026 20:24:35
+  Compiler: VisualStudio 2026 MSVC 14.51 (MSC_VER 1951, FULL 195136260, BUILD 0)
+  OS: Windows
+  CPU: x86 (64 bits)
+
+  Build with libraries:
+    OpenSSL    3.0.22 25 Aug 2026
+    PCRE2      10.49 2026-09-28
+    LibXml2    2.15.4
+    libbson    2.5.5
+    libmongoc  2.5.5
+
+[K[ERR] path: missing parameter value
+[K[ERR] this-option-name-is-deliberately-longer-than-sixty-four-characters-aaaaaaaaaaaaaaaaaaaaaaaaaaaa: name too long
+[K[ERR] (CONF) unknown config option: max-frames=4
+[K[ERR] invalid size value: 12x
+[K[ERR] invalid time value: 2q
+[K[WRN] (TSP BUFFER) maximum scratch size reached (1048576 bytes)
+Regression test: start...
+Regression test: success!
+Project binaries: C:\Users\shine\Documents\xtate提升\xtate\bin
+
+Build matrix succeeded.
+Project binaries (C:\Users\shine\Documents\xtate提升\xtate\bin):
+
+Name                   Length LastWriteTime
+----                   ------ -------------
+xtate-msvc-release.exe 896000 2026/11/11 20:24:37
+xtate.exe              896000 2026/11/11 20:24:37
+
+Artifact copies (C:\Users\shine\AppData\Local\xtate-build\artifacts):
+
+Name                   Length LastWriteTime
+----                   ------ -------------
+xtate-msvc-release.exe 896000 2026/11/11 20:24:37
+
+Staged source/build tree removed.
+Project binaries: C:\Users\shine\Documents\xtate提升\xtate\bin
+Artifact copies: C:\Users\shine\AppData\Local\xtate-build\artifacts

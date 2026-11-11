@@ -11,3 +11,6 @@ tests/fuzz/artifacts/
 tests/fuzz/corpus-working/
 tests/lab/ci-*.log
 tests/sanitizers/build/
+
+xtate-job-*.request.json
+xtate-mcp-audit.log

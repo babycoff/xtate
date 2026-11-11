@@ -192,9 +192,19 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
     if (strstr(line, "\"job.start\"")) {
         char req[600], res[600], params[16384];
         if (extract_object(line, "params", params, sizeof(params))) {
-            snprintf(req, sizeof(req), "xtate-job-%lld.request.json",
-                     (long long)time(NULL));
+            const char *tmpdir = getenv("TMPDIR");
+#ifdef _WIN32
+            if (!tmpdir || !tmpdir[0]) tmpdir = getenv("TEMP");
+#endif
+            if (!tmpdir || !tmpdir[0]) tmpdir = "/tmp";
+            snprintf(req, sizeof(req), "%s/xtate-job-%lld.request.json",
+                     tmpdir, (long long)time(NULL));
             FILE *rf = fopen(req, "wb");
+            if (!rf) {
+                snprintf(req, sizeof(req), "xtate-job-%lld.request.json",
+                         (long long)time(NULL));
+                rf = fopen(req, "wb");
+            }
             if (!rf) { send_json(out, id, NULL, "IO_ERROR", "cannot write request"); return; }
             fwrite(params, 1, strlen(params), rf);
             fclose(rf);
@@ -220,9 +230,19 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
         char quotarg[64] = {0};
         if (quota) snprintf(quotarg, sizeof(quotarg), "--result-quota=%llu",
                             (unsigned long long)quota);
-        char *argv[] = {exe, "--scan-request", req, "--output-module", "ndjson",
-                        "--output-file", res, "--show", "all", "--wait", "1",
-                        "--no-status", hbarg, quota ? quotarg : NULL, NULL};
+        char iface[256] = {0};
+        bool has_iface = field_str(line, "interface", iface, sizeof(iface)) != NULL;
+        char *argv[20];
+        int ac = 0;
+        argv[ac++] = exe; argv[ac++] = "--scan-request"; argv[ac++] = req;
+        argv[ac++] = "--output-module"; argv[ac++] = "ndjson";
+        argv[ac++] = "--output-file"; argv[ac++] = res;
+        argv[ac++] = "--show"; argv[ac++] = "all";
+        argv[ac++] = "--wait"; argv[ac++] = "1";
+        argv[ac++] = "--no-status"; argv[ac++] = hbarg;
+        if (quota) argv[ac++] = quotarg;
+        if (has_iface) { argv[ac++] = "-if"; argv[ac++] = iface; }
+        argv[ac] = NULL;
         job_manager_lock(m);
         Job *j = job_start(m, argv, res, NULL, 0);
         if (j) {

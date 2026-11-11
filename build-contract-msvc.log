@@ -1,0 +1,20 @@
+
+参数 '.\xtate\scripts\build-windows.ps1' 无法识别为脚本文件名。请检查名称的拼写或验证路径是否正确(如果包含路径)，然后重试。
+用法: pwsh[.exe] [-Login] [[-File] <filePath> [args]]
+                  [-Command { - | <script-block> [-args <arg-array>]
+                                | <string> [<CommandParameters>] } ]
+                  [-CommandWithArgs <string> [<CommandParameters>]
+                  [-ConfigurationName <string>] [-ConfigurationFile <filePath>]
+                  [-CustomPipeName <string>] [-EncodedCommand <Base64EncodedCommand>]
+                  [-ExecutionPolicy <ExecutionPolicy>] [-InputFormat {Text | XML}]
+                  [-Interactive] [-MTA] [-NoExit] [-NoLogo] [-NonInteractive] [-NoProfile]
+                  [-NoProfileLoadTime] [-OutputFormat {Text | XML}]
+                  [-SettingsFile <filePath>] [-SSHServerMode] [-STA]
+                  [-Version] [-WindowStyle <style>]
+                  [-WorkingDirectory <directoryPath>]
+
+       pwsh[.exe] -h | -Help | -? | /?
+
+PowerShell 联机帮助 https://aka.ms/powershell-docs
+
+所有参数都不区分大小写。

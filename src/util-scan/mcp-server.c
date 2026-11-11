@@ -132,7 +132,8 @@ static bool extract_object(const char *line, const char *key, char *out,
 }
 
 static int control_call(const char *endpoint, const char *method,
-                        const char *args, char *resp, size_t cap) {
+                        const char *args, const char *iface,
+                        char *resp, size_t cap) {
     char req[8192], token[256] = "";
     const char *tok = getenv("XTATE_CONTROL_TOKEN");
     if (tok && tok[0]) snprintf(token, sizeof(token), ",\"token\":\"%s\"", tok);
@@ -151,6 +152,14 @@ static int control_call(const char *endpoint, const char *method,
         char params[7168];
         if (!extract_object(args ? args : "", "arguments", params, sizeof(params)))
             return -1;
+        if (iface && iface[0]) {
+            size_t n = strlen(params);
+            char *esc = json_encode_string(iface);
+            if (n && params[n - 1] == '}') params[--n] = 0;
+            snprintf(params + n, sizeof(params) - n,
+                     ",\"interface\":%s}", esc ? esc : "\"\"");
+            free(esc);
+        }
         snprintf(req, sizeof(req),
                  "{\"id\":1,\"method\":\"job.start\",\"params\":%s%s}\n",
                  params, token);
@@ -418,6 +427,32 @@ static void tool_call(const char *id, const char *name, const char *args,
             fclose(audit);
         }
     }
+    char iface[256] = {0};
+    if (strcmp(name, "start_scan") == 0) {
+        char targets[4096] = {0}; size_t off = 0;
+        JsonNode *root = json_decode(args ? args : "{}");
+        JsonNode *cfg = root ? json_find_member(root, "arguments") : NULL;
+        JsonNode *ta = cfg ? json_find_member(cfg, "targets") : NULL;
+        for (JsonNode *t = ta ? ta->children.head : NULL; t; t = t->next) {
+            if (t->tag != JSON_STRING) continue;
+            if (off + strlen(t->string_) + 2 >= sizeof(targets)) break;
+            off += (size_t)snprintf(targets + off, sizeof(targets) - off, "%s%s",
+                                    off ? "," : "", t->string_);
+        }
+        if (root) json_delete(root);
+        if (targets[0]) {
+            char text[16384], ea[4300];
+            snprintf(ea, sizeof(ea), "--explain-target=%s", targets);
+            if (run_self(ea, text, sizeof(text))) {
+                const char *pif = strstr(text, "Interface:");
+                if (pif) {
+                    pif += 10; while (*pif == ' ') pif++;
+                    size_t k = 0; while (pif[k] && pif[k] != '\n' && pif[k] != '\r' && k + 1 < sizeof(iface)) { iface[k]=pif[k]; k++; }
+                    iface[k] = 0;
+                }
+            }
+        }
+    }
     char resp[65536];
     const char *method = name;
     if (strcmp(name, "job_result_manifest") == 0) method = "job.result_manifest";
@@ -425,7 +460,7 @@ static void tool_call(const char *id, const char *name, const char *args,
     else if (strcmp(name, "job_cancel") == 0) method = "job.cancel";
     else if (strcmp(name, "job_list") == 0) method = "job.list";
     else if (strcmp(name, "start_scan") == 0) method = "job.start";
-    int n = control_call(endpoint, method, args, resp, sizeof(resp));
+    int n = control_call(endpoint, method, args, iface, resp, sizeof(resp));
     if (n < 0) { text_result(id, "control request failed", true); return; }
     text_result(id, resp, false);
 }

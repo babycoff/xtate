@@ -67,7 +67,7 @@ try:
     assert not cc["result"]["isError"]
     out2 = os.path.join(tempfile.mkdtemp(), "mcp-chunk.ndjson")
     cs = rpc({"jsonrpc":"2.0","id":17,"method":"tools/call","params":{"name":"start_scan","arguments":{
-        "scan":"tcp-syn","targets":["127.0.0.1"],"ports":[1],
+        "scan":"tcp-syn","targets":["8.8.8.8"],"ports":[53],
         "result_path":out2,"chunk_size":100,"index":True,"quota_bytes":100000,
         "authorized":True}}})
     assert not cs["result"]["isError"]
@@ -80,10 +80,14 @@ try:
     mm = rpc({"jsonrpc":"2.0","id":19,"method":"tools/call","params":{"name":"job_result_manifest","arguments":{"job_id":cid2}}})
     mt = mm["result"]["content"][0]["text"]
     assert "manifest_path" in mt, mt
-    # manifest file content depends on worker completing; API metadata is asserted above
+    stobj = json.loads(st2t)["result"]
+    if stobj.get("state") == "completed":
+        assert os.path.exists(out2 + ".manifest.json")
     print("MCP server tests: PASS")
 finally:
     mp.terminate(); ctlp.terminate()
+
+
 
 
 
