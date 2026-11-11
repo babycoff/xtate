@@ -1,0 +1,345 @@
+#include "job-manager.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <fcntl.h>
+#include <signal.h>
+#include <sys/prctl.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <time.h>
+#include <unistd.h>
+#endif
+
+struct Job {
+    char      id[32];
+    JobState  state;
+    unsigned  timeout_sec;
+    unsigned  exit_code;
+    long long start_ms;
+    long long end_ms;
+    bool      cancel_requested;
+    char     *result_path;
+    char     *log_path;
+    Job      *next;
+#ifdef _WIN32
+    PROCESS_INFORMATION pi;
+    HANDLE              job_object;
+#else
+    pid_t pid;
+#endif
+};
+
+struct JobManager {
+    Job     *head;
+    unsigned max_jobs;
+    unsigned seq;
+};
+
+static char *dupstr(const char *s) {
+    size_t n = strlen(s) + 1;
+    char *p = malloc(n);
+    if (p) memcpy(p, s, n);
+    return p;
+}
+
+const char *job_state_string(JobState s) {
+    switch (s) {
+        case JOB_QUEUED: return "queued";
+        case JOB_RUNNING: return "running";
+        case JOB_COMPLETED: return "completed";
+        case JOB_FAILED: return "failed";
+        case JOB_CANCELLED: return "cancelled";
+        case JOB_TIMED_OUT: return "timed_out";
+        default: return "unknown";
+    }
+}
+
+bool job_is_terminal(const Job *job) {
+    return job && (job->state == JOB_COMPLETED || job->state == JOB_FAILED ||
+                   job->state == JOB_CANCELLED || job->state == JOB_TIMED_OUT);
+}
+
+static long long now_ms(void) {
+#ifdef _WIN32
+    return (long long)GetTickCount64();
+#else
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (long long)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+#endif
+}
+
+JobManager *job_manager_create(unsigned max_jobs) {
+    JobManager *m = calloc(1, sizeof(*m));
+    if (m) m->max_jobs = max_jobs ? max_jobs : 4;
+    return m;
+}
+
+static void close_handles(Job *j) {
+#ifdef _WIN32
+    if (j->pi.hProcess) CloseHandle(j->pi.hProcess);
+    if (j->pi.hThread) CloseHandle(j->pi.hThread);
+    if (j->job_object) CloseHandle(j->job_object);
+#else
+    (void)j;
+#endif
+}
+
+static void job_free(Job *j) {
+    if (!j) return;
+    close_handles(j);
+    free(j->result_path);
+    free(j->log_path);
+    free(j);
+}
+
+void job_manager_destroy(JobManager *m) {
+    if (!m) return;
+    Job *j = m->head;
+    while (j) {
+        Job *next = j->next;
+        if (!job_is_terminal(j)) job_cancel(j);
+        job_free(j);
+        j = next;
+    }
+    free(m);
+}
+
+unsigned job_count(JobManager *m) {
+    unsigned n = 0;
+    for (Job *j = m ? m->head : NULL; j; j = j->next) n++;
+    return n;
+}
+
+Job *job_first(JobManager *m) { return m ? m->head : NULL; }
+Job *job_next(Job *j) { return j ? j->next : NULL; }
+
+Job *job_find(JobManager *m, const char *id) {
+    for (Job *j = m ? m->head : NULL; j; j = j->next)
+        if (id && strcmp(j->id, id) == 0) return j;
+    return NULL;
+}
+
+const char *job_id(const Job *j) { return j ? j->id : ""; }
+JobState job_state(const Job *j) { return j ? j->state : JOB_FAILED; }
+const char *job_result_path(const Job *j) { return j ? j->result_path : NULL; }
+const char *job_log_path(const Job *j) { return j ? j->log_path : NULL; }
+unsigned job_exit_code(const Job *j) { return j ? j->exit_code : 0; }
+unsigned job_elapsed_ms(const Job *j) {
+    if (!j) return 0;
+    long long end = j->end_ms ? j->end_ms : now_ms();
+    return (unsigned)(end - j->start_ms);
+}
+
+static Job *new_job(JobManager *m, const char *result_path,
+                    const char *log_path, unsigned timeout_sec) {
+    Job *j = calloc(1, sizeof(*j));
+    if (!j) return NULL;
+    snprintf(j->id, sizeof(j->id), "job-%u", ++m->seq);
+    j->state = JOB_QUEUED;
+    j->timeout_sec = timeout_sec;
+    j->result_path = result_path ? dupstr(result_path) : NULL;
+    j->log_path = log_path ? dupstr(log_path) : NULL;
+    j->next = m->head;
+    m->head = j;
+    return j;
+}
+
+#ifdef _WIN32
+static void append_quoted(char **buf, size_t *len, size_t *cap, const char *s) {
+    size_t need = strlen(s) * 2 + 4;
+    if (*len + need > *cap) {
+        *cap = (*cap + need) * 2;
+        *buf = realloc(*buf, *cap);
+    }
+    (*buf)[(*len)++] = '"';
+    for (; *s; s++) {
+        if (*s == '"') (*buf)[(*len)++] = '\\';
+        (*buf)[(*len)++] = *s;
+    }
+    (*buf)[(*len)++] = '"';
+    (*buf)[*len] = 0;
+}
+
+Job *job_start(JobManager *m, char *const argv[], const char *result_path,
+               const char *log_path, unsigned timeout_sec) {
+    if (!m || !argv || !argv[0]) return NULL;
+    unsigned active = 0;
+    for (Job *j = m->head; j; j = j->next)
+        if (!job_is_terminal(j)) active++;
+    if (active >= m->max_jobs) return NULL;
+
+    Job *j = new_job(m, result_path, log_path, timeout_sec);
+    if (!j) return NULL;
+
+    SECURITY_ATTRIBUTES sa = {sizeof(sa), NULL, TRUE};
+    HANDLE out = CreateFileA(result_path ? result_path : "NUL",
+                             GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                             &sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    HANDLE err = CreateFileA(log_path ? log_path : "NUL",
+                             GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                             &sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (out == INVALID_HANDLE_VALUE || err == INVALID_HANDLE_VALUE) {
+        if (out != INVALID_HANDLE_VALUE) CloseHandle(out);
+        if (err != INVALID_HANDLE_VALUE) CloseHandle(err);
+        j->state = JOB_FAILED;
+        j->exit_code = 1;
+        return j;
+    }
+
+    size_t cap = 256, len = 0;
+    char *cmd = calloc(cap, 1);
+    for (int i = 0; argv[i]; i++) {
+        if (i) cmd[len++] = ' ';
+        append_quoted(&cmd, &len, &cap, argv[i]);
+    }
+
+    STARTUPINFOA si;
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdOutput = out;
+    si.hStdError = err;
+    si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+
+    j->job_object = CreateJobObjectA(NULL, NULL);
+    if (j->job_object) {
+        JOBOBJECT_EXTENDED_LIMIT_INFORMATION li;
+        ZeroMemory(&li, sizeof(li));
+        li.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        SetInformationJobObject(j->job_object, JobObjectExtendedLimitInformation,
+                                &li, sizeof(li));
+    }
+
+    BOOL ok = CreateProcessA(NULL, cmd, NULL, NULL, TRUE,
+                             CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP, NULL,
+                             NULL, &si, &j->pi);
+    CloseHandle(out); CloseHandle(err); free(cmd);
+    if (!ok) {
+        j->state = JOB_FAILED;
+        j->exit_code = 1;
+        return j;
+    }
+    if (j->job_object)
+        AssignProcessToJobObject(j->job_object, j->pi.hProcess);
+    j->state = JOB_RUNNING;
+    j->start_ms = now_ms();
+    return j;
+}
+#else
+Job *job_start(JobManager *m, char *const argv[], const char *result_path,
+               const char *log_path, unsigned timeout_sec) {
+    if (!m || !argv || !argv[0]) return NULL;
+    unsigned active = 0;
+    for (Job *j = m->head; j; j = j->next)
+        if (!job_is_terminal(j)) active++;
+    if (active >= m->max_jobs) return NULL;
+
+    Job *j = new_job(m, result_path, log_path, timeout_sec);
+    if (!j) return NULL;
+    int out = open(result_path ? result_path : "/dev/null",
+                   O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    int err = open(log_path ? log_path : "/dev/null",
+                   O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (out < 0 || err < 0) {
+        if (out >= 0) close(out);
+        if (err >= 0) close(err);
+        j->state = JOB_FAILED;
+        j->exit_code = 1;
+        return j;
+    }
+    pid_t pid = fork();
+    if (pid == 0) {
+        setsid();
+        prctl(PR_SET_PDEATHSIG, SIGKILL);
+        dup2(out, STDOUT_FILENO);
+        dup2(err, STDERR_FILENO);
+        close(out); close(err);
+        execv(argv[0], (char *const *)argv);
+        _exit(127);
+    }
+    close(out); close(err);
+    if (pid < 0) {
+        j->state = JOB_FAILED;
+        j->exit_code = 1;
+        return j;
+    }
+    j->pid = pid;
+    j->state = JOB_RUNNING;
+    j->start_ms = now_ms();
+    return j;
+}
+#endif
+
+static void terminate_job(Job *j) {
+#ifdef _WIN32
+    if (j->job_object) TerminateJobObject(j->job_object, 1);
+    else if (j->pi.hProcess) TerminateProcess(j->pi.hProcess, 1);
+#else
+    if (j->pid > 0) kill(-j->pid, SIGTERM);
+#endif
+}
+
+JobState job_poll(Job *j) {
+    if (!j || job_is_terminal(j)) return j ? j->state : JOB_FAILED;
+    if (j->state != JOB_RUNNING) return j->state;
+
+    if (!j->cancel_requested && j->timeout_sec &&
+        job_elapsed_ms(j) >= j->timeout_sec * 1000) {
+        terminate_job(j);
+        j->state = JOB_TIMED_OUT;
+        j->end_ms = now_ms();
+        return j->state;
+    }
+
+#ifdef _WIN32
+    DWORD code = 0;
+    if (WaitForSingleObject(j->pi.hProcess, 0) == WAIT_OBJECT_0) {
+        GetExitCodeProcess(j->pi.hProcess, &code);
+        j->exit_code = code;
+        j->end_ms = now_ms();
+        j->state = j->cancel_requested ? JOB_CANCELLED
+                                       : (code == 0 ? JOB_COMPLETED : JOB_FAILED);
+    }
+#else
+    int status = 0;
+    pid_t r = waitpid(j->pid, &status, WNOHANG);
+    if (r == j->pid) {
+        if (WIFEXITED(status)) j->exit_code = WEXITSTATUS(status);
+        else if (WIFSIGNALED(status)) j->exit_code = 128 + WTERMSIG(status);
+        j->end_ms = now_ms();
+        j->state = j->cancel_requested ? JOB_CANCELLED
+                                       : (j->exit_code == 0 ? JOB_COMPLETED
+                                                            : JOB_FAILED);
+    }
+#endif
+    return j->state;
+}
+
+bool job_cancel(Job *j) {
+    if (!j || job_is_terminal(j)) return false;
+    j->cancel_requested = true;
+    terminate_job(j);
+    return true;
+}
+
+bool job_wait(Job *j, unsigned timeout_ms) {
+    long long deadline = now_ms() + timeout_ms;
+    while (j && !job_is_terminal(j)) {
+        job_poll(j);
+        if (job_is_terminal(j)) return true;
+        if (now_ms() >= deadline) return false;
+#ifdef _WIN32
+        Sleep(50);
+#else
+        struct timespec ts = {0, 50 * 1000000};
+        nanosleep(&ts, NULL);
+#endif
+    }
+    return true;
+}
