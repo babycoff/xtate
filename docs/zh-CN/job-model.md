@@ -107,3 +107,12 @@ Linux：`tests/job/test_heartbeat.c` 覆盖 heartbeat 新鲜/进展、过期 hea
 以及 `phase=draining` 豁免。Windows：`tests/job/test_heartbeat.ps1` 启动 job，
 检查 completed 和 heartbeat 内容。当前 worker phase 只有 `tx` 和 `draining`，
 尚未引入单独的 `waiting` 阶段。
+
+## 大结果处理（P0a）
+
+- `job_read_results` 使用 `uint64_t` offset 和 64 位 seek，只返回完整行，并给出
+  `next_offset`/`truncated`。
+- heartbeat 节流到约每秒一次。
+- `job_manager_set_retention` / `job_manager_prune` 限制保留的完成 job 数量并按
+  TTL 过期。
+- 控制客户端必须请求有界 chunk，不能一次读取整个结果文件。

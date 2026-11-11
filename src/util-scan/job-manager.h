@@ -2,6 +2,7 @@
 #define JOB_MANAGER_H
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 typedef enum JobState {
     JOB_QUEUED = 0,
@@ -43,7 +44,11 @@ Job  *job_find(JobManager *m, const char *id);
 Job  *job_first(JobManager *m);
 void  job_manager_lock(JobManager *m);
 void  job_manager_unlock(JobManager *m);
-long  job_read_results(Job *job, long offset, char *buf, size_t cap);
+uint64_t job_read_results(Job *job, uint64_t offset, char *buf, size_t cap,
+                          uint64_t *next_offset, bool *truncated);
+void job_manager_set_retention(JobManager *m, unsigned max_jobs,
+                               unsigned ttl_sec);
+void job_manager_prune(JobManager *m);
 Job  *job_next(Job *job);
 unsigned job_count(JobManager *m);
 #endif

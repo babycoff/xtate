@@ -638,7 +638,10 @@ static int _main_scan(XConf *xconf) {
         status_item.max_count     = scan_range;
         status_item.print_in_json = xconf->is_status_ndjson;
 
-        if (xconf->job_heartbeat_file) {
+        static time_t last_heartbeat_sec = 0;
+        time_t now_sec = time(NULL);
+        if (xconf->job_heartbeat_file && now_sec != last_heartbeat_sec) {
+            last_heartbeat_sec = now_sec;
             heartbeat_write(xconf->job_heartbeat_file, status_item.total_sent,
                             status_item.cur_count, status_item.total_successed,
                             status_item.total_failed, status_item.total_info,
@@ -746,7 +749,10 @@ static int _main_scan(XConf *xconf) {
         status_item.max_count     = scan_range;
         status_item.print_in_json = xconf->is_status_ndjson;
 
-        if (xconf->job_heartbeat_file) {
+        static time_t last_heartbeat_sec = 0;
+        time_t now_sec = time(NULL);
+        if (xconf->job_heartbeat_file && now_sec != last_heartbeat_sec) {
+            last_heartbeat_sec = now_sec;
             heartbeat_write(xconf->job_heartbeat_file, status_item.total_sent,
                             status_item.cur_count, status_item.total_successed,
                             status_item.total_failed, status_item.total_info,

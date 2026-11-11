@@ -112,3 +112,12 @@ heartbeat, and `phase=draining` exemption. Windows:
 `tests/job/test_heartbeat.ps1` starts a job, checks completion and heartbeat
 contents. The current worker phases are `tx` and `draining`; no separate
 `waiting` phase exists yet.
+
+## Large result handling (P0a)
+
+- `job_read_results` uses `uint64_t` offsets and 64-bit seeks, returning only
+  complete lines and a `next_offset`/`truncated` pair.
+- Heartbeat is throttled to about one write per second.
+- `job_manager_set_retention` / `job_manager_prune` cap retained completed jobs
+  and expire them by TTL.
+- Control clients must request bounded chunks, never whole result files.

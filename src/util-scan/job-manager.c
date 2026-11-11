@@ -57,6 +57,8 @@ struct Job {
 struct JobManager {
     Job     *head;
     unsigned max_jobs;
+    unsigned max_retained;
+    unsigned ttl_sec;
     unsigned seq;
 #ifdef _WIN32
     CRITICAL_SECTION mutex;
@@ -116,6 +118,8 @@ JobManager *job_manager_create(unsigned max_jobs) {
     JobManager *m = calloc(1, sizeof(*m));
     if (m) {
         m->max_jobs = max_jobs ? max_jobs : 4;
+        m->max_retained = 100;
+        m->ttl_sec = 86400;
 #ifdef _WIN32
         InitializeCriticalSection(&m->mutex);
 #else
@@ -161,15 +165,62 @@ void job_manager_unlock(JobManager *m) {
 #endif
 }
 
-long job_read_results(Job *job, long offset, char *buf, size_t cap) {
-    if (!job || !job->result_path || !buf || cap == 0 || offset < 0) return 0;
+uint64_t job_read_results(Job *job, uint64_t offset, char *buf, size_t cap,
+                          uint64_t *next_offset, bool *truncated) {
+    if (next_offset) *next_offset = offset;
+    if (truncated) *truncated = false;
+    if (!job || !job->result_path || !buf || cap == 0) return 0;
     FILE *fp = fopen(job->result_path, "rb");
     if (!fp) return 0;
-    if (fseek(fp, offset, SEEK_SET) != 0) { fclose(fp); return 0; }
+#ifdef _WIN32
+    if (_fseeki64(fp, (__int64)offset, SEEK_SET) != 0) { fclose(fp); return 0; }
+#else
+    if (fseeko(fp, (off_t)offset, SEEK_SET) != 0) { fclose(fp); return 0; }
+#endif
     size_t n = fread(buf, 1, cap - 1, fp);
     fclose(fp);
     buf[n] = 0;
-    return (long)n;
+    /* return complete lines only; leave the tail for the next chunk */
+    size_t end = n;
+    if (n && buf[n - 1] != '\n') {
+        while (end && buf[end - 1] != '\n') end--;
+        if (end == 0) {
+            if (truncated) *truncated = true;
+            return 0;
+        }
+    }
+    buf[end] = 0;
+    if (next_offset) *next_offset = offset + end;
+    if (truncated && end < n) *truncated = true;
+    return end;
+}
+
+void job_manager_set_retention(JobManager *m, unsigned max_jobs,
+                               unsigned ttl_sec) {
+    if (!m) return;
+    m->max_retained = max_jobs ? max_jobs : 1;
+    m->ttl_sec = ttl_sec;
+}
+
+void job_manager_prune(JobManager *m) {
+    if (!m) return;
+    unsigned terminal = 0;
+    for (Job *j = m->head; j; j = j->next)
+        if (job_is_terminal(j)) terminal++;
+    long long now = now_ms();
+    Job **pp = &m->head;
+    while (*pp) {
+        Job *j = *pp;
+        bool old = m->ttl_sec && job_is_terminal(j) &&
+                   now - j->end_ms >= (long long)m->ttl_sec * 1000;
+        if (old || terminal > m->max_retained) {
+            *pp = j->next;
+            if (job_is_terminal(j)) terminal--;
+            job_free(j);
+            continue;
+        }
+        pp = &j->next;
+    }
 }
 
 void job_manager_destroy(JobManager *m) {
