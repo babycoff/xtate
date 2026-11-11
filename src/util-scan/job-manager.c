@@ -343,6 +343,31 @@ JobState job_poll(Job *j) {
     if (!j || job_is_terminal(j)) return j ? j->state : JOB_FAILED;
     if (j->state != JOB_RUNNING) return j->state;
 
+    /* Reap a finished worker before applying liveness/deadline rules. */
+#ifdef _WIN32
+    DWORD code = 0;
+    if (WaitForSingleObject(j->pi.hProcess, 0) == WAIT_OBJECT_0) {
+        GetExitCodeProcess(j->pi.hProcess, &code);
+        j->exit_code = code;
+        j->end_ms = now_ms();
+        j->state = j->cancel_requested ? JOB_CANCELLED
+                                       : (code == 0 ? JOB_COMPLETED : JOB_FAILED);
+        return j->state;
+    }
+#else
+    int status = 0;
+    pid_t r = waitpid(j->pid, &status, WNOHANG);
+    if (r == j->pid) {
+        if (WIFEXITED(status)) j->exit_code = WEXITSTATUS(status);
+        else if (WIFSIGNALED(status)) j->exit_code = 128 + WTERMSIG(status);
+        j->end_ms = now_ms();
+        j->state = j->cancel_requested ? JOB_CANCELLED
+                                       : (j->exit_code == 0 ? JOB_COMPLETED
+                                                            : JOB_FAILED);
+        return j->state;
+    }
+#endif
+
     long long sent = 0, targets = 0, stamp = 0;
     bool hb = read_heartbeat(j, &sent, &targets, &stamp);
     if (hb && time(NULL) - stamp <= 2) {
@@ -376,28 +401,6 @@ JobState job_poll(Job *j) {
         j->end_ms = now_ms();
         return j->state;
     }
-
-#ifdef _WIN32
-    DWORD code = 0;
-    if (WaitForSingleObject(j->pi.hProcess, 0) == WAIT_OBJECT_0) {
-        GetExitCodeProcess(j->pi.hProcess, &code);
-        j->exit_code = code;
-        j->end_ms = now_ms();
-        j->state = j->cancel_requested ? JOB_CANCELLED
-                                       : (code == 0 ? JOB_COMPLETED : JOB_FAILED);
-    }
-#else
-    int status = 0;
-    pid_t r = waitpid(j->pid, &status, WNOHANG);
-    if (r == j->pid) {
-        if (WIFEXITED(status)) j->exit_code = WEXITSTATUS(status);
-        else if (WIFSIGNALED(status)) j->exit_code = 128 + WTERMSIG(status);
-        j->end_ms = now_ms();
-        j->state = j->cancel_requested ? JOB_CANCELLED
-                                       : (j->exit_code == 0 ? JOB_COMPLETED
-                                                            : JOB_FAILED);
-    }
-#endif
     return j->state;
 }
 
