@@ -4,6 +4,7 @@
 
 #include "../xconf.h"
 #include "../util-data/file-open.h"
+#include "stream-reader.h"
 #include "../util-data/fine-malloc.h"
 #include "../target/target-cookie.h"
 #include "../target/target-set.h"

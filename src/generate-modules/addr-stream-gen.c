@@ -2,6 +2,8 @@
 
 #include "../xconf.h"
 #include "../util-data/file-open.h"
+#include "stream-reader.h"
+#include "../util-data/fine-malloc.h"
 #include "../util-data/safe-string.h"
 #include "../target/target-cookie.h"
 #include "../target/target-set.h"
@@ -25,6 +27,9 @@ struct AddrStreamConf {
     char      splitter[10];
     size_t    splitter_len;
     unsigned  no_random : 1;
+    char     *filename;
+    uint64_t  line_number;
+    uint64_t  bad_lines;
 };
 
 static struct AddrStreamConf addrstream_conf = {0};
@@ -60,6 +65,9 @@ static ConfRes SET_file(void *conf, const char *name, const char *value) {
     UNUSEDPARM(conf);
     UNUSEDPARM(name);
 
+    if (addrstream_conf.fp && addrstream_conf.fp != stdin) fclose(addrstream_conf.fp);
+    FREE(addrstream_conf.filename);
+    addrstream_conf.filename = STRDUP(value);
     addrstream_conf.fp = file_open_utf8(value);
     if (addrstream_conf.fp == NULL) {
         LOG(LEVEL_ERROR, "(stream generator) %s: %s\n", value, strerror(errno));
@@ -140,21 +148,24 @@ bool addrstream_hasmore(unsigned tx_index, uint64_t index) {
     /*add new ips*/
     char line[256];
     while (true) {
-        char *s = fgets(line, sizeof(line), addrstream_conf.fp);
-
-        if (s == NULL) {
+        bool too_long = false;
+        int rr = stream_read_line(addrstream_conf.fp, line, sizeof(line),
+                                  addrstream_conf.filename,
+                                  &addrstream_conf.line_number,
+                                  &addrstream_conf.bad_lines, &too_long);
+        if (rr < 0) {
             if (ferror(addrstream_conf.fp))
-                LOG(LEVEL_DEBUG, "(stream generator) error of stream.\n");
-            else if (feof(addrstream_conf.fp))
+                LOG(LEVEL_ERROR, "%s: read error\n",
+                    addrstream_conf.filename ? addrstream_conf.filename : "<stdin>");
+            else
                 LOG(LEVEL_DEBUG, "(stream generator) EOF of stream.\n");
             return false;
         }
-
-        size_t _ll = strlen(line);
-        if (_ll == sizeof(line) - 1 && line[_ll - 1] != '\n') {
-            int _c;
-            while ((_c = fgetc(addrstream_conf.fp)) != EOF && _c != '\n') {}
-            LOG(LEVEL_ERROR, "(generate) target line too long (max %zu bytes)\n",
+        char *s = line;
+        if (rr > 0) {
+            LOG(LEVEL_ERROR, "%s:%llu: target line too long (max %zu bytes)\n",
+                addrstream_conf.filename ? addrstream_conf.filename : "<stdin>",
+                (unsigned long long)addrstream_conf.line_number,
                 sizeof(line) - 1);
             continue;
         }
