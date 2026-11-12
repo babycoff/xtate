@@ -412,3 +412,15 @@ Xtate 起源于 [Masscan](https://github.com/robertdavidgraham/masscan) 的代�
 <div align="center">
   <sub>God is Stateless. 物理层？我们止步于网线。</sub>
 </div>
+**输入模块与 Generate 模块**
+
+Xtate 有两套输入模型：静态 `TargetSet`（`-ip`、`-iL/--include-file`）和运行时
+Generate 模块（`ip-stream`、`addr-stream`、`ip-list`、`addr-list`）。
+
+Generate 模块逐行读取目标，支持 `file:line` 错误定位；非法行默认跳过并继续，全部
+无效时退出非零。当前 strict 模式通过 `XTATE_STREAM_STRICT=1` 启用，最大错误行数为
+1000，尚未支持可配置的错误率。
+
+MCP 只使用静态目标集，避免与 MCP stdio 的 stdin 冲突；大目标集使用 `include_file`。
+
+详见 [docs/input-modules.md](docs/input-modules.md)。

@@ -99,3 +99,5 @@ These are not written yet:
 - Generated CLI and per-module reference
 
 A browsable documentation site is planned as a separate step; for now everything is plain Markdown in this directory.
+
+See [input-modules.md](./input-modules.md) for static and stream target input.
