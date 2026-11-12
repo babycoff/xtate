@@ -101,9 +101,53 @@ try:
     stobj = json.loads(st2t)["result"]
     if stobj.get("state") == "completed":
         assert os.path.exists(out2 + ".manifest.json")
+    base = os.environ.get("XTATE_TEST_DIR", ".")
+    udir = os.path.join(base, "P1 测试")
+    os.makedirs(udir, exist_ok=True)
+    uout = os.path.join(udir, "scan file.ndjson")
+    ur = rpc({"jsonrpc":"2.0","id":40,"method":"tools/call","params":{"name":"start_scan","arguments":{
+        "scan":"tcp-syn","targets":["8.8.8.8"],"ports":[53],
+        "result_path":uout,"authorized":True}}})
+    assert not ur["result"]["isError"], ur
+    ujid = json.loads(ur["result"]["content"][0]["text"])["result"]["job_id"]
+    time.sleep(4)
+    ust = rpc({"jsonrpc":"2.0","id":41,"method":"tools/call","params":{"name":"job_status","arguments":{"job_id":ujid}}})
+    ustj = json.loads(ust["result"]["content"][0]["text"])["result"]
+    assert ustj["state"] == "completed", ustj
+    assert os.path.exists(uout)
+    noenv = {k: v for k, v in os.environ.items() if k != "XTATE_CONTROL_TOKEN"}
+    mp_nt = subprocess.Popen([BIN, "--mcp", "--control-connect=" + ep], env=noenv,
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                             stderr=subprocess.DEVNULL, encoding="utf-8", text=True)
+    try:
+        mp_nt.stdin.write(json.dumps({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"job_list","arguments":{}}})+"\n")
+        mp_nt.stdin.flush()
+        ntr = json.loads(mp_nt.stdout.readline())
+        assert ntr["result"]["isError"]
+        assert "UNAUTHORIZED" in ntr["result"]["content"][0]["text"]
+    finally:
+        mp_nt.terminate()
+    c1 = rpc({"jsonrpc":"2.0","id":42,"method":"tools/call","params":{"name":"start_scan","arguments":{
+        "scan":"tcp-syn","targets":["8.8.8.8"],"ports":[53],
+        "result_path":out + ".c1.ndjson","authorized":True}}})
+    c2 = rpc({"jsonrpc":"2.0","id":43,"method":"tools/call","params":{"name":"start_scan","arguments":{
+        "scan":"tcp-syn","targets":["1.1.1.1"],"ports":[53],
+        "result_path":out + ".c2.ndjson","authorized":True}}})
+    assert not c1["result"]["isError"] and not c2["result"]["isError"]
+    j1 = json.loads(c1["result"]["content"][0]["text"])["result"]["job_id"]
+    j2 = json.loads(c2["result"]["content"][0]["text"])["result"]["job_id"]
+    time.sleep(5)
+    for jid in (j1, j2):
+        stx = rpc({"jsonrpc":"2.0","id":44,"method":"tools/call","params":{"name":"job_status","arguments":{"job_id":jid}}})
+        assert json.loads(stx["result"]["content"][0]["text"])["result"]["state"] == "completed"
+    p1 = rpc({"jsonrpc":"2.0","id":45,"method":"tools/call","params":{"name":"job_list","arguments":{"offset":0,"limit":1}}})
+    assert not p1["result"]["isError"]
+    pl = json.loads(p1["result"]["content"][0]["text"])
+    assert "result" in pl
     print("MCP server tests: PASS")
 finally:
     mp.terminate(); ctlp.terminate()
+
 
 
 

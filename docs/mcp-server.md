@@ -61,3 +61,9 @@ rejection when the target set actually spans routes.
 tools, malformed/absent tool arguments, malformed resource URIs, unknown job
 ids, unwritable result paths, real `completed` jobs, and presence of
 `log_path`/`stderr_tail`.
+
+## P1 test coverage
+
+Unicode and space-containing result paths, missing token, concurrent jobs,
+`job_list` pagination, mixed-route rejection, and chunk manifest checks are
+covered when the worker completes.

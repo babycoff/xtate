@@ -14,3 +14,5 @@ tests/sanitizers/build/
 
 xtate-job-*.request.json
 xtate-mcp-audit.log
+
+P1 测试/
