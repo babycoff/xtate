@@ -33,7 +33,9 @@ xtate --generate ip-stream \
 - Invalid data line: log `file:line`, increment `bad_lines`, continue.
 - EOF with no valid targets: exit 1.
 - More than 1000 invalid lines: exit 1.
-- `XTATE_STREAM_STRICT=1`: first invalid line exits 1.
+- `--strict-errors`: first invalid line exits 1.
+- `--max-errors N`: abort after N invalid lines.
+- `--max-error-rate P`: abort when invalid lines exceed P% of lines read.
 - Read error: failure.
 
 Strict mode is currently an environment variable, not yet a `--gen-arg` option.

@@ -443,8 +443,7 @@ Xtate 有两套输入模型：静态 `TargetSet`（`-ip`、`-iL/--include-file`�
 Generate 模块（`ip-stream`、`addr-stream`、`ip-list`、`addr-list`）。
 
 Generate 模块逐行读取目标，支持 `file:line` 错误定位；非法行默认跳过并继续，全部
-无效时退出非零。当前 strict 模式通过 `XTATE_STREAM_STRICT=1` 启用，最大错误行数为
-1000，尚未支持可配置的错误率。
+无效时退出非零。strict、最大错误行数、错误率均通过 `--gen-arg` 配置：`--strict-errors`、`--max-errors`、`--max-error-rate`。
 
 MCP 只使用静态目标集，避免与 MCP stdio 的 stdin 冲突；大目标集使用 `include_file`。
 

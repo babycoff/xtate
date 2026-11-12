@@ -17,14 +17,19 @@ static inline int stream_read_line(FILE *fp, char *buf, size_t cap,
         int c;
         while ((c = fgetc(fp)) != EOF && c != '\n') {}
         (*bad)++;
-        if (*bad >= 1000 || getenv("XTATE_STREAM_STRICT")) {
-            fprintf(stderr, "%s:%llu: too many/invalid target lines\n",
-                    filename ? filename : "<stdin>",
-                    (unsigned long long)*line);
-            exit(1);
-        }
         *too_long = true;
         (void)filename;
+        return 1;
+    }
+    return 0;
+}
+static inline int stream_bad_limit(uint64_t bad, uint64_t lines, bool strict,
+                                   uint64_t max_errors, unsigned max_percent,
+                                   const char *file, uint64_t line) {
+    if (strict || (max_errors && bad >= max_errors) ||
+        (max_percent && lines > 0 && bad * 100 > lines * max_percent)) {
+        fprintf(stderr, "%s:%llu: too many invalid target lines (aborting)\n",
+                file ? file : "<stdin>", (unsigned long long)line);
         return 1;
     }
     return 0;

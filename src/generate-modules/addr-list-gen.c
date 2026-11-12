@@ -24,6 +24,9 @@ struct AddrListConf {
     char     *filename;
     uint64_t  line_number;
     uint64_t  bad_lines;
+    bool      strict_errors;
+    uint64_t  max_errors;
+    unsigned  max_error_percent;
 };
 
 static struct AddrListConf addrlist_conf = {0};
@@ -53,7 +56,33 @@ static ConfRes SET_file(void *conf, const char *name, const char *value) {
     return Conf_OK;
 }
 
+static ConfRes SET_strict(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf); UNUSEDPARM(name);
+    addrlist_conf.strict_errors = conf_parse_bool(value);
+    return Conf_OK;
+}
+static ConfRes SET_max_errors(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf); UNUSEDPARM(name);
+    uint64_t n = 0;
+    if (!conf_parse_int_checked(value, &n)) return Conf_ERR;
+    addrlist_conf.max_errors = n;
+    return Conf_OK;
+}
+static ConfRes SET_max_rate(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf); UNUSEDPARM(name);
+    uint64_t n = 0;
+    if (!conf_parse_int_checked(value, &n) || n > 100) return Conf_ERR;
+    addrlist_conf.max_error_percent = (unsigned)n;
+    return Conf_OK;
+}
+
 static ConfParam addrlist_parameters[] = {
+    {"strict-errors", SET_strict, Type_FLAG, {"strict", 0},
+     "Abort on the first invalid target line."},
+    {"max-errors", SET_max_errors, Type_ARG, {"max-bad", 0},
+     "Abort after this many invalid target lines (0 disables)."},
+    {"max-error-rate", SET_max_rate, Type_ARG, {"max-bad-rate", 0},
+     "Abort when invalid lines exceed this percent of lines read."},
     {"address-file",
      SET_file,
      Type_ARG,

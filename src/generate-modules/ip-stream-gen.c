@@ -30,6 +30,9 @@ struct IpStreamConf {
     uint64_t  line_number;
     uint64_t  bad_lines;
     uint64_t  valid_lines;
+    bool      strict_errors;
+    uint64_t  max_errors;
+    unsigned  max_error_percent;
 };
 
 static struct IpStreamConf ipstream_conf = {0};
@@ -81,7 +84,33 @@ static ConfRes SET_file(void *conf, const char *name, const char *value) {
     return Conf_OK;
 }
 
+static ConfRes SET_strict(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf); UNUSEDPARM(name);
+    ipstream_conf.strict_errors = conf_parse_bool(value);
+    return Conf_OK;
+}
+static ConfRes SET_max_errors(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf); UNUSEDPARM(name);
+    uint64_t n = 0;
+    if (!conf_parse_int_checked(value, &n)) return Conf_ERR;
+    ipstream_conf.max_errors = n;
+    return Conf_OK;
+}
+static ConfRes SET_max_rate(void *conf, const char *name, const char *value) {
+    UNUSEDPARM(conf); UNUSEDPARM(name);
+    uint64_t n = 0;
+    if (!conf_parse_int_checked(value, &n) || n > 100) return Conf_ERR;
+    ipstream_conf.max_error_percent = (unsigned)n;
+    return Conf_OK;
+}
+
 static ConfParam ipstream_parameters[] = {
+    {"strict-errors", SET_strict, Type_FLAG, {"strict", 0},
+     "Abort on the first invalid target line."},
+    {"max-errors", SET_max_errors, Type_ARG, {"max-bad", 0},
+     "Abort after this many invalid target lines (0 disables)."},
+    {"max-error-rate", SET_max_rate, Type_ARG, {"max-bad-rate", 0},
+     "Abort when invalid lines exceed this percent of lines read."},
     {"default-port",
      SET_port,
      Type_ARG,
@@ -181,7 +210,10 @@ bool ipstream_hasmore(unsigned tx_index, uint64_t index) {
             int _c;
             while ((_c = fgetc(ipstream_conf.fp)) != EOF && _c != '\n') {}
             ipstream_conf.bad_lines++;
-            if (ipstream_conf.bad_lines >= 1000 || getenv("XTATE_STREAM_STRICT")) { LOG(LEVEL_ERROR, "too many invalid target lines; aborting\n"); exit(1); }
+            if (stream_bad_limit(ipstream_conf.bad_lines, ipstream_conf.line_number,
+                            ipstream_conf.strict_errors, ipstream_conf.max_errors,
+                            ipstream_conf.max_error_percent,
+                            ipstream_conf.filename, ipstream_conf.line_number)) exit(1);
             LOG(LEVEL_ERROR, "%s:%llu: target line too long (max %zu bytes)\n",
                 ipstream_conf.filename ? ipstream_conf.filename : "<stdin>",
                 (unsigned long long)ipstream_conf.line_number,
@@ -196,7 +228,10 @@ bool ipstream_hasmore(unsigned tx_index, uint64_t index) {
         int err = targetset_add_ip_str(cur_tgt, line);
         if (err) {
             ipstream_conf.bad_lines++;
-            if (ipstream_conf.bad_lines >= 1000 || getenv("XTATE_STREAM_STRICT")) { LOG(LEVEL_ERROR, "too many invalid target lines; aborting\n"); exit(1); }
+            if (stream_bad_limit(ipstream_conf.bad_lines, ipstream_conf.line_number,
+                            ipstream_conf.strict_errors, ipstream_conf.max_errors,
+                            ipstream_conf.max_error_percent,
+                            ipstream_conf.filename, ipstream_conf.line_number)) exit(1);
             LOG(LEVEL_ERROR, "%s:%llu: invalid ip in address: %s",
                 ipstream_conf.filename ? ipstream_conf.filename : "<stdin>",
                 (unsigned long long)ipstream_conf.line_number, line);

@@ -40,7 +40,6 @@ def run_raw(arg, lines, name, extra_env=None):
 
 p = run_raw("--ip-file FILE --default-port 1", "BAD\nBAD2\n", "allbad.txt")
 assert p.returncode != 0, p.returncode
-p = run_raw("--ip-file FILE --default-port 1", "127.0.0.1\nBAD\n", "strict.txt",
-            {"XTATE_STREAM_STRICT": "1"})
+p = run_raw("--ip-file FILE --default-port 1 --strict-errors", "127.0.0.1\nBAD\n", "strict.txt")
 assert p.returncode != 0, p.returncode
 print("Generate input tests: PASS")
