@@ -188,7 +188,11 @@ static bool validate_cfg(const char *cfg, char *err, size_t errcap,
     JsonNode *targets = json_find_member(root, "targets");
     JsonNode *inc = json_find_member(root, "include_file");
     bool has_file = inc && inc->tag == JSON_STRING && inc->string_[0];
-    if ((!targets || targets->tag != JSON_ARRAY || !targets->children.head) && !has_file) {
+    bool has_targets = targets && targets->tag == JSON_ARRAY && targets->children.head;
+    if (has_targets && has_file) {
+        snprintf(err, errcap, "targets and include_file are mutually exclusive"); json_delete(root); return false;
+    }
+    if (!has_targets && !has_file) {
         snprintf(err, errcap, "targets or include_file required"); json_delete(root); return false;
     }
     if (!targets || targets->tag != JSON_ARRAY) targets = NULL;

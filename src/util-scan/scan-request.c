@@ -133,6 +133,10 @@ int scan_request_build_argv(const char *filename, int *argc_out,
     if (!scan || scan->tag!=JSON_STRING || (!has_targets && !has_file)) {
         req_error(ERR_INVALID_ARGUMENT,"scan and targets or include_file are required"); json_delete(root); return -1;
     }
+    if (has_targets && has_file) {
+        req_error(ERR_INVALID_ARGUMENT,"targets and include_file are mutually exclusive");
+        json_delete(root); return -1;
+    }
     if (!get_scan_module_by_name(scan->string_)) {
         req_error(ERR_UNSUPPORTED_SCAN, "unknown scan module");
         json_delete(root);
