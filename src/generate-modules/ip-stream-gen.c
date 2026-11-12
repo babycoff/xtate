@@ -4,6 +4,7 @@
 
 #include "../xconf.h"
 #include "../util-data/file-open.h"
+#include "../util-data/fine-malloc.h"
 #include "../target/target-cookie.h"
 #include "../target/target-set.h"
 #include "../target/target-rangev4.h"
@@ -24,6 +25,9 @@ struct IpStreamConf {
     BlackRock br_table;
     unsigned  rounds;
     unsigned  no_random : 1;
+    char     *filename;
+    uint64_t  line_number;
+    uint64_t  bad_lines;
 };
 
 static struct IpStreamConf ipstream_conf = {0};
@@ -64,6 +68,9 @@ static ConfRes SET_file(void *conf, const char *name, const char *value) {
     UNUSEDPARM(conf);
     UNUSEDPARM(name);
 
+    if (ipstream_conf.fp && ipstream_conf.fp != stdin) fclose(ipstream_conf.fp);
+    FREE(ipstream_conf.filename);
+    ipstream_conf.filename = STRDUP(value);
     ipstream_conf.fp = file_open_utf8(value);
     if (ipstream_conf.fp == NULL) {
         LOG(LEVEL_ERROR, "(stream generator) %s: %s\n", value, strerror(errno));
@@ -151,6 +158,7 @@ bool ipstream_hasmore(unsigned tx_index, uint64_t index) {
     char line[256];
     while (true) {
         char *s = fgets(line, sizeof(line), ipstream_conf.fp);
+        if (s != NULL) ipstream_conf.line_number++;
 
         if (s == NULL) {
             if (ferror(ipstream_conf.fp))
@@ -164,7 +172,10 @@ bool ipstream_hasmore(unsigned tx_index, uint64_t index) {
         if (_ll == sizeof(line) - 1 && line[_ll - 1] != '\n') {
             int _c;
             while ((_c = fgetc(ipstream_conf.fp)) != EOF && _c != '\n') {}
-            LOG(LEVEL_ERROR, "(generate) target line too long (max %zu bytes)\n",
+            ipstream_conf.bad_lines++;
+            LOG(LEVEL_ERROR, "%s:%llu: target line too long (max %zu bytes)\n",
+                ipstream_conf.filename ? ipstream_conf.filename : "<stdin>",
+                (unsigned long long)ipstream_conf.line_number,
                 sizeof(line) - 1);
             continue;
         }
@@ -175,8 +186,10 @@ bool ipstream_hasmore(unsigned tx_index, uint64_t index) {
 
         int err = targetset_add_ip_str(cur_tgt, line);
         if (err) {
-            LOG(LEVEL_ERROR, "(stream generator) invalid ip in address: %s",
-                line);
+            ipstream_conf.bad_lines++;
+            LOG(LEVEL_ERROR, "%s:%llu: invalid ip in address: %s",
+                ipstream_conf.filename ? ipstream_conf.filename : "<stdin>",
+                (unsigned long long)ipstream_conf.line_number, line);
             continue;
         }
 
