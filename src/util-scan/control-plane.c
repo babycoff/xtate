@@ -323,7 +323,8 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
         job_manager_lock(m);
         char logpath[1100];
         snprintf(logpath, sizeof(logpath), "%s.log", res);
-        Job *j = job_start(m, argv, res, logpath, 0);
+        unsigned job_timeout = (unsigned)field_int(line, "timeout_sec", 0);
+        Job *j = job_start(m, argv, res, logpath, job_timeout);
         if (j) {
             job_set_heartbeat(j, hb, 30);
             job_set_result_config(j, (uint64_t)field_int(line, "chunk_size", 0),

@@ -67,3 +67,11 @@ ids, unwritable result paths, real `completed` jobs, and presence of
 Unicode and space-containing result paths, missing token, concurrent jobs,
 `job_list` pagination, mixed-route rejection, and chunk manifest checks are
 covered when the worker completes.
+
+## P2 stability coverage
+
+`tests/mcp/test_mcp_stability.py` covers timeout, cancellation, concurrent
+requests, oversized configuration rejection, malformed JSON, control-plane
+restart (Windows) and a second MCP client. Oversized requests above the 8 KiB
+MCP argument buffer are rejected cleanly; large target sets need a future
+file/stream input path.
