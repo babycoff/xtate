@@ -4,6 +4,8 @@
 
 #include "../xconf.h"
 #include "../util-data/file-open.h"
+#include "stream-reader.h"
+#include "../util-data/fine-malloc.h"
 #include "../target/target-cookie.h"
 #include "../target/target-parse.h"
 #include "../target/target-rangev4.h"
@@ -24,6 +26,9 @@ struct IpListConf {
     BlackRock        br_table;
     unsigned         rounds;
     unsigned         no_random : 1;
+    char            *filename;
+    uint64_t         line_number;
+    uint64_t         bad_lines;
 };
 
 static struct IpListConf iplist_conf = {0};
@@ -64,6 +69,9 @@ static ConfRes SET_file(void *conf, const char *name, const char *value) {
     UNUSEDPARM(conf);
     UNUSEDPARM(name);
 
+    if (iplist_conf.fp && iplist_conf.fp != stdin) fclose(iplist_conf.fp);
+    FREE(iplist_conf.filename);
+    iplist_conf.filename = STRDUP(value);
     iplist_conf.fp = file_open_utf8(value);
     if (iplist_conf.fp == NULL) {
         LOG(LEVEL_ERROR, "(stream generator) %s: %s\n", value, strerror(errno));
@@ -155,24 +163,26 @@ bool iplist_hasmore(unsigned tx_index, uint64_t index) {
     /*add new ips*/
     char line[256];
     while (true) {
-        char *s = fgets(line, sizeof(line), iplist_conf.fp);
-
-        if (s == NULL) {
+        bool too_long = false;
+        int rr = stream_read_line(iplist_conf.fp, line, sizeof(line),
+                                  iplist_conf.filename,
+                                  &iplist_conf.line_number,
+                                  &iplist_conf.bad_lines, &too_long);
+        if (rr < 0) {
             if (ferror(iplist_conf.fp))
-                LOG(LEVEL_DEBUG, "(list generator) error of list.\n");
-            else if (feof(iplist_conf.fp))
+                LOG(LEVEL_ERROR, "%s: read error\n",
+                    iplist_conf.filename ? iplist_conf.filename : "<stdin>");
+            else
                 LOG(LEVEL_DEBUG, "(list generator) EOF of list.\n");
             return false;
         }
-
-        size_t _ll = strlen(line);
-        if (_ll == sizeof(line) - 1 && line[_ll - 1] != '\n') {
-            int _c;
-            while ((_c = fgetc(iplist_conf.fp)) != EOF && _c != '\n') {}
-            LOG(LEVEL_ERROR, "(generate) target line too long (max %zu bytes)\n",
-                sizeof(line) - 1);
+        if (rr > 0) {
+            LOG(LEVEL_ERROR, "%s:%llu: target line too long (max %zu bytes)\n",
+                iplist_conf.filename ? iplist_conf.filename : "<stdin>",
+                (unsigned long long)iplist_conf.line_number, sizeof(line) - 1);
             continue;
         }
+        char *s = line;
         /*absolute null line or the last line*/
         if (s[0] == '\n' || s[0] == '\r') {
             continue;
@@ -180,8 +190,10 @@ bool iplist_hasmore(unsigned tx_index, uint64_t index) {
 
         iplist_conf.ip = target_parse_ip(line);
         if (iplist_conf.ip.version == 0) {
-            LOG(LEVEL_ERROR, "(list generator) invalid ip in address: %s",
-                line);
+            iplist_conf.bad_lines++;
+            LOG(LEVEL_ERROR, "%s:%llu: invalid ip in address: %s",
+                iplist_conf.filename ? iplist_conf.filename : "<stdin>",
+                (unsigned long long)iplist_conf.line_number, line);
             continue;
         } else
             break;

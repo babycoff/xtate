@@ -2,6 +2,8 @@
 
 #include "../xconf.h"
 #include "../util-data/file-open.h"
+#include "stream-reader.h"
+#include "../util-data/fine-malloc.h"
 #include "../target/target-cookie.h"
 #include "../target/target-parse.h"
 #include "../target/target-rangeport.h"
@@ -19,6 +21,9 @@ struct AddrListConf {
     unsigned  port;
     char      splitter[10];
     size_t    splitter_len;
+    char     *filename;
+    uint64_t  line_number;
+    uint64_t  bad_lines;
 };
 
 static struct AddrListConf addrlist_conf = {0};
@@ -37,6 +42,9 @@ static ConfRes SET_file(void *conf, const char *name, const char *value) {
     UNUSEDPARM(conf);
     UNUSEDPARM(name);
 
+    if (addrlist_conf.fp && addrlist_conf.fp != stdin) fclose(addrlist_conf.fp);
+    FREE(addrlist_conf.filename);
+    addrlist_conf.filename = STRDUP(value);
     addrlist_conf.fp = file_open_utf8(value);
     if (addrlist_conf.fp == NULL) {
         LOG(LEVEL_ERROR, "(list generator) %s: %s\n", value, strerror(errno));
@@ -96,24 +104,26 @@ bool addrlist_hasmore(unsigned tx_index, uint64_t index) {
     /*add new ips*/
     char line[256];
     while (true) {
-        char *s = fgets(line, sizeof(line), addrlist_conf.fp);
-
-        if (s == NULL) {
+        bool too_long = false;
+        int rr = stream_read_line(addrlist_conf.fp, line, sizeof(line),
+                                  addrlist_conf.filename,
+                                  &addrlist_conf.line_number,
+                                  &addrlist_conf.bad_lines, &too_long);
+        if (rr < 0) {
             if (ferror(addrlist_conf.fp))
-                LOG(LEVEL_DEBUG, "(list generator) error of list.\n");
-            else if (feof(addrlist_conf.fp))
+                LOG(LEVEL_ERROR, "%s: read error\n",
+                    addrlist_conf.filename ? addrlist_conf.filename : "<stdin>");
+            else
                 LOG(LEVEL_DEBUG, "(list generator) EOF of list.\n");
             return false;
         }
-
-        size_t _ll = strlen(line);
-        if (_ll == sizeof(line) - 1 && line[_ll - 1] != '\n') {
-            int _c;
-            while ((_c = fgetc(addrlist_conf.fp)) != EOF && _c != '\n') {}
-            LOG(LEVEL_ERROR, "(generate) target line too long (max %zu bytes)\n",
-                sizeof(line) - 1);
+        if (rr > 0) {
+            LOG(LEVEL_ERROR, "%s:%llu: target line too long (max %zu bytes)\n",
+                addrlist_conf.filename ? addrlist_conf.filename : "<stdin>",
+                (unsigned long long)addrlist_conf.line_number, sizeof(line) - 1);
             continue;
         }
+        char *s = line;
         /*absolute null line or the last line*/
         if (s[0] == '\n' || s[0] == '\r') {
             continue;
@@ -122,8 +132,10 @@ bool addrlist_hasmore(unsigned tx_index, uint64_t index) {
         /*split ip range and port range*/
         char *sub = strstr(s, addrlist_conf.splitter);
         if (sub == NULL) {
-            LOG(LEVEL_ERROR, "(list generator) invalid splitter in address: %s",
-                line);
+            addrlist_conf.bad_lines++;
+            LOG(LEVEL_ERROR, "%s:%llu: invalid splitter in address: %s",
+                addrlist_conf.filename ? addrlist_conf.filename : "<stdin>",
+                (unsigned long long)addrlist_conf.line_number, line);
             continue;
         }
 
@@ -132,9 +144,11 @@ bool addrlist_hasmore(unsigned tx_index, uint64_t index) {
 
         addrlist_conf.ip = target_parse_ip(s);
         if (addrlist_conf.ip.version == 0) {
+            addrlist_conf.bad_lines++;
             sub[0] = addrlist_conf.splitter[0];
-            LOG(LEVEL_ERROR, "(list generator) invalid ip in address: %s",
-                line);
+            LOG(LEVEL_ERROR, "%s:%llu: invalid ip in address: %s",
+                addrlist_conf.filename ? addrlist_conf.filename : "<stdin>",
+                (unsigned long long)addrlist_conf.line_number, line);
             continue;
         }
 
@@ -144,9 +158,11 @@ bool addrlist_hasmore(unsigned tx_index, uint64_t index) {
         if (err || ports.list_len != 1 ||
             ports.list[0].end != ports.list[0].begin) {
             rangelist_rm_all(&ports);
+            addrlist_conf.bad_lines++;
             sub[0] = addrlist_conf.splitter[0];
-            LOG(LEVEL_ERROR, "(list generator) invalid port in address: %s",
-                line);
+            LOG(LEVEL_ERROR, "%s:%llu: invalid port in address: %s",
+                addrlist_conf.filename ? addrlist_conf.filename : "<stdin>",
+                (unsigned long long)addrlist_conf.line_number, line);
             addrlist_conf.ip.version = 0;
             continue;
         }
