@@ -177,8 +177,10 @@ bool addrstream_hasmore(unsigned tx_index, uint64_t index) {
         /*split ip range and port range*/
         char *sub = strstr(s, addrstream_conf.splitter);
         if (sub == NULL) {
-            LOG(LEVEL_ERROR,
-                "(stream generator) invalid splitter in address: %s", line);
+            addrstream_conf.bad_lines++;
+            LOG(LEVEL_ERROR, "%s:%llu: invalid splitter in address: %s",
+                addrstream_conf.filename ? addrstream_conf.filename : "<stdin>",
+                (unsigned long long)addrstream_conf.line_number, line);
             continue;
         }
 
@@ -188,16 +190,20 @@ bool addrstream_hasmore(unsigned tx_index, uint64_t index) {
         int err = targetset_add_ip_str(cur_tgt, s);
         if (err) {
             sub[0] = addrstream_conf.splitter[0];
-            LOG(LEVEL_ERROR, "(stream generator) invalid ip in address: %s",
-                line);
+            addrstream_conf.bad_lines++;
+            LOG(LEVEL_ERROR, "%s:%llu: invalid ip in address: %s",
+                addrstream_conf.filename ? addrstream_conf.filename : "<stdin>",
+                (unsigned long long)addrstream_conf.line_number, line);
             continue;
         }
 
         err = targetset_add_port_str(cur_tgt, port_str, 0);
         if (err) {
             sub[0] = addrstream_conf.splitter[0];
-            LOG(LEVEL_ERROR, "(stream generator) invalid port in address: %s",
-                line);
+            addrstream_conf.bad_lines++;
+            LOG(LEVEL_ERROR, "%s:%llu: invalid port in address: %s",
+                addrstream_conf.filename ? addrstream_conf.filename : "<stdin>",
+                (unsigned long long)addrstream_conf.line_number, line);
             targetset_rm_ip(cur_tgt);
             continue;
         }
@@ -226,6 +232,9 @@ bool addrstream_hasmore(unsigned tx_index, uint64_t index) {
             continue;
         }
 
+        if (cur_tgt->count_ipv4s == 0 && cur_tgt->count_ipv6s.hi == 0 &&
+            cur_tgt->count_ipv6s.lo == 0)
+            continue;
         break;
     }
 

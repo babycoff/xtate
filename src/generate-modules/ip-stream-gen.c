@@ -213,6 +213,9 @@ bool ipstream_hasmore(unsigned tx_index, uint64_t index) {
             continue;
         }
 
+        if (cur_tgt->count_ipv4s == 0 && cur_tgt->count_ipv6s.hi == 0 &&
+            cur_tgt->count_ipv6s.lo == 0)
+            continue;
         break;
     }
 
