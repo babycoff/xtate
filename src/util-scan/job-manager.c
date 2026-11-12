@@ -418,10 +418,13 @@ Job *job_start(JobManager *m, char *const argv[], const char *result_path,
     STARTUPINFOW si;
     ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);
+    HANDLE in = CreateFileA("NUL", GENERIC_READ,
+                            FILE_SHARE_READ | FILE_SHARE_WRITE, &sa,
+                            OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     si.dwFlags = STARTF_USESTDHANDLES;
     si.hStdOutput = out;
     si.hStdError = err;
-    si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+    si.hStdInput = in;
 
     j->job_object = CreateJobObjectA(NULL, NULL);
     if (j->job_object) {
@@ -440,7 +443,7 @@ Job *job_start(JobManager *m, char *const argv[], const char *result_path,
                              NULL, &si, &j->pi);
     if (!ok) fprintf(stderr, "CreateProcessW failed cn=%d gle=%lu cmd=%s\n",
                      cn, (unsigned long)GetLastError(), cmd);
-    CloseHandle(out); CloseHandle(err); free(cmd);
+    CloseHandle(out); CloseHandle(err); CloseHandle(in); free(cmd);
     if (!ok) {
         j->state = JOB_FAILED;
         j->exit_code = 1;
