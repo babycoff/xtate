@@ -61,6 +61,14 @@ try:
         assert mixed["result"]["isError"]
     rr = rpc({"jsonrpc":"2.0","id":13,"method":"resources/read","params":{"uri":"xtate://docs/overview"}})
     assert rr["result"]["contents"][0]["text"]
+    other = tempfile.mkdtemp()
+    detached = subprocess.run([BIN, "--mcp"], cwd=other, text=True, timeout=20,
+        encoding="utf-8", errors="replace",
+        input=json.dumps({"jsonrpc":"2.0","id":1,"method":"initialize"})+"\n"+
+              json.dumps({"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"xtate://docs/overview"}})+"\n",
+        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    assert detached.stdout.strip(), "MCP produced no output from a different cwd"
+    assert "contents" in detached.stdout, "MCP resources depend on the working directory"
     pr = rpc({"jsonrpc":"2.0","id":14,"method":"prompts/get","params":{"name":"plan-safe-scan"}})
     assert pr["result"]["messages"]
     badenv = dict(os.environ, XTATE_CONTROL_TOKEN="wrong-token")
