@@ -6,6 +6,7 @@
 #endif
 
 #include "../rawsock/rawsock.h"
+#include "../generate-modules/generate-modules.h"
 #include "../scan-modules/scan-modules.h"
 #include "../probe-modules/probe-modules.h"
 #include "../stub/stub-pcap-dlt.h"
@@ -249,6 +250,19 @@ int init_nic(XConf *xconf, bool has_ipv4_targets, bool has_ipv6_targets) {
             xconf->nic.src.ipv6.range = 1;
         }
         if (ipv6address_is_zero(adapter_ipv6)) {
+            const char *gname = xconf->generator ? xconf->generator->name : "";
+            bool stream_gen = strcmp(gname, "ip-stream") == 0 ||
+                              strcmp(gname, "addr-stream") == 0 ||
+                              strcmp(gname, "ip-list") == 0 ||
+                              strcmp(gname, "addr-list") == 0;
+            if (stream_gen) {
+                LOG(LEVEL_WARN,
+                    "interface \"%s\" has no IPv6 address; "
+                    "IPv4 stream targets continue, IPv6 stream targets will fail\n",
+                    ifname);
+                is_usable_ipv6 = true;
+                goto ipv6_done;
+            }
             LOG(LEVEL_ERROR,
                 "failed to detect IPv6 address of interface \"%s\"\n", ifname);
             LOG(LEVEL_HINT, "did you spell the name correctly?\n");
@@ -294,6 +308,7 @@ int init_nic(XConf *xconf, bool has_ipv4_targets, bool has_ipv6_targets) {
         }
     }
 
+ipv6_done:
     /*
      * NOTE:
      *
