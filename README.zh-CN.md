@@ -247,6 +247,10 @@ README 是落地页，手册在 [`docs/`](docs/zh-CN/README.md) 目录下：
 - [平台支持](docs/zh-CN/platform-support.md)——CMake 3.13、旧发行版、Ninja 与 musl 构建
 - [构建产物](docs/zh-CN/build-artifacts.md)——别名、按工具链命名、Debug/DLL 布局
 - [测试规范](docs/zh-CN/testing.md)——改动后的 Tier 0/1/2 检查
+- [MCP server](docs/zh-CN/mcp-server.md)——stdio 工具、resource、路由规划与安全限制
+- [控制面](docs/zh-CN/control-plane.md)——MCP/TUI/GUI 共用的本地 JSON-lines API
+- [Job 模型](docs/zh-CN/job-model.md)——托管扫描 job、超时、心跳与结果
+- [输入模块](docs/zh-CN/input-modules.md)——静态目标集与 generate 流、错误策略
 - [故障排查](docs/zh-CN/troubleshooting.md) · [已知限制](docs/zh-CN/known-limitations.md)
 
 英文文档：[`docs/`](docs/README.md)
@@ -358,6 +362,23 @@ xtate --lang zh --help        # 中文人类帮助（未翻译内容回退英文
 xtate --interact              # interactive shell with tab completion
 ```
 
+## AI 集成（MCP）
+
+Xtate 提供 MCP stdio server，供 AI 客户端调用。先启动控制面，再用同一个 token
+连接 MCP：
+
+```bash
+export XTATE_CONTROL_TOKEN="$(openssl rand -hex 16)"
+xtate --control-plane=/tmp/xtate-ctl.sock
+xtate --mcp --control-connect=/tmp/xtate-ctl.sock
+```
+
+工具可列出模块、解释目标路由、校验封闭的扫描请求、启动托管 job，以及查询 job
+状态和 manifest。`start_scan` 要求 `authorized: true`；结果保留在分片文件中，不会
+内联返回。服务不会执行 shell 命令。契约与限制见 [MCP server](docs/zh-CN/mcp-server.md)、
+[控制面](docs/zh-CN/control-plane.md)、[job 模型](docs/zh-CN/job-model.md) 和
+[输入模块](docs/zh-CN/input-modules.md)。
+
 ## 论文与引用
 
 Xtate 的两个引擎源自我们的研究：
@@ -412,14 +433,3 @@ Xtate 起源于 [Masscan](https://github.com/robertdavidgraham/masscan) 的代�
 <div align="center">
   <sub>God is Stateless. 物理层？我们止步于网线。</sub>
 </div>
-**输入模块与 Generate 模块**
-
-Xtate 有两套输入模型：静态 `TargetSet`（`-ip`、`-iL/--include-file`）和运行时
-Generate 模块（`ip-stream`、`addr-stream`、`ip-list`、`addr-list`）。
-
-Generate 模块逐行读取目标，支持 `file:line` 错误定位；非法行默认跳过并继续，全部
-无效时退出非零。strict、最大错误行数、错误率均通过 `--gen-arg` 配置：`--strict-errors`、`--max-errors`、`--max-error-rate`。
-
-MCP 只使用静态目标集，避免与 MCP stdio 的 stdin 冲突；大目标集使用 `include_file`。
-
-详见 [docs/input-modules.md](docs/input-modules.md)。

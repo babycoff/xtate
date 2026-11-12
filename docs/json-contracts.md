@@ -72,8 +72,10 @@ python3 tests/schema/validate_schemas.py
 ```
 
 The test checks schema metaschema validity, positive/negative fixtures, and a
-real NDJSON result line. The MCP server must validate both requests and
-generated result lines before returning them.
+real NDJSON result line. The MCP server validates the closed request subset it
+accepts (module names, target syntax, port range and rate); it does not parse
+result lines.
+
 ## JSON error mode
 
 In `--scan-request` mode every `LOG(LEVEL_ERROR)` is emitted as:

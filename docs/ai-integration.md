@@ -1,54 +1,73 @@
-# AI integration design (MCP / Agent / Skill)
+# AI integration (MCP / Agent / Skill)
 
-**English** · [中文](zh-CN/ai-integration.md)
+Xtate is callable by AI agents through a typed, auditable interface instead of an
+unrestricted shell. The CLI remains the source of truth; the control plane owns
+jobs, and the MCP server is a thin client of that control plane.
 
-Xtate should be callable by AI agents through typed, auditable interfaces — not
-through an unrestricted shell. The CLI remains the source of truth; MCP and
-skills are wrappers around it.
+## Current state
+
+Implemented in 2.42.0:
+
+- managed scan jobs with timeout, stall detection, heartbeat and cancellation;
+- a local control plane over a Unix socket or Windows Named Pipe with optional
+  shared-token authentication through `XTATE_CONTROL_TOKEN` (set it in
+  production);
+- a stdio MCP server exposing module metadata, route planning, validation, job
+  start and job queries;
+- chunked result files with a manifest; results are never returned inline;
+- JSON contracts for scan requests and error codes.
+
+Still pending:
+
+- a reviewed Agent Skill (documentation and policy, not a privileged binary);
+- an agent evaluation suite and packaging;
+- exposing generate/stream input through MCP (MCP is static `targets` or
+  `include_file` only).
 
 ## Three layers
 
 ### 1. Stable JSON contracts
 
-Required before any agent integration:
+Machine-readable boundaries exist for:
 
 ```text
-module metadata schema
-scan/probe configuration schema
-result schema (NDJSON already exists)
-error schema with stable codes
+schemas/scan-request.schema.json
+schemas/module.schema.json
+schemas/result.schema.json
+schemas/error.schema.json and schemas/error-codes.json
+NDJSON result lines
 ```
 
-Add `--json`/`--json-schema` where the CLI currently prints human text. Never
-make an agent parse colored text.
+MCP tools return JSON text, so an agent never parses colored CLI output. The MCP
+server validates a closed subset itself (scan/probe names, target syntax, port
+range, rate, mutual exclusion) and the control plane validates the job request.
 
-### 2. Agent skill
+### 2. Agent skill (pending)
 
-A reviewed `SKILL.md` that tells an agent how to:
+The skill should teach an agent to:
 
 ```text
 ask for target authorization
-run --check / --explain-target first
-install Linux firewall rules only for stateful scans
-choose a scanner/probe and rate
+run explain_target / check first
+open only the required Linux firewall rules for stateful scans
+choose a scan/probe pair and a bounded rate
 start a bounded job
-read NDJSON results
-clean up firewall rules
+read the manifest and chunks, not the whole result file
+cancel or let the job time out
 ```
 
-The skill is documentation plus policy, not a privileged binary.
+A skill is policy and documentation. It cannot enforce tool boundaries; the MCP
+server does that.
 
 ### 3. MCP server
 
-Proposed command:
-
-```text
-xtate mcp --stdio
+```bash
+export XTATE_CONTROL_TOKEN="$(openssl rand -hex 16)"
+xtate --control-plane=/tmp/xtate-ctl.sock
+xtate --mcp --control-connect=/tmp/xtate-ctl.sock
 ```
 
-Transport: stdio JSON-RPC (MCP). Tools are small and typed.
-
-Read-only first:
+Tools:
 
 ```text
 list_modules
@@ -56,18 +75,14 @@ describe_probe
 explain_target
 check
 validate_config
-get_scan_status
-get_results
-```
-
-Controlled scan tools after the read-only phase:
-
-```text
 start_scan
-stop_scan
+job_list
+job_status
+job_result_manifest
+job_cancel
 ```
 
-`start_scan` accepts a closed config object, not a shell string:
+`start_scan` accepts a closed object, not a shell string:
 
 ```json
 {
@@ -77,44 +92,55 @@ stop_scan
   "ports": [443],
   "probe_args": {"dns_name": "example.com", "authority": "dns.example"},
   "rate": 100,
-  "timeout_sec": 30
+  "timeout_sec": 30,
+  "result_path": "results/doh.ndjson",
+  "authorized": true
 }
 ```
 
-It returns a job id; results are read later. No unbounded blocking call.
+It returns a `job_id` immediately. Status and results are read later; there is no
+unbounded blocking tool call and no inline result payload.
 
 ## Safety requirements
+
+Implemented:
 
 ```text
 no arbitrary shell execution
 no target expansion beyond user input
-allowlist scan/probe/parameter names
-rate and concurrency limits
-job timeout and cancellation
-audit log: who/what/targets/args/result path
-dry-run by default for write-like actions
-explicit confirmation for scans and firewall changes
-no credentials or secret storage
+scan/probe names restricted to registered modules
+target and rate limits
+job timeout, cancellation and audit log
+explicit authorized:true assertion for start_scan
+resource paths restricted to a fixed allowlist
+control plane local-only; `XTATE_CONTROL_TOKEN` authentication when configured
 ```
 
-## Why not just a skill?
+Still to verify or add:
 
-A skill alone cannot enforce tool boundaries or validate arguments. MCP gives a
-typed boundary; the skill teaches workflow. Both are needed.
+```text
+capability-scoped tokens and per-client quotas
+configurable audit destination and rotation
+agent evaluation for prompt-injection and target-scope violations
+```
 
 ## Testing
 
-- MCP protocol conformance and schema validation;
-- tool tests: read-only tools work without network;
-- scan job lifecycle: start/status/stop/results;
-- rejection tests: shell metacharacters, unknown args, unbounded targets;
-- agent evaluation tasks: plan a safe scan, run it, summarize results.
+- MCP protocol conformance, schemas, resources and prompts;
+- read-only tools without network access;
+- scan job lifecycle: start, status, manifest, cancel and timeout;
+- rejection tests: unknown modules, malformed targets, mixed routes, bad tokens,
+  oversized arguments;
+- Windows and Linux regression runs.
+
+See [MCP server](./mcp-server.md), [control plane](./control-plane.md) and
+[job model](./job-model.md).
 
 ## Phases
 
 ```text
-2.42.0  JSON contracts + skill
-2.43.0  read-only MCP server
-2.44.0  controlled scan jobs
-2.45.0  evaluation suite and packaging
+2.42.0  jobs + control plane + MCP server (done)
+next    Agent Skill
+next    evaluation suite and packaging
+later   MCP generate/stream input
 ```

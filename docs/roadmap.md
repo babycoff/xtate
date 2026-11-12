@@ -232,47 +232,54 @@ separate audit report plus fixes.
 ## AI integration (MCP / Agent / Skill)
 
 Goal: make Xtate usable by AI agents without giving them an unstructured shell.
-The CLI remains the source of truth; AI integration is a typed, auditable layer.
+The CLI remains the source of truth; the control plane owns jobs and MCP is a
+typed client.
 
-Planned deliverables:
+Delivered in 2.42.0:
 
-1. Stable machine-readable contracts: JSON schemas for module metadata, scan
-   config, results and errors; explicit `--json`/`--json-schema` where needed.
-2. Agent skill: a reviewed skill file describing safe scan workflows, target
-   authorization, firewall prerequisites, rate limits and result handling.
-3. MCP server (`xtate mcp`) over stdio JSON-RPC, exposing read-only tools first:
+1. JSON schemas for scan requests, module metadata, results and error codes.
+2. Managed scan jobs with timeout, stall detection, heartbeat and cancellation.
+3. A local control plane over a Unix socket or Windows Named Pipe, protected by
+   `XTATE_CONTROL_TOKEN`.
+4. An MCP stdio server with read-only tools and controlled `start_scan`:
    `list_modules`, `describe_probe`, `explain_target`, `check`,
-   `validate_config`, `get_scan_status`, `get_results`.
-4. Controlled scan tools after the read-only phase: `start_scan`, `stop_scan`,
-   with an allowlist of scan/probe/args, explicit target scope, rate limit,
-   timeout and audit log.
-5. Job model: scans run as managed jobs (id, status, counters, result file),
-   never as an unbounded blocking tool call.
-6. Safety: no arbitrary shell, no credential handling, no target expansion
-   beyond what the user supplied, dry-run by default for write-like actions,
-   explicit confirmation for scans and firewall changes.
+   `validate_config`, `start_scan`, `job_list`, `job_status`,
+   `job_result_manifest`, `job_cancel`.
+5. Route-aware planning and rejection of target sets that span multiple routes.
+6. Safety boundaries: no shell, registered module names only, target/rate limits,
+   explicit `authorized:true`, audit log and local-only control transport.
+
+Remaining:
+
+- Agent Skill (workflow and policy documentation);
+- agent evaluation suite and packaging;
+- MCP generate/stream input (static `targets` and `include_file` only for now);
+- per-job disk quota enforcement during scanning (currently reported after
+  completion).
 
 Phases:
 
 ```text
-2.42.0  JSON contracts + agent skill
-2.43.0  read-only MCP server
-2.44.0  controlled scan jobs over MCP
-2.45.0  agent evaluation suite and packaging
+2.42.0  JSON contracts + jobs + control plane + MCP server (done)
+next    Agent Skill
+next    evaluation suite and packaging
+later   MCP generate/stream input
 ```
 
-See [AI integration design](./ai-integration.md).
+See [AI integration design](./ai-integration.md) and [MCP server](./mcp-server.md).
 
 ## Internet-scale job data plane
 
-Before MCP `start_scan`, harden the result path:
+Status for the result path used by MCP/TUI/GUI:
 
-- [ ] 64-bit result offsets (`uint64_t`, `fseeko`/`_fseeki64`);
-- [ ] bounded `job.results(offset,max_bytes)` with next offset/truncated;
-- [ ] chunked NDJSON, optional zstd, index;
-- [ ] per-job disk quota and ENOSPC -> OUTPUT_WRITE_FAILED;
-- [ ] completed-job TTL and max retained jobs;
-- [ ] heartbeat throttled to ~1s;
-- [ ] control/data plane separation for MCP/TUI/GUI.
+- [x] 64-bit result sizes and cursors (`uint64_t`, `fseeko`/`_fseeki64`);
+- [x] bounded control responses; clients read the manifest and chunks instead of
+  asking the control plane for the whole result;
+- [x] chunked NDJSON, optional zstd and optional index;
+- [x] completed-job TTL and maximum retained jobs;
+- [x] heartbeat and stall detection;
+- [x] control/data plane separation for MCP/TUI/GUI;
+- [ ] per-job disk quota enforced during scanning (quota is currently checked
+  after completion and reported as a warning).
 
 See [control plane](./control-plane.md).

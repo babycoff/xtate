@@ -2,30 +2,56 @@
 
 [English](../control-plane.md) · **中文**
 
-MCP、TUI、GUI 共用的 P0 契约。仅本地传输：Linux Unix domain socket，
-Windows Named Pipe。一行一个 JSON 对象，不经过 shell。
+MCP、TUI、GUI 共用的本地 JSON-lines 契约。一行一个 JSON 对象；服务端不执行
+shell，也不是网络监听器。
 
-## 端点
+## 传输
 
-Linux: `$XDG_RUNTIME_DIR/xtate/control.sock`
-Windows: `\\.\pipe\xtate-control`
+- Linux：Unix domain socket。
+- Windows：Named Pipe，例如 `\\.\pipe\xtate-control`。
 
-本地 token 文件鉴权。
+没有隐式 endpoint。服务端只使用传给 `--control-plane` 的路径，客户端只使用传给
+`--control-connect` 的路径：
+
+```bash
+xtate --control-plane=/tmp/xtate-ctl.sock
+xtate --control-connect=/tmp/xtate-ctl.sock --control-request='{"id":1,"method":"ping"}'
+```
+
+## 鉴权
+
+服务端和客户端都从环境变量读取 `XTATE_CONTROL_TOKEN`。服务端设置了 token 时，
+每个请求必须携带相同的 `"token"` 字段；缺失或错误返回 `UNAUTHORIZED`。
+
+如果服务端没有设置 `XTATE_CONTROL_TOKEN`，它会接受所有本地客户端。在不能信任
+其他本地用户或进程时务必设置 token。控制面只监听本地，不监听 TCP。
 
 ## 方法
 
-- `ping`
-- `job.start`（scan-request 对象）
-- `job.list`
-- `job.status`（`job_id`）
-- `job.results`（`job_id`、`offset`、`limit`）
-- `job.cancel`（`job_id`）
-- `job.events`（`after`）
+| 方法 | 参数 | 结果 |
+|---|---|---|
+| `ping` | 无 | `{"pong":true}` |
+| `job.start` | `params` 扫描请求对象，或旧式 `request_path` | `{"job_id":"..."}` |
+| `job.list` | 可选 `offset`、`limit`（默认 100，最大 1000） | `jobs`、`total`、`next_offset`、`truncated` |
+| `job.status` | `job_id` | 状态、计数器、结果/日志路径、stderr 尾部 |
+| `job.result_manifest` | `job_id` | `result_path`、`manifest_path`、`result_bytes`、`complete` |
+| `job.results` | `job_id` | 同上 manifest 元数据；`offset`/`limit` 保留但当前被忽略 |
+| `job.cancel` | `job_id` | `cancelled` 布尔值 |
+
+`job.start` 还会读取这些顶层选项：`result_path`、`timeout_sec`、`chunk_size`、
+`compression`、`index`、`quota_bytes` 和 `interface`。扫描请求本身由 worker 校验；
+非法请求会异步失败，并通过 `job.status` 查看。
+
+没有 `job.events` 方法，也没有服务端推送。客户端轮询 `job.status` / `job.list`。
 
 ## 状态
 
-`job_id`、`state`、`phase`、`sent`、`targets`、`success`、`failed`、
-`elapsed_ms`、`result_path`、`heartbeat_age_ms`。
+`job.status` 返回：
+
+```text
+job_id, state, phase, sent, targets, heartbeat_age_ms, heartbeat,
+exit_code, result, log_path, error, stderr_tail, elapsed_ms
+```
 
 状态：`queued`、`running`、`completed`、`failed`、`cancelled`、`timed_out`、
 `stalled`。
@@ -33,36 +59,32 @@ Windows: `\\.\pipe\xtate-control`
 ## 错误
 
 错误码来自 `schemas/error-codes.json`，格式：
-`{"id":1,"error":{"code":"JOB_NOT_FOUND","message":"...","retryable":false}}`。
 
-## 数据面（互联网规模结果）
+```json
+{"id":1,"error":{"code":"JOB_NOT_FOUND","message":"...","retryable":false}}
+```
 
-控制消息不携带无界结果数据。在 `start_scan` 之前增加 Result Store 工作流：
+## 数据面
 
-- `uint64_t` offset 和 64 位文件 seek，不使用 32 位 `long`/`fseek`；
-- `job.results(offset, max_bytes)` 返回有界 chunk、`next_offset`、`truncated` 和
-  chunk 元数据；
-- 结果分片、可选 zstd 压缩和索引；
-- 单 job 磁盘配额；ENOSPC 使用 `OUTPUT_WRITE_FAILED`；
-- 完成 job 的 TTL 和最大保留数；
-- heartbeat 约 1 秒一次，不做每次 fsync；
-- 控制面与数据面分离：MCP/TUI/GUI 读 chunk，不读整文件。
+控制响应有界，且从不携带结果字节。job 拥有自己的结果路径；客户端从文件系统读取
+manifest 和分片。
 
-## 规则
-
-- 控制面单线程，manager 调用串行。
-- 控制面不携带结果数据。`job.result_manifest` 返回路径、大小和完成状态；
-  客户端直接读取结果分块。
-- `job.start` 必须有明确目标与 timeout/stall 策略。
-- daemon 拥有 worker；MCP/TUI/GUI 只是客户端。
-- server 重启终止 job，不声称可恢复。
-- 本地 token 鉴权，不监听网络。
+- 结果大小和游标使用 `uint64_t` 和 64 位 seek。
+- 完成结果可拆成 `<result>.<id>.ndjson` 分片和 `<result>.manifest.json`，并写
+  可选 index。
+- 压缩是可选 zstd，默认不压缩。
+- `job.results` 当前返回 manifest 元数据，不返回字节区间；客户端不能依赖
+  `offset`/`limit` 对结果内容分页。
+- `quota_bytes` 在完成后检查并告警，扫描期间不强制。
+- 完成 job 的 TTL 和最大保留数由 manager 执行。
+- 心跳由 worker 更新、manager 读取；客户端看到 `heartbeat_age_ms` 和
+  `heartbeat`。
 
 ## 结果存储
 
-`--result-chunk-size=N --result-index` 会把完成的 CLI job 结果拆成
-`<result>.<id>.ndjson` 分片，并写 `<result>.manifest.json` 和可选 index。
-当前压缩仅 `none`。`job.result_manifest` 返回 manifest 路径；控制消息不携带结果字节。
+`--result-chunk-size=N --result-index` 会把完成结果拆成分片，并写
+`<result>.manifest.json` 和可选 index。`job.result_manifest` 返回 manifest 路径；
+控制消息不携带结果字节。
 
 ### 可选 zstd
 
@@ -74,3 +96,21 @@ Windows: `\\.\pipe\xtate-control`
 `job.start` 支持 `chunk_size`、`compression`、`index`、`quota_bytes`。
 完成的 job 在下一次控制请求时自动完成分片和 manifest。`quota_bytes` 在完成后
 检查并输出警告；扫描过程中的强制配额仍是后续工作。
+
+## 批量 explain
+
+`--explain-target` 接受目标集（CIDR、范围、逗号列表）。输出按接口/源地址/网关
+分组并带目标计数；目标集跨多个路由时会警告。`check` 使用同一分组。MCP
+`explain_target` 接受同样的目标集字符串。
+
+### IPv4/IPv6 explain
+
+单个地址不带 `/32` 或 `/128`。IPv6 目标也会分组；无路由目标进入 `(no route)`
+组但仍计数。混合 IPv4/IPv6 目标集可能产生多个组和拆分警告。
+
+## 规则
+
+- 控制面单线程；manager 调用串行。
+- daemon 拥有 worker；MCP/TUI/GUI 只是客户端。
+- server 重启终止 job，不声称持久化或恢复。
+- 本地 token 鉴权；不监听网络。

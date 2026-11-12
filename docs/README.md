@@ -6,7 +6,7 @@ This directory is the user manual for **Xtate v2.42.0** — a modular all-stack 
 
 The [README](../README.md) is the landing page. Start here if you want to use Xtate rather than skim its feature list.
 
-**Release notes:** [2.41.2](./release-notes/2.42.0.md) — JSON contracts, scan-request runtime and error handling.
+**Release notes:** [2.42.0](./release-notes/2.42.0.md) — managed jobs, control plane and MCP server.
 
 ## Where to start
 
@@ -25,6 +25,8 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 | DNS over TLS | [DNS over TLS](./dns-over-tls.md) |
 | Input/output audit | [Input/output audit](./input-output-audit.md) |
 | Job model | [Job model](./job-model.md) |
+| Automating scans / AI client | [MCP server](./mcp-server.md) → [Control plane](./control-plane.md) |
+| Large target files or stream input | [Input modules](./input-modules.md) |
 | Error codes | [Error codes](./error-codes.md) |
 | JSON contracts | [JSON contracts](./json-contracts.md) |
 | AI integration design | [AI integration design](./ai-integration.md) |
@@ -65,6 +67,15 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 - [Testing policy](./testing.md) — Tier 0/1/2 checks, matrix and evidence rules
 - [Plugin protocol](./plugin-protocol.md) — Go sidecar boundary, result envelope and non-goals
 
+### Automation and integration
+
+- [MCP server](./mcp-server.md) — stdio tools, resources, prompts, route planning and limits
+- [Control plane](./control-plane.md) — local JSON-lines API shared by MCP/TUI/GUI
+- [Job model](./job-model.md) — managed jobs, timeout, heartbeat, cancellation and results
+- [Input modules](./input-modules.md) — static targets vs generate streams and error policy
+- [JSON contracts](./json-contracts.md) — scan-request, module metadata and error schemas
+- [AI integration design](./ai-integration.md) — boundaries, safety requirements and remaining work
+
 ### How it works
 
 - [Architecture](./architecture.md) — threads, queues, the scan pipeline
@@ -89,7 +100,7 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-The docs are written against the v2.39.1 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
+The docs are written against the v2.42.0 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
 
 ## Planned
 
@@ -99,5 +110,3 @@ These are not written yet:
 - Generated CLI and per-module reference
 
 A browsable documentation site is planned as a separate step; for now everything is plain Markdown in this directory.
-
-See [input-modules.md](./input-modules.md) for static and stream target input.

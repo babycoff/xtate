@@ -26,7 +26,7 @@ bool job_wait(Job *, unsigned timeout_ms);
 
 | 关注点 | Linux | Windows |
 |:---|:---|:---|
-| 进程 | `fork`/`execv` | `CreateProcessA` |
+| 进程 | `fork`/`execv` | `CreateProcessW` |
 | 进程组 | `setsid` | `CREATE_NEW_PROCESS_GROUP` |
 | 终止 | `SIGTERM`/进程组 | `TerminateProcess`/`TerminateJobObject` |
 | 父进程退出 | `PR_SET_PDEATHSIG` | Job Object `KILL_ON_JOB_CLOSE` |
@@ -40,7 +40,7 @@ bool job_wait(Job *, unsigned timeout_ms);
 - worker 复用同一个 `xtate` 二进制，不引入解释器。
 - 每个 job 独立结果文件；超时/取消保留部分结果。
 - timeout 是总墙钟时间，不是单连接超时。
-- 后续本地控制 API（`job.start/status/results/cancel`）复用该 manager；
+- 本地控制 API（`job.start/status/results/cancel`）复用该 manager；
   MCP/TUI/GUI 都是客户端。
 - job id 稳定；生命周期错误码为 `SCAN_TIMEOUT`、`SCAN_CANCELLED`、
   `JOB_NOT_FOUND`、`JOB_LIMIT_REACHED`。
@@ -49,7 +49,10 @@ bool job_wait(Job *, unsigned timeout_ms);
 ## 当前状态
 
 核心 manager + Linux/Windows 实现 + Linux smoke test：
-`tests/job/test_job.c`（timeout、cancel、complete）。CLI/MCP 接线是下一步。
+核心 manager、Linux/Windows 实现、控制面和 MCP 客户端均已实现。测试包括
+`tests/job/test_job.c`（timeout、cancel、complete）、`tests/job/test_heartbeat.c`、
+`tests/job/test_cursor.c`、`tests/job/test_stall.c`、`tests/job/test_cli.sh`、
+`tests/control/test_control.py` 以及 MCP 测试套件。
 
 ## CLI
 
@@ -115,4 +118,4 @@ Linux：`tests/job/test_heartbeat.c` 覆盖 heartbeat 新鲜/进展、过期 hea
 - heartbeat 节流到约每秒一次。
 - `job_manager_set_retention` / `job_manager_prune` 限制保留的完成 job 数量并按
   TTL 过期。
-- 控制客户端必须请求有界 chunk，不能一次读取整个结果文件。
+- 控制响应保持有界：客户端读取结果 manifest 和分片文件，而不是向控制面请求整个结果。

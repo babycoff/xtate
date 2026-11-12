@@ -27,7 +27,7 @@ does not require predicting total scan duration.
 
 | Concern | Linux | Windows |
 |:---|:---|:---|
-| process | `fork`/`execv` | `CreateProcessA` |
+| process | `fork`/`execv` | `CreateProcessW` |
 | group | `setsid` | `CREATE_NEW_PROCESS_GROUP` |
 | kill | `SIGTERM`/process group | `TerminateProcess`/`TerminateJobObject` |
 | parent death | `PR_SET_PDEATHSIG` | Job Object `KILL_ON_JOB_CLOSE` |
@@ -41,16 +41,18 @@ No shell is used. `argv` is passed directly.
 - Worker is the same `xtate` binary; no sidecar interpreter.
 - One result file per job; partial results survive timeout/cancel.
 - Timeout is total wall-clock time, not a per-connection timeout.
-- A future local control API (`job.start/status/results/cancel`) reuses this
-  manager; MCP/TUI/GUI are clients of that API.
+- The local control API (`job.start/status/results/cancel`) reuses this manager;
+  MCP/TUI/GUI are clients of that API.
 - Job ids are stable strings; lifecycle errors are `SCAN_TIMEOUT`,
   `SCAN_CANCELLED`, `JOB_NOT_FOUND`, `JOB_LIMIT_REACHED`.
 - Single-threaded control plane for now; callers serialize manager access.
 
 ## Current state
 
-Core manager + Linux/Windows implementations + a Linux smoke test:
-`tests/job/test_job.c` (timeout, cancel, complete). CLI/MCP wiring is next.
+The core manager, Linux/Windows implementations, control plane and MCP client are
+implemented. Tests include `tests/job/test_job.c` (timeout, cancel, complete),
+`tests/job/test_heartbeat.c`, `tests/job/test_cursor.c`, `tests/job/test_stall.c`,
+`tests/job/test_cli.sh`, `tests/control/test_control.py` and the MCP suites.
 
 ## CLI
 
@@ -120,4 +122,5 @@ contents. The current worker phases are `tx` and `draining`; no separate
 - Heartbeat is throttled to about one write per second.
 - `job_manager_set_retention` / `job_manager_prune` cap retained completed jobs
   and expire them by TTL.
-- Control clients must request bounded chunks, never whole result files.
+- Control responses stay bounded: clients read the result manifest and chunk
+  files, never ask the control plane for the whole result.

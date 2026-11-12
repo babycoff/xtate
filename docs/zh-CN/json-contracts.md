@@ -9,11 +9,11 @@ schema 只是描述它们。
 
 | 文件 | 用途 |
 |:---|:---|
-| [`schemas/module.schema.json`](../schemas/module.schema.json) | 模块元数据（scan/probe/output/generate） |
-| [`schemas/scan-request.schema.json`](../schemas/scan-request.schema.json) | Agent/MCP 使用的封闭扫描请求 |
-| [`schemas/result.schema.json`](../schemas/result.schema.json) | 一行 NDJSON 结果 |
-| [`schemas/error.schema.json`](../schemas/error.schema.json) | 稳定错误信封 |
-| [`schemas/error-codes.json`](../schemas/error-codes.json) | 已知错误码 |
+| [`schemas/module.schema.json`](../../schemas/module.schema.json) | 模块元数据（scan/probe/output/generate） |
+| [`schemas/scan-request.schema.json`](../../schemas/scan-request.schema.json) | Agent/MCP 使用的封闭扫描请求 |
+| [`schemas/result.schema.json`](../../schemas/result.schema.json) | 一行 NDJSON 结果 |
+| [`schemas/error.schema.json`](../../schemas/error.schema.json) | 稳定错误信封 |
+| [`schemas/error-codes.json`](../../schemas/error-codes.json) | 已知错误码 |
 
 ## 运行时元数据
 
@@ -66,8 +66,9 @@ python3 -m pip install jsonschema
 python3 tests/schema/validate_schemas.py
 ```
 
-测试覆盖 schema 元校验、正反例 fixture 和真实 NDJSON 结果。MCP server 必须在
-返回前校验请求和生成的结果行。
+测试覆盖 schema 元校验、正反例 fixture 和真实 NDJSON 结果。MCP server 只校验它
+接受的封闭请求子集（模块名、目标语法、端口范围和速率），不解析结果行。
+
 ## JSON 错误模式
 
 `--scan-request` 模式下所有 `LOG(LEVEL_ERROR)` 输出为：

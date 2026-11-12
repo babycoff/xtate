@@ -1,6 +1,25 @@
 # Input / Generate Modules Audit
 
-Status: initial audit, 2026-11-12
+Status: initial audit, 2026-11-12. Resolution status below.
+
+## Resolution (post-2.42.0)
+
+Fixed and covered by tests:
+
+- all four line-based generators use `src/generate-modules/stream-reader.h`:
+  one physical line is one record, overlong lines are consumed and counted,
+  and errors carry `file:line`;
+- `--strict-errors`, `--max-errors N` and `--max-error-rate P` for all four;
+- IPv4-only adapters no longer require IPv6 (`init-nic`);
+- count/overflow checks in `ip-stream` and `addr-stream`;
+- `addr-list` no longer leaks a `RangeList` per line;
+- file options open UTF-8/UTF-16 paths and close the previous stream;
+- job workers get a NUL stdin, so an unconfigured stream cannot block on the
+  control/MCP stdin; MCP also rejects mixed `targets` + `include_file`;
+- stream generators reject more than one TX thread instead of silently degrading.
+
+Tests: `tests/input/test_generate.py` (all four modules, invalid line 2,
+all-invalid exit 1, strict exit 1). Remaining coverage is listed below.
 
 ## Two input models
 
@@ -46,7 +65,7 @@ Status: initial audit, 2026-11-12
 - `--gen-arg ip-file=file`: FAIL, unknown parameter.
 - Malformed invocation fell back to stdin and hung until cancelled.
 
-## Planned tests
+## Remaining test coverage
 
 1. Valid/invalid/comment/blank lines for all four generators.
 2. IPv4-only and IPv6-only files/adapters.

@@ -2,25 +2,34 @@
 
 ## Two input models
 
-- Static target set: `-ip`, `-iL/--include-file`, `--exclude-file`.
-- Generate modules: `--generate`, runtime target generation.
+Xtate has two ways to supply targets:
 
-`include_file` is static (parsed before the scan). `ip-stream`/`addr-stream`/
-`ip-list`/`addr-list` read during the scan.
+- **Static target set** — parsed before the scan starts: `-ip`, `-iL`/`--include-file`, `--exclude-file`.
+- **Generate module** — target generation at scan time: `--generate <module>`.
+
+`include_file` is static. `ip-stream`, `addr-stream`, `ip-list` and `addr-list`
+read during the scan. `blackrock` is the default generate module used to randomize
+a static target set.
 
 ## Generate modules
 
-| Module | One line means | Main args |
+| Module | One input line means | Main arguments |
 |---|---|---|
-| `ip-stream` | IP/CIDR/range | `ip-file`, `default-port`, `no-random`, `rounds` |
-| `addr-stream` | IP range + splitter + port range | `address-file`, `splitter`, `default-port`, `no-random` |
-| `ip-list` | one IP | `ip-file`, `default-port`, `no-random` |
-| `addr-list` | one IP + splitter + one port | `address-file`, `splitter` |
+| `blackrock` | internal randomization of a target set | default; not a line reader |
+| `ip-stream` | IP/CIDR/range | `--ip-file`, `--default-port`, `--no-random`, `--rounds` |
+| `addr-stream` | IP range + splitter + port range | `--address-file`, `--splitter`, `--default-port`, `--no-random` |
+| `ip-list` | one IP | `--ip-file`, `--default-port`, `--no-random` |
+| `addr-list` | one IP + splitter + one port | `--address-file`, `--splitter` |
 
-All four read one physical line at a time, count `line_number` per physical
-`fgets`, reject lines longer than 255 bytes instead of splitting them, report
-`file:line: reason`, skip invalid lines by default, and support only one TX
-thread.
+The four line-reading modules:
+
+- read one physical line at a time and keep a shared `line_number`;
+- consume an overlong line instead of splitting it into several targets, and count
+  it as invalid;
+- report errors as `file:line: reason`;
+- skip invalid lines by default and continue;
+- support one TX thread only; the scan rate is capped but not guaranteed while the
+  stream blocks.
 
 ```bash
 xtate --generate ip-stream \
@@ -30,25 +39,32 @@ xtate --generate ip-stream \
 
 ## Error policy
 
-- Invalid data line: log `file:line`, increment `bad_lines`, continue.
-- EOF with no valid targets: exit 1.
-- More than 1000 invalid lines: exit 1.
-- `--strict-errors`: first invalid line exits 1.
-- `--max-errors N`: abort after N invalid lines.
-- `--max-error-rate P`: abort when invalid lines exceed P% of lines read.
+- Invalid target line: print `file:line`, increment `bad_lines`, continue.
+- End of input with no valid target: exit 1.
 - Read error: failure.
+- `--strict-errors` (alias `--strict`): abort on the first invalid line.
+- `--max-errors N` (alias `--max-bad`): abort after `N` invalid lines; `0` disables
+  (the default).
+- `--max-error-rate P` (alias `--max-bad-rate`): abort when invalid lines exceed
+  `P` percent of lines read; `P` is 0-100 and `0` disables (the default).
 
-Strict mode is currently an environment variable, not yet a `--gen-arg` option.
+All three are `--gen-arg` module parameters, for example:
+
+```bash
+--gen-arg "--ip-file targets.txt --strict-errors"
+--gen-arg "--ip-file targets.txt --max-errors 100"
+--gen-arg "--ip-file targets.txt --max-error-rate 5"
+```
 
 ## Why MCP does not expose streams
 
 MCP stdin is JSON-RPC. Stream generators default to stdin, cannot report a target
-count up front, and cannot be route-grouped before scanning. MCP uses static
-`targets` or `include_file`; mixing both is rejected.
+count up front, and cannot be route-grouped before scanning. MCP uses a static
+`targets` array or `include_file`; mixing both is rejected. Large target sets
+therefore go through `include_file`, not a generate module.
 
 ## Known issues
 
-- strict/max-errors/max-error-rate are not formal `--gen-arg` parameters;
-- max-errors is fixed at 1000;
-- no error-rate limit;
-- stream errors are not reflected in `job_status`.
+- Stream error counters are not yet reflected in `job_status`.
+- Route discovery from `include_file` is not implemented; Windows multi-NIC users
+  must pass `interface` explicitly.

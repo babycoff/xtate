@@ -2,78 +2,105 @@
 
 **English** · [中文](zh-CN/control-plane.md)
 
-P0 contract shared by MCP, TUI and GUI. Local transport only: Unix domain
-socket on Linux, Named Pipe on Windows. One JSON object per line; no shell.
+Local JSON-lines contract shared by MCP, TUI and GUI. One JSON object per line;
+the server never runs a shell. It is not a network listener.
 
-## Endpoints
+## Transport
 
-Linux: `$XDG_RUNTIME_DIR/xtate/control.sock`
-Windows: `\\.\pipe\xtate-control`
+- Linux: Unix domain socket.
+- Windows: Named Pipe, for example `\\.\pipe\xtate-control`.
 
-A local token file guards access.
+There is no implicit endpoint. The server uses exactly the path passed to
+`--control-plane`, and a client uses exactly the path passed to
+`--control-connect`:
+
+```bash
+xtate --control-plane=/tmp/xtate-ctl.sock
+xtate --control-connect=/tmp/xtate-ctl.sock --control-request='{"id":1,"method":"ping"}'
+```
+
+## Authentication
+
+Both server and client read `XTATE_CONTROL_TOKEN` from their environment. When
+the server has a token, every request must carry the same `"token"` field;
+missing or wrong tokens return `UNAUTHORIZED`.
+
+If `XTATE_CONTROL_TOKEN` is unset, the server accepts every local client. Always
+set it when other local users or processes are not trusted. The control plane is
+local-only and does not listen on TCP.
 
 ## Methods
 
-- `ping`
-- `job.start` (scan-request object)
-- `job.list`
-- `job.status` (`job_id`)
-- `job.results` (`job_id`, `offset`, `limit`)
-- `job.cancel` (`job_id`)
-- `job.events` (`after`)
+| Method | Parameters | Result |
+|---|---|---|
+| `ping` | none | `{"pong":true}` |
+| `job.start` | `params` scan-request object, or legacy `request_path` | `{"job_id":"..."}` |
+| `job.list` | optional `offset`, `limit` (default 100, max 1000) | `jobs`, `total`, `next_offset`, `truncated` |
+| `job.status` | `job_id` | state, counters, result/log paths, stderr tail |
+| `job.result_manifest` | `job_id` | `result_path`, `manifest_path`, `result_bytes`, `complete` |
+| `job.results` | `job_id` | same manifest metadata; `offset`/`limit` are reserved and currently ignored |
+| `job.cancel` | `job_id` | `cancelled` boolean |
+
+`job.start` also reads these top-level options when present: `result_path`,
+`timeout_sec`, `chunk_size`, `compression`, `index`, `quota_bytes` and
+`interface`. The scan request itself is validated by the worker; an invalid
+request fails asynchronously and is visible through `job.status`.
+
+There is no `job.events` method and no server-push channel. Clients poll
+`job.status` / `job.list`.
 
 ## Status
 
-`job_id`, `state`, `phase`, `sent`, `targets`, `success`, `failed`,
-`elapsed_ms`, `result_path`, `heartbeat_age_ms`.
+`job.status` returns:
 
-States: `queued`, `running`, `completed`, `failed`, `cancelled`,
-`timed_out`, `stalled`.
+```text
+job_id, state, phase, sent, targets, heartbeat_age_ms, heartbeat,
+exit_code, result, log_path, error, stderr_tail, elapsed_ms
+```
+
+States: `queued`, `running`, `completed`, `failed`, `cancelled`, `timed_out`,
+`stalled`.
 
 ## Errors
 
-Stable codes from `schemas/error-codes.json`; error response:
-`{"id":1,"error":{"code":"JOB_NOT_FOUND","message":"...","retryable":false}}`.
+Stable codes come from `schemas/error-codes.json`; an error response looks like:
 
-## Data plane (Internet-scale results)
+```json
+{"id":1,"error":{"code":"JOB_NOT_FOUND","message":"...","retryable":false}}
+```
 
-Control messages never carry unbounded result data. Add a result store
-workstream before `start_scan`:
+## Data plane
 
-- `uint64_t` offsets and 64-bit file seeks (no 32-bit `long`/`fseek`);
-- `job.results(offset, max_bytes)` returns a bounded chunk plus `next_offset`,
-  `truncated`, and chunk metadata;
-- chunked result files, optional zstd compression and an index;
-- per-job disk quota / ENOSPC failure with `OUTPUT_WRITE_FAILED`;
-- completed-job TTL and max retained jobs;
-- heartbeat throttled to ~1s, no fsync per update;
-- control plane and data plane separated: MCP/TUI/GUI read chunks, not whole files.
+Control responses are bounded and never carry result bytes. A job owns its
+result path; clients read the manifest and the chunk files from the filesystem.
 
-## Rules
-
-- One control-plane thread; manager calls serialized.
-- Results are cursor-based; clients never read files directly.
-- `job.start` requires explicit targets and a timeout/stall policy.
-- Daemon owns workers; MCP/TUI/GUI are clients.
-- Server restart terminates jobs; no false persistence claim.
-- Local token authentication; no network listener.
+- Result sizes and cursors use `uint64_t` and 64-bit seeks.
+- Completed results can be split into `<result>.<id>.ndjson` chunks plus
+  `<result>.manifest.json`, with an optional index.
+- Compression is optional zstd; the default is none.
+- `job.results` currently returns manifest metadata rather than byte ranges, so
+  clients must not expect `offset`/`limit` paging over result content.
+- `quota_bytes` is checked after completion and reported as a warning; it is not
+  enforced during the scan.
+- Completed-job TTL and maximum retained jobs are enforced by the manager.
+- Heartbeat is updated by the worker and read by the manager; clients see
+  `heartbeat_age_ms` and `heartbeat`.
 
 ## Result store
 
-`--result-chunk-size=N --result-index` splits a completed CLI job result into
-`<result>.<id>.ndjson` chunks and writes `<result>.manifest.json` plus an
-optional index. Compression is currently `none`. `job.result_manifest` returns
-the manifest path; control messages never carry result bytes.
+`--result-chunk-size=N --result-index` splits a completed result into chunks and
+writes `<result>.manifest.json` plus an optional index. `job.result_manifest`
+returns the manifest path; control messages never carry result bytes.
 
 ### Optional zstd
 
 `-DWITH_ZSTD=ON` enables zstd detection. If zstd is missing, the build defines
 `NOT_FOUND_ZSTD`; `--result-compress=zstd` then falls back to uncompressed
-chunks. Compression is opt-in; default is `none`.
+chunks. Compression is opt-in; the default is `none`.
 
 ## Per-job result config
 
-`job.start` accepts `chunk_size`, `compression`, `index`, `quota_bytes`.
+`job.start` accepts `chunk_size`, `compression`, `index` and `quota_bytes`.
 Completed jobs are finalized on the next control request: chunks and manifest
 are written automatically. `quota_bytes` is checked after completion and
 reported as a warning; enforcement during scanning is future work.
@@ -87,4 +114,13 @@ accepts the same target-set string.
 
 ### IPv4/IPv6 explain
 
-Single addresses are printed without `/32` or `/128`. IPv6 targets are grouped too; targets with no route appear in a `(no route)` group and still count. Mixed IPv4/IPv6 sets can produce multiple groups and a split warning.
+Single addresses are printed without `/32` or `/128`. IPv6 targets are grouped
+too; targets with no route appear in a `(no route)` group and still count. Mixed
+IPv4/IPv6 sets can produce multiple groups and a split warning.
+
+## Rules
+
+- One control-plane thread; manager calls are serialized.
+- The daemon owns workers; MCP/TUI/GUI are clients.
+- A server restart terminates jobs; there is no persistence or recovery claim.
+- Local token authentication; no network listener.

@@ -28,7 +28,7 @@ xtate ... -output-module ndjson -output-file - --no-status |
 
 ## 自带示例
 
-[scripts/aggregate-events.py](../scripts/aggregate-events.py) 只使用 Python 标准库。
+[scripts/aggregate-events.py](../../scripts/aggregate-events.py) 只使用 Python 标准库。
 
 ```bash
 xtate ... -output-module ndjson -output-file scan.jsonl

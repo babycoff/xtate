@@ -3,7 +3,7 @@
 [English](../error-codes.md) · **中文**
 
 JSON 错误信封使用的稳定错误码。机器可读列表：
-[`schemas/error-codes.json`](../schemas/error-codes.json)。
+[`schemas/error-codes.json`](../../schemas/error-codes.json)。
 
 | 错误码 | 可重试 | 含义 |
 |:---|:---:|:---|

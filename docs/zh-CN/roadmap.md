@@ -190,44 +190,50 @@ GitHub Release 和构建/测试证据齐全才算发布完成。
 ## AI 集成（MCP / Agent / Skill）
 
 目标：让 AI 能安全地操作 Xtate，而不是把无结构 shell 交给模型。
-CLI 仍是唯一事实来源；AI 集成是带类型、可审计的封装层。
+CLI 仍是事实来源；控制面拥有 job，MCP 是类型化客户端。
 
-计划交付：
+2.42.0 已交付：
 
-1. 稳定的机器可读契约：模块元数据、扫描配置、结果和错误的 JSON schema；
-   必要时增加 `--json`/`--json-schema`。
-2. Agent skill：受审查的 skill 文件，描述安全扫描流程、目标授权、防火墙前置、
-   速率限制和结果处理。
-3. stdio JSON-RPC 的 MCP server（`xtate mcp`），先提供只读工具：
+1. scan-request、模块元数据、结果和错误码的 JSON schema。
+2. 托管扫描 job：超时、stall 检测、心跳和取消。
+3. 本地控制面：Linux Unix socket 或 Windows Named Pipe，使用
+   `XTATE_CONTROL_TOKEN`。
+4. MCP stdio server：只读工具和受控 `start_scan`：
    `list_modules`、`describe_probe`、`explain_target`、`check`、
-   `validate_config`、`get_scan_status`、`get_results`。
-4. 只读阶段稳定后增加受控扫描工具：`start_scan`、`stop_scan`，
-   带 scan/probe/args 白名单、明确目标范围、速率限制、超时和审计日志。
-5. 任务模型：扫描作为受管 job（id、状态、计数、结果文件），不暴露无界阻塞调用。
-6. 安全：不允许任意 shell、不处理凭据、不扩展用户给定目标、写操作默认 dry-run，
-   扫描和防火墙变更需要显式确认。
+   `validate_config`、`start_scan`、`job_list`、`job_status`、
+   `job_result_manifest`、`job_cancel`。
+5. 路由感知规划，并拒绝跨多个路由的目标集。
+6. 安全边界：不执行 shell、只接受已注册模块名、目标/速率上限、显式
+   `authorized:true`、审计日志、控制面仅本地。
+
+仍待完成：
+
+- Agent Skill（流程与策略文档）；
+- agent 评测套件与打包；
+- MCP generate/流式输入（目前只有静态 `targets` 和 `include_file`）；
+- 扫描期间的单 job 磁盘配额强制（目前只在完成后报告）。
 
 阶段：
 
 ```text
-2.42.0  JSON 契约 + agent skill
-2.43.0  只读 MCP server
-2.44.0  MCP 受控扫描 job
-2.45.0  agent 评测与打包
+2.42.0  JSON 契约 + job + 控制面 + MCP server（已完成）
+下一步  Agent Skill
+下一步  评测套件与打包
+以后    MCP generate/流式输入
 ```
 
-见 [AI 集成设计](./ai-integration.md)。
+见 [AI 集成设计](./ai-integration.md) 和 [MCP server](./mcp-server.md)。
 
 ## 互联网规模 job 数据面
 
-MCP `start_scan` 之前加固结果路径：
+MCP/TUI/GUI 使用的结果路径状态：
 
-- [ ] 64 位结果 offset（`uint64_t`、`fseeko`/`_fseeki64`）；
-- [ ] 有界 `job.results(offset,max_bytes)`，返回 next offset/truncated；
-- [ ] 结果分片 NDJSON、可选 zstd、索引；
-- [ ] 单 job 磁盘配额，ENOSPC -> OUTPUT_WRITE_FAILED；
-- [ ] 完成 job TTL 和最大保留数；
-- [ ] heartbeat 约 1 秒一次；
-- [ ] 控制面/数据面分离，供 MCP/TUI/GUI 使用。
+- [x] 64 位结果大小与游标（`uint64_t`、`fseeko`/`_fseeki64`）；
+- [x] 控制响应有界；客户端读 manifest 和分片，而不是向控制面请求整个结果；
+- [x] 结果分片 NDJSON、可选 zstd、可选索引；
+- [x] 完成 job 的 TTL 和最大保留数；
+- [x] 心跳与 stall 检测；
+- [x] 控制面/数据面分离，供 MCP/TUI/GUI 使用；
+- [ ] 扫描期间强制单 job 磁盘配额（目前完成后检查并告警）。
 
 见 [控制平面](./control-plane.md)。

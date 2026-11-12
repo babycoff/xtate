@@ -256,6 +256,10 @@ The README is the landing page. The manual lives in [`docs/`](docs/README.md):
 - [Platform support](docs/platform-support.md) — CMake 3.13, old distros, Ninja and musl builds
 - [Build artifacts](docs/build-artifacts.md) — aliases, exact toolchain names, Debug/DLL layout
 - [Testing policy](docs/testing.md) — required Tier 0/1/2 checks after a change
+- [MCP server](docs/mcp-server.md) — stdio tools, resources, route planning and safety limits
+- [Control plane](docs/control-plane.md) — local JSON-lines API shared by MCP/TUI/GUI
+- [Job model](docs/job-model.md) — managed scan jobs, timeouts, heartbeats and results
+- [Input modules](docs/input-modules.md) — static target sets vs generate streams and error policy
 - [Troubleshooting](docs/troubleshooting.md) · [Known limitations](docs/known-limitations.md)
 
 中文文档：[`docs/zh-CN/`](docs/zh-CN/README.md)
@@ -382,6 +386,24 @@ xtate --lang zh --help        # Chinese human help (English fallback for untrans
 xtate --interact              # interactive shell (TTY: completion/history; pipe: scripts)
 ```
 
+## AI integration (MCP)
+
+Xtate ships an MCP stdio server for AI clients. Start a control plane, then
+connect the MCP server to it with the same token:
+
+```bash
+export XTATE_CONTROL_TOKEN="$(openssl rand -hex 16)"
+xtate --control-plane=/tmp/xtate-ctl.sock
+xtate --mcp --control-connect=/tmp/xtate-ctl.sock
+```
+
+The tools list modules, explain target routes, validate a closed scan request,
+start a managed job, and query job status/manifests. `start_scan` requires
+`authorized: true`; results stay in chunked files and are never returned inline.
+The server never executes a shell command. See [MCP server](docs/mcp-server.md),
+[control plane](docs/control-plane.md), [job model](docs/job-model.md) and
+[input modules](docs/input-modules.md) for the contract and limits.
+
 ## Papers and citation
 
 Xtate's two engines come from our research:
@@ -437,14 +459,3 @@ Created by **Alvin Chen** (陈驰昱) · [shineccy@aliyun.com](mailto:shineccy@a
 <div align="center">
   <sub>God is Stateless. Physical layer? We stop at the wire.</sub>
 </div>
-**输入模块与 Generate 模块**
-
-Xtate 有两套输入模型：静态 `TargetSet`（`-ip`、`-iL/--include-file`）和运行时
-Generate 模块（`ip-stream`、`addr-stream`、`ip-list`、`addr-list`）。
-
-Generate 模块逐行读取目标，支持 `file:line` 错误定位；非法行默认跳过并继续，全部
-无效时退出非零。strict、最大错误行数、错误率均通过 `--gen-arg` 配置：`--strict-errors`、`--max-errors`、`--max-error-rate`。
-
-MCP 只使用静态目标集，避免与 MCP stdio 的 stdin 冲突；大目标集使用 `include_file`。
-
-详见 [docs/input-modules.md](docs/input-modules.md)。

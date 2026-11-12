@@ -1,52 +1,69 @@
-# AI 集成设计（MCP / Agent / Skill）
+# AI 集成（MCP / Agent / Skill）
 
-[English](../ai-integration.md) · **中文**
+Xtate 通过类型化、可审计的接口供 AI agent 调用，而不是给它一个不受限的 shell。
+CLI 仍是事实来源；控制面拥有 job，MCP server 只是控制面的轻量客户端。
 
-Xtate 应通过带类型、可审计的接口被 AI 调用，而不是把无限制 shell 交给模型。
-CLI 仍是唯一事实来源；MCP 和 skill 只是它的封装层。
+## 当前状态
 
-## 三层设计
+2.42.0 已实现：
+
+- 托管扫描 job：超时、stall 检测、心跳和取消；
+- 本地控制面：Linux Unix socket 或 Windows Named Pipe，支持通过
+  `XTATE_CONTROL_TOKEN` 做共享 token 认证（生产环境应设置）；
+- stdio MCP server：模块元数据、路由规划、配置校验、job 启动与查询；
+- 分片结果文件和 manifest；结果不会内联返回；
+- scan-request、模块、结果和错误码的 JSON 契约。
+
+仍待完成：
+
+- 经过审查的 Agent Skill（文档与策略，不是特权二进制）；
+- agent 评测套件与打包；
+- 通过 MCP 暴露 generate/流式输入（MCP 目前只支持静态 `targets` 或
+  `include_file`）。
+
+## 三层
 
 ### 1. 稳定的 JSON 契约
 
-在任何 agent 集成之前先完成：
+已有机器可读边界：
 
 ```text
-模块元数据 schema
-扫描/探针配置 schema
-结果 schema（已有 NDJSON）
-稳定错误码 schema
+schemas/scan-request.schema.json
+schemas/module.schema.json
+schemas/result.schema.json
+schemas/error.schema.json 与 schemas/error-codes.json
+NDJSON 结果行
 ```
 
-需要时增加 `--json`/`--json-schema`。不要让 agent 解析彩色文本。
+MCP 工具返回 JSON 文本，agent 不需要解析带颜色的 CLI 输出。MCP server 自身校验
+封闭子集（scan/probe 名称、目标语法、端口范围、速率、互斥字段），控制面再校验
+job 请求。
 
-### 2. Agent skill
+### 2. Agent Skill（待完成）
 
-受审查的 `SKILL.md`，指导 agent：
+Skill 应教会 agent：
 
 ```text
-确认目标授权
-先跑 --check / --explain-target
-仅对 stateful 扫描安装 Linux 防火墙规则
-选择 scanner/probe 和速率
-启动有界 job
-读取 NDJSON 结果
-清理防火墙规则
+先询问目标授权
+先运行 explain_target / check
+只对有状态扫描开放必要的 Linux 防火墙规则
+选择 scan/probe 组合和有上限的速率
+启动有边界的 job
+读取 manifest 和分片，而不是整个结果文件
+取消 job 或等待超时
 ```
 
-skill 是文档和策略，不是特权二进制。
+Skill 是策略和文档，不能强制工具边界；边界由 MCP server 执行。
 
 ### 3. MCP server
 
-建议命令：
-
-```text
-xtate mcp --stdio
+```bash
+export XTATE_CONTROL_TOKEN="$(openssl rand -hex 16)"
+xtate --control-plane=/tmp/xtate-ctl.sock
+xtate --mcp --control-connect=/tmp/xtate-ctl.sock
 ```
 
-传输：stdio JSON-RPC（MCP）。工具小且类型化。
-
-先只读：
+工具：
 
 ```text
 list_modules
@@ -54,18 +71,14 @@ describe_probe
 explain_target
 check
 validate_config
-get_scan_status
-get_results
-```
-
-只读稳定后再加受控扫描：
-
-```text
 start_scan
-stop_scan
+job_list
+job_status
+job_result_manifest
+job_cancel
 ```
 
-`start_scan` 接受封闭配置对象，而不是 shell 字符串：
+`start_scan` 接受封闭对象，不接受 shell 字符串：
 
 ```json
 {
@@ -75,44 +88,54 @@ stop_scan
   "ports": [443],
   "probe_args": {"dns_name": "example.com", "authority": "dns.example"},
   "rate": 100,
-  "timeout_sec": 30
+  "timeout_sec": 30,
+  "result_path": "results/doh.ndjson",
+  "authorized": true
 }
 ```
 
-返回 job id，之后读取结果。不暴露无界阻塞调用。
+它立即返回 `job_id`。状态和结果稍后读取；不存在无界阻塞的工具调用，也不会内联
+返回结果数据。
 
 ## 安全要求
 
+已实现：
+
 ```text
-不允许任意 shell
-不扩展用户给定目标
-scan/probe/参数名白名单
-速率和并发限制
-job 超时与取消
-审计日志：谁/什么/目标/参数/结果文件
-写操作默认 dry-run
-扫描和防火墙变更显式确认
-不保存凭据
+不执行任意 shell
+不超出用户输入扩展目标
+scan/probe 名称限制为已注册模块
+目标数量与速率上限
+job 超时、取消与审计日志
+start_scan 显式要求 authorized:true
+resource 路径限制为固定白名单
+控制面仅本地；配置 `XTATE_CONTROL_TOKEN` 时校验 token
 ```
 
-## 为什么不能只有 skill
+仍需验证或补充：
 
-skill 无法强制工具边界或校验参数。MCP 提供类型化边界，skill 教会 agent 流程。
-两者都需要。
+```text
+按能力划分的 token 与每客户端配额
+可配置的审计输出位置与轮转
+针对 prompt injection 和目标范围越界的 agent 评测
+```
 
 ## 测试
 
-- MCP 协议一致性和 schema 校验；
-- 只读工具无网络测试；
-- 扫描 job 生命周期：start/status/stop/results；
-- 拒绝测试：shell 元字符、未知参数、无界目标；
-- agent 评测：规划安全扫描、执行、总结结果。
+- MCP 协议一致性、schema、resource 和 prompt；
+- 无网络情况下的只读工具；
+- job 生命周期：启动、状态、manifest、取消和超时；
+- 拒绝测试：未知模块、畸形目标、混合路由、错误 token、超大参数；
+- Windows 和 Linux 回归。
+
+参见 [MCP server](./mcp-server.md)、[控制面](./control-plane.md) 和
+[job 模型](./job-model.md)。
 
 ## 阶段
 
 ```text
-2.42.0  JSON 契约 + skill
-2.43.0  只读 MCP server
-2.44.0  受控扫描 job
-2.45.0  评测与打包
+2.42.0  job + 控制面 + MCP server（已完成）
+下一步  Agent Skill
+下一步  评测套件与打包
+以后    MCP generate/流式输入
 ```

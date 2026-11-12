@@ -6,7 +6,7 @@
 
 项目 [README](../../README.zh-CN.md) 是落地页。如果你想上手使用 Xtate，而不是只扫一眼功能列表，就从这里开始。
 
-**发布说明：** [2.41.2](./release-notes/2.42.0.md)——JSON 契约、scan-request 运行时与错误处理。
+**发布说明：** [2.42.0](./release-notes/2.42.0.md)——托管 job、控制面与 MCP server。
 
 ## 从哪里开始
 
@@ -25,6 +25,8 @@
 | DNS over TLS | [DNS over TLS](./dns-over-tls.md) |
 | 输入/输出审查 | [输入/输出审查](./input-output-audit.md) |
 | Job 模型 | [Job 模型](./job-model.md) |
+| 自动化扫描 / AI 客户端 | [MCP server](./mcp-server.md) → [控制面](./control-plane.md) |
+| 大目标文件或流式输入 | [输入模块](./input-modules.md) |
 | 错误码 | [错误码](./error-codes.md) |
 | JSON 契约 | [JSON 契约](./json-contracts.md) |
 | AI 集成设计 | [AI 集成设计](./ai-integration.md) |
@@ -60,6 +62,15 @@
 - [Windows 快速上手](./windows-quickstart.md)——新手安装、Npcap、构建、首次扫描与排查
 - [Windows 可选依赖](./windows-dependencies.md)——PCRE2/LibXml2/bson/mongoc 与 MinGW 注意事项
 
+### 自动化与集成
+
+- [MCP server](./mcp-server.md)——stdio 工具、resource、prompt、路由规划与限制
+- [控制面](./control-plane.md)——MCP/TUI/GUI 共用的本地 JSON-lines API
+- [Job 模型](./job-model.md)——托管 job、超时、心跳、取消与结果
+- [输入模块](./input-modules.md)——静态目标与 generate 流、错误策略
+- [JSON 契约](./json-contracts.md)——scan-request、模块元数据与错误 schema
+- [AI 集成设计](./ai-integration.md)——边界、安全要求与剩余工作
+
 ### 工作原理
 
 - [架构](./architecture.md)——线程、队列、扫描流水线
@@ -84,7 +95,7 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-本文档基于 v2.39.1 的代码树编写。如果你在更新的 commit 上发现内容有出入，请以二进制为准，也欢迎提 issue。
+本文档基于 v2.42.0 的代码树编写。如果你在更新的 commit 上发现内容有出入，请以二进制为准，也欢迎提 issue。
 
 ## 计划中
 
