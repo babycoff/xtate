@@ -24,6 +24,7 @@ struct AddrListConf {
     char     *filename;
     uint64_t  line_number;
     uint64_t  bad_lines;
+    uint64_t  valid_lines;
     bool      strict_errors;
     uint64_t  max_errors;
     unsigned  max_error_percent;
@@ -142,11 +143,21 @@ bool addrlist_hasmore(unsigned tx_index, uint64_t index) {
             if (ferror(addrlist_conf.fp))
                 LOG(LEVEL_ERROR, "%s: read error\n",
                     addrlist_conf.filename ? addrlist_conf.filename : "<stdin>");
-            else
+            else {
                 LOG(LEVEL_DEBUG, "(list generator) EOF of list.\n");
+                if (addrlist_conf.valid_lines == 0 && addrlist_conf.bad_lines > 0) {
+                    LOG(LEVEL_ERROR, "%s: no valid targets; all lines were rejected\n",
+                        addrlist_conf.filename ? addrlist_conf.filename : "<stdin>");
+                    exit(1);
+                }
+            }
             return false;
         }
         if (rr > 0) {
+            if (stream_bad_limit(addrlist_conf.bad_lines, addrlist_conf.line_number,
+                                 addrlist_conf.strict_errors, addrlist_conf.max_errors,
+                                 addrlist_conf.max_error_percent,
+                                 addrlist_conf.filename, addrlist_conf.line_number)) exit(1);
             LOG(LEVEL_ERROR, "%s:%llu: target line too long (max %zu bytes)\n",
                 addrlist_conf.filename ? addrlist_conf.filename : "<stdin>",
                 (unsigned long long)addrlist_conf.line_number, sizeof(line) - 1);
@@ -162,7 +173,10 @@ bool addrlist_hasmore(unsigned tx_index, uint64_t index) {
         char *sub = strstr(s, addrlist_conf.splitter);
         if (sub == NULL) {
             addrlist_conf.bad_lines++;
-            if (addrlist_conf.bad_lines >= 1000 || getenv("XTATE_STREAM_STRICT")) { LOG(LEVEL_ERROR, "too many invalid target lines; aborting\n"); exit(1); }
+            if (stream_bad_limit(addrlist_conf.bad_lines, addrlist_conf.line_number,
+                            addrlist_conf.strict_errors, addrlist_conf.max_errors,
+                            addrlist_conf.max_error_percent,
+                            addrlist_conf.filename, addrlist_conf.line_number)) exit(1);
             LOG(LEVEL_ERROR, "%s:%llu: invalid splitter in address: %s",
                 addrlist_conf.filename ? addrlist_conf.filename : "<stdin>",
                 (unsigned long long)addrlist_conf.line_number, line);
@@ -175,7 +189,10 @@ bool addrlist_hasmore(unsigned tx_index, uint64_t index) {
         addrlist_conf.ip = target_parse_ip(s);
         if (addrlist_conf.ip.version == 0) {
             addrlist_conf.bad_lines++;
-            if (addrlist_conf.bad_lines >= 1000 || getenv("XTATE_STREAM_STRICT")) { LOG(LEVEL_ERROR, "too many invalid target lines; aborting\n"); exit(1); }
+            if (stream_bad_limit(addrlist_conf.bad_lines, addrlist_conf.line_number,
+                            addrlist_conf.strict_errors, addrlist_conf.max_errors,
+                            addrlist_conf.max_error_percent,
+                            addrlist_conf.filename, addrlist_conf.line_number)) exit(1);
             sub[0] = addrlist_conf.splitter[0];
             LOG(LEVEL_ERROR, "%s:%llu: invalid ip in address: %s",
                 addrlist_conf.filename ? addrlist_conf.filename : "<stdin>",
@@ -190,7 +207,10 @@ bool addrlist_hasmore(unsigned tx_index, uint64_t index) {
             ports.list[0].end != ports.list[0].begin) {
             rangelist_rm_all(&ports);
             addrlist_conf.bad_lines++;
-            if (addrlist_conf.bad_lines >= 1000 || getenv("XTATE_STREAM_STRICT")) { LOG(LEVEL_ERROR, "too many invalid target lines; aborting\n"); exit(1); }
+            if (stream_bad_limit(addrlist_conf.bad_lines, addrlist_conf.line_number,
+                            addrlist_conf.strict_errors, addrlist_conf.max_errors,
+                            addrlist_conf.max_error_percent,
+                            addrlist_conf.filename, addrlist_conf.line_number)) exit(1);
             sub[0] = addrlist_conf.splitter[0];
             LOG(LEVEL_ERROR, "%s:%llu: invalid port in address: %s",
                 addrlist_conf.filename ? addrlist_conf.filename : "<stdin>",
@@ -201,6 +221,7 @@ bool addrlist_hasmore(unsigned tx_index, uint64_t index) {
 
         addrlist_conf.port = ports.list[0].begin;
         rangelist_rm_all(&ports);
+        addrlist_conf.valid_lines++;
 
         break;
     }

@@ -199,6 +199,10 @@ bool addrstream_hasmore(unsigned tx_index, uint64_t index) {
         }
         char *s = line;
         if (rr > 0) {
+            if (stream_bad_limit(addrstream_conf.bad_lines, addrstream_conf.line_number,
+                                 addrstream_conf.strict_errors, addrstream_conf.max_errors,
+                                 addrstream_conf.max_error_percent,
+                                 addrstream_conf.filename, addrstream_conf.line_number)) exit(1);
             LOG(LEVEL_ERROR, "%s:%llu: target line too long (max %zu bytes)\n",
                 addrstream_conf.filename ? addrstream_conf.filename : "<stdin>",
                 (unsigned long long)addrstream_conf.line_number,
@@ -214,7 +218,10 @@ bool addrstream_hasmore(unsigned tx_index, uint64_t index) {
         char *sub = strstr(s, addrstream_conf.splitter);
         if (sub == NULL) {
             addrstream_conf.bad_lines++;
-            if (addrstream_conf.bad_lines >= 1000 || getenv("XTATE_STREAM_STRICT")) { LOG(LEVEL_ERROR, "too many invalid target lines; aborting\n"); exit(1); }
+            if (stream_bad_limit(addrstream_conf.bad_lines, addrstream_conf.line_number,
+                            addrstream_conf.strict_errors, addrstream_conf.max_errors,
+                            addrstream_conf.max_error_percent,
+                            addrstream_conf.filename, addrstream_conf.line_number)) exit(1);
             LOG(LEVEL_ERROR, "%s:%llu: invalid splitter in address: %s",
                 addrstream_conf.filename ? addrstream_conf.filename : "<stdin>",
                 (unsigned long long)addrstream_conf.line_number, line);
@@ -228,7 +235,10 @@ bool addrstream_hasmore(unsigned tx_index, uint64_t index) {
         if (err) {
             sub[0] = addrstream_conf.splitter[0];
             addrstream_conf.bad_lines++;
-            if (addrstream_conf.bad_lines >= 1000 || getenv("XTATE_STREAM_STRICT")) { LOG(LEVEL_ERROR, "too many invalid target lines; aborting\n"); exit(1); }
+            if (stream_bad_limit(addrstream_conf.bad_lines, addrstream_conf.line_number,
+                            addrstream_conf.strict_errors, addrstream_conf.max_errors,
+                            addrstream_conf.max_error_percent,
+                            addrstream_conf.filename, addrstream_conf.line_number)) exit(1);
             LOG(LEVEL_ERROR, "%s:%llu: invalid ip in address: %s",
                 addrstream_conf.filename ? addrstream_conf.filename : "<stdin>",
                 (unsigned long long)addrstream_conf.line_number, line);
@@ -239,7 +249,10 @@ bool addrstream_hasmore(unsigned tx_index, uint64_t index) {
         if (err) {
             sub[0] = addrstream_conf.splitter[0];
             addrstream_conf.bad_lines++;
-            if (addrstream_conf.bad_lines >= 1000 || getenv("XTATE_STREAM_STRICT")) { LOG(LEVEL_ERROR, "too many invalid target lines; aborting\n"); exit(1); }
+            if (stream_bad_limit(addrstream_conf.bad_lines, addrstream_conf.line_number,
+                            addrstream_conf.strict_errors, addrstream_conf.max_errors,
+                            addrstream_conf.max_error_percent,
+                            addrstream_conf.filename, addrstream_conf.line_number)) exit(1);
             LOG(LEVEL_ERROR, "%s:%llu: invalid port in address: %s",
                 addrstream_conf.filename ? addrstream_conf.filename : "<stdin>",
                 (unsigned long long)addrstream_conf.line_number, line);

@@ -29,6 +29,7 @@ struct IpListConf {
     char            *filename;
     uint64_t         line_number;
     uint64_t         bad_lines;
+    uint64_t  valid_lines;
     bool             strict_errors;
     uint64_t         max_errors;
     unsigned         max_error_percent;
@@ -201,11 +202,21 @@ bool iplist_hasmore(unsigned tx_index, uint64_t index) {
             if (ferror(iplist_conf.fp))
                 LOG(LEVEL_ERROR, "%s: read error\n",
                     iplist_conf.filename ? iplist_conf.filename : "<stdin>");
-            else
+            else {
                 LOG(LEVEL_DEBUG, "(list generator) EOF of list.\n");
+                if (iplist_conf.valid_lines == 0 && iplist_conf.bad_lines > 0) {
+                    LOG(LEVEL_ERROR, "%s: no valid targets; all lines were rejected\n",
+                        iplist_conf.filename ? iplist_conf.filename : "<stdin>");
+                    exit(1);
+                }
+            }
             return false;
         }
         if (rr > 0) {
+            if (stream_bad_limit(iplist_conf.bad_lines, iplist_conf.line_number,
+                                 iplist_conf.strict_errors, iplist_conf.max_errors,
+                                 iplist_conf.max_error_percent,
+                                 iplist_conf.filename, iplist_conf.line_number)) exit(1);
             LOG(LEVEL_ERROR, "%s:%llu: target line too long (max %zu bytes)\n",
                 iplist_conf.filename ? iplist_conf.filename : "<stdin>",
                 (unsigned long long)iplist_conf.line_number, sizeof(line) - 1);
@@ -220,13 +231,18 @@ bool iplist_hasmore(unsigned tx_index, uint64_t index) {
         iplist_conf.ip = target_parse_ip(line);
         if (iplist_conf.ip.version == 0) {
             iplist_conf.bad_lines++;
-            if (iplist_conf.bad_lines >= 1000 || getenv("XTATE_STREAM_STRICT")) { LOG(LEVEL_ERROR, "too many invalid target lines; aborting\n"); exit(1); }
+            if (stream_bad_limit(iplist_conf.bad_lines, iplist_conf.line_number,
+                            iplist_conf.strict_errors, iplist_conf.max_errors,
+                            iplist_conf.max_error_percent,
+                            iplist_conf.filename, iplist_conf.line_number)) exit(1);
             LOG(LEVEL_ERROR, "%s:%llu: invalid ip in address: %s",
                 iplist_conf.filename ? iplist_conf.filename : "<stdin>",
                 (unsigned long long)iplist_conf.line_number, line);
             continue;
-        } else
+        } else {
+            iplist_conf.valid_lines++;
             break;
+        }
     }
 
     iplist_conf.index = 0;
