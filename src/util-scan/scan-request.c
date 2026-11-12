@@ -23,7 +23,7 @@ static void req_error(ErrorCode code, const char *msg) {
 static bool allowed(const char *name) {
     static const char *ok[] = {"scan","probe","targets","ports","probe_args",
                                "scan_args","rate","timeout_sec","dry_run","result_path",
-                               "chunk_size","compression","index","quota_bytes","authorized","interface","timeout_sec",0};
+                               "chunk_size","compression","index","quota_bytes","authorized","interface","timeout_sec","include_file",0};
     for (int i=0; ok[i]; i++) if (strcmp(name, ok[i]) == 0) return true;
     return false;
 }
@@ -127,8 +127,11 @@ int scan_request_build_argv(const char *filename, int *argc_out,
     for (JsonNode *n=root->children.head; n; n=n->next)
         if (!allowed(n->key ? n->key : "")) { req_error(ERR_INVALID_ARGUMENT,"unknown field"); json_delete(root); return -1; }
     JsonNode *scan=json_find_member(root,"scan"), *targets=json_find_member(root,"targets");
-    if (!scan || scan->tag!=JSON_STRING || !targets || targets->tag!=JSON_ARRAY || !targets->children.head) {
-        req_error(ERR_INVALID_ARGUMENT,"scan and non-empty targets are required"); json_delete(root); return -1;
+    JsonNode *inc=json_find_member(root,"include_file");
+    bool has_targets = targets && targets->tag == JSON_ARRAY && targets->children.head;
+    bool has_file = inc && inc->tag == JSON_STRING && inc->string_[0];
+    if (!scan || scan->tag!=JSON_STRING || (!has_targets && !has_file)) {
+        req_error(ERR_INVALID_ARGUMENT,"scan and targets or include_file are required"); json_delete(root); return -1;
     }
     if (!get_scan_module_by_name(scan->string_)) {
         req_error(ERR_UNSUPPORTED_SCAN, "unknown scan module");
@@ -144,7 +147,7 @@ int scan_request_build_argv(const char *filename, int *argc_out,
             return -1;
         }
     }
-    for (JsonNode *n = targets->children.head; n; n = n->next) {
+    for (JsonNode *n = has_targets ? targets->children.head : NULL; n; n = n->next) {
         if (n->tag != JSON_STRING) {
             req_error(ERR_TARGET_INVALID, "target must be a string");
             json_delete(root); return -1;
@@ -161,13 +164,15 @@ int scan_request_build_argv(const char *filename, int *argc_out,
             }
         }
     }
-    char *ip=join_array(targets,false); if (!ip) { req_error(ERR_TARGET_INVALID,"invalid targets"); json_delete(root); return -1; }
-    char **argv = CALLOC(32, sizeof(char*)); int ac=0;
+    char *ip = has_targets ? join_array(targets,false) : NULL;
+    if (has_targets && !ip) { req_error(ERR_TARGET_INVALID,"invalid targets"); json_delete(root); return -1; }
+    char **argv = CALLOC(36, sizeof(char*)); int ac=0;
     argv[ac++] = STRDUP("xtate");
     argv[ac++] = STRDUP("-scan"); argv[ac++] = STRDUP(scan->string_);
     JsonNode *probe=json_find_member(root,"probe");
     if (probe) { if(probe->tag!=JSON_STRING){req_error(ERR_INVALID_ARGUMENT,"probe must be string");} argv[ac++]=STRDUP("-probe"); argv[ac++]=STRDUP(probe->string_); }
-    argv[ac++]=STRDUP("-ip"); argv[ac++]=ip;
+    if (has_targets) { argv[ac++]=STRDUP("-ip"); argv[ac++]=ip; }
+    else { argv[ac++]=STRDUP("--include-file"); argv[ac++]=STRDUP(inc->string_); }
     JsonNode *ports=json_find_member(root,"ports");
     if (ports) { char *p=join_array(ports,true); if(!p){req_error(ERR_INVALID_ARGUMENT,"invalid ports");} argv[ac++]=STRDUP("-p"); argv[ac++]=p; }
     JsonNode *rate=json_find_member(root,"rate");

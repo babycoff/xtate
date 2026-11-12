@@ -186,11 +186,14 @@ static bool validate_cfg(const char *cfg, char *err, size_t errcap,
         snprintf(err, errcap, "unknown probe"); json_delete(root); return false;
     }
     JsonNode *targets = json_find_member(root, "targets");
-    if (!targets || targets->tag != JSON_ARRAY || !targets->children.head) {
-        snprintf(err, errcap, "targets must be a non-empty array"); json_delete(root); return false;
+    JsonNode *inc = json_find_member(root, "include_file");
+    bool has_file = inc && inc->tag == JSON_STRING && inc->string_[0];
+    if ((!targets || targets->tag != JSON_ARRAY || !targets->children.head) && !has_file) {
+        snprintf(err, errcap, "targets or include_file required"); json_delete(root); return false;
     }
+    if (!targets || targets->tag != JSON_ARRAY) targets = NULL;
     unsigned count = 0;
-    for (JsonNode *t = targets->children.head; t; t = t->next) {
+    for (JsonNode *t = targets ? targets->children.head : NULL; t; t = t->next) {
         if (t->tag != JSON_STRING) { snprintf(err, errcap, "target must be a string"); json_delete(root); return false; }
         size_t off = 0, len = strlen(t->string_);
         struct Range r4; struct Range6 r6;
@@ -445,6 +448,13 @@ static void tool_call(const char *id, const char *name, const char *args,
             text_result(id, verr, true); return;
         }
         int rg = explain_group_count(endpoint, cfg);
+        if (rg < 0) {
+            JsonNode *fr = json_decode(cfg);
+            JsonNode *incn = fr ? json_find_member(fr, "include_file") : NULL;
+            JsonNode *ifn = fr ? json_find_member(fr, "interface") : NULL;
+            if (incn && incn->tag == JSON_STRING && ifn && ifn->tag == JSON_STRING) rg = 1;
+            if (fr) json_delete(fr);
+        }
         if (rg < 0) { text_result(id, "cannot determine route groups", true); return; }
         if (rg > 1) { text_result(id, "targets span multiple routes; split into separate jobs", true); return; }
         FILE *audit = fopen("xtate-mcp-audit.log", "a");
@@ -468,6 +478,10 @@ static void tool_call(const char *id, const char *name, const char *args,
                                     off ? "," : "", t->string_);
         }
         if (root) json_delete(root);
+        if (!targets[0]) {
+            JsonNode *ir = root ? json_find_member(root, "interface") : NULL;
+            if (ir && ir->tag == JSON_STRING) snprintf(iface, sizeof(iface), "%s", ir->string_);
+        }
         if (targets[0]) {
             char text[16384], ea[4300];
             snprintf(ea, sizeof(ea), "--explain-target=%s", targets);

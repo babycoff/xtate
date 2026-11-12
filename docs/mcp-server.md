@@ -75,3 +75,14 @@ requests, oversized configuration rejection, malformed JSON, control-plane
 restart (Windows) and a second MCP client. Oversized requests above the 8 KiB
 MCP argument buffer are rejected cleanly; large target sets need a future
 file/stream input path.
+
+### Large target sets
+
+Use `include_file` for large target sets instead of inlining `targets`:
+
+```json
+{"scan":"tcp-syn","include_file":"C:/scans/targets.txt","ports":[443]}
+```
+
+When `include_file` is used, pass `interface` explicitly for Windows multi-NIC
+hosts; route-group discovery from the file is not yet implemented.

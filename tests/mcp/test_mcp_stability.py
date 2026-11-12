@@ -41,9 +41,20 @@ try:
     v = call("validate_config", {"config":{"scan":"tcp-syn","targets":targets}})
     assert not v["isError"], v
     assert json.loads(text(v))["valid"] is True
-    big = ["10.%d.%d.%d" % (i//65536%256, i//256%256, i%256) for i in range(2000)]
-    bv = call("validate_config", {"config":{"scan":"tcp-syn","targets":big}})
-    assert bv["isError"], bv
+    bigfile = out + ".targets.txt"
+    with open(bigfile, "w", encoding="utf-8") as f:
+        for i in range(2000):
+            f.write("10.%d.%d.%d\n" % (i//65536%256, i//256%256, i%256))
+    bv = call("validate_config", {"config":{"scan":"tcp-syn","include_file":bigfile}})
+    assert not bv["isError"], bv
+    assert json.loads(text(bv))["valid"] is True
+    ex = json.loads(text(call("explain_target", {"target":"8.8.8.8"})))
+    iface = ex["groups"][0]["interface"]
+    fr = call("start_scan", {"scan":"tcp-syn","include_file":bigfile,
+                             "ports":[53],"rate":10000,"interface":iface,
+                             "result_path":out+".large.ndjson","timeout_sec":2,
+                             "authorized":True})
+    assert not fr["isError"], fr
     mp.stdin.write('{"jsonrpc":"2.0"\n'); mp.stdin.flush()
     line = mp.stdout.readline(); assert line
     json.loads(line)

@@ -355,10 +355,10 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
             if ((int64_t)emitted >= limit) break;
             job_poll(j);
             finalize_job(j);
+            char jp[512]; jesc(job_result_path(j), jp, sizeof(jp));
             off += (size_t)snprintf(buf + off, sizeof(buf) - off,
                 "%s{\"job_id\":\"%s\",\"state\":\"%s\",\"result\":\"%s\"}",
-                first ? "" : ",", job_id(j), job_state_string(job_state(j)),
-                job_result_path(j) ? job_result_path(j) : "");
+                first ? "" : ",", job_id(j), job_state_string(job_state(j)), jp);
             first = 0; emitted++;
             if (off > sizeof(buf) - 512) break;
         }
