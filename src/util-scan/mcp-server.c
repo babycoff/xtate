@@ -13,11 +13,15 @@
 #include <ws2tcpip.h>
 #else
 #include <arpa/inet.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/wait.h>
 #endif
 #include "../crypto/crypto-json.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <stdbool.h>
 #ifdef _WIN32
 #define strtok_r strtok_s
@@ -238,7 +242,12 @@ static bool safe_target(const char *t) {
 
 static bool self_path(char *out, size_t cap) {
 #ifdef _WIN32
-    return GetModuleFileNameA(NULL, out, (DWORD)cap) > 0;
+    wchar_t wexe[1024];
+    DWORD n = GetModuleFileNameW(NULL, wexe,
+                                 (DWORD)(sizeof(wexe) / sizeof(wexe[0])));
+    if (n == 0) return false;
+    return WideCharToMultiByte(CP_UTF8, 0, wexe, -1, out, (int)cap,
+                               NULL, NULL) > 0;
 #else
     ssize_t n = readlink("/proc/self/exe", out, cap - 1);
     if (n <= 0) return false;
@@ -248,7 +257,15 @@ static bool self_path(char *out, size_t cap) {
 }
 
 static char *read_file_alloc(const char *path) {
+#ifdef _WIN32
+    wchar_t wpath[1600];
+    if (MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath,
+                            (int)(sizeof(wpath) / sizeof(wpath[0]))) <= 0)
+        return NULL;
+    FILE *f = _wfopen(wpath, L"rb");
+#else
     FILE *f = fopen(path, "rb");
+#endif
     if (!f) return NULL;
     if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return NULL; }
     long n = ftell(f);
@@ -263,10 +280,16 @@ static char *read_file_alloc(const char *path) {
 }
 
 /* Resources may be read from any working directory. Look next to the
- * executable and up to three parent directories, which covers both an
+ * executable and up to four parent directories, which covers both an
  * installed layout and the repository build directory. */
+/* Resource names are a fixed, compiled-in allowlist. Reject anything that is
+ * absolute, drive-qualified or contains a parent traversal component, so the
+ * lookup can never be turned into an arbitrary file read. */
 static char *read_resource_file(const char *rel) {
     char cand[1600];
+    if (!rel || !rel[0] || rel[0] == '/' || rel[0] == '\\' ||
+        strchr(rel, ':') || strstr(rel, ".."))
+        return NULL;
     const char *base = getenv("XTATE_MCP_DOCS_DIR");
     if (base && base[0]) {
         snprintf(cand, sizeof(cand), "%s/%s", base, rel);
@@ -296,25 +319,125 @@ static char *read_resource_file(const char *rel) {
     return NULL;
 }
 
+static void normalize_text(char *s) {
+    char *w = s;
+    for (char *r = s; *r; r++) {
+        if (*r == '\r' && r[1] == '\n') continue;
+        *w++ = *r;
+    }
+    *w = 0;
+}
+
+/* Run this executable with a fixed argument vector and capture stdout.
+ * Arguments are split on spaces; every caller builds them from validated
+ * module names and target characters only, so no quoting or shell is needed.
+ * This deliberately avoids popen()/system(): the client cannot inject a shell
+ * command even if a validation rule is missed. */
 static bool run_self(const char *args, char *out, size_t cap) {
     char exe[1024];
     if (!self_path(exe, sizeof(exe))) return false;
-    char cmd[1400];
-    snprintf(cmd, sizeof(cmd), "\"%s\" %s", exe, args);
+
+    char argbuf[8192];
+    int argn = snprintf(argbuf, sizeof(argbuf), "%s", args ? args : "");
+    if (argn < 0 || (size_t)argn >= sizeof(argbuf)) return false;
+    char *argv[128];
+    int argc = 0;
+    argv[argc++] = exe;
+    char *save = NULL;
+    for (char *tok = strtok_r(argbuf, " ", &save);
+         tok && argc + 1 < (int)(sizeof(argv) / sizeof(argv[0]));
+         tok = strtok_r(NULL, " ", &save)) {
+        argv[argc++] = tok;
+    }
+    argv[argc] = NULL;
+    if (argc < 2) return false;
+
 #ifdef _WIN32
-    FILE *p = _popen(cmd, "r");
-#else
-    FILE *p = popen(cmd, "r");
-#endif
-    if (!p) return false;
-    size_t n = fread(out, 1, cap - 1, p);
+    char cmd[10000];
+    int cmdn = snprintf(cmd, sizeof(cmd), "\"%s\" %s", exe, args ? args : "");
+    if (cmdn < 0 || (size_t)cmdn >= sizeof(cmd)) return false;
+
+    SECURITY_ATTRIBUTES sa = {sizeof(sa), NULL, TRUE};
+    HANDLE rd = NULL, wr = NULL;
+    if (!CreatePipe(&rd, &wr, &sa, 0)) return false;
+    SetHandleInformation(rd, HANDLE_FLAG_INHERIT, 0);
+
+    HANDLE nul = CreateFileW(L"NUL", GENERIC_READ,
+                             FILE_SHARE_READ | FILE_SHARE_WRITE, &sa,
+                             OPEN_EXISTING, 0, NULL);
+
+    STARTUPINFOW si;
+    PROCESS_INFORMATION pi;
+    memset(&si, 0, sizeof(si));
+    memset(&pi, 0, sizeof(pi));
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdOutput = wr;
+    si.hStdError = wr;
+    si.hStdInput = (nul != INVALID_HANDLE_VALUE) ? nul
+                                                 : GetStdHandle(STD_INPUT_HANDLE);
+
+    wchar_t wexe[1024], wcmd[1600];
+    bool ok = MultiByteToWideChar(CP_UTF8, 0, exe, -1, wexe,
+                                  (int)(sizeof(wexe) / sizeof(wexe[0]))) > 0 &&
+              MultiByteToWideChar(CP_UTF8, 0, cmd, -1, wcmd,
+                                  (int)(sizeof(wcmd) / sizeof(wcmd[0]))) > 0 &&
+              CreateProcessW(wexe, wcmd, NULL, NULL, TRUE, CREATE_NO_WINDOW,
+                             NULL, NULL, &si, &pi);
+    CloseHandle(wr);
+    if (nul != INVALID_HANDLE_VALUE) CloseHandle(nul);
+    if (!ok) {
+        CloseHandle(rd);
+        return false;
+    }
+    size_t n = 0;
+    DWORD got = 0;
+    while (n + 1 < cap &&
+           ReadFile(rd, out + n, (DWORD)(cap - 1 - n), &got, NULL) && got > 0)
+        n += got;
     out[n] = 0;
-#ifdef _WIN32
-    _pclose(p);
-#else
-    pclose(p);
-#endif
+    normalize_text(out);
+    CloseHandle(rd);
+    WaitForSingleObject(pi.hProcess, 30000);
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
     return true;
+#else
+    int fds[2];
+    if (pipe(fds) != 0) return false;
+    pid_t pid = fork();
+    if (pid < 0) {
+        close(fds[0]);
+        close(fds[1]);
+        return false;
+    }
+    if (pid == 0) {
+        int nul = open("/dev/null", O_RDONLY);
+        if (nul >= 0) {
+            dup2(nul, STDIN_FILENO);
+            close(nul);
+        }
+        dup2(fds[1], STDOUT_FILENO);
+        dup2(fds[1], STDERR_FILENO);
+        close(fds[0]);
+        close(fds[1]);
+        execv(exe, argv);
+        _exit(127);
+    }
+    close(fds[1]);
+    size_t n = 0;
+    ssize_t got;
+    while (n + 1 < cap &&
+           (got = read(fds[0], out + n, cap - 1 - n)) > 0)
+        n += (size_t)got;
+    out[n] = 0;
+    normalize_text(out);
+    close(fds[0]);
+    int status = 0;
+    while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {
+    }
+    return true;
+#endif
 }
 
 static void structured_explain(const char *id, const char *text);
@@ -530,11 +653,11 @@ static void tool_call(const char *id, const char *name, const char *args,
             off += (size_t)snprintf(targets + off, sizeof(targets) - off, "%s%s",
                                     off ? "," : "", t->string_);
         }
-        if (root) json_delete(root);
         if (!targets[0]) {
             JsonNode *ir = root ? json_find_member(root, "interface") : NULL;
             if (ir && ir->tag == JSON_STRING) snprintf(iface, sizeof(iface), "%s", ir->string_);
         }
+        if (root) json_delete(root);
         if (targets[0]) {
             char text[16384], ea[4300];
             snprintf(ea, sizeof(ea), "--explain-target=%s", targets);
@@ -593,20 +716,22 @@ int mcp_server_run(const char *control_endpoint) {
             char uri[256] = {0};
             json_str(line, "uri", uri, sizeof(uri));
             const char *path = NULL;
-            if (strstr(uri, "docs/overview")) path = "docs/README.md";
-            else if (strstr(uri, "docs/firewall")) path = "docs/firewall.md";
-            else if (strstr(uri, "schemas/scan-request")) path = "schemas/scan-request.json";
+            if (strcmp(uri, "xtate://docs/overview") == 0) path = "docs/README.md";
+            else if (strcmp(uri, "xtate://docs/firewall") == 0) path = "docs/firewall.md";
+            else if (strcmp(uri, "xtate://schemas/scan-request") == 0) path = "schemas/scan-request.schema.json";
             char *text = path ? read_resource_file(path) : NULL;
             if (!text) { rpc_error(id, -32002, "resource not found"); continue; }
             char *esc = json_encode_string(text);
-            printf("{\"jsonrpc\":\"2.0\",\"id\":%s,\"result\":{\"contents\":[{\"uri\":\"%s\",\"mimeType\":\"text/plain\",\"text\":%s}]}}\n",
-                   id, uri, esc ? esc : "\"\"");
+            const char *mime = strstr(path, ".json") ? "application/json" : "text/markdown";
+            printf("{\"jsonrpc\":\"2.0\",\"id\":%s,\"result\":{\"contents\":[{\"uri\":\"%s\",\"mimeType\":\"%s\",\"text\":%s}]}}\n",
+                   id, uri, mime, esc ? esc : "\"\"");
             free(esc); free(text); fflush(stdout);
         } else if (strcmp(method, "prompts/list") == 0) {
             printf("{\"jsonrpc\":\"2.0\",\"id\":%s,\"result\":%s}\n", id, prompts_json);
             fflush(stdout);
         } else if (strcmp(method, "prompts/get") == 0) {
             char name[64] = {0}; json_str(line, "name", name, sizeof(name));
+            if (strcmp(name, "plan-safe-scan") != 0) { rpc_error(id, -32602, "unknown prompt"); continue; }
             char *esc = json_encode_string("First call list_modules. Then plan an authorized scan with explicit targets, timeout/stall policy, and Linux firewall check for stateful scans. Use job tools; read results via job_result_manifest.");
             printf("{\"jsonrpc\":\"2.0\",\"id\":%s,\"result\":{\"description\":\"Plan a safe scan\",\"messages\":[{\"role\":\"user\",\"content\":{\"type\":\"text\",\"text\":%s}}]}}\n", id, esc ? esc : "\"\"");
             free(esc); fflush(stdout);

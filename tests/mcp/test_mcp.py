@@ -32,6 +32,12 @@ try:
     assert badjob["result"]["isError"]
     badres = rpc({"jsonrpc":"2.0","id":34,"method":"resources/read","params":{"uri":"xtate://nope"}})
     assert "error" in badres
+    traversal = rpc({"jsonrpc":"2.0","id":35,"method":"resources/read","params":{"uri":"xtate://docs/../README.md"}})
+    assert "error" in traversal
+    schema = rpc({"jsonrpc":"2.0","id":36,"method":"resources/read","params":{"uri":"xtate://schemas/scan-request"}})
+    sc = schema["result"]["contents"][0]
+    assert sc["mimeType"] == "application/json", sc
+    assert "\"$schema\"" in sc["text"], sc["text"][:80]
     res = rpc({"jsonrpc":"2.0","id":3,"method":"resources/list"})["result"]["resources"]
     assert any(r["uri"].endswith("/docs/overview") for r in res)
     mods = rpc({"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"describe_probe","arguments":{"name":"doh-h2"}}})
@@ -71,6 +77,8 @@ try:
     assert "contents" in detached.stdout, "MCP resources depend on the working directory"
     pr = rpc({"jsonrpc":"2.0","id":14,"method":"prompts/get","params":{"name":"plan-safe-scan"}})
     assert pr["result"]["messages"]
+    badprompt = rpc({"jsonrpc":"2.0","id":15,"method":"prompts/get","params":{"name":"no-such-prompt"}})
+    assert "error" in badprompt
     badenv = dict(os.environ, XTATE_CONTROL_TOKEN="wrong-token")
     mp_bad = subprocess.Popen([BIN, "--mcp", "--control-connect=" + ep], env=badenv,
                               stdin=subprocess.PIPE, stdout=subprocess.PIPE,
