@@ -32,7 +32,10 @@ Xtate, supported protocols, authorization, firewall prerequisites and the job
 model. `tools/list` includes descriptions, JSON input schemas and read-only /
 destructive annotations. Resources expose overview, firewall and scan-request
 schema; a `plan-safe-scan` prompt is provided. `list_modules` returns full
-module metadata.
+module metadata. Resource documents are looked up through
+`XTATE_MCP_DOCS_DIR` (when set), then the current directory and the
+executable's directory plus up to four parent directories, so MCP works from
+an arbitrary working directory in a normal install or repository build.
 
 ## Tool behavior
 

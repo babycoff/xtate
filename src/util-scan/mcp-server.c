@@ -247,6 +247,55 @@ static bool self_path(char *out, size_t cap) {
 #endif
 }
 
+static char *read_file_alloc(const char *path) {
+    FILE *f = fopen(path, "rb");
+    if (!f) return NULL;
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return NULL; }
+    long n = ftell(f);
+    if (n < 0) { fclose(f); return NULL; }
+    rewind(f);
+    char *text = malloc((size_t)n + 1);
+    if (!text) { fclose(f); return NULL; }
+    if (fread(text, 1, (size_t)n, f) != (size_t)n) { free(text); fclose(f); return NULL; }
+    text[n] = 0;
+    fclose(f);
+    return text;
+}
+
+/* Resources may be read from any working directory. Look next to the
+ * executable and up to three parent directories, which covers both an
+ * installed layout and the repository build directory. */
+static char *read_resource_file(const char *rel) {
+    char cand[1600];
+    const char *base = getenv("XTATE_MCP_DOCS_DIR");
+    if (base && base[0]) {
+        snprintf(cand, sizeof(cand), "%s/%s", base, rel);
+        char *text = read_file_alloc(cand);
+        if (text) return text;
+    }
+    char *text = read_file_alloc(rel);
+    if (text) return text;
+    char exe[1024];
+    if (!self_path(exe, sizeof(exe))) return NULL;
+    char dir[1200];
+    snprintf(dir, sizeof(dir), "%s", exe);
+    char *slash = strrchr(dir, '/');
+#ifdef _WIN32
+    char *bslash = strrchr(dir, '\\');
+    if (!slash || (bslash && bslash > slash)) slash = bslash;
+#endif
+    if (slash) *slash = 0; else dir[0] = 0;
+    for (int i = 0; i < 5; i++) {
+        snprintf(cand, sizeof(cand), "%s/%s", dir, rel);
+        text = read_file_alloc(cand);
+        if (text) return text;
+        size_t len = strlen(dir);
+        if (len + 3 >= sizeof(dir)) break;
+        memcpy(dir + len, "/..", 4);
+    }
+    return NULL;
+}
+
 static bool run_self(const char *args, char *out, size_t cap) {
     char exe[1024];
     if (!self_path(exe, sizeof(exe))) return false;
@@ -547,17 +596,7 @@ int mcp_server_run(const char *control_endpoint) {
             if (strstr(uri, "docs/overview")) path = "docs/README.md";
             else if (strstr(uri, "docs/firewall")) path = "docs/firewall.md";
             else if (strstr(uri, "schemas/scan-request")) path = "schemas/scan-request.json";
-            char *text = NULL;
-            if (path) {
-                FILE *f = fopen(path, "rb");
-                if (f) {
-                    fseek(f, 0, SEEK_END); long n = ftell(f); rewind(f);
-                    text = malloc((size_t)n + 1);
-                    if (text && fread(text, 1, (size_t)n, f) == (size_t)n) text[n] = 0;
-                    else { free(text); text = NULL; }
-                    fclose(f);
-                }
-            }
+            char *text = path ? read_resource_file(path) : NULL;
             if (!text) { rpc_error(id, -32002, "resource not found"); continue; }
             char *esc = json_encode_string(text);
             printf("{\"jsonrpc\":\"2.0\",\"id\":%s,\"result\":{\"contents\":[{\"uri\":\"%s\",\"mimeType\":\"text/plain\",\"text\":%s}]}}\n",
