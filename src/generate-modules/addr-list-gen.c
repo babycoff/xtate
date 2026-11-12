@@ -133,6 +133,7 @@ bool addrlist_hasmore(unsigned tx_index, uint64_t index) {
         char *sub = strstr(s, addrlist_conf.splitter);
         if (sub == NULL) {
             addrlist_conf.bad_lines++;
+            if (addrlist_conf.bad_lines >= 1000 || getenv("XTATE_STREAM_STRICT")) { LOG(LEVEL_ERROR, "too many invalid target lines; aborting\n"); exit(1); }
             LOG(LEVEL_ERROR, "%s:%llu: invalid splitter in address: %s",
                 addrlist_conf.filename ? addrlist_conf.filename : "<stdin>",
                 (unsigned long long)addrlist_conf.line_number, line);
@@ -145,6 +146,7 @@ bool addrlist_hasmore(unsigned tx_index, uint64_t index) {
         addrlist_conf.ip = target_parse_ip(s);
         if (addrlist_conf.ip.version == 0) {
             addrlist_conf.bad_lines++;
+            if (addrlist_conf.bad_lines >= 1000 || getenv("XTATE_STREAM_STRICT")) { LOG(LEVEL_ERROR, "too many invalid target lines; aborting\n"); exit(1); }
             sub[0] = addrlist_conf.splitter[0];
             LOG(LEVEL_ERROR, "%s:%llu: invalid ip in address: %s",
                 addrlist_conf.filename ? addrlist_conf.filename : "<stdin>",
@@ -159,6 +161,7 @@ bool addrlist_hasmore(unsigned tx_index, uint64_t index) {
             ports.list[0].end != ports.list[0].begin) {
             rangelist_rm_all(&ports);
             addrlist_conf.bad_lines++;
+            if (addrlist_conf.bad_lines >= 1000 || getenv("XTATE_STREAM_STRICT")) { LOG(LEVEL_ERROR, "too many invalid target lines; aborting\n"); exit(1); }
             sub[0] = addrlist_conf.splitter[0];
             LOG(LEVEL_ERROR, "%s:%llu: invalid port in address: %s",
                 addrlist_conf.filename ? addrlist_conf.filename : "<stdin>",

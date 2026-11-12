@@ -30,6 +30,7 @@ struct AddrStreamConf {
     char     *filename;
     uint64_t  line_number;
     uint64_t  bad_lines;
+    uint64_t  valid_lines;
 };
 
 static struct AddrStreamConf addrstream_conf = {0};
@@ -157,8 +158,14 @@ bool addrstream_hasmore(unsigned tx_index, uint64_t index) {
             if (ferror(addrstream_conf.fp))
                 LOG(LEVEL_ERROR, "%s: read error\n",
                     addrstream_conf.filename ? addrstream_conf.filename : "<stdin>");
-            else
+            else {
                 LOG(LEVEL_DEBUG, "(stream generator) EOF of stream.\n");
+                if (addrstream_conf.valid_lines == 0 && addrstream_conf.bad_lines > 0) {
+                    LOG(LEVEL_ERROR, "addrstream_conf: no valid targets; all lines were rejected\n",
+                        addrstream_conf.filename ? addrstream_conf.filename : "<stdin>");
+                    exit(1);
+                }
+            }
             return false;
         }
         char *s = line;
@@ -178,6 +185,7 @@ bool addrstream_hasmore(unsigned tx_index, uint64_t index) {
         char *sub = strstr(s, addrstream_conf.splitter);
         if (sub == NULL) {
             addrstream_conf.bad_lines++;
+            if (addrstream_conf.bad_lines >= 1000 || getenv("XTATE_STREAM_STRICT")) { LOG(LEVEL_ERROR, "too many invalid target lines; aborting\n"); exit(1); }
             LOG(LEVEL_ERROR, "%s:%llu: invalid splitter in address: %s",
                 addrstream_conf.filename ? addrstream_conf.filename : "<stdin>",
                 (unsigned long long)addrstream_conf.line_number, line);
@@ -191,6 +199,7 @@ bool addrstream_hasmore(unsigned tx_index, uint64_t index) {
         if (err) {
             sub[0] = addrstream_conf.splitter[0];
             addrstream_conf.bad_lines++;
+            if (addrstream_conf.bad_lines >= 1000 || getenv("XTATE_STREAM_STRICT")) { LOG(LEVEL_ERROR, "too many invalid target lines; aborting\n"); exit(1); }
             LOG(LEVEL_ERROR, "%s:%llu: invalid ip in address: %s",
                 addrstream_conf.filename ? addrstream_conf.filename : "<stdin>",
                 (unsigned long long)addrstream_conf.line_number, line);
@@ -201,6 +210,7 @@ bool addrstream_hasmore(unsigned tx_index, uint64_t index) {
         if (err) {
             sub[0] = addrstream_conf.splitter[0];
             addrstream_conf.bad_lines++;
+            if (addrstream_conf.bad_lines >= 1000 || getenv("XTATE_STREAM_STRICT")) { LOG(LEVEL_ERROR, "too many invalid target lines; aborting\n"); exit(1); }
             LOG(LEVEL_ERROR, "%s:%llu: invalid port in address: %s",
                 addrstream_conf.filename ? addrstream_conf.filename : "<stdin>",
                 (unsigned long long)addrstream_conf.line_number, line);
@@ -235,13 +245,22 @@ bool addrstream_hasmore(unsigned tx_index, uint64_t index) {
         if (cur_tgt->count_ipv4s == 0 && cur_tgt->count_ipv6s.hi == 0 &&
             cur_tgt->count_ipv6s.lo == 0)
             continue;
+        addrstream_conf.valid_lines++;
         break;
     }
 
     /*update relevant info*/
 
-    addrstream_conf.range_all =
-        (cur_tgt->count_ipv4s + cur_tgt->count_ipv6s.lo) * cur_tgt->count_ports;
+    if (cur_tgt->count_ipv6s.hi != 0 || cur_tgt->count_ports == 0) {
+        LOG(LEVEL_ERROR, "(stream generator) target range too large or empty\n");
+        return false;
+    }
+    uint64_t total_ips = cur_tgt->count_ipv4s + cur_tgt->count_ipv6s.lo;
+    if (total_ips > UINT64_MAX / cur_tgt->count_ports) {
+        LOG(LEVEL_ERROR, "(stream generator) target count overflow\n");
+        return false;
+    }
+    addrstream_conf.range_all = total_ips * cur_tgt->count_ports;
     addrstream_conf.index = 0;
 
     /*init blackrock again*/

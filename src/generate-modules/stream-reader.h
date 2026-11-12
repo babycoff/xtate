@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 static inline int stream_read_line(FILE *fp, char *buf, size_t cap,
                                    const char *filename, uint64_t *line,
                                    uint64_t *bad, bool *too_long) {
@@ -16,6 +17,12 @@ static inline int stream_read_line(FILE *fp, char *buf, size_t cap,
         int c;
         while ((c = fgetc(fp)) != EOF && c != '\n') {}
         (*bad)++;
+        if (*bad >= 1000 || getenv("XTATE_STREAM_STRICT")) {
+            fprintf(stderr, "%s:%llu: too many/invalid target lines\n",
+                    filename ? filename : "<stdin>",
+                    (unsigned long long)*line);
+            exit(1);
+        }
         *too_long = true;
         (void)filename;
         return 1;

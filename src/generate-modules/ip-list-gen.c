@@ -191,6 +191,7 @@ bool iplist_hasmore(unsigned tx_index, uint64_t index) {
         iplist_conf.ip = target_parse_ip(line);
         if (iplist_conf.ip.version == 0) {
             iplist_conf.bad_lines++;
+            if (iplist_conf.bad_lines >= 1000 || getenv("XTATE_STREAM_STRICT")) { LOG(LEVEL_ERROR, "too many invalid target lines; aborting\n"); exit(1); }
             LOG(LEVEL_ERROR, "%s:%llu: invalid ip in address: %s",
                 iplist_conf.filename ? iplist_conf.filename : "<stdin>",
                 (unsigned long long)iplist_conf.line_number, line);

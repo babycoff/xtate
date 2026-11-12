@@ -29,6 +29,7 @@ struct IpStreamConf {
     char     *filename;
     uint64_t  line_number;
     uint64_t  bad_lines;
+    uint64_t  valid_lines;
 };
 
 static struct IpStreamConf ipstream_conf = {0};
@@ -164,8 +165,14 @@ bool ipstream_hasmore(unsigned tx_index, uint64_t index) {
         if (s == NULL) {
             if (ferror(ipstream_conf.fp))
                 LOG(LEVEL_DEBUG, "(stream generator) error of stream.\n");
-            else if (feof(ipstream_conf.fp))
+            else if (feof(ipstream_conf.fp)) {
                 LOG(LEVEL_DEBUG, "(stream generator) EOF of stream.\n");
+                if (ipstream_conf.valid_lines == 0 && ipstream_conf.line_number > 0) {
+                    LOG(LEVEL_ERROR, "%s: no valid targets; all input lines were rejected\n",
+                        ipstream_conf.filename ? ipstream_conf.filename : "<stdin>");
+                    exit(1);
+                }
+            }
             return false;
         }
 
@@ -174,6 +181,7 @@ bool ipstream_hasmore(unsigned tx_index, uint64_t index) {
             int _c;
             while ((_c = fgetc(ipstream_conf.fp)) != EOF && _c != '\n') {}
             ipstream_conf.bad_lines++;
+            if (ipstream_conf.bad_lines >= 1000 || getenv("XTATE_STREAM_STRICT")) { LOG(LEVEL_ERROR, "too many invalid target lines; aborting\n"); exit(1); }
             LOG(LEVEL_ERROR, "%s:%llu: target line too long (max %zu bytes)\n",
                 ipstream_conf.filename ? ipstream_conf.filename : "<stdin>",
                 (unsigned long long)ipstream_conf.line_number,
@@ -188,6 +196,7 @@ bool ipstream_hasmore(unsigned tx_index, uint64_t index) {
         int err = targetset_add_ip_str(cur_tgt, line);
         if (err) {
             ipstream_conf.bad_lines++;
+            if (ipstream_conf.bad_lines >= 1000 || getenv("XTATE_STREAM_STRICT")) { LOG(LEVEL_ERROR, "too many invalid target lines; aborting\n"); exit(1); }
             LOG(LEVEL_ERROR, "%s:%llu: invalid ip in address: %s",
                 ipstream_conf.filename ? ipstream_conf.filename : "<stdin>",
                 (unsigned long long)ipstream_conf.line_number, line);
@@ -216,11 +225,20 @@ bool ipstream_hasmore(unsigned tx_index, uint64_t index) {
         if (cur_tgt->count_ipv4s == 0 && cur_tgt->count_ipv6s.hi == 0 &&
             cur_tgt->count_ipv6s.lo == 0)
             continue;
+        ipstream_conf.valid_lines++;
         break;
     }
 
-    ipstream_conf.range_all =
-        (cur_tgt->count_ipv4s + cur_tgt->count_ipv6s.lo) * cur_tgt->count_ports;
+    if (cur_tgt->count_ipv6s.hi != 0 || cur_tgt->count_ports == 0) {
+        LOG(LEVEL_ERROR, "(stream generator) target range too large or empty\n");
+        return false;
+    }
+    uint64_t total_ips = cur_tgt->count_ipv4s + cur_tgt->count_ipv6s.lo;
+    if (total_ips > UINT64_MAX / cur_tgt->count_ports) {
+        LOG(LEVEL_ERROR, "(stream generator) target count overflow\n");
+        return false;
+    }
+    ipstream_conf.range_all = total_ips * cur_tgt->count_ports;
     ipstream_conf.index = 0;
 
     /*init blackrock again*/
