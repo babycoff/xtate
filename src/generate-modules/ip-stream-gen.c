@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "../xconf.h"
+#include "../util-data/file-open.h"
 #include "../target/target-cookie.h"
 #include "../target/target-set.h"
 #include "../target/target-rangev4.h"
@@ -63,7 +64,7 @@ static ConfRes SET_file(void *conf, const char *name, const char *value) {
     UNUSEDPARM(conf);
     UNUSEDPARM(name);
 
-    ipstream_conf.fp = fopen(value, "rb");
+    ipstream_conf.fp = file_open_utf8(value);
     if (ipstream_conf.fp == NULL) {
         LOG(LEVEL_ERROR, "(stream generator) %s: %s\n", value, strerror(errno));
         return Conf_ERR;
@@ -159,6 +160,14 @@ bool ipstream_hasmore(unsigned tx_index, uint64_t index) {
             return false;
         }
 
+        size_t _ll = strlen(line);
+        if (_ll == sizeof(line) - 1 && line[_ll - 1] != '\n') {
+            int _c;
+            while ((_c = fgetc(ipstream_conf.fp)) != EOF && _c != '\n') {}
+            LOG(LEVEL_ERROR, "(generate) target line too long (max %zu bytes)\n",
+                sizeof(line) - 1);
+            continue;
+        }
         /*absolute null line or the last line*/
         if (s[0] == '\n' || s[0] == '\r') {
             continue;

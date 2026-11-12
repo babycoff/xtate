@@ -1,6 +1,7 @@
 #include "generate-modules.h"
 
 #include "../xconf.h"
+#include "../util-data/file-open.h"
 #include "../target/target-cookie.h"
 #include "../target/target-parse.h"
 #include "../target/target-rangeport.h"
@@ -36,7 +37,7 @@ static ConfRes SET_file(void *conf, const char *name, const char *value) {
     UNUSEDPARM(conf);
     UNUSEDPARM(name);
 
-    addrlist_conf.fp = fopen(value, "rb");
+    addrlist_conf.fp = file_open_utf8(value);
     if (addrlist_conf.fp == NULL) {
         LOG(LEVEL_ERROR, "(list generator) %s: %s\n", value, strerror(errno));
         return Conf_ERR;
@@ -105,6 +106,14 @@ bool addrlist_hasmore(unsigned tx_index, uint64_t index) {
             return false;
         }
 
+        size_t _ll = strlen(line);
+        if (_ll == sizeof(line) - 1 && line[_ll - 1] != '\n') {
+            int _c;
+            while ((_c = fgetc(addrlist_conf.fp)) != EOF && _c != '\n') {}
+            LOG(LEVEL_ERROR, "(generate) target line too long (max %zu bytes)\n",
+                sizeof(line) - 1);
+            continue;
+        }
         /*absolute null line or the last line*/
         if (s[0] == '\n' || s[0] == '\r') {
             continue;
@@ -134,6 +143,7 @@ bool addrlist_hasmore(unsigned tx_index, uint64_t index) {
         rangelist_parse_ports(&ports, port_str, &err, 0);
         if (err || ports.list_len != 1 ||
             ports.list[0].end != ports.list[0].begin) {
+            rangelist_rm_all(&ports);
             sub[0] = addrlist_conf.splitter[0];
             LOG(LEVEL_ERROR, "(list generator) invalid port in address: %s",
                 line);
@@ -142,6 +152,7 @@ bool addrlist_hasmore(unsigned tx_index, uint64_t index) {
         }
 
         addrlist_conf.port = ports.list[0].begin;
+        rangelist_rm_all(&ports);
 
         break;
     }
