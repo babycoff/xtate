@@ -54,3 +54,10 @@ than one route; split those into separate jobs.
 resources/list, describe_probe, structured explain_target, validate/start
 guards, start_scan -> job_status/job_result_manifest/job_list, and mixed-route
 rejection when the target set actually spans routes.
+
+## P0 test coverage
+
+`tests/mcp/test_mcp.py` additionally asserts unknown RPC methods, unknown
+tools, malformed/absent tool arguments, malformed resource URIs, unknown job
+ids, unwritable result paths, real `completed` jobs, and presence of
+`log_path`/`stderr_tail`.

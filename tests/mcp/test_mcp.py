@@ -22,6 +22,16 @@ try:
     for n in ["list_modules","describe_probe","explain_target","check","validate_config","start_scan","job_list","job_status","job_result_manifest","job_cancel"]: assert n in names, n
     for t in tools:
         assert t.get("description"); assert "inputSchema" in t
+    unk = rpc({"jsonrpc":"2.0","id":30,"method":"no/such/method"})
+    assert "error" in unk
+    mp.stdin.write(json.dumps({"jsonrpc":"2.0","id":31,"method":"tools/call","params":{"name":"no_such_tool","arguments":{}}})+"\n"); mp.stdin.flush()
+    nt = json.loads(mp.stdout.readline()); assert nt["result"]["isError"]
+    badargs = rpc({"jsonrpc":"2.0","id":32,"method":"tools/call","params":{"name":"validate_config","arguments":{}}})
+    assert badargs["result"]["isError"]
+    badjob = rpc({"jsonrpc":"2.0","id":33,"method":"tools/call","params":{"name":"job_status","arguments":{"job_id":"job-nope"}}})
+    assert badjob["result"]["isError"]
+    badres = rpc({"jsonrpc":"2.0","id":34,"method":"resources/read","params":{"uri":"xtate://nope"}})
+    assert "error" in badres
     res = rpc({"jsonrpc":"2.0","id":3,"method":"resources/list"})["result"]["resources"]
     assert any(r["uri"].endswith("/docs/overview") for r in res)
     mods = rpc({"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"describe_probe","arguments":{"name":"doh-h2"}}})
@@ -32,11 +42,16 @@ try:
     bad = rpc({"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"start_scan","arguments":{"scan":"tcp-syn","targets":["127.0.0.1"]}}})
     assert bad["result"]["isError"]
     out = os.environ.get("XTATE_TEST_OUT", "mcp-test.ndjson")
-    started = rpc({"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"start_scan","arguments":{"scan":"tcp-syn","targets":["127.0.0.1"],"ports":[1],"result_path":out,"authorized":True}}})
+    started = rpc({"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"start_scan","arguments":{"scan":"tcp-syn","targets":["8.8.8.8"],"ports":[53],"result_path":out,"authorized":True}}})
     assert not started["result"]["isError"], started
     job = json.loads(started["result"]["content"][0]["text"])["result"]["job_id"]
-    time.sleep(1)
+    time.sleep(4)
     st = rpc({"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"job_status","arguments":{"job_id":job}}}); assert not st["result"]["isError"]
+    stj = json.loads(st["result"]["content"][0]["text"])["result"]
+    assert stj["state"] == "completed", stj
+    assert stj["exit_code"] == 0
+    assert os.path.exists(out)
+    assert "log_path" in stj and "stderr_tail" in stj
     man = rpc({"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"job_result_manifest","arguments":{"job_id":job}}}); assert not man["result"]["isError"]
     lst = rpc({"jsonrpc":"2.0","id":10,"method":"tools/call","params":{"name":"job_list","arguments":{}}}); assert not lst["result"]["isError"]
     mex = rpc({"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"explain_target","arguments":{"target":"8.8.8.8,2001:4860:4860::8888"}}})
@@ -59,6 +74,9 @@ try:
         assert "UNAUTHORIZED" in bad["result"]["content"][0]["text"]
     finally:
         mp_bad.terminate()
+    blocked = "C:/Windows/System32/xtate/mcp.ndjson" if sys.platform == "win32" else "/proc/xtate/mcp.ndjson"
+    bw = rpc({"jsonrpc":"2.0","id":35,"method":"tools/call","params":{"name":"start_scan","arguments":{"scan":"tcp-syn","targets":["8.8.8.8"],"result_path":blocked,"authorized":True}}})
+    assert bw["result"]["isError"]
     cj = rpc({"jsonrpc":"2.0","id":15,"method":"tools/call","params":{"name":"start_scan","arguments":{
         "scan":"tcp-syn","targets":["127.0.0.1"],"ports":[1],
         "result_path":out,"authorized":True}}})
