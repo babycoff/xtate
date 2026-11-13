@@ -759,12 +759,48 @@ static void gui_handle(gui_sock s, const char *endpoint, const char *token,
     }
 }
 
+#if defined(_WIN32)
+static int gui_is_elevated(void) {
+    HANDLE token = NULL;
+    TOKEN_ELEVATION elevation;
+    DWORD size = sizeof(elevation);
+    int elevated = 0;
+
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
+        if (GetTokenInformation(token, TokenElevation, &elevation,
+                                sizeof(elevation), &size)) {
+            elevated = elevation.TokenIsElevated != 0;
+        }
+        CloseHandle(token);
+    }
+    return elevated;
+}
+#endif
+
 static void gui_open_browser(const char *url) {
 #if defined(_WIN32)
     wchar_t wurl[512];
     if (MultiByteToWideChar(CP_UTF8, 0, url, -1, wurl,
-                            (int)(sizeof(wurl) / sizeof(wurl[0]))) > 0)
-        ShellExecuteW(NULL, L"open", wurl, NULL, NULL, SW_SHOWNORMAL);
+                            (int)(sizeof(wurl) / sizeof(wurl[0]))) <= 0)
+        return;
+
+    /* Edge and other Chromium browsers object when an elevated process asks
+     * an existing medium-integrity browser to open a URL, and show an
+     * "existing instance is running with elevated privileges" dialog. Ask
+     * the already-running Explorer shell to open it instead; Explorer runs
+     * at medium integrity and uses the normal user's browser instance. */
+    if (gui_is_elevated()) {
+        wchar_t params[600];
+        swprintf(params, sizeof(params) / sizeof(params[0]), L"\"%ls\"", wurl);
+        if ((INT_PTR)ShellExecuteW(NULL, L"open", L"explorer.exe", params,
+                                   NULL, SW_SHOWNORMAL) > 32)
+            return;
+        printf("Could not open the browser automatically; open %s manually.\n",
+               url);
+        return;
+    }
+
+    ShellExecuteW(NULL, L"open", wurl, NULL, NULL, SW_SHOWNORMAL);
 #else
     pid_t pid = fork();
     if (pid == 0) {

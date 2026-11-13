@@ -116,7 +116,8 @@ JSON 控制 API。scan/probe 参数可在 Method 面板中编辑。
   （`log`、`result` 或 `manifest`）；服务端从 job status/manifest 解析路径，绝不打开
   客户端提供的路径。
 - **不经过 shell。** GUI 是进程内 C 代码；自动打开浏览器在 Windows 使用
-  `ShellExecuteW`，在 Unix 使用 `xdg-open`。
+  `ShellExecuteW`/Explorer，在 Unix 使用 `xdg-open`。当 Xtate 以管理员权限运行时，
+  Windows 通过已运行的 Explorer 打开 URL，避免把浏览器强制提升为管理员实例。
 - **token 处理。** 连接已有控制平面时，其 control-plane token 只从环境读取并由服务端
   添加；页面 JavaScript 不会拿到它。私有模式下若环境没有 token，GUI 会生成临时 token
   并在退出时清除。浏览器会话 token 会出现在页面源码中，因此应把浏览器配置视为
@@ -135,6 +136,7 @@ GUI 不是扫描的安全边界。授权、目标数量、速率、路由预检�
 | `GUI_TOKEN_REQUIRED` | 从当前打印的 URL 重新加载页面；token 必须匹配当前服务进程。 |
 | `AUTHORIZATION_REQUIRED` | 在向导中勾选授权；API 也要求 `params.authorized=true`。 |
 | `multiple default interfaces detected` | 运行 `xtate --explain-target=<target>`，把 `-if` 值填入接口字段。 |
+| Edge 提示现有实例以提升权限运行、是否重启 | 当前构建在 Xtate 以管理员权限运行时通过 Explorer 打开 URL，避免该提示。旧构建可加 `--gui-no-open`，把打印出的 URL 粘贴到普通权限启动的浏览器。 |
 
 ## 测试
 

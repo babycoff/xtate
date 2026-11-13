@@ -139,7 +139,9 @@ arguments are editable in the Method panel.
   or `manifest`); the server resolves the path from the job status/manifest and
   never opens a client-supplied path.
 - **No shell.** The GUI is in-process C; the optional browser launch uses
-  `ShellExecuteW` on Windows and `xdg-open` on Unix.
+  `ShellExecuteW`/Explorer on Windows and `xdg-open` on Unix. When Xtate is
+  elevated, Windows opens the URL through the running Explorer shell so the
+  browser is not forced into an elevated instance.
 - **Token handling.** An attached daemon's control-plane token is read from the
   environment and added by the server; page JavaScript never receives it. In
   private mode the GUI creates an ephemeral token when the environment has none
@@ -160,6 +162,7 @@ and MCP server.
 | `GUI_TOKEN_REQUIRED` | Reload the page from the printed URL; the token must match the current server process. |
 | `AUTHORIZATION_REQUIRED` | Tick the authorization checkbox in the wizard; the API also requires `params.authorized=true`. |
 | `multiple default interfaces detected` | Run `xtate --explain-target=<target>`, then paste the `-if` value into the interface field. |
+| Edge asks to restart because the existing instance is elevated | Current builds open the URL through Explorer when Xtate runs as Administrator, avoiding the prompt. On an older build, use `--gui-no-open` and paste the printed URL into a normally started browser. |
 
 ## Tests
 
