@@ -256,8 +256,9 @@ Its tool surface is intentionally small and structured: `capabilities`,
 `preflight`, `validate_config`, `start_scan`, `job_list`, `job_status`,
 `job_result_manifest`, `job.records` and `job_cancel` — build/interface/module discovery,
 route/firewall explanation, packet-free preflight, config validation, job
-start/list/status/cancel and result-manifest reads. Scan data is returned as
-filesystem metadata, not inline: the client reads the manifest, then chunks.
+start/list/status/cancel, bounded `job.records` pages and result-manifest
+metadata. Whole result sets are not inlined: use `job.records` for pages or
+read the manifest and chunks directly when the host can access them.
 
 MCP adds its own boundaries:
 

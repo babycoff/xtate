@@ -27,7 +27,8 @@ Every successful tool result has this shape:
 ```
 
 `text` is the JSON payload; parse it a second time. A rejected request sets
-`isError: true`. Scan result records are never returned inline.
+`isError: true`. Result records are returned only in bounded `job.records`
+pages, never as the whole result set.
 
 ## Read-only tools
 

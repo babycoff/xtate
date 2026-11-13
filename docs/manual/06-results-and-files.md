@@ -269,9 +269,10 @@ chunks in the manifest) yourself; the control plane is not a result server.
 The GUI's **Live scan** page polls `job.status` and shows state, sent,
 targets, phase, heartbeat age, elapsed time, exit code and a result-manifest
 card. The **Results** page lists scans managed by the control plane (id, state,
-result path) newest first; selecting a scan returns to its Live view. The
-console does not render individual result records and has no server-side
-record viewer, so open the NDJSON/chunk files with your own tooling. This is
+result path) newest first; selecting a scan returns to its Live view. The Live
+view also has a **Result records** card that pages the job's result through
+`/api/results` (50 valid NDJSON records at a time). For compressed or chunked
+results, decompress and open the manifest chunks with your own tooling. This is
 also why result paths must be real files on the machine running the daemon.
 
 See [02 · GUI console](./02-gui-console.md) for the page-by-page description

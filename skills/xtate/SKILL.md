@@ -94,17 +94,30 @@ Poll `job_status` every 2-5 seconds. Stop polling when the state is
 
 ### 6. Read results
 
-Call `job_result_manifest`. It returns paths and completeness, never result
-bytes. Then:
+Call `job_result_manifest` first. It returns paths and completeness, never
+result bytes.
+
+Prefer `job.records` for reading results through MCP:
+
+1. Call `job.records` with `{"job_id":"...","offset":0,"limit":50}`.
+2. Continue with `next_offset` while records are returned and the user needs
+   more. `count` is the number of valid records in this page.
+3. Malformed/partial NDJSON lines are skipped by the server; do not treat a
+   short page as corruption.
+4. Report counts and notable fields; do not dump full record pages into chat.
+
+If the MCP host can read the worker filesystem and the user needs the complete
+raw output, use `job_result_manifest`:
 
 1. Read `<result_path>.manifest.json` if present; iterate `chunks` in id order.
 2. Otherwise read `result_path` itself.
 3. Parse NDJSON: one JSON object per line. Do not JSON-parse a partially written
    file unless the user explicitly wants partial results.
-4. Report counts and notable fields; do not dump raw chunks into chat.
 
-Compression is opt-in (`"zstd"`); decompress chunks before parsing when set.
-`quota_bytes` is a post-completion warning, not a live limit.
+Compression and chunking are opt-in. `job.records` reads the job's plain result
+file; if `job_result_manifest` reports chunks or `"compression":"zstd"`, read
+and decompress the manifest chunks instead. `quota_bytes` is a post-completion
+warning, not a live limit.
 
 ## Large target sets
 
