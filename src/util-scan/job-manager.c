@@ -43,6 +43,8 @@ struct Job {
     uint64_t  result_chunk_bytes;
     uint64_t  result_quota_bytes;
     char     *result_compression;
+    char     *request_path;
+    bool      request_cleaned;
     bool      result_index;
     bool      result_finalized;
     unsigned  exit_code;
@@ -162,14 +164,56 @@ static void close_handles(Job *j) {
 #endif
 }
 
+static void cleanup_request_file(Job *j) {
+    if (!j || !j->request_path || j->request_cleaned) return;
+#ifdef _WIN32
+    {
+        wchar_t wpath[2048];
+        if (MultiByteToWideChar(CP_UTF8, 0, j->request_path, -1, wpath,
+                (int)(sizeof(wpath) / sizeof(wpath[0]))) > 0)
+            DeleteFileW(wpath);
+    }
+#else
+    unlink(j->request_path);
+#endif
+    j->request_cleaned = true;
+    if (j->heartbeat_path) {
+#ifdef _WIN32
+        wchar_t wpath[2048];
+        if (MultiByteToWideChar(CP_UTF8, 0, j->heartbeat_path, -1, wpath,
+                (int)(sizeof(wpath) / sizeof(wpath[0]))) > 0)
+            DeleteFileW(wpath);
+#else
+        unlink(j->heartbeat_path);
+#endif
+    }
+}
+
 static void job_free(Job *j) {
     if (!j) return;
+    cleanup_request_file(j);
     close_handles(j);
     free(j->result_path);
     free(j->log_path);
     free(j->heartbeat_path);
     free(j->result_compression);
+    free(j->request_path);
     free(j);
+}
+
+void job_set_request_path(Job *j, const char *path) {
+    size_t n;
+    char *copy;
+    if (!j) return;
+    free(j->request_path);
+    j->request_path = NULL;
+    j->request_cleaned = false;
+    if (!path) return;
+    n = strlen(path) + 1;
+    copy = (char *)malloc(n);
+    if (!copy) return;
+    memcpy(copy, path, n);
+    j->request_path = copy;
 }
 
 void job_manager_lock(JobManager *m) {
@@ -545,7 +589,11 @@ static bool read_heartbeat(Job *j, long long *sent, long long *targets,
 }
 
 JobState job_poll(Job *j) {
-    if (!j || job_is_terminal(j)) return j ? j->state : JOB_FAILED;
+    if (!j) return JOB_FAILED;
+    if (job_is_terminal(j)) {
+        cleanup_request_file(j);
+        return j->state;
+    }
     if (j->state != JOB_RUNNING) return j->state;
 
     /* Reap a finished worker before applying liveness/deadline rules. */
@@ -559,6 +607,7 @@ JobState job_poll(Job *j) {
         j->end_ms = now_ms();
         j->state = j->cancel_requested ? JOB_CANCELLED
                                        : (code == 0 ? JOB_COMPLETED : JOB_FAILED);
+        cleanup_request_file(j);
         return j->state;
     }
 #else
@@ -571,6 +620,7 @@ JobState job_poll(Job *j) {
         j->state = j->cancel_requested ? JOB_CANCELLED
                                        : (j->exit_code == 0 ? JOB_COMPLETED
                                                             : JOB_FAILED);
+        cleanup_request_file(j);
         return j->state;
     }
 #endif
@@ -597,6 +647,7 @@ JobState job_poll(Job *j) {
         terminate_job(j);
         j->state = JOB_STALLED;
         j->end_ms = now;
+        cleanup_request_file(j);
         return j->state;
     }
     if (!j->cancel_requested && j->stall_timeout_sec &&
@@ -604,6 +655,7 @@ JobState job_poll(Job *j) {
         terminate_job(j);
         j->state = JOB_STALLED;
         j->end_ms = now;
+        cleanup_request_file(j);
         return j->state;
     }
     if (!j->cancel_requested && j->timeout_sec &&
@@ -611,6 +663,7 @@ JobState job_poll(Job *j) {
         terminate_job(j);
         j->state = JOB_TIMED_OUT;
         j->end_ms = now_ms();
+        cleanup_request_file(j);
         return j->state;
     }
     return j->state;

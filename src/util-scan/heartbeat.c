@@ -26,7 +26,14 @@ void heartbeat_write(const char *path, uint64_t sent, uint64_t targets,
     fflush(fp);
     fclose(fp);
 #ifdef _WIN32
-    MoveFileExA(tmp, path, MOVEFILE_REPLACE_EXISTING);
+    {
+        wchar_t wtmp[1200], wpath[1200];
+        if (MultiByteToWideChar(CP_UTF8, 0, tmp, -1, wtmp,
+                (int)(sizeof(wtmp) / sizeof(wtmp[0]))) > 0 &&
+            MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath,
+                (int)(sizeof(wpath) / sizeof(wpath[0]))) > 0)
+            MoveFileExW(wtmp, wpath, MOVEFILE_REPLACE_EXISTING);
+    }
 #else
     rename(tmp, path);
 #endif

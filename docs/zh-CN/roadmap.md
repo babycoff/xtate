@@ -237,13 +237,14 @@ CLI 仍是事实来源；控制面拥有 job，MCP 是类型化客户端。
   `--explain-target`/`--list-if`。
 - 扫描启动横幅和元信息文件显示实际 `Rate:`（默认值或 `--rate`）。
 
-3.0.0-rc.2 已交付（候选版本）：
+3.0.0-rc.3 已交付（候选版本）：
 
-- 以扫描为中心的浏览器控制台：服务端预检、实时任务、网卡、模块目录和设置；
+- 重新设计的扫描优先浏览器控制台：可读的 Paper/Graphite 主题、按类型分组的模块目录、真正的 System 偏好设置、大号实时状态标题、结果分页和用默认程序打开任务文件；
+- 服务端预检与受管的结果/状态目录，任务结束后清理请求与心跳文件；
 - `xtate --gui` 与 `xtate --mcp` 一条命令启动私有控制面；
-- `--list-capabilities` 与 MCP `capabilities` 工具；
+- `--list-capabilities`，以及 MCP `capabilities`、`iface.list`、`preflight`、`job.records` 和带令牌保护的私有控制面；
 - 明确的“HTTP/3 + QUIC 仅 Linux”能力报告，Windows 显示为不可用；
-- `docs/manual/` 下的结构化双语文档正在编写。
+- `docs/manual/` 与 `docs/zh-CN/manual/` 下的双语 10 章手册。
 
 仍待完成：
 
@@ -261,7 +262,7 @@ CLI 仍是事实来源；控制面拥有 job，MCP 是类型化客户端。
 2.44.0  控制平面浏览器 GUI（已完成，已发布）
 2.44.1  TUI/GUI 一条命令启动私有控制面（已完成，已发布）
 2.44.2  RAW/TUN 链路预检 + 启动速率显示（已完成）
-3.0.0-rc.2  扫描优先 GUI + AI/MCP 启动 + 能力报告（候选）
+3.0.0-rc.3  重新设计的 GUI + AI/MCP 工具 + 能力报告（候选）
 下一步  RC 试用修复、评测套件与打包
 以后    MCP generate/流式输入
 ```

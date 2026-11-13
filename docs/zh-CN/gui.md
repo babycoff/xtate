@@ -1,7 +1,7 @@
 # 浏览器 GUI
 
 Xtate 提供一个仅监听环回地址的浏览器控制平面面板。它和 MCP、TUI 一样是客户端：
-负责展示任务、启动已授权扫描和取消任务；worker、超时、结果文件与真实扫描过程仍由
+负责展示 job、启动已授权扫描和取消任务；worker、超时、结果文件与真实扫描过程仍由
 控制平面掌握。
 
 GUI 面向本机分析工作站，不是公网 Web 服务，也不会通过 TCP 暴露控制平面。
@@ -40,7 +40,7 @@ Windows PowerShell：
 export XTATE_CONTROL_TOKEN='change-me'
 xtate --control-plane=/tmp/xtate-ctl.sock
 
-# 另一个终端
+# second terminal
 xtate --gui --control-connect=/tmp/xtate-ctl.sock
 ```
 
@@ -50,7 +50,7 @@ Windows PowerShell：
 $env:XTATE_CONTROL_TOKEN = 'change-me'
 .\bin\xtate.exe --control-plane=\\.\pipe\xtate-ctl
 
-# 另一个终端
+# second terminal
 .\bin\xtate.exe --gui --control-connect=\\.\pipe\xtate-ctl
 ```
 
@@ -65,31 +65,41 @@ $env:XTATE_CONTROL_TOKEN = 'change-me'
 浏览器 URL 形如 `http://127.0.0.1:<port>/`。会话 token 只打印一次，同时注入页面；
 没有匹配 `X-Xtate-GUI-Token` 请求头的调用会被拒绝。
 
+结果与日志文件不会写在二进制旁边。控制平面使用托管状态目录：Windows 上是
+`%LOCALAPPDATA%\xtate\results`，Linux 上是 `$XDG_STATE_HOME/xtate/results`（回退到
+`$HOME/.local/state/xtate/results`）。设置 `XTATE_STATE_DIR` 可以覆盖它。请求文件位于
+同一状态目录下，job 进入终态时会被删除。
+
 ## 控制台功能
 
-GUI 以扫描为中心：默认页是 **New scan**，不是任务表格。
+GUI 以扫描为中心：默认页是 **New scan**，不是 job 表格。
 
-- **New scan** 接受逗号、范围或 CIDR 形式的 IPv4/IPv6 目标，选择 11 个扫描引擎之一；
-  只有引擎需要时才显示 probe，ICMP/ARP/NDP 扫描会隐藏端口。速率、超时和可选接口
+- **New scan** 接受逗号、范围或 CIDR 形式的 IPv4/IPv6 目标，从 11 个扫描引擎中选择一个；
+  只有引擎需要时才显示探测选项，ICMP/ARP/NDP 扫描会隐藏端口。速率、超时和可选接口
   也在此设置。
-- 服务端**预检**（`POST /api/preflight`）解析与 `job.start` 相同的请求，检查目标语法
-  与数量、路由、源地址、网关、链路类型和 raw-IP 能力，并拒绝未知 scan/probe、TCP
+- 服务端**预检**（`POST /api/preflight`）解析与 `job.start` 相同的请求，校验目标语法
+  与数量、路由、源地址、网关、链路类型和 raw-IP 能力，并拒绝未知扫描/探测、TCP
   引擎只给 UDP 端口以及非法数值。预检不发包。
 - **Start scan** 只有在预检通过、勾选授权、且预检后表单未改动时才可用。桥接层仍会
   拒绝 `params.authorized` 不为字面 `true` 的 `job.start`。
-- **模块参数** 会显示当前扫描引擎和探测的开关与文本参数，作为 `scan_args`/
+- **模块参数** 会显示当前扫描引擎和探测暴露的开关与文本参数，作为 `scan_args`/
   `probe_args` 发送；留空即不发送。预检不校验参数名或取值，非法值会让 job 失败，
   并在 `stderr_tail`/日志中出现 worker 参数错误。
-- **Live** 每 1.5 秒轮询 `job.status`，显示阶段、sent/targets、心跳、耗时、退出码、
-  结果/日志路径和有界 stderr 尾部；queued/running 任务经确认可取消。完成后的结果可
-  通过 **加载记录** 分页查看（`GET /api/results?job_id=...&offset=...&limit=...`，
-  每页 50 条合法 NDJSON 记录；损坏或不完整的行会跳过）。
-- **Results** 通过 `job.list` 列出任务，打开后显示清单状态、结果字节数与路径。
-- **Interfaces** 显示采集网卡的 IPv4/IPv6、MAC、网关、默认标记、链路类型和 raw-IP
-  能力；**Modules** 搜索模块目录；**Settings** 显示运行时、能力和安全状态。
+- **Live** 以可配置的间隔轮询 `job.status`，页面顶部是一个大号状态标题（`Scanning`、
+  `Scan complete`、`Scan failed` 等），下面显示 sent/targets、吞吐、已用时间、退出码、
+  结果/日志路径和清理过的 worker 日志尾部。没有进度条。**Open log** 与 **Open result**
+  会把服务端解析出的 job 文件交给操作系统的默认应用（Windows 上 `.log`/`.ndjson`
+  没有文件关联时回退到文本编辑器）。取消前会要求确认。
+- **Results** 用 `job.list` 列出 job；打开一个会切到 Live 并选中该 job。**Load records**
+  通过 `GET /api/results?job_id=...&offset=...&limit=...`（每页 50 条）读取已完成的
+  结果文件，**Load more** 继续翻页。只返回合法的 NDJSON 记录；损坏或不完整的行会被跳过。
+- **Interfaces** 列出采集网卡及其 IPv4/IPv6 地址、MAC、网关、默认标志、链路类型和
+  raw-IP 能力。**Modules** 把扫描引擎、协议探测、输出写入器和生成器分组，支持搜索与
+  类型标签页。**System** 有真实的外观控制（Paper/Graphite 主题、密度、实时刷新）、
+  运行时计数、能力以及本地安全模型。
 
-输出路径由服务端管理。include_file、分块和配额等高级字段请直接使用 MCP server 或
-JSON 控制 API；scan/probe 参数可在 Method 面板中编辑。
+输出路径由服务端管理。include 文件、分块和配额等设置请直接使用 MCP server 或
+JSON 控制 API。scan/probe 参数可在 Method 面板中编辑。
 
 ## 安全模型
 
@@ -99,14 +109,16 @@ JSON 控制 API；scan/probe 参数可在 Method 面板中编辑。
   发送，服务端使用常数时间比较。
 - **Host 校验。** 非环回 `Host` 请求会被拒绝，防止 DNS rebinding 页面访问 API。
 - **方法白名单。** `/api/rpc` 仅转发 `job.list`、`job.status`、`job.cancel`、
-  `job.result_manifest` 和 `job.start`；`/api/system`、`/api/interfaces`、
-  `/api/modules`、`/api/preflight` 和 `/api/results` 是服务端只读处理器，
-  不能调用任意控制方法。`/api/results` 只接受 `job-<数字>`，读取该任务清单
-  指向的结果文件，绝不接受客户端任意路径。
+  `job.result_manifest` 和 `job.start`。`/api/system`、`/api/interfaces`、
+  `/api/modules`、`/api/preflight`、`/api/results` 和 `/api/open` 是服务端处理器，
+  不能调用任意控制方法。`/api/results` 只接受 `job-<数字>`，读取该 job manifest
+  报告的结果路径，绝不接受客户端任意路径。`/api/open` 只接受 `job_id` 加 `kind`
+  （`log`、`result` 或 `manifest`）；服务端从 job status/manifest 解析路径，绝不打开
+  客户端提供的路径。
 - **不经过 shell。** GUI 是进程内 C 代码；自动打开浏览器在 Windows 使用
   `ShellExecuteW`，在 Unix 使用 `xdg-open`。
-- **token 处理。** 连接已有控制平面时，其 token 只从环境读取并由服务端添加；
-  页面 JavaScript 不会拿到它。私有模式下若环境没有 token，GUI 会生成临时 token
+- **token 处理。** 连接已有控制平面时，其 control-plane token 只从环境读取并由服务端
+  添加；页面 JavaScript 不会拿到它。私有模式下若环境没有 token，GUI 会生成临时 token
   并在退出时清除。浏览器会话 token 会出现在页面源码中，因此应把浏览器配置视为
   可信本机状态。
 
@@ -130,9 +142,10 @@ GUI 不是扫描的安全边界。授权、目标数量、速率、路由预检�
 python tests/gui/test_gui.py
 ```
 
-测试会启动真实控制平面和 GUI 桥接，检查页面、token、system/interfaces/modules/
-preflight 端点，拒绝非环回 Host 和缺失 token，并启动一次 dry-run 任务轮询到终态。
-无需浏览器。
+测试会启动真实控制平面和 GUI 桥接，使用工作区 `XTATE_STATE_DIR`，检查页面、token、
+system/interfaces/modules/preflight 和 results 端点，拒绝非环回 Host 与缺失 token，
+在不启动任何应用的情况下拒绝非法的 `/api/open` 请求，并启动一个 dry-run job 轮询到
+终态。无需浏览器。
 
 ## 相关文档
 

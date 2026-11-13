@@ -48,11 +48,13 @@ Delivered for 2.44.2:
 - scan startup and meta output include the effective `Rate:` (default or
   `--rate`).
 
-Delivered for 3.0.0-rc.2 (candidate):
+Delivered for 3.0.0-rc.3 (candidate):
 
-- one-command `xtate --mcp` with a private control plane;
-- `capabilities` MCP tool and `--list-capabilities` JSON for agent hosts;
-- scan-first GUI preflight and live job view as a reference front end.
+- one-command `xtate --mcp` with a token-protected private control plane;
+- `capabilities` and `iface.list` MCP tools, plus `--list-capabilities` JSON;
+- server-authoritative `preflight` and bounded `job.records` paging through
+  MCP, including chunked and zstd-compressed results;
+- redesigned scan-first GUI preflight and live view as a reference front end.
 
 Still pending:
 

@@ -121,7 +121,7 @@ GUI 是由同一进程提供的本地扫描控制台。浏览器页面、其资�
 回环 API 的安全契约才是重点：
 
 - **回环绑定与 Host 校验** —— 监听器仅回环，每个请求必须带回环 `Host`（`127.0.0.1:PORT` 或 `localhost:PORT`）；其他一律拒绝，从而阻断 DNS-rebinding 攻击。
-- **每次运行一个 token** —— `/api/*` 请求必须带 `X-Xtate-GUI-Token`，这是启动时生成并注入所服务页面的随机 token。没有它请求得到 `403 GUI_TOKEN_REQUIRED`，且 token 值从不显示在 Settings 中；只显示其存在/缺失。
+- **每次运行一个 token** —— `/api/*` 请求必须带 `X-Xtate-GUI-Token`，这是启动时生成并注入所服务页面的随机 token。没有它请求得到 `403 GUI_TOKEN_REQUIRED`，且 token 值从不显示在 System 中；只显示其存在/缺失。
 - **浏览器无法提供控制面 token。** 含 `token` 成员的 `/api/rpc` 正文会被 `400 TOKEN_NOT_ALLOWED` 拒绝；转发到控制面时，GUI 注入服务器进程自己的 `XTATE_CONTROL_TOKEN`。因此页面 JavaScript 无法选择或泄露任意控制 token。
 - **有界正文与响应** —— 请求正文上限 64 KiB（超出为 `413`），转发的控制响应上限相同。
 - **没有任意文件读取** —— 浏览器不能要求服务器读文件；结果访问走 job 方法及其 manifest。

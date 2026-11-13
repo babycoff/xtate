@@ -73,6 +73,13 @@ The browser URL is printed as `http://127.0.0.1:<port>/`. The session token is
 printed once and is also injected into the page; requests without the matching
 `X-Xtate-GUI-Token` header are rejected.
 
+Result and log files are not written beside the binary. The control plane uses a
+managed state directory: `%LOCALAPPDATA%\xtate\results` on Windows, or
+`$XDG_STATE_HOME/xtate/results` (falling back to
+`$HOME/.local/state/xtate/results`) on Linux. Set `XTATE_STATE_DIR` to override
+it. Request files live under the same state directory and are removed when the
+job reaches a terminal state.
+
 ## What the console does
 
 The GUI is scan-first: the default page is **New scan**, not a job table.
@@ -92,17 +99,23 @@ The GUI is scan-first: the default page is **New scan**, not a job table.
   arguments. Values are sent as `scan_args`/`probe_args`; empty fields are omitted.
   Preflight does not validate argument names or values, so a bad value fails the
   job with the worker argument error in `stderr_tail`/the log.
-- **Live** polls `job.status` every 1.5 seconds, shows phase, sent/targets,
-  heartbeat, elapsed time, exit code, result/log path and the bounded stderr
-  tail, and cancels a queued or running job after confirmation.
-- **Results** lists jobs from `job.list`; opening one shows the manifest state,
-  result bytes and paths. In **Live**, **Load records** reads the completed
-  result file through `GET /api/results?job_id=...&offset=...&limit=...`
-  (50 records per page) and **Load more** pages through it. Only valid NDJSON
-  records are returned; malformed or partial lines are skipped.
+- **Live** polls `job.status` at a configurable interval and leads with a large
+  status headline (`Scanning`, `Scan complete`, `Scan failed`, and so on) plus
+  sent/targets, throughput, elapsed time, exit code, result/log path and a
+  cleaned worker-log tail. There is no progress bar. **Open log** and **Open
+  result** hand the server-resolved job files to the operating system's default
+  application (with a text-editor fallback on Windows when `.log`/`.ndjson` has
+  no file association). Cancelling asks for confirmation.
+- **Results** lists jobs from `job.list`; opening one moves to Live with that job
+  selected. **Load records** reads the completed result file through
+  `GET /api/results?job_id=...&offset=...&limit=...` (50 records per page) and
+  **Load more** pages through it. Only valid NDJSON records are returned;
+  malformed or partial lines are skipped.
 - **Interfaces** lists capture adapters with IPv4/IPv6, MAC, gateway, default
-  flag, link type and raw-IP capability. **Modules** searches the module catalog;
-  **Settings** shows runtime, capability and security state.
+  flag, link type and raw-IP capability. **Modules** groups scan engines,
+  protocol probes, output writers and generators, with search and type tabs.
+  **System** has real appearance controls (Paper/Graphite theme, density, live
+  refresh), runtime counts, capabilities and the local security model.
 
 The output path is managed by the server. For include files, chunking or quota
 settings, use the MCP server or the JSON control API directly. Scan and probe
@@ -118,10 +131,13 @@ arguments are editable in the Method panel.
   which prevents DNS-rebinding pages from reaching the API.
 - **Method allowlist.** Only `job.list`, `job.status`, `job.cancel`,
   `job.result_manifest` and `job.start` are forwarded through `/api/rpc`.
-  `/api/system`, `/api/interfaces`, `/api/modules`, `/api/preflight` and
-  `/api/results` are server-side read-only handlers; they cannot call arbitrary
-  control methods. `/api/results` accepts only `job-<digits>` and reads the
-  result path reported by that job's manifest, never an arbitrary client path.
+  `/api/system`, `/api/interfaces`, `/api/modules`, `/api/preflight`,
+  `/api/results` and `/api/open` are server-side handlers; they cannot call
+  arbitrary control methods. `/api/results` accepts only `job-<digits>` and
+  reads the result path reported by that job's manifest, never an arbitrary
+  client path. `/api/open` accepts only `job_id` plus `kind` (`log`, `result`
+  or `manifest`); the server resolves the path from the job status/manifest and
+  never opens a client-supplied path.
 - **No shell.** The GUI is in-process C; the optional browser launch uses
   `ShellExecuteW` on Windows and `xdg-open` on Unix.
 - **Token handling.** An attached daemon's control-plane token is read from the
@@ -151,10 +167,11 @@ and MCP server.
 python tests/gui/test_gui.py
 ```
 
-The test starts a real control plane and GUI bridge, checks the page, token,
-system/interfaces/modules/preflight endpoints, rejects a non-loopback Host and
-a missing token, and starts a dry-run job and polls it to a terminal state. It
-does not require a browser.
+The test starts a real control plane and GUI bridge with a workspace
+`XTATE_STATE_DIR`, checks the page, token, system/interfaces/modules/preflight
+and results endpoints, rejects a non-loopback Host and a missing token, rejects
+invalid `/api/open` requests without launching an application, and starts a
+dry-run job and polls it to a terminal state. It does not require a browser.
 
 ## Related
 

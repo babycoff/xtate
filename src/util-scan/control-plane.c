@@ -234,10 +234,95 @@ static void json_unescape_inplace(char *s) {
 static FILE *open_write_utf8(const char *path) {
     wchar_t wpath[2048];
     if (!path || MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath,
-            (int)(sizeof(wpath) / sizeof(wpath[0]))) <= 0) return NULL;
+            (int)(sizeof(wpath) / sizeof(wpath[0]))) <= 0)
+        return NULL;
     return _wfopen(wpath, L"wb");
 }
 #endif
+
+static int state_dir(char *out, size_t cap) {
+#ifdef _WIN32
+    wchar_t base[1024];
+    wchar_t dir[2048];
+    DWORD n;
+    {
+        wchar_t wdir[2048];
+        DWORD wn = GetEnvironmentVariableW(L"XTATE_STATE_DIR", wdir,
+                                           (DWORD)(sizeof(wdir) / sizeof(wdir[0])));
+        if (wn > 0 && wn < sizeof(wdir) / sizeof(wdir[0])) {
+            CreateDirectoryW(wdir, NULL);
+            return WideCharToMultiByte(CP_UTF8, 0, wdir, -1, out, (int)cap,
+                                       NULL, NULL) > 0;
+        }
+    }
+    n = GetEnvironmentVariableW(L"LOCALAPPDATA", base,
+                                (DWORD)(sizeof(base) / sizeof(base[0])));
+    if (n == 0 || n >= sizeof(base) / sizeof(base[0])) return 0;
+    if (swprintf(dir, sizeof(dir) / sizeof(dir[0]), L"%ls\\xtate", base) < 0)
+        return 0;
+    CreateDirectoryW(dir, NULL);
+    {
+        char utf8[2048];
+        if (WideCharToMultiByte(CP_UTF8, 0, dir, -1, utf8, sizeof(utf8), NULL, NULL) <= 0)
+            return 0;
+        return snprintf(out, cap, "%s", utf8) < (int)cap;
+    }
+#else
+    const char *base = getenv("XDG_STATE_HOME");
+    char root[1500];
+    {
+        const char *override = getenv("XTATE_STATE_DIR");
+        if (override && override[0]) {
+            if (snprintf(out, cap, "%s", override) >= (int)cap) return 0;
+            mkdir(out, 0700);
+            return 1;
+        }
+    }
+    if (base && base[0]) {
+        if (snprintf(root, sizeof(root), "%s", base) >= (int)sizeof(root)) return 0;
+    } else {
+        const char *home = getenv("HOME");
+        if (!home || !home[0]) return 0;
+        if (snprintf(root, sizeof(root), "%s/.local/state", home) >= (int)sizeof(root))
+            return 0;
+        mkdir(root, 0700);
+    }
+    if (snprintf(out, cap, "%s/xtate", root) >= (int)cap) return 0;
+    mkdir(out, 0700);
+    return 1;
+#endif
+}
+
+static int make_state_subdir(char *out, size_t cap, const char *name) {
+    char dir[2048];
+    if (!state_dir(dir, sizeof(dir))) return 0;
+#ifdef _WIN32
+    if (snprintf(out, cap, "%s\\%s", dir, name) >= (int)cap) return 0;
+    {
+        wchar_t wdir[2048];
+        if (MultiByteToWideChar(CP_UTF8, 0, out, -1, wdir,
+                                (int)(sizeof(wdir) / sizeof(wdir[0]))) <= 0)
+            return 0;
+        CreateDirectoryW(wdir, NULL);
+    }
+#else
+    if (snprintf(out, cap, "%s/%s", dir, name) >= (int)cap) return 0;
+    mkdir(out, 0700);
+#endif
+    return 1;
+}
+
+static int default_result_path(char *out, size_t cap) {
+    char dir[2048];
+    if (!make_state_subdir(dir, sizeof(dir), "results")) return 0;
+#ifdef _WIN32
+    return snprintf(out, cap, "%s\\xtate-job-%lld-%lu.ndjson", dir,
+                    (long long)time(NULL), next_name_seq()) < (int)cap;
+#else
+    return snprintf(out, cap, "%s/xtate-job-%lld-%lu.ndjson", dir,
+                    (long long)time(NULL), next_name_seq()) < (int)cap;
+#endif
+}
 
 static void jesc(const char *s, char *out, size_t cap) {
     size_t n = 0;
@@ -307,7 +392,9 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
             return;
         }
         if (extract_object(line, "params", params, sizeof(params))) {
-            const char *tmpdir = getenv("TMPDIR");
+            char reqdir[2048];
+            const char *tmpdir = make_state_subdir(reqdir, sizeof(reqdir), "requests")
+                                     ? reqdir : getenv("TMPDIR");
 #ifdef _WIN32
             if (!tmpdir || !tmpdir[0]) tmpdir = getenv("TEMP");
 #endif
@@ -320,17 +407,7 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
             }
             int rfd = mkstemp(req);
             FILE *rf = rfd >= 0 ? fdopen(rfd, "wb") : NULL;
-            if (!rf) {
-                if (rfd >= 0) close(rfd);
-                rn = snprintf(req, sizeof(req), "xtate-job-XXXXXX");
-                if (rn < 0 || (size_t)rn >= sizeof(req)) {
-                    send_json(out, id, NULL, "INVALID_ARGUMENT", "request path too long");
-                    return;
-                }
-                rfd = mkstemp(req);
-                rf = rfd >= 0 ? fdopen(rfd, "wb") : NULL;
-                if (!rf && rfd >= 0) close(rfd);
-            }
+            if (!rf && rfd >= 0) close(rfd);
 #else
             int rn = snprintf(req, sizeof(req), "%s/xtate-job-%lld-%lu.request.json",
                               tmpdir, (long long)time(NULL), next_name_seq());
@@ -339,15 +416,6 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
                 return;
             }
             FILE *rf = open_write_utf8(req);
-            if (!rf) {
-                rn = snprintf(req, sizeof(req), "xtate-job-%lld-%lu.request.json",
-                              (long long)time(NULL), next_name_seq());
-                if (rn < 0 || (size_t)rn >= sizeof(req)) {
-                    send_json(out, id, NULL, "INVALID_ARGUMENT", "request path too long");
-                    return;
-                }
-                rf = open_write_utf8(req);
-            }
 #endif
             if (!rf) { send_json(out, id, NULL, "IO_ERROR", "cannot write request"); return; }
             fwrite(params, 1, strlen(params), rf);
@@ -357,10 +425,14 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
             return;
         }
         if (!field_str(line, "result_path", res, sizeof(res))) {
-            snprintf(res, sizeof(res), "xtate-job-%lld-%lu.ndjson",
-                     (long long)time(NULL), next_name_seq());
+            if (!default_result_path(res, sizeof(res))) {
+                send_json(out, id, NULL, "IO_ERROR",
+                          "cannot create a result path outside the working directory");
+                return;
+            }
+        } else {
+            json_unescape_inplace(res);
         }
-        json_unescape_inplace(res);
 #ifdef _WIN32
         char exe[MAX_PATH * 4];
         wchar_t wexe[MAX_PATH];
@@ -425,6 +497,7 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
         unsigned job_timeout = (unsigned)tmo;
         Job *j = job_start(m, argv, res, logpath, job_timeout);
         if (j) {
+            job_set_request_path(j, req);
             job_set_heartbeat(j, hb, 30);
             job_set_result_config(j, (uint64_t)chunk_i,
                                   strstr(line, "\"index\":true") != NULL,

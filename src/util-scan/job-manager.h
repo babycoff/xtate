@@ -28,6 +28,7 @@ Job *job_start(JobManager *m, char *const argv[], const char *result_path,
 JobState job_poll(Job *job);
 bool     job_cancel(Job *job);
 void     job_set_stall_timeout(Job *job, unsigned seconds);
+void     job_set_request_path(Job *job, const char *path);
 void     job_set_heartbeat(Job *job, const char *path, unsigned timeout_sec);
 void     job_set_result_config(Job *job, uint64_t chunk_bytes, bool index,
                                const char *compression, uint64_t quota_bytes);

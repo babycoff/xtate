@@ -64,7 +64,7 @@ endpoint. On Windows the endpoint is a named pipe such as
 ## Page tour
 
 The left navigation has six entries: **New scan**, **Live scan**, **Results**,
-**Interfaces**, **Modules** and **Settings**. The top bar shows the connection
+**Interfaces**, **Modules** and **System**. The top bar shows the connection
 state to the control plane; the footer shows the console version and the
 endpoint currently in use.
 
@@ -143,23 +143,34 @@ job id.
 
 ### Live scan
 
-The header shows the job id and state: `queued`, `running`, `completed`,
-`failed`, `cancelled`, `timed_out` or `stalled`. The page polls `job.status`
-about every 1.5 seconds and stops polling in a terminal state.
+The page leads with a large status headline — `Scanning`, `Scan complete`,
+`Scan failed`, `Scan cancelled`, `Scan timed out` or `Scan stalled` — and a
+one-line explanation. There is no progress bar; the counters and terminal state
+are the authoritative status. The page polls `job.status` every 1.5 seconds by
+default and stops polling in a terminal state.
 
 Fields and panels:
 
-- progress bar and sent/targets counters;
-- phase, heartbeat age, elapsed time and exit code;
-- packets per second, derived from sent packets and elapsed time;
+- sent/targets, throughput, elapsed time, phase, heartbeat age and exit code;
 - result manifest: result path, manifest path, size and completeness;
-- a bounded tail of the worker log (stderr);
+- a cleaned tail of the worker log (terminal escape fragments are removed but
+  `[HIN]`, `[ERR]` and similar log prefixes are preserved);
+- **Open log** and **Open result** buttons that ask the server to open the
+  job's resolved log or result file with the operating system's default
+  application (Windows falls back to the text editor when the extension has no
+  association);
 - a bounded result-record browser for the completed job (50 records per page);
 - result, log and error fields when the daemon reports them.
 
 **Cancel** sends `job.cancel` immediately and reports the outcome in a toast. It
 is disabled in terminal states. Leaving the page does not stop the scan; the
 daemon continues and the job stays visible on Results.
+
+Result files are written to the managed state directory, not beside the binary:
+`%LOCALAPPDATA%\xtate\results` on Windows, or
+`$XDG_STATE_HOME/xtate/results`/`$HOME/.local/state/xtate/results` on Linux.
+Set `XTATE_STATE_DIR` to override it. Request files are removed when the job
+ends.
 
 ### Results
 
@@ -183,20 +194,23 @@ same data drives the CLI's `--list-if`.
 
 ### Modules
 
-Shows the module catalog of the running daemon, grouped into scan engines,
-probes, output and generate modules. Each card shows the module name, its short
-description (or full description when no short one exists) and its parameter
-names. The filter box narrows the list. The catalog is the same one behind
+Shows the module catalog of the running daemon grouped by role — **Scan
+engines**, **Protocol probes**, **Output writers** and **Target generators** —
+with a count for each group. Each card shows the module name, its short
+description and the number/first few parameter names. The search box and the
+type tabs narrow the list. The catalog is the same one behind
 `--list-modules-json` and the per-module help, so the console cannot claim a
 module that the binary does not have.
 
-### Settings
+### System
 
-Shows version, platform, control endpoint and the four module counts, plus the
-HTTP/3 and QUIC transport capability flags reported by the server (for example,
-Linux with ngtcp2 vs a Windows build without it). It also restates the console's
-security model. The page does not change daemon configuration; start the daemon
-with the options you need.
+**System & preferences** is a real preferences page, not a read-only status
+dump. Appearance offers a warm **Paper** theme or a **Graphite** dark theme,
+comfortable or compact density, and a 1.5 s/3 s live-refresh interval; the
+choice is saved in this browser's local storage. Runtime shows version,
+platform, endpoint and module counts. Capabilities shows raw sockets, HTTP/3,
+QUIC transport and zstd result capability. Security model restates loopback,
+Host validation, session token, control-token handling and the allowlist.
 
 ## Security model
 
@@ -217,7 +231,9 @@ The console is designed for a single local user:
   `job.status`, `job.cancel`, `job.result_manifest` and `job.start`.
   `/api/results` is a separate read-only handler that accepts only a job id and
   pages through that job's manifest result file; neither path can call arbitrary
-  control methods.
+  control methods. `/api/open` accepts only a job id and `kind`
+  (`log`/`result`/`manifest`), resolves the path from the job status/manifest,
+  and never opens a client-supplied path.
 - **Server-side authorization.** `job.start` is refused unless the request
   carries `params.authorized: true`. The browser checkboxes are convenience,
   not the enforcement point.
@@ -242,7 +258,8 @@ job worker, and MCP applies its own restrictions (see
 The console covers the common scan workflow, not every CLI feature. These are
 deliberately left to the CLI, the control plane or MCP:
 
-- target files (`include_file`) and scan/probe arguments;
+- target files (`include_file`) and arbitrary scan/probe argument combinations
+  beyond the parameters exposed in the Method panel;
 - output-module selection, result chunking and per-job quotas;
 - scheduling, recurring scans or scan profiles;
 - remote access, multiple users or authentication beyond the session token;

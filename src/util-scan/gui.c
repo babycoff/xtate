@@ -478,6 +478,154 @@ static char *gui_value_after(const char *query, const char *key) {
     return NULL;
 }
 
+static int gui_job_id_ok(const char *job_id) {
+    size_t i;
+    if (!job_id || strncmp(job_id, "job-", 4) != 0 || !job_id[4]) return 0;
+    for (i = 4; job_id[i]; i++) {
+        if (job_id[i] < '0' || job_id[i] > '9') return 0;
+    }
+    return 1;
+}
+
+/* Resolve a job artifact path from the control plane.  The client never
+   supplies a path: only the job id and a kind are accepted. */
+static int gui_job_path(const char *endpoint, const char *job_id, const char *kind,
+                        char *out, size_t cap) {
+    char response[GUI_RESPONSE_SIZE];
+    JsonNode *root, *result, *node, *rq;
+    const char *member = "result";
+    const char *control_token = getenv("XTATE_CONTROL_TOKEN");
+    char *request;
+    int rc;
+
+    if (!gui_job_id_ok(job_id) || !out || cap == 0) return 0;
+    if (strcmp(kind, "manifest") == 0) member = "manifest_path";
+    else if (strcmp(kind, "log") != 0 && strcmp(kind, "result") != 0) return 0;
+    rq = json_mkobject();
+    if (!rq) return 0;
+    json_append_member(rq, "id", json_mknumber(1));
+    json_append_member(rq, "method", json_mkstring(
+        strcmp(kind, "manifest") == 0 ? "job.result_manifest" : "job.status"));
+    json_append_member(rq, "job_id", json_mkstring(job_id));
+    if (control_token && control_token[0])
+        json_append_member(rq, "token", json_mkstring(control_token));
+    request = json_stringify(rq, NULL);
+    json_delete(rq);
+    if (!request) return 0;
+    rc = control_client_request(endpoint, request, response, sizeof(response));
+    free(request);
+    if (rc < 0) return 0;
+    root = json_decode(response);
+    if (!root) return 0;
+    result = json_find_member(root, "result");
+    if (!result || result->tag != JSON_OBJECT) {
+        json_delete(root);
+        return 0;
+    }
+    node = json_find_member(result, member);
+    if (!node || node->tag != JSON_STRING || !node->string_ || !node->string_[0]) {
+        json_delete(root);
+        return 0;
+    }
+    snprintf(out, cap, "%s", node->string_);
+    json_delete(root);
+    return 1;
+}
+
+#if defined(_WIN32)
+/* ShellExecuteW can block while a DDE server initializes, which would stall
+ * the single-threaded GUI server. Open the file on a detached thread and
+ * return immediately; the browser only needs acknowledgement that the request
+ * was dispatched. */
+static DWORD WINAPI gui_open_thread(LPVOID arg) {
+    wchar_t *path = (wchar_t *)arg;
+    if ((INT_PTR)ShellExecuteW(NULL, L"open", path, NULL, NULL,
+                               SW_SHOWNORMAL) <= 32)
+        ShellExecuteW(NULL, L"open", L"notepad.exe", path, NULL,
+                      SW_SHOWNORMAL);
+    free(path);
+    return 0;
+}
+#endif
+
+static int gui_open_path(const char *path) {
+#if defined(_WIN32)
+    wchar_t wpath[2048];
+    wchar_t *copy;
+    HANDLE thread;
+    size_t len;
+    if (MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath,
+                            (int)(sizeof(wpath) / sizeof(wpath[0]))) <= 0)
+        return 0;
+    len = wcslen(wpath) + 1;
+    copy = (wchar_t *)malloc(len * sizeof(wchar_t));
+    if (!copy) return 0;
+    memcpy(copy, wpath, len * sizeof(wchar_t));
+    thread = CreateThread(NULL, 0, gui_open_thread, copy, 0, NULL);
+    if (!thread) {
+        free(copy);
+        return 0;
+    }
+    CloseHandle(thread);
+    return 1;
+#else
+    pid_t pid = fork();
+    if (pid < 0) return 0;
+    if (pid == 0) {
+        pid_t grandchild = fork();
+        if (grandchild == 0) {
+            execlp("xdg-open", "xdg-open", path, (char *)NULL);
+            _exit(127);
+        }
+        _exit(grandchild < 0 ? 1 : 0);
+    }
+    return 1;
+#endif
+}
+
+static int gui_kind_ok(const char *kind) {
+    return kind && (strcmp(kind, "log") == 0 || strcmp(kind, "result") == 0 ||
+                    strcmp(kind, "manifest") == 0);
+}
+
+static void gui_handle_open(gui_sock s, const char *endpoint, const char *body) {
+    JsonNode *root = json_decode(body);
+    JsonNode *job_id, *kind;
+    char path[2048];
+    char out[256];
+
+    if (!root || root->tag != JSON_OBJECT) {
+        json_delete(root);
+        gui_respond_error(s, 400, "INVALID_JSON", "request must be a JSON object");
+        return;
+    }
+    job_id = json_find_member(root, "job_id");
+    kind = json_find_member(root, "kind");
+    if (!job_id || job_id->tag != JSON_STRING || !gui_job_id_ok(job_id->string_) ||
+        !kind || kind->tag != JSON_STRING || !gui_kind_ok(kind->string_)) {
+        json_delete(root);
+        gui_respond_error(s, 400, "INVALID_ARGUMENT",
+                          "job_id must be job-<number> and kind must be log, result or manifest");
+        return;
+    }
+    if (!gui_job_path(endpoint, job_id->string_, kind->string_, path, sizeof(path))) {
+        json_delete(root);
+        gui_respond_error(s, 404, "JOB_FILE_NOT_FOUND",
+                          "the job has no such file yet");
+        return;
+    }
+    if (!gui_open_path(path)) {
+        json_delete(root);
+        gui_respond_error(s, 500, "OPEN_FAILED",
+                          "the operating system could not open the file");
+        return;
+    }
+    snprintf(out, sizeof(out),
+             "{\"opened\":true,\"kind\":\"%s\"}", kind->string_);
+    json_delete(root);
+    gui_respond(s, 200, "application/json; charset=utf-8", out, strlen(out));
+}
+
 static void gui_handle_results(gui_sock s, const char *endpoint,
                                const char *query) {
     char *job_id = gui_value_after(query, "job_id");
@@ -582,6 +730,8 @@ static void gui_handle(gui_sock s, const char *endpoint, const char *token,
         route = 6;
     else if (strcmp(method, "GET") == 0 && strcmp(path, "/api/results") == 0)
         route = 7;
+    else if (strcmp(method, "POST") == 0 && strcmp(path, "/api/open") == 0)
+        route = 8;
     else
         route = 0;
 
@@ -604,6 +754,7 @@ static void gui_handle(gui_sock s, const char *endpoint, const char *token,
     case 5: gui_handle_modules(s); break;
     case 6: gui_handle_preflight(s, request + header_len); break;
     case 7: gui_handle_results(s, endpoint, query ? query : ""); break;
+    case 8: gui_handle_open(s, endpoint, request + header_len); break;
     default: break;
     }
 }

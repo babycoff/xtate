@@ -11,6 +11,7 @@ import http.client
 import json
 import os
 import re
+import shutil
 import socket
 import subprocess
 import sys
@@ -66,8 +67,11 @@ def main():
         return 1
 
     endpoint = unique_endpoint()
+    state_dir = os.path.join(os.getcwd(), "gui-test-state")
+    shutil.rmtree(state_dir, ignore_errors=True)
     env = os.environ.copy()
     env["XTATE_CONTROL_TOKEN"] = "gui-test-token"
+    env["XTATE_STATE_DIR"] = state_dir
     control = subprocess.Popen(
         [exe, "--control-plane=" + endpoint],
         stdout=subprocess.PIPE,
@@ -272,7 +276,11 @@ def main():
         if status != 200:
             print("GUI job.start failed:", status, body[:300], file=sys.stderr)
             return 1
-        job_id = json.loads(body.decode())["result"]["job_id"]
+        started = json.loads(body.decode())
+        if "result" not in started:
+            print("GUI job.start returned no job:", body[:500], file=sys.stderr)
+            return 1
+        job_id = started["result"]["job_id"]
 
         state = ""
         for _ in range(50):
@@ -333,6 +341,24 @@ def main():
         if status != 403:
             print("GUI result records without token were allowed:", status,
                   body[:200], file=sys.stderr)
+            return 1
+        status, body = http_json(
+            port, "/api/open", token, {"job_id": "../../etc/passwd", "kind": "log"})
+        if status != 400:
+            print("GUI open invalid job id was not rejected:", status,
+                  body[:200], file=sys.stderr)
+            return 1
+        status, body = http_json(
+            port, "/api/open", token, {"job_id": job_id, "kind": "bogus"})
+        if status != 400:
+            print("GUI open invalid kind was not rejected:", status,
+                  body[:200], file=sys.stderr)
+            return 1
+        status, body = http_json(
+            port, "/api/open", token, {"job_id": "job-999", "kind": "log"})
+        if status != 404:
+            print("GUI open unknown job was not 404:", status, body[:200],
+                  file=sys.stderr)
             return 1
 
         # Without --control-connect, --gui starts a private control plane.
@@ -408,6 +434,7 @@ def main():
             path = "gui-test-result.ndjson" + suffix
             if os.path.exists(path):
                 os.unlink(path)
+        shutil.rmtree(state_dir, ignore_errors=True)
 
 
 if __name__ == "__main__":

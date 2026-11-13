@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-import json, os, subprocess, sys, tempfile, time
+import json, os, shutil, subprocess, sys, tempfile, time
 BIN = os.environ["XTATE_BIN"]; TOKEN = "mcp-stab-token"
 ep = ("\\\\.\\pipe\\xtate-mcp-stab-" + str(os.getpid())) if sys.platform == "win32" else os.path.join(tempfile.mkdtemp(), "ctl.sock")
-env = dict(os.environ, XTATE_CONTROL_TOKEN=TOKEN)
+state_dir = os.path.join(os.getcwd(), "mcp-stab-state")
+shutil.rmtree(state_dir, ignore_errors=True)
+os.makedirs(state_dir, exist_ok=True)
+env = dict(os.environ, XTATE_CONTROL_TOKEN=TOKEN, XTATE_STATE_DIR=state_dir)
 def start_ctl():
     p = subprocess.Popen([BIN, "--control-plane=" + ep], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(1); return p
@@ -74,4 +77,5 @@ try:
         mp2.terminate()
     print("MCP stability tests: PASS")
 finally:
+    shutil.rmtree(state_dir, ignore_errors=True)
     mp.terminate(); ctl.terminate()

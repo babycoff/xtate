@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-import json, os, subprocess, tempfile, time, sys
+import json, os, shutil, subprocess, tempfile, time, sys
 BIN=os.environ["XTATE_BIN"]; TOKEN="test-token"
 if sys.platform=="win32":
     ep="\\\\.\\pipe\\xtate-test-"+str(os.getpid())
 else:
     ep=os.path.join(tempfile.mkdtemp(),"ctl.sock")
-p=subprocess.Popen([BIN,"--control-plane="+ep],env=dict(os.environ,XTATE_CONTROL_TOKEN=TOKEN),stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+state_dir=os.path.join(os.getcwd(),"control-test-state")
+shutil.rmtree(state_dir,ignore_errors=True); os.makedirs(state_dir,exist_ok=True)
+base_env=dict(os.environ,XTATE_CONTROL_TOKEN=TOKEN,XTATE_STATE_DIR=state_dir)
+p=subprocess.Popen([BIN,"--control-plane="+ep],env=base_env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 try:
     for _ in range(50):
         if sys.platform!="win32" and os.path.exists(ep): break
@@ -24,4 +27,5 @@ try:
     rc,o=rpc({"id":5,"method":"job.list"}); assert o["result"]["jobs"]
     print("control plane: PASS")
 finally:
+    shutil.rmtree(state_dir,ignore_errors=True)
     p.terminate(); p.wait(timeout=5)

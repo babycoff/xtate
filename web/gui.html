@@ -6,29 +6,60 @@
 <title>Xtate control plane — 3.0</title>
 <style>
 :root {
-  --bg: #090c11;
-  --bg-2: #0d1219;
-  --surface: #111821;
-  --surface-2: #151e29;
-  --line: #22303f;
-  --line-soft: #1a2532;
-  --text: #e8eef5;
-  --muted: #8595a5;
-  --faint: #637384;
-  --mint: #66e3bd;
-  --mint-dark: #0e2c27;
-  --amber: #f0c36a;
-  --red: #f27d7d;
-  --blue: #88b8f2;
-  --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  --sans: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --bg: #f4f1e9;
+  --bg-2: #eae4d7;
+  --surface: #fffdf8;
+  --surface-2: #f2ede2;
+  --line: #d6cfbf;
+  --line-soft: #e3ddd0;
+  --text: #17221c;
+  --muted: #56655d;
+  --faint: #7b877f;
+  --mint: #0b6b53;
+  --mint-dark: #e2f1ea;
+  --amber: #945900;
+  --red: #b42318;
+  --blue: #1f5f9b;
+  --input: #fbf8f1;
+  --code-bg: #14201b;
+  --code-text: #dbe7df;
+  --on-accent: #ffffff;
+  --topbar: rgba(244,241,233,.94);
+  --mono: "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --sans: "Segoe UI Variable Text", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --radius: 12px;
 }
+html[data-theme="dark"] {
+  --bg: #0e1511;
+  --bg-2: #121b16;
+  --surface: #16211b;
+  --surface-2: #1b2821;
+  --line: #2b3d33;
+  --line-soft: #24342c;
+  --text: #eef4ef;
+  --muted: #a8b8ae;
+  --faint: #7f9387;
+  --mint: #62d6b2;
+  --mint-dark: #143a2e;
+  --amber: #efc06a;
+  --red: #ff9188;
+  --blue: #8dbbef;
+  --input: #101a15;
+  --code-bg: #070c09;
+  --code-text: #d9e7de;
+  --on-accent: #06201a;
+  --topbar: rgba(14,21,17,.94);
+}
+html[data-theme="dark"] .card { background: linear-gradient(180deg, rgba(255,255,255,.03), transparent 55%), var(--surface); }
+html[data-theme="dark"] .toast { box-shadow: 0 14px 40px rgba(0,0,0,.4); }
+html[data-density="compact"] body { font-size: 14px; }
+html[data-density="compact"] .card-body { padding: 14px; }
+html[data-density="compact"] .kv-grid { gap: 8px; }
 * { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100%; }
 body {
   background:
-    radial-gradient(1100px 500px at 50% -180px, rgba(102,227,189,.07), transparent 60%),
+    radial-gradient(1100px 500px at 50% -180px, rgba(11,107,83,.07), transparent 60%),
     var(--bg);
   color: var(--text);
   font: 13px/1.45 var(--sans);
@@ -47,7 +78,7 @@ a { color: var(--mint); text-decoration: none; }
   gap: 22px;
   padding: 0 28px;
   border-bottom: 1px solid var(--line-soft);
-  background: rgba(9,12,17,.92);
+  background: var(--topbar);
   position: sticky;
   top: 0;
   z-index: 20;
@@ -57,8 +88,8 @@ a { color: var(--mint); text-decoration: none; }
 .brand-mark {
   width: 27px; height: 27px; border-radius: 8px;
   display: grid; place-items: center;
-  background: var(--mint); color: #06201a; font-weight: 800; font-size: 14px;
-  box-shadow: 0 0 0 1px rgba(255,255,255,.18) inset;
+  background: var(--mint); color: var(--on-accent); font-weight: 800; font-size: 14px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.08) inset;
 }
 .brand-name { font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
 .version-chip {
@@ -75,7 +106,7 @@ a { color: var(--mint); text-decoration: none; }
 .top-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .conn { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
-.dot.ok { background: var(--mint); box-shadow: 0 0 0 3px rgba(102,227,189,.12); }
+.dot.ok { background: var(--mint); box-shadow: 0 0 0 3px rgba(11,107,83,.12); }
 .dot.bad { background: var(--red); }
 .avatar {
   width: 28px; height: 28px; border-radius: 50%; background: var(--surface-2);
@@ -93,13 +124,13 @@ h1 { font-size: 34px; line-height: 1.05; letter-spacing: -.035em; margin: 9px 0 
   border: 1px solid var(--line); border-radius: 999px; padding: 4px 9px;
   font-size: 11px; color: var(--muted); background: var(--surface);
 }
-.badge.mint { color: var(--mint); border-color: rgba(102,227,189,.35); background: var(--mint-dark); }
-.badge.amber { color: var(--amber); border-color: rgba(240,195,106,.35); background: rgba(240,195,106,.08); }
-.badge.red { color: var(--red); border-color: rgba(242,125,125,.35); background: rgba(242,125,125,.08); }
+.badge.mint { color: var(--mint); border-color: rgba(11,107,83,.35); background: var(--mint-dark); }
+.badge.amber { color: var(--amber); border-color: rgba(148,89,0,.35); background: rgba(148,89,0,.08); }
+.badge.red { color: var(--red); border-color: rgba(180,35,24,.35); background: rgba(180,35,24,.08); }
 
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 352px; gap: 22px; align-items: start; }
 .card {
-  background: linear-gradient(180deg, rgba(255,255,255,.012), transparent 55%), var(--surface);
+  background: linear-gradient(180deg, rgba(255,255,255,.55), transparent 55%), var(--surface);
   border: 1px solid var(--line-soft); border-radius: var(--radius);
 }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 18px; border-bottom: 1px solid var(--line-soft); }
@@ -108,12 +139,12 @@ h1 { font-size: 34px; line-height: 1.05; letter-spacing: -.035em; margin: 9px 0 
 .field-label { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; color: var(--muted); font-size: 11.5px; margin-bottom: 7px; }
 .field-hint { color: var(--faint); font-size: 10.5px; }
 input[type="text"], input[type="number"], select, textarea {
-  width: 100%; background: #0b1118; border: 1px solid var(--line); border-radius: 8px;
+  width: 100%; background: var(--input); border: 1px solid var(--line); border-radius: 8px;
   padding: 10px 11px; outline: none; transition: border-color .15s, box-shadow .15s;
 }
-input:focus, select:focus, textarea:focus { border-color: rgba(102,227,189,.7); box-shadow: 0 0 0 2px rgba(102,227,189,.13); }
+input:focus, select:focus, textarea:focus { border-color: rgba(11,107,83,.7); box-shadow: 0 0 0 2px rgba(11,107,83,.13); }
 textarea { resize: vertical; min-height: 74px; font-family: var(--mono); font-size: 12.5px; }
-input.invalid, textarea.invalid { border-color: rgba(242,125,125,.7); }
+input.invalid, textarea.invalid { border-color: rgba(180,35,24,.7); }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .grid-3 { display: grid; grid-template-columns: 1.25fr 1fr 1fr; gap: 14px; }
 .stack { display: grid; gap: 14px; }
@@ -127,18 +158,18 @@ input.invalid, textarea.invalid { border-color: rgba(242,125,125,.7); }
 .file-btn:hover { color: var(--text); border-color: var(--faint); }
 .parsed { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; min-height: 22px; }
 .chip {
-  border: 1px solid var(--line); background: #0b1118; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--input); border-radius: 999px;
   padding: 3px 8px; font-family: var(--mono); font-size: 10.5px; color: var(--muted);
 }
-.chip.mint { color: var(--mint); border-color: rgba(102,227,189,.30); }
+.chip.mint { color: var(--mint); border-color: rgba(11,107,83,.30); }
 
 .method-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
 .method {
-  text-align: left; background: #0b1118; border: 1px solid var(--line-soft);
+  text-align: left; background: var(--input); border: 1px solid var(--line-soft);
   border-radius: 9px; padding: 11px 12px; position: relative;
 }
-.method:hover { border-color: var(--line); background: #0d151e; }
-.method.active { border-color: rgba(102,227,189,.65); background: linear-gradient(180deg, rgba(102,227,189,.075), transparent), #0b1118; }
+.method:hover { border-color: var(--line); background: var(--surface-2); }
+.method.active { border-color: rgba(11,107,83,.65); background: linear-gradient(180deg, rgba(11,107,83,.075), transparent), var(--input); }
 .method .m-name { color: var(--text); font-weight: 650; font-size: 12.5px; }
 .method .m-desc { color: var(--muted); font-size: 10.5px; margin-top: 3px; line-height: 1.35; }
 .method .m-check { position: absolute; right: 10px; top: 10px; width: 7px; height: 7px; border-radius: 50%; background: transparent; border: 1px solid var(--line); }
@@ -149,7 +180,7 @@ input.invalid, textarea.invalid { border-color: rgba(242,125,125,.7); }
 .module-params summary::-webkit-details-marker { display: none; }
 .module-params summary:hover { color: var(--text); }
 .arg-grid { display: grid; gap: 14px; margin-top: 14px; }
-.arg-group { border: 1px solid var(--line-soft); border-radius: 9px; background: #0b1118; padding: 12px; }
+.arg-group { border: 1px solid var(--line-soft); border-radius: 9px; background: var(--input); padding: 12px; }
 .arg-group-title { color: var(--faint); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 9px; }
 .arg-row { display: grid; grid-template-columns: minmax(120px, .8fr) minmax(0, 1.2fr); gap: 12px; align-items: center; padding: 5px 0; }
 .arg-row .arg-name { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
@@ -159,7 +190,7 @@ input.invalid, textarea.invalid { border-color: rgba(242,125,125,.7); }
 .arg-empty { color: var(--faint); font-size: 11px; margin-top: 12px; }
 .iface-line {
   display: flex; align-items: center; gap: 10px; border: 1px solid var(--line-soft);
-  border-radius: 9px; background: #0b1118; padding: 10px 11px;
+  border-radius: 9px; background: var(--input); padding: 10px 11px;
 }
 .iface-line .ico { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--line); display: grid; place-items: center; color: var(--mint); }
 .iface-line .name { font-weight: 600; font-size: 12px; }
@@ -168,7 +199,7 @@ input.invalid, textarea.invalid { border-color: rgba(242,125,125,.7); }
 
 .auth {
   display: flex; gap: 11px; align-items: flex-start; padding: 12px;
-  border: 1px solid var(--line); border-radius: 9px; background: #0b1118;
+  border: 1px solid var(--line); border-radius: 9px; background: var(--input);
 }
 .auth input { width: 19px; height: 19px; accent-color: var(--mint); margin-top: 1px; }
 .auth-label { color: var(--muted); font-size: 11.5px; line-height: 1.45; }
@@ -187,25 +218,25 @@ input.invalid, textarea.invalid { border-color: rgba(242,125,125,.7); }
 .pf-check { display: flex; gap: 7px; align-items: flex-start; font-size: 11px; color: var(--muted); }
 .pf-check .mark { width: 13px; flex: 0 0 13px; color: var(--mint); }
 .pf-check.bad .mark { color: var(--red); } .pf-check.warn .mark { color: var(--amber); }
-.pf-note { margin: 12px 18px 0; border: 1px solid rgba(102,227,189,.25); background: rgba(102,227,189,.05); border-radius: 8px; padding: 9px 10px; color: var(--muted); font-size: 10.5px; line-height: 1.45; }
+.pf-note { margin: 12px 18px 0; border: 1px solid rgba(11,107,83,.25); background: rgba(11,107,83,.05); border-radius: 8px; padding: 9px 10px; color: var(--muted); font-size: 10.5px; line-height: 1.45; }
 .pf-actions { padding: 15px 18px 17px; }
 .btn {
   border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2);
   color: var(--text); padding: 9px 13px; font-weight: 600; font-size: 12px;
 }
 .btn:hover { border-color: var(--faint); }
-.btn.mint { background: var(--mint); border-color: var(--mint); color: #06201a; }
+.btn.mint { background: var(--mint); border-color: var(--mint); color: var(--on-accent); }
 .btn.mint:hover { filter: brightness(1.06); }
 .btn.ghost { background: transparent; color: var(--muted); }
-.btn.danger { color: var(--red); border-color: rgba(242,125,125,.35); background: rgba(242,125,125,.06); }
+.btn.danger { color: var(--red); border-color: rgba(180,35,24,.35); background: rgba(180,35,24,.06); }
 .btn[disabled] { opacity: .38; cursor: not-allowed; filter: none; }
 .btn-wide { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; }
 .btn-wide .arrow { font-size: 15px; line-height: 1; }
 
-.progress { height: 7px; background: #0b1118; border-radius: 999px; overflow: hidden; border: 1px solid var(--line-soft); }
-.progress > span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #3fbf9e, var(--mint)); transition: width .4s ease; }
+.progress { height: 7px; background: var(--input); border-radius: 999px; overflow: hidden; border: 1px solid var(--line-soft); }
+.progress > span { display: block; height: 100%; width: 0; background: var(--mint); transition: width .4s ease; }
 .kv-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.kv { border: 1px solid var(--line-soft); background: #0b1118; border-radius: 8px; padding: 10px 11px; }
+.kv { border: 1px solid var(--line-soft); background: var(--input); border-radius: 8px; padding: 10px 11px; }
 .kv .k { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
 .kv .v { margin-top: 4px; font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
 .table { width: 100%; border-collapse: collapse; }
@@ -216,16 +247,16 @@ input.invalid, textarea.invalid { border-color: rgba(242,125,125,.7); }
 .table tbody tr:hover { background: var(--surface-2); }
 .table .id { font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
 .state { font-family: var(--mono); font-size: 10px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
-.state.completed { color: var(--mint); border-color: rgba(102,227,189,.35); }
-.state.running, .state.queued { color: var(--amber); border-color: rgba(240,195,106,.35); }
-.state.failed, .state.cancelled, .state.timed_out, .state.stalled { color: var(--red); border-color: rgba(242,125,125,.35); }
+.state.completed { color: var(--mint); border-color: rgba(11,107,83,.35); }
+.state.running, .state.queued { color: var(--amber); border-color: rgba(148,89,0,.35); }
+.state.failed, .state.cancelled, .state.timed_out, .state.stalled { color: var(--red); border-color: rgba(180,35,24,.35); }
 .muted { color: var(--muted); } .faint { color: var(--faint); }
 .small { font-size: 11px; }
 .mono { font-family: var(--mono); }
 .section-label { color: var(--faint); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; font-weight: 650; margin: 0 0 10px; }
 .iface-grid, .module-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.iface-card { padding: 14px; border: 1px solid var(--line-soft); border-radius: 10px; background: #0b1118; }
-.iface-card.default { border-color: rgba(102,227,189,.34); }
+.iface-card { padding: 14px; border: 1px solid var(--line-soft); border-radius: 10px; background: var(--input); }
+.iface-card.default { border-color: rgba(11,107,83,.34); }
 .iface-card h3 { margin: 0 0 2px; font-size: 13px; font-weight: 600; }
 .iface-card .desc { color: var(--muted); font-size: 11px; margin-bottom: 10px; }
 .kv-list { display: grid; gap: 5px; }
@@ -234,7 +265,7 @@ input.invalid, textarea.invalid { border-color: rgba(242,125,125,.7); }
 .search { position: relative; max-width: 360px; }
 .search input { padding-left: 32px; }
 .search::before { content: "⌕"; position: absolute; left: 11px; top: 7px; color: var(--faint); font-size: 15px; }
-.module-card { padding: 12px 13px; border: 1px solid var(--line-soft); border-radius: 9px; background: #0b1118; }
+.module-card { padding: 12px 13px; border: 1px solid var(--line-soft); border-radius: 9px; background: var(--input); }
 .module-card h3 { margin: 0; font-size: 12px; font-family: var(--mono); }
 .module-card .kind { color: var(--faint); font-size: 9px; text-transform: uppercase; letter-spacing: .1em; }
 .module-card p { margin: 6px 0 0; color: var(--muted); font-size: 10.5px; line-height: 1.4; }
@@ -244,19 +275,109 @@ input.invalid, textarea.invalid { border-color: rgba(242,125,125,.7); }
   padding: 11px 13px; font-size: 11.5px; color: var(--text);
   box-shadow: 0 14px 40px rgba(0,0,0,.35); z-index: 50;
 }
-.toast.bad { border-color: rgba(242,125,125,.4); }
+.toast.bad { border-color: rgba(180,35,24,.4); }
 .empty { border: 1px dashed var(--line); border-radius: 10px; padding: 34px 20px; text-align: center; color: var(--muted); }
 .empty b { display: block; color: var(--text); font-size: 13px; margin-bottom: 5px; }
 .log-tail {
   margin: 0; padding: 12px 13px; border: 1px solid var(--line-soft); border-radius: 9px;
-  background: #070a0e; color: #b8c7d6; font: 10.5px/1.5 var(--mono);
+  background: var(--code-bg); color: var(--code-text); font: 10.5px/1.5 var(--mono);
   max-height: 260px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere;
 }
-footer { max-width: 1320px; margin: 0 auto; padding: 0 28px 30px; color: var(--faint); font-size: 10.5px; display: flex; justify-content: space-between; gap: 20px; }
+footer { max-width: 1320px; margin: 0 auto; padding: 0 28px 30px; color: var(--faint); font-size: 11.5px; display: flex; justify-content: space-between; gap: 20px; }
 footer .mono { color: var(--faint); }
+
+/* 3.0 RC readability and console refinements */
+body { font-size: 15px; line-height: 1.55; }
+.topbar { height: 68px; }
+.brand-name { font-size: 18px; }
+.version-chip { font-size: 11px; padding: 3px 8px; }
+.nav button, .nav-link { font-size: 13.5px; padding: 8px 12px; }
+.conn { font-size: 12.5px; }
+main { padding-top: 38px; }
+.eyebrow { font-size: 11px; }
+h1 { font-size: 42px; margin: 10px 0 8px; }
+.sub { font-size: 14.5px; line-height: 1.55; max-width: 760px; }
+.badge { font-size: 12px; padding: 5px 10px; }
+.card-title { font-size: 12px; letter-spacing: .08em; }
+.field-label { font-size: 12.5px; }
+.field-hint { font-size: 11.5px; }
+input[type="text"], input[type="number"], select, textarea { font-size: 14px; padding: 11px 12px; }
+textarea { font-size: 13.5px; line-height: 1.5; }
+.method { padding: 13px 14px; }
+.method .m-name { font-size: 14px; }
+.method .m-desc { font-size: 12px; margin-top: 4px; }
+.chip { font-size: 11.5px; padding: 4px 9px; }
+.auth-label { font-size: 12.5px; }
+.pf-state { font-size: 11px; }
+.pf-big { font-size: 31px; }
+.pf-big small { font-size: 12px; }
+.pf-line { font-size: 12.5px; padding: 8px 0; }
+.pf-line .v { font-size: 11.5px; overflow-wrap: anywhere; text-align: right; max-width: 68%; }
+.kv-list div { overflow-wrap: anywhere; }
+.pf-check { font-size: 12px; }
+.pf-note { font-size: 11.5px; }
+.btn { font-size: 13px; padding: 10px 14px; }
+.btn-wide { padding: 12px 14px; font-size: 14px; }
+.kv .k { font-size: 11px; }
+.kv .v { font-size: 13.5px; }
+.table th { font-size: 11px; }
+.table td { font-size: 13px; }
+.state { font-size: 11px; }
+.iface-card h3 { font-size: 14.5px; }
+.iface-card .desc, .iface-card .kind { font-size: 12px; }
+.kv-list div { font-size: 12px; }
+.module-card { padding: 15px 16px; }
+.module-card h3 { font-size: 14px; }
+.module-card .kind { font-size: 10.5px; }
+.module-card p { font-size: 12.5px; }
+.module-card .desc { font-size: 11.5px; margin-top: 7px; color: var(--faint); overflow-wrap: anywhere; }
+.log-tail { font-size: 12.5px; line-height: 1.55; }
+.search input { font-size: 13.5px; }
+.section-label { font-size: 11px; }
+.empty b { font-size: 14px; }
+
+/* live status replaces the old progress bar */
+.live-hero { padding: 24px 22px; }
+.live-state-line { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+.live-headline { margin: 10px 0 6px; font-size: 38px; line-height: 1.08; letter-spacing: -.035em; font-weight: 650; }
+.live-headline.running { color: var(--amber); }
+.live-headline.completed { color: var(--mint); }
+.live-headline.failed, .live-headline.cancelled, .live-headline.timed_out, .live-headline.stalled { color: var(--red); }
+.live-detail { color: var(--muted); font-size: 14px; }
+.live-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 16px; }
+.live-actions .btn { min-width: 128px; }
+
+/* modules grouped by kind */
+.module-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 22px; }
+.module-toolbar .search { flex: 1 1 300px; max-width: 480px; }
+.module-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.module-tab { border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 6px 11px; font-size: 12px; }
+.module-tab.active { background: var(--mint); border-color: var(--mint); color: var(--on-accent); }
+.module-group { margin-bottom: 28px; }
+.module-group-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin: 0 0 10px; border-bottom: 1px solid var(--line-soft); padding-bottom: 8px; }
+.module-group-head h2 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
+.module-group-head .count { color: var(--faint); font-size: 12px; }
+.module-group .module-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+/* real system page */
+.system-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+.setting-row { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 13px 0; border-bottom: 1px solid var(--line-soft); }
+.setting-row:last-child { border-bottom: 0; }
+.setting-row .sk { color: var(--text); font-weight: 600; font-size: 13.5px; }
+.setting-row .sd { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.setting-row .sv { color: var(--muted); font-family: var(--mono); font-size: 12px; text-align: right; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; background: var(--surface); color: var(--muted); padding: 7px 12px; font-size: 12px; }
+.seg button.active { background: var(--mint-dark); color: var(--mint); font-weight: 600; }
+.sys-note { color: var(--muted); font-size: 12.5px; line-height: 1.6; margin: 0; }
+
+@media (max-width: 1180px) {
+  .module-group .module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 980px) {
   .layout { grid-template-columns: 1fr; }
   .preflight { position: static; }
+  .system-grid { grid-template-columns: 1fr; }
   .grid-3 { grid-template-columns: 1fr 1fr; }
   .grid-3 > :first-child { grid-column: 1 / -1; }
 }
@@ -287,7 +408,7 @@ footer .mono { color: var(--faint); }
     <button data-page="results">Results</button>
     <button data-page="interfaces">Interfaces</button>
     <button data-page="modules">Modules</button>
-    <button data-page="settings">Settings</button>
+    <button data-page="system">System</button>
   </nav>
   <div class="top-right">
     <div class="conn"><span class="dot" id="conn-dot"></span><span id="conn-text">connecting</span></div>
@@ -419,20 +540,29 @@ footer .mono { color: var(--faint); }
     </div>
     <div class="layout">
       <div class="stack">
-        <section class="card"><div class="card-head"><div class="card-title">Progress</div><div class="field-hint mono" id="live-eta">—</div></div>
-          <div class="card-body">
-            <div class="progress"><span id="live-progress"></span></div>
-            <div class="kv-grid" style="margin-top:14px">
-              <div class="kv"><div class="k">Sent</div><div class="v" id="live-sent">—</div></div>
-              <div class="kv"><div class="k">Targets</div><div class="v" id="live-targets">—</div></div>
-              <div class="kv"><div class="k">Phase</div><div class="v" id="live-phase">—</div></div>
-              <div class="kv"><div class="k">Heartbeat</div><div class="v" id="live-heartbeat">—</div></div>
-              <div class="kv"><div class="k">Elapsed</div><div class="v" id="live-elapsed">—</div></div>
-              <div class="kv"><div class="k">Exit code</div><div class="v" id="live-exit">—</div></div>
-            </div>
-            <div style="display:flex;gap:9px;margin-top:14px">
+        <section class="card">
+          <div class="card-body live-hero">
+            <div class="live-state-line"><span class="dot" id="live-dot"></span><span id="live-kicker">Idle</span></div>
+            <div class="live-headline" id="live-headline">No scan running</div>
+            <div class="live-detail" id="live-detail">Start a scan from New scan. This page follows the current scan automatically.</div>
+            <div class="live-actions">
               <button class="btn danger" id="btn-cancel" disabled>Cancel scan</button>
               <button class="btn ghost" id="btn-refresh-live">Refresh</button>
+              <button class="btn ghost" id="btn-open-log" disabled>Open log</button>
+              <button class="btn ghost" id="btn-open-result" disabled>Open result</button>
+            </div>
+          </div>
+        </section>
+        <section class="card"><div class="card-head"><div class="card-title">Scan counters</div><div class="field-hint mono">live from the control plane</div></div>
+          <div class="card-body">
+            <div class="kv-grid">
+              <div class="kv"><div class="k">Sent</div><div class="v" id="live-sent">—</div></div>
+              <div class="kv"><div class="k">Targets</div><div class="v" id="live-targets">—</div></div>
+              <div class="kv"><div class="k">Throughput</div><div class="v"><span id="live-pps">—</span> pps</div></div>
+              <div class="kv"><div class="k">Elapsed</div><div class="v" id="live-elapsed">—</div></div>
+              <div class="kv"><div class="k">Phase</div><div class="v" id="live-phase">—</div></div>
+              <div class="kv"><div class="k">Heartbeat</div><div class="v" id="live-heartbeat">—</div></div>
+              <div class="kv"><div class="k">Exit code</div><div class="v" id="live-exit">—</div></div>
             </div>
           </div>
         </section>
@@ -471,21 +601,56 @@ footer .mono { color: var(--faint); }
   </section>
 
   <section id="page-modules" class="hidden">
-    <div class="page-head"><div><div class="eyebrow">Console / Modules</div><h1>What can be sent.</h1><div class="sub">Scan engines, protocol probes, output writers and target generators.</div></div>
-      <div class="search"><input id="module-search" type="text" placeholder="Filter modules…" autocomplete="off"></div>
+    <div class="page-head"><div><div class="eyebrow">Console / Modules</div><h1>What can be sent.</h1><div class="sub">Scan engines, protocol probes, output writers and target generators, grouped by role.</div></div></div>
+    <div class="module-toolbar">
+      <div class="search"><input id="module-search" type="text" placeholder="Filter by name, description or parameter…" autocomplete="off"></div>
+      <div class="module-tabs" id="module-tabs">
+        <button type="button" class="module-tab active" data-kind="all">All</button>
+        <button type="button" class="module-tab" data-kind="scan">Scan engines</button>
+        <button type="button" class="module-tab" data-kind="probe">Protocol probes</button>
+        <button type="button" class="module-tab" data-kind="output">Output</button>
+        <button type="button" class="module-tab" data-kind="generate">Generators</button>
+      </div>
     </div>
-    <div class="module-grid" id="module-grid"></div>
+    <div id="module-groups"></div>
   </section>
 
-  <section id="page-settings" class="hidden">
-    <div class="page-head"><div><div class="eyebrow">Console / Settings</div><h1>Local session.</h1><div class="sub">This GUI is a loopback-only client for the local control plane.</div></div></div>
-    <div class="layout">
-      <section class="card"><div class="card-head"><div class="card-title">Runtime</div><div class="field-hint mono">read only</div></div><div class="card-body"><div class="kv-list" id="settings-runtime"></div></div></section>
-      <aside class="card"><div class="card-head"><div class="card-title">Security</div></div><div class="card-body stack small muted">
-        <p style="margin:0">The server binds to 127.0.0.1 only, validates the Host header, requires a per-session token, and exposes only allowlisted control methods. The scan child is owned by the control plane.</p>
-        <p style="margin:0">The GUI never stores the control token in the page; the server adds it to control requests.</p>
-        <p style="margin:0">Authorization is checked before start and again by the server. Do not scan systems you do not own.</p>
-      </div></aside>
+  <section id="page-system" class="hidden">
+    <div class="page-head"><div><div class="eyebrow">Console / System</div><h1>System &amp; preferences.</h1><div class="sub">Appearance, runtime capabilities and the local security model of this console.</div></div></div>
+    <div class="system-grid">
+      <section class="card">
+        <div class="card-head"><div class="card-title">Appearance</div><div class="field-hint mono">saved in this browser</div></div>
+        <div class="card-body">
+          <div class="setting-row">
+            <div><div class="sk">Theme</div><div class="sd">Warm paper is easier on long sessions; graphite is for dark rooms.</div></div>
+            <div class="seg" id="theme-seg"><button type="button" data-theme-set="light">Paper</button><button type="button" data-theme-set="dark">Graphite</button></div>
+          </div>
+          <div class="setting-row">
+            <div><div class="sk">Density</div><div class="sd">Compact fits more rows; comfortable gives labels more air.</div></div>
+            <div class="seg" id="density-seg"><button type="button" data-density-set="comfortable">Comfortable</button><button type="button" data-density-set="compact">Compact</button></div>
+          </div>
+          <div class="setting-row">
+            <div><div class="sk">Live refresh</div><div class="sd">How often the Live page asks the control plane for status.</div></div>
+            <div class="seg" id="refresh-seg"><button type="button" data-refresh="1500">1.5 s</button><button type="button" data-refresh="3000">3 s</button></div>
+          </div>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-head"><div class="card-title">Runtime</div><div class="field-hint mono">read only</div></div>
+        <div class="card-body"><div class="kv-list" id="settings-runtime"></div></div>
+      </section>
+      <section class="card">
+        <div class="card-head"><div class="card-title">Capabilities</div><div class="field-hint mono">build-dependent</div></div>
+        <div class="card-body"><div class="kv-list" id="settings-caps"></div></div>
+      </section>
+      <section class="card">
+        <div class="card-head"><div class="card-title">Security model</div><div class="field-hint mono">loopback only</div></div>
+        <div class="card-body stack">
+          <p class="sys-note">The server binds to <b>127.0.0.1</b> only, validates the <b>Host</b> header, requires a per-session token, and exposes only allowlisted control methods. The scan child is owned by the control plane.</p>
+          <p class="sys-note">The GUI page never receives the control-plane token; the server adds it to control requests. Authorization is checked before Start and again by the server.</p>
+          <p class="sys-note" style="margin:0">Result and log files stay under the managed Xtate results directory, not beside the binary.</p>
+        </div>
+      </section>
     </div>
   </section>
 </main>
@@ -508,9 +673,45 @@ const state = {
   pollTimer: null,
   dirty: true,
   argValues: new Map(),
+  records: [],
+  recordOffset: 0,
+  logText: "",
+  moduleKind: "all",
+  prefs: {theme: "light", density: "comfortable", refresh: 1500},
 };
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? "" : s);
+
+function loadPrefs() {
+  try {
+    const raw = localStorage.getItem("xtate.gui.prefs");
+    if (raw) Object.assign(state.prefs, JSON.parse(raw));
+  } catch (_) {}
+  if (!["light", "dark"].includes(state.prefs.theme)) state.prefs.theme = "light";
+  if (!["comfortable", "compact"].includes(state.prefs.density)) state.prefs.density = "comfortable";
+  if (![1500, 3000].includes(+state.prefs.refresh)) state.prefs.refresh = 1500;
+  applyPrefs();
+}
+function savePrefs() {
+  try { localStorage.setItem("xtate.gui.prefs", JSON.stringify(state.prefs)); } catch (_) {}
+}
+function applyPrefs() {
+  document.documentElement.dataset.theme = state.prefs.theme;
+  document.documentElement.dataset.density = state.prefs.density;
+  for (const b of document.querySelectorAll("[data-theme-set]")) b.classList.toggle("active", b.dataset.themeSet === state.prefs.theme);
+  for (const b of document.querySelectorAll("[data-density-set]")) b.classList.toggle("active", b.dataset.densitySet === state.prefs.density);
+  for (const b of document.querySelectorAll("[data-refresh]")) b.classList.toggle("active", +b.dataset.refresh === +state.prefs.refresh);
+}
+function setPrefs(patch) {
+  Object.assign(state.prefs, patch);
+  savePrefs();
+  applyPrefs();
+  if (state.pollTimer) {
+    clearInterval(state.pollTimer);
+    state.pollTimer = null;
+    if (state.page === "live" && state.jobId) pollJob();
+  }
+}
 
 function toast(message, bad) {
   const el = $("toast");
@@ -541,11 +742,16 @@ async function api(path, options) {
 function showPage(name) {
   state.page = name;
   document.querySelectorAll("[data-page]").forEach((b) => b.classList.toggle("active", b.dataset.page === name));
-  ["scan", "live", "results", "interfaces", "modules", "settings"].forEach((p) => {
+  ["scan", "live", "results", "interfaces", "modules", "system"].forEach((p) => {
     $("page-" + p).classList.toggle("hidden", p !== name);
   });
   if (name === "results") loadResults();
-  if (name === "live") pollJob();
+  if (name === "live") {
+    if (state.pollTimer) { clearInterval(state.pollTimer); state.pollTimer = null; }
+    pollJob();
+  }
+  const hash = "#" + name;
+  if (location.hash !== hash) history.replaceState(null, "", hash);
 }
 
 function setConn(ok, text) {
@@ -689,18 +895,23 @@ async function loadSystem() {
     setConn(true, "control plane · local");
     $("version-chip").textContent = state.system.version || "3.0";
     $("footer-endpoint").textContent = info.endpoint || "local";
-    const rt = $("settings-runtime");
-    rt.innerHTML = [
+    const mods = state.system.modules || {};
+    $("settings-runtime").innerHTML = [
       ["Version", info.version || state.system.version || "—"],
       ["Platform", state.system.platform || "—"],
       ["Control endpoint", info.endpoint || "—"],
-      ["Scan modules", (state.system.modules || {}).scan || 0],
-      ["Probe modules", (state.system.modules || {}).probe || 0],
-      ["Output modules", (state.system.modules || {}).output || 0],
-      ["Generate modules", (state.system.modules || {}).generate || 0],
-      ["HTTP/3", (state.system.capabilities || {}).http3 ? "compiled" : "unavailable"],
-      ["QUIC transport", (state.system.capabilities || {}).quic_transport ? "compiled" : "unavailable"],
-      ["zstd results", (state.system.capabilities || {}).zstd ? "compiled" : "unavailable"],
+      ["Scan engines", mods.scan || 0],
+      ["Protocol probes", mods.probe || 0],
+      ["Output writers", mods.output || 0],
+      ["Target generators", mods.generate || 0],
+    ].map(([k, v]) => '<div><span class="k">' + k + '</span><span class="v">' + esc(v) + "</span></div>").join("");
+    const caps = state.system.capabilities || {};
+    $("settings-caps").innerHTML = [
+      ["Raw sockets", caps.raw_sockets !== false ? "available" : "unavailable"],
+      ["HTTP/3", caps.http3 ? "compiled" : "unavailable"],
+      ["QUIC transport", caps.quic_transport ? "compiled" : "unavailable"],
+      ["zstd results", caps.zstd ? "compiled" : "unavailable"],
+      ["Live result records", caps.live_results ? "available" : "paged from disk"],
     ].map(([k, v]) => '<div><span class="k">' + k + '</span><span class="v">' + esc(v) + "</span></div>").join("");
   } catch (err) {
     setConn(false, "offline");
@@ -733,25 +944,54 @@ async function loadInterfaces() {
   } catch (err) { toast("Cannot list interfaces: " + err.message, true); }
 }
 
+const MODULE_GROUPS = [
+  {kind: "scan", title: "Scan engines", note: "How packets are sent and what state is kept."},
+  {kind: "probe", title: "Protocol probes", note: "What is read from a responding service."},
+  {kind: "output", title: "Output writers", note: "How results are written."},
+  {kind: "generate", title: "Target generators", note: "How target lists can be produced."},
+];
+
+function moduleCard(m) {
+  const params = (m.parameters || []).map((p) => p.name);
+  const shown = params.slice(0, 6).join(", ") + (params.length > 6 ? " +" + (params.length - 6) + " more" : "");
+  return '<article class="module-card" data-module-text="' +
+    esc((m.name + " " + (m.short_description || "") + " " + params.join(" ")).toLowerCase()) + '">' +
+    '<div class="kind">' + esc(m.kind) + '</div><h3>' + esc(m.name) + "</h3>" +
+    '<p>' + esc(m.short_description || m.description || "") + "</p>" +
+    (params.length ? '<div class="desc mono" title="' + esc(params.join(", ")) + '">' + params.length + " parameters · " + esc(shown) + "</div>" : '<div class="desc mono">no parameters</div>') +
+    "</article>";
+}
+
+function renderModulesPage() {
+  const q = ($("module-search").value || "").toLowerCase().trim();
+  const kind = state.moduleKind || "all";
+  let total = 0;
+  const parts = [];
+  for (const group of MODULE_GROUPS) {
+    if (kind !== "all" && kind !== group.kind) continue;
+    const items = (state.modules || []).filter((m) => m.kind === group.kind &&
+      (!q || (m.name + " " + (m.short_description || "") + " " + (m.parameters || []).map((p) => p.name).join(" ")).toLowerCase().includes(q)));
+    if (!items.length) continue;
+    total += items.length;
+    parts.push('<section class="module-group"><div class="module-group-head"><div><h2>' + esc(group.title) + '</h2><div class="sd">' + esc(group.note) + '</div></div><div class="count">' + items.length + '</div></div><div class="module-grid">' + items.map(moduleCard).join("") + "</div></section>");
+  }
+  $("module-groups").innerHTML = parts.length ? parts.join("") :
+    '<div class="empty"><b>No modules match.</b>Try a different filter or category.</div>';
+  $("module-search").setAttribute("aria-label", total + " modules shown");
+}
+
 async function loadModules() {
   try {
     const data = await api("/api/modules");
     state.modules = data.modules || [];
     const scans = state.modules.filter((m) => m.kind === "scan");
     const probes = state.modules.filter((m) => m.kind === "probe");
-    const others = state.modules.filter((m) => m.kind !== "scan" && m.kind !== "probe");
     $("method-grid").innerHTML = scans.map((m) =>
       '<button type="button" class="method ' + (m.name === state.scan ? "active" : "") + '" data-scan="' + esc(m.name) + '">' +
       '<span class="m-check"></span><div class="m-name">' + esc(m.name) + "</div>" +
       '<div class="m-desc">' + esc(m.short_description || m.description || "") + "</div></button>").join("");
     state.probes = probes;
-    const html = (list, kind) => list.map((m) => {
-      const params = (m.parameters || []).map((p) => p.name).join(", ");
-      return '<article class="module-card"><div class="kind">' + kind + '</div><h3>' + esc(m.name) + "</h3>" +
-        '<p>' + esc(m.short_description || m.description || "") + "</p>" +
-        (params ? '<div class="desc mono">args: ' + esc(params) + "</div>" : "") + "</article>";
-    }).join("");
-    $("module-grid").innerHTML = html(scans, "scan engine") + html(probes, "probe") + html(others, "output / generate");
+    renderModulesPage();
     for (const button of document.querySelectorAll("[data-scan]")) {
       button.addEventListener("click", () => {
         state.scan = button.dataset.scan;
@@ -868,11 +1108,8 @@ async function startScan() {
   try {
     const res = await api("/api/rpc", {method: "POST", body: payload});
     if (!res || !res.result || !res.result.job_id) throw new Error("control plane did not return a scan id");
-    state.jobId = res.result.job_id;
-    state.job = null;
     toast("Scan started.");
-    showPage("live");
-    pollJob();
+    beginLive(res.result.job_id);
   } catch (err) {
     toast("Start failed: " + err.message, true);
     $("btn-start").disabled = !(state.preflight && state.preflight.ok && $("auth").checked);
@@ -915,19 +1152,75 @@ async function loadRecords(more) {
   }
 }
 
+function cleanTerminal(text) {
+  return String(text || "")
+    .replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, "")
+    .replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "")
+    .replace(/\x1b[@-_]/g, "")
+    .replace(/\[K/g, "")
+    .replace(/\[\?[0-9;]*[A-Za-z]/g, "")
+    .replace(/\[[0-9;]*m/g, "")
+    .replace(/\r/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+const LIVE_LABEL = {
+  queued: ["Queued", "Waiting for a worker slot."],
+  running: ["Scanning", "The daemon is sending packets. You can leave this page; the scan continues."],
+  completed: ["Scan complete", "The worker finished and the result manifest is available."],
+  failed: ["Scan failed", "The worker stopped with an error. Check the log and the error detail."],
+  cancelled: ["Scan cancelled", "The job was cancelled. Partial results, if any, remain readable."],
+  timed_out: ["Scan timed out", "The job exceeded its timeout. Partial results, if any, remain readable."],
+  stalled: ["Scan stalled", "The worker heartbeat stopped. The control plane marked this job as stalled."],
+};
+
+function resetLiveView() {
+  $("live-title").textContent = state.jobId ? "Scan " + state.jobId : "No active scan.";
+  $("live-sub").textContent = state.jobId ? "Waiting for the control plane to report the first status." : "Start a scan from New scan. This page follows the current scan automatically.";
+  $("live-state-badge").textContent = state.jobId ? "starting" : "idle";
+  $("live-state-badge").className = "badge";
+  $("live-kicker").textContent = state.jobId ? "Starting" : "Idle";
+  $("live-headline").textContent = state.jobId ? "Starting scan" : "No scan running";
+  $("live-headline").className = "live-headline";
+  $("live-detail").textContent = state.jobId ? "Request accepted. Waiting for the worker to attach." : "Start a scan from New scan. This page follows the current scan automatically.";
+  $("live-dot").className = "dot";
+  $("live-sent").textContent = "—"; $("live-targets").textContent = "—";
+  $("live-phase").textContent = "—"; $("live-heartbeat").textContent = "—";
+  $("live-elapsed").textContent = "—"; $("live-exit").textContent = "—";
+  $("live-pps").textContent = "—";
+  $("live-manifest").innerHTML = ""; $("live-log").textContent = state.jobId ? "Waiting for worker output…" : "No output yet.";
+  $("live-records").textContent = "No records loaded."; $("live-record-meta").textContent = "—";
+  $("live-result").textContent = "—"; $("live-logpath").textContent = "—"; $("live-error").textContent = "—";
+  $("btn-cancel").disabled = !state.jobId; $("btn-records").disabled = true; $("btn-records-more").disabled = true;
+  $("btn-open-log").disabled = true; $("btn-open-result").disabled = true;
+}
+
+function beginLive(jobId) {
+  if (state.pollTimer) { clearInterval(state.pollTimer); state.pollTimer = null; }
+  state.jobId = jobId;
+  state.job = null;
+  state.records = [];
+  state.recordOffset = 0;
+  state.logText = "";
+  resetLiveView();
+  showPage("live");
+}
+
+async function openJobFile(kind) {
+  if (!state.jobId) return;
+  try {
+    await api("/api/open", {method: "POST", body: {job_id: state.jobId, kind: kind}});
+    toast(kind === "log" ? "Opening the worker log…" : "Opening the result file…");
+  } catch (err) {
+    toast("Cannot open file: " + err.message, true);
+  }
+}
+
 async function pollJob() {
   if (!state.jobId) {
-    $("live-title").textContent = "No active scan.";
-    $("live-sub").textContent = "Start a scan from New scan. Every packet is accounted for here.";
-    $("live-state-badge").textContent = "idle";
-    $("live-state-badge").className = "badge";
-    $("live-sent").textContent = "—"; $("live-targets").textContent = "—";
-    $("live-phase").textContent = "—"; $("live-heartbeat").textContent = "—";
-    $("live-elapsed").textContent = "—"; $("live-exit").textContent = "—";
-    $("live-progress").style.width = "0%"; $("live-pps").textContent = "—";
-    $("live-manifest").innerHTML = ""; $("live-log").textContent = "No output yet.";
-    $("live-records").textContent = "No records loaded."; $("live-record-meta").textContent = "—";
-    $("btn-cancel").disabled = true; $("btn-records").disabled = true; $("btn-records-more").disabled = true;
+    resetLiveView();
     return;
   }
   try {
@@ -936,38 +1229,56 @@ async function pollJob() {
     state.job = job;
     const stateName = job.state || "unknown";
     const terminal = ["completed", "failed", "cancelled", "timed_out", "stalled"].includes(stateName);
+    const label = LIVE_LABEL[stateName] || [stateName, "State reported by the control plane."];
     $("live-title").textContent = "Scan " + state.jobId;
-    $("live-sub").textContent = stateName === "running" ? "The daemon is sending packets. You can leave this page; the scan continues." : "Scan state and counters from the control plane.";
+    $("live-sub").textContent = "Started from this console · " + (stateName === "running" && job.phase ? job.phase : stateName);
     $("live-state-badge").textContent = stateName;
     $("live-state-badge").className = "badge " + (stateName === "completed" ? "mint" : terminal ? "red" : "amber");
+    $("live-kicker").textContent = label[0];
+    $("live-headline").textContent = label[0];
+    $("live-headline").className = "live-headline " + stateName;
+    $("live-dot").className = "dot " + (stateName === "completed" ? "ok" : terminal ? "bad" : "");
+    const sent = job.sent != null ? Number(job.sent) : 0;
+    const targets = job.targets != null ? Number(job.targets) : 0;
+    const pps = job.elapsed_ms && job.sent ? Math.round(job.sent * 1000 / job.elapsed_ms) : null;
+    $("live-detail").textContent = terminal
+      ? label[1]
+      : (sent.toLocaleString() + " sent" + (targets ? " of " + targets.toLocaleString() + " targets" : "") +
+         (pps ? " · " + pps.toLocaleString() + " pps" : "") + " · " + fmtDuration(job.elapsed_ms) + " elapsed");
     $("live-sent").textContent = job.sent != null ? Number(job.sent).toLocaleString() : "—";
     $("live-targets").textContent = job.targets != null ? Number(job.targets).toLocaleString() : "—";
     $("live-phase").textContent = job.phase || "—";
     $("live-heartbeat").textContent = job.heartbeat_age_ms != null ? fmtDuration(job.heartbeat_age_ms) + " ago" : "—";
     $("live-elapsed").textContent = fmtDuration(job.elapsed_ms);
     $("live-exit").textContent = job.exit_code != null ? job.exit_code : "—";
+    $("live-pps").textContent = pps ? pps.toLocaleString() : "—";
     $("live-result").textContent = job.result || "—";
     $("live-logpath").textContent = job.log_path || "—";
     $("live-error").textContent = job.error || "—";
-    const pct = job.targets ? Math.min(100, Math.round((job.sent || 0) * 100 / job.targets)) : 0;
-    $("live-progress").style.width = pct + "%";
-    $("live-pps").textContent = job.elapsed_ms && job.sent ? Math.round(job.sent * 1000 / job.elapsed_ms).toLocaleString() : "—";
     $("btn-cancel").disabled = terminal;
     $("btn-records").disabled = !job.result;
-    if (job.stderr_tail) $("live-log").textContent = job.stderr_tail;
-    if (terminal || state.jobId) {
-      const man = await api("/api/rpc", {method: "POST", body: {id: Date.now(), method: "job.result_manifest", job_id: state.jobId}});
-      const m = (man && man.result) || {};
-      $("live-manifest-state").textContent = m.complete ? "complete" : "pending";
-      $("live-manifest").innerHTML = [
-        ["Result", m.result_path || job.result || "—"],
-        ["Manifest", m.manifest_path || "—"],
-        ["Bytes", m.result_bytes != null ? Number(m.result_bytes).toLocaleString() : "—"],
-        ["Complete", m.complete ? "yes" : "no"],
-      ].map(([k, v]) => '<div><span class="k">' + k + '</span><span class="v">' + esc(v) + "</span></div>").join("");
+    $("btn-open-log").disabled = !job.log_path;
+    $("btn-open-result").disabled = !job.result;
+    const cleaned = cleanTerminal(job.stderr_tail || "");
+    if (cleaned) {
+      state.logText = cleaned;
+      $("live-log").textContent = cleaned;
+    } else if (terminal && !state.logText) {
+      $("live-log").textContent = "No worker log output.";
     }
-    if (state.page === "live" && !state.pollTimer) state.pollTimer = setInterval(pollJob, 1500);
+    const man = await api("/api/rpc", {method: "POST", body: {id: Date.now(), method: "job.result_manifest", job_id: state.jobId}});
+    const m = (man && man.result) || {};
+    $("live-manifest-state").textContent = m.complete ? "complete" : "pending";
+    $("live-manifest").innerHTML = [
+      ["Result", m.result_path || job.result || "—"],
+      ["Manifest", m.manifest_path || "—"],
+      ["Bytes", m.result_bytes != null ? Number(m.result_bytes).toLocaleString() : "—"],
+      ["Complete", m.complete ? "yes" : "no"],
+    ].map(([k, v]) => '<div><span class="k">' + k + '</span><span class="v">' + esc(v) + "</span></div>").join("");
     if (terminal && state.pollTimer) { clearInterval(state.pollTimer); state.pollTimer = null; }
+    if (!terminal && state.page === "live" && !state.pollTimer) {
+      state.pollTimer = setInterval(pollJob, state.prefs.refresh);
+    }
   } catch (err) {
     toast("Cannot read scan status: " + err.message, true);
   }
@@ -994,7 +1305,7 @@ async function loadResults() {
     $("results-body").innerHTML = jobs.map((j) =>
       '<tr data-job="' + esc(j.job_id) + '"><td class="id">' + esc(j.job_id) + '</td><td><span class="state ' + esc(j.state) + '">' + esc(j.state) + '</span></td><td class="mono">' + esc(j.result || "—") + '</td><td class="muted">view →</td></tr>').join("");
     for (const row of document.querySelectorAll("[data-job]")) {
-      row.addEventListener("click", () => { state.jobId = row.dataset.job; showPage("live"); pollJob(); });
+      row.addEventListener("click", () => beginLive(row.dataset.job));
     }
   } catch (err) { toast("Cannot list scans: " + err.message, true); }
 }
@@ -1019,12 +1330,26 @@ function init() {
   $("btn-cancel").addEventListener("click", cancelScan);
   $("btn-records").addEventListener("click", () => loadRecords(false));
   $("btn-records-more").addEventListener("click", () => loadRecords(true));
+  $("btn-open-log").addEventListener("click", () => openJobFile("log"));
+  $("btn-open-result").addEventListener("click", () => openJobFile("result"));
   $("btn-refresh-live").addEventListener("click", pollJob);
   $("btn-refresh-results").addEventListener("click", loadResults);
-  $("module-search").addEventListener("input", () => {
-    const q = $("module-search").value.toLowerCase();
-    for (const card of document.querySelectorAll(".module-card")) card.classList.toggle("hidden", !card.textContent.toLowerCase().includes(q));
-  });
+  $("module-search").addEventListener("input", renderModulesPage);
+  for (const tab of document.querySelectorAll("[data-kind]")) {
+    tab.addEventListener("click", () => {
+      state.moduleKind = tab.dataset.kind;
+      for (const b of document.querySelectorAll("[data-kind]")) b.classList.toggle("active", b === tab);
+      renderModulesPage();
+    });
+  }
+  for (const b of document.querySelectorAll("[data-theme-set]")) b.addEventListener("click", () => setPrefs({theme: b.dataset.themeSet}));
+  for (const b of document.querySelectorAll("[data-density-set]")) b.addEventListener("click", () => setPrefs({density: b.dataset.densitySet}));
+  for (const b of document.querySelectorAll("[data-refresh]")) b.addEventListener("click", () => setPrefs({refresh: +b.dataset.refresh}));
+  loadPrefs();
+  const initial = (location.hash || "").replace(/^#/, "");
+  const deepJob = new URLSearchParams(location.search).get("job");
+  if (/^job-\d+$/.test(deepJob || "")) beginLive(deepJob);
+  else if (["scan", "live", "results", "interfaces", "modules", "system"].includes(initial)) showPage(initial);
   loadSystem().then(loadInterfaces).then(loadModules).then(schedulePreflight);
 }
 init();

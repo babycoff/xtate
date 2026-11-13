@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-import json, os, subprocess, sys, tempfile, time
+import json, os, shutil, subprocess, sys, tempfile, time
 BIN = os.environ["XTATE_BIN"]; TOKEN = "mcp-test-token"
 # Linux loopback has no MAC address; TEST-NET-3 routes through the normal interface.
 SCAN_TARGET = "127.0.0.1" if os.name == "nt" else "203.0.113.1"
 ep = ("\\\\.\\pipe\\xtate-mcp-test-" + str(os.getpid())) if sys.platform == "win32" else os.path.join(tempfile.mkdtemp(), "ctl.sock")
 audit_path = os.path.join(os.getcwd(), "mcp-audit-test.log")
-env = dict(os.environ, XTATE_CONTROL_TOKEN=TOKEN, XTATE_MCP_AUDIT_LOG=audit_path)
+state_dir = os.path.join(os.getcwd(), "mcp-test-state")
+shutil.rmtree(state_dir, ignore_errors=True)
+os.makedirs(state_dir, exist_ok=True)
+env = dict(os.environ, XTATE_CONTROL_TOKEN=TOKEN, XTATE_MCP_AUDIT_LOG=audit_path,
+           XTATE_STATE_DIR=state_dir)
 ctlp = subprocess.Popen([BIN, "--control-plane=" + ep], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
 mp = subprocess.Popen([BIN, "--mcp", "--control-connect=" + ep], env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, encoding="utf-8", text=True)
@@ -226,6 +230,7 @@ finally:
         os.remove(audit_path)
     except OSError:
         pass
+    shutil.rmtree(state_dir, ignore_errors=True)
     mp.terminate(); ctlp.terminate()
 
 
