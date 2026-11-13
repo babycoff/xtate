@@ -170,7 +170,9 @@ Result files are written to the managed state directory, not beside the binary:
 `%LOCALAPPDATA%\xtate\results` on Windows, or
 `$XDG_STATE_HOME/xtate/results`/`$HOME/.local/state/xtate/results` on Linux.
 Set `XTATE_STATE_DIR` to override it. Request files are removed when the job
-ends.
+ends. If the preferred directory cannot be created, the control plane falls
+back to `<exe-dir>\.xtate-state`, then `%TEMP%\xtate-state`, then
+`.xtate-state` in the current directory.
 
 ### Results
 

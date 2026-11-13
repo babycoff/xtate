@@ -736,6 +736,10 @@ async function api(path, options) {
     const err = data && (data.error || data);
     throw new Error((err && (err.message || err.code)) || ("HTTP " + res.status));
   }
+  if (data && data.error) {
+    const err = data.error;
+    throw new Error(err.message || err.code || "control request failed");
+  }
   return data;
 }
 

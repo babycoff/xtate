@@ -108,7 +108,7 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 
 **Cancel** 立即发送 `job.cancel`，并用 toast 报告结果。终态下该按钮禁用。离开页面不会停止扫描；守护进程继续运行，job 仍会出现在 Results 中。
 
-结果文件写入托管状态目录，而不是二进制旁边：Windows 上是 `%LOCALAPPDATA%\xtate\results`，Linux 上是 `$XDG_STATE_HOME/xtate/results`/`$HOME/.local/state/xtate/results`。设置 `XTATE_STATE_DIR` 可以覆盖它。job 结束时请求文件会被删除。
+结果文件写入托管状态目录，而不是二进制旁边：Windows 上是 `%LOCALAPPDATA%\xtate\results`，Linux 上是 `$XDG_STATE_HOME/xtate/results`/`$HOME/.local/state/xtate/results`。设置 `XTATE_STATE_DIR` 可以覆盖它。job 结束时请求文件会被删除。如果首选目录无法创建，控制平面会依次回退到 `<exe 所在目录>\.xtate-state`、`%TEMP%\xtate-state`、当前目录下的 `.xtate-state`。
 
 ### Results
 

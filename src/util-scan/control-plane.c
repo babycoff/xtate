@@ -240,42 +240,122 @@ static FILE *open_write_utf8(const char *path) {
 }
 #endif
 
-static int state_dir(char *out, size_t cap) {
+/* Create every missing component of a directory path. A plain
+ * CreateDirectoryW()/mkdir() creates only the last component, so the first
+ * run on a clean machine failed for %LOCALAPPDATA%\xtate\requests. */
+static int ensure_dir(const char *path) {
+    if (!path || !path[0]) return 0;
 #ifdef _WIN32
-    wchar_t base[1024];
-    wchar_t dir[2048];
-    DWORD n;
-    {
-        wchar_t wdir[2048];
-        DWORD wn = GetEnvironmentVariableW(L"XTATE_STATE_DIR", wdir,
-                                           (DWORD)(sizeof(wdir) / sizeof(wdir[0])));
-        if (wn > 0 && wn < sizeof(wdir) / sizeof(wdir[0])) {
-            CreateDirectoryW(wdir, NULL);
-            return WideCharToMultiByte(CP_UTF8, 0, wdir, -1, out, (int)cap,
-                                       NULL, NULL) > 0;
+    wchar_t wpath[2048];
+    DWORD attr;
+    wchar_t *p;
+    if (MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath,
+                            (int)(sizeof(wpath) / sizeof(wpath[0]))) <= 0)
+        return 0;
+    for (p = wpath + 2; *p; p++) {
+        if (*p == L'\\' || *p == L'/') {
+            wchar_t c = *p;
+            *p = 0;
+            CreateDirectoryW(wpath, NULL);
+            *p = c;
         }
     }
-    n = GetEnvironmentVariableW(L"LOCALAPPDATA", base,
-                                (DWORD)(sizeof(base) / sizeof(base[0])));
-    if (n == 0 || n >= sizeof(base) / sizeof(base[0])) return 0;
-    if (swprintf(dir, sizeof(dir) / sizeof(dir[0]), L"%ls\\xtate", base) < 0)
+    CreateDirectoryW(wpath, NULL);
+    attr = GetFileAttributesW(wpath);
+    if (attr == INVALID_FILE_ATTRIBUTES ||
+        (attr & FILE_ATTRIBUTE_DIRECTORY) == 0)
         return 0;
-    CreateDirectoryW(dir, NULL);
-    {
-        char utf8[2048];
-        if (WideCharToMultiByte(CP_UTF8, 0, dir, -1, utf8, sizeof(utf8), NULL, NULL) <= 0)
-            return 0;
-        return snprintf(out, cap, "%s", utf8) < (int)cap;
-    }
+    return 1;
 #else
+    char tmp[2048];
+    char *p;
+    struct stat st;
+    if (snprintf(tmp, sizeof(tmp), "%s", path) >= (int)sizeof(tmp)) return 0;
+    for (p = tmp + 1; *p; p++) {
+        if (*p == '/') {
+            *p = 0;
+            mkdir(tmp, 0700);
+            *p = '/';
+        }
+    }
+    mkdir(tmp, 0700);
+    return stat(tmp, &st) == 0 && S_ISDIR(st.st_mode);
+#endif
+}
+
+#ifdef _WIN32
+/* Convert a wide candidate path to UTF-8 and create it. */
+static int try_state_candidate(const wchar_t *wdir, char *out, size_t cap) {
+    if (!wdir || !wdir[0]) return 0;
+    if (WideCharToMultiByte(CP_UTF8, 0, wdir, -1, out, (int)cap,
+                            NULL, NULL) <= 0)
+        return 0;
+    return ensure_dir(out);
+}
+
+/* Return a writable parent for the per-user state directory. The normal
+ * location is %LOCALAPPDATA%\xtate. Restricted launch environments (for
+ * example sandboxed shells or policy-managed desktops) can deny writes
+ * there even when the user owns the directory; in that case fall back to
+ * a hidden directory next to the executable, then TEMP, then CWD. */
+static int state_dir(char *out, size_t cap) {
+    wchar_t wdir[2048];
+    wchar_t *slash;
+    DWORD n;
+    {
+        n = GetEnvironmentVariableW(L"XTATE_STATE_DIR", wdir,
+                                    (DWORD)(sizeof(wdir) / sizeof(wdir[0])));
+        if (n > 0 && n < sizeof(wdir) / sizeof(wdir[0])) {
+            if (!try_state_candidate(wdir, out, cap)) return 0;
+            return 1;
+        }
+    }
+    n = GetEnvironmentVariableW(L"LOCALAPPDATA", wdir,
+                                (DWORD)(sizeof(wdir) / sizeof(wdir[0])));
+    if (n > 0 && n < sizeof(wdir) / sizeof(wdir[0])) {
+        if (swprintf(wdir + n, sizeof(wdir) / sizeof(wdir[0]) - n,
+                     L"\\xtate") > 0 &&
+            try_state_candidate(wdir, out, cap))
+            return 1;
+    }
+    n = GetModuleFileNameW(NULL, wdir, (DWORD)(sizeof(wdir) / sizeof(wdir[0])));
+    if (n > 0 && n < sizeof(wdir) / sizeof(wdir[0])) {
+        slash = wcsrchr(wdir, L'\\');
+        if (slash) {
+            *slash = 0;
+            if (swprintf(wdir + wcslen(wdir),
+                         sizeof(wdir) / sizeof(wdir[0]) - wcslen(wdir),
+                         L"\\.xtate-state") > 0 &&
+                try_state_candidate(wdir, out, cap))
+                return 1;
+        }
+    }
+    n = GetEnvironmentVariableW(L"TEMP", wdir,
+                                (DWORD)(sizeof(wdir) / sizeof(wdir[0])));
+    if (n > 0 && n < sizeof(wdir) / sizeof(wdir[0])) {
+        if (swprintf(wdir + n, sizeof(wdir) / sizeof(wdir[0]) - n,
+                     L"\\xtate-state") > 0 &&
+            try_state_candidate(wdir, out, cap))
+            return 1;
+    }
+    n = GetCurrentDirectoryW((DWORD)(sizeof(wdir) / sizeof(wdir[0])), wdir);
+    if (n > 0 && n < sizeof(wdir) / sizeof(wdir[0]) &&
+        swprintf(wdir + wcslen(wdir),
+                 sizeof(wdir) / sizeof(wdir[0]) - wcslen(wdir),
+                 L"\\.xtate-state") > 0 &&
+        try_state_candidate(wdir, out, cap))
+        return 1;
+    return 0;
+}
+#else
+static int state_dir(char *out, size_t cap) {
     const char *base = getenv("XDG_STATE_HOME");
     char root[1500];
     {
         const char *override = getenv("XTATE_STATE_DIR");
         if (override && override[0]) {
             if (snprintf(out, cap, "%s", override) >= (int)cap) return 0;
-            mkdir(out, 0700);
-            return 1;
+            return ensure_dir(out);
         }
     }
     if (base && base[0]) {
@@ -285,31 +365,22 @@ static int state_dir(char *out, size_t cap) {
         if (!home || !home[0]) return 0;
         if (snprintf(root, sizeof(root), "%s/.local/state", home) >= (int)sizeof(root))
             return 0;
-        mkdir(root, 0700);
     }
+    if (!ensure_dir(root)) return 0;
     if (snprintf(out, cap, "%s/xtate", root) >= (int)cap) return 0;
-    mkdir(out, 0700);
-    return 1;
-#endif
+    return ensure_dir(out);
 }
+#endif
 
 static int make_state_subdir(char *out, size_t cap, const char *name) {
     char dir[2048];
     if (!state_dir(dir, sizeof(dir))) return 0;
 #ifdef _WIN32
     if (snprintf(out, cap, "%s\\%s", dir, name) >= (int)cap) return 0;
-    {
-        wchar_t wdir[2048];
-        if (MultiByteToWideChar(CP_UTF8, 0, out, -1, wdir,
-                                (int)(sizeof(wdir) / sizeof(wdir[0]))) <= 0)
-            return 0;
-        CreateDirectoryW(wdir, NULL);
-    }
 #else
     if (snprintf(out, cap, "%s/%s", dir, name) >= (int)cap) return 0;
-    mkdir(out, 0700);
 #endif
-    return 1;
+    return ensure_dir(out);
 }
 
 static int default_result_path(char *out, size_t cap) {

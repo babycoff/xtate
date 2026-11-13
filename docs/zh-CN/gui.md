@@ -68,7 +68,9 @@ $env:XTATE_CONTROL_TOKEN = 'change-me'
 结果与日志文件不会写在二进制旁边。控制平面使用托管状态目录：Windows 上是
 `%LOCALAPPDATA%\xtate\results`，Linux 上是 `$XDG_STATE_HOME/xtate/results`（回退到
 `$HOME/.local/state/xtate/results`）。设置 `XTATE_STATE_DIR` 可以覆盖它。请求文件位于
-同一状态目录下，job 进入终态时会被删除。
+同一状态目录下，job 进入终态时会被删除。如果首选位置无法创建（例如受限的启动环境），
+控制平面会依次回退到 `<exe 所在目录>\.xtate-state`、`%TEMP%\xtate-state`、当前目录下的
+`.xtate-state`；选中的根目录下仍然包含 `requests` 和 `results`。
 
 ## 控制台功能
 

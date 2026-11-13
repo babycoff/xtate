@@ -78,7 +78,10 @@ managed state directory: `%LOCALAPPDATA%\xtate\results` on Windows, or
 `$XDG_STATE_HOME/xtate/results` (falling back to
 `$HOME/.local/state/xtate/results`) on Linux. Set `XTATE_STATE_DIR` to override
 it. Request files live under the same state directory and are removed when the
-job reaches a terminal state.
+job reaches a terminal state. If the preferred location cannot be created
+(for example a restricted launch environment), the control plane falls back to
+`<exe-dir>\.xtate-state`, then `%TEMP%\xtate-state`, then `.xtate-state` in the
+current directory; the selected root still contains `requests` and `results`.
 
 ## What the console does
 
