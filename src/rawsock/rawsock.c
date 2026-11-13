@@ -204,6 +204,39 @@ int rawsock_resolve_ifname(const char *hint, char *out, size_t out_size) {
 }
 
 
+int rawsock_get_adapter_link_type(const char *ifname, unsigned *link_type) {
+    pcap_t *pcap;
+    char    errbuf[PCAP_ERRBUF_SIZE] = {0};
+
+    if (!ifname || !ifname[0] || !link_type)
+        return -1;
+    if (pcap_init() != 0)
+        return -1;
+    pcap = (pcap_t *)PCAP.open_live(ifname, 64, 0, 1, errbuf);
+    if (!pcap)
+        return -1;
+
+    int dlt = (int)PCAP.datalink(pcap);
+    PCAP.close(pcap);
+    if (dlt < 0)
+        return -1;
+    *link_type = (unsigned)dlt;
+    return 0;
+}
+
+const char *rawsock_link_type_name(unsigned link_type) {
+    switch (link_type) {
+        case PCAP_DLT_NULL:
+            return "NULL";
+        case PCAP_DLT_ETHERNET:
+            return "EN10MB";
+        case PCAP_DLT_RAW:
+            return "RAW";
+        default:
+            return "UNSUPPORTED";
+    }
+}
+
 int rawsock_count_default_interfaces(void) {
     pcap_if_t *alldevs = NULL;
     char       errbuf[PCAP_ERRBUF_SIZE];

@@ -428,11 +428,13 @@ static int _main_scan(XConf *xconf) {
      * Print meta information before scanning
      */
     char      buffer[80];
+    char      ratebuf[64];
     struct tm x;
 
     now = time(0);
     safe_gmtime(&x, &now);
     strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S GMT", &x);
+    snprintf(ratebuf, sizeof(ratebuf), "%.10g", xconf->max_rate);
     LOG(LEVEL_OUT,
         "\nStarting " XTATE_NAME_TITLE_CASE " " XTATE_VERSION " at %s\n",
         buffer);
@@ -446,6 +448,7 @@ static int _main_scan(XConf *xconf) {
         LOG(LEVEL_OUT, "Output:     %s\n", xconf->out_conf.output_module->name);
 
     LOG(LEVEL_OUT, "Interface:  %s\n", xconf->nic.ifname);
+    LOG(LEVEL_OUT, "Rate:       %s packets/sec\n", ratebuf);
     LOG(LEVEL_OUT, "IP version:");
     if (init_ipv4)
         LOG(LEVEL_OUT, " v4");
@@ -502,8 +505,9 @@ static int _main_scan(XConf *xconf) {
 
         err = fprintf(meta_fp,
                       "Interface: %s\n"
+                      "Rate: %s packets/sec\n"
                       "IP version:",
-                      xconf->nic.ifname);
+                      xconf->nic.ifname, ratebuf);
         if (err < 0)
             goto meta_error0;
 
@@ -1305,12 +1309,14 @@ static int xtate_main(int argc, char *argv[]) {
             break;
 
         case Op_ExplainTarget:
-            explain_targets(xconf->diag_targets, false, xconf->nic.ifname);
+            exit_code =
+                explain_targets(xconf->diag_targets, false, xconf->nic.ifname);
             break;
 
         case Op_CheckNetwork:
-            explain_targets(xconf->diag_targets ? xconf->diag_targets : "8.8.8.8",
-                            true, xconf->nic.ifname);
+            exit_code = explain_targets(
+                xconf->diag_targets ? xconf->diag_targets : "8.8.8.8", true,
+                xconf->nic.ifname);
             break;
 
         case Op_ListScanModules:

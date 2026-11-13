@@ -14,7 +14,12 @@ typedef enum {
      */
     PCAP_DLT_NULL             = 0,
     PCAP_DLT_ETHERNET         = 1,   /*ethernet*/
-    PCAP_DLT_RAW              = 101, /*raw ip*/
+    /**
+     * pcap_datalink() returns DLT_RAW (12), not LINKTYPE_RAW (101).
+     * Npcap reports 12 for TUN/VPN adapters such as Clash/Meta tunnels.
+     * The savefile LINKTYPE_RAW value 101 is a different namespace.
+     */
+    PCAP_DLT_RAW              = 12,  /*raw ip*/
     PCAP_DLT_IEEE802_11       = 105, /*wifi, no radiotap headers*/
     /*ref: https://www.tcpdump.org/linktypes/LINKTYPE_LINUX_SLL.html*/
     PCAP_DLT_LINUX_SLL        = 113,

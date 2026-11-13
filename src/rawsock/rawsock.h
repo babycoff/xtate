@@ -121,6 +121,16 @@ ipv6address rawsock_get_adapter_ipv6(const char *ifname);
  */
 int rawsock_get_adapter_mac(const char *ifname, unsigned char *mac);
 
+/**
+ * Query the pcap link type of an interface without scanning. This opens the
+ * adapter briefly, so it can fail when the process lacks capture permission.
+ * Returns 0 and stores the link type on success, -1 otherwise.
+ */
+int rawsock_get_adapter_link_type(const char *ifname, unsigned *link_type);
+
+/** Human-readable name for the link types Xtate understands. */
+const char *rawsock_link_type_name(unsigned link_type);
+
 int rawsock_get_default_gateway(const char *ifname, unsigned *ipv4);
 int rawsock_get_default_interface(char *ifname, size_t sizeof_ifname);
 

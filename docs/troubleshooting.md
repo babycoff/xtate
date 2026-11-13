@@ -57,6 +57,41 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http -scan-a
 - For UDP scans the same interference exists via ICMP port-unreachable, which is why the scripts drop that too.
 - On Windows there is no bundled script; handshake-based banner scans are unreliable there for the same reason.
 
+## TUN/VPN adapters, fake-IP and RAW link type
+
+Clash/Meta/Surge-style TUN adapters often publish a fake IP range such as
+`198.18.0.0/15` (RFC 2544). `ping`/`Resolve-DnsName` can return one of those
+addresses even though the target has a real public address. Resolve the name
+through DoH (`--doh`) or a DNS server outside the tunnel, then scan the real
+address; a fake IP is only meaningful inside that tunnel.
+
+Run `--explain-target` first. It prints the route-selected interface and the
+pcap link type:
+
+```text
+Route group 1:
+  Interface: \Device\NPF_{...}
+  Link type: RAW (12)
+  Source IPv4: 198.18.0.1
+  Gateway: 198.18.0.2
+```
+
+Xtate supports Ethernet (`EN10MB`), `NULL` and `RAW` link types. A TUN/VPN
+adapter with `RAW` sends IP packets without an Ethernet header, so it has no
+MAC/ARP and may still drop or rewrite scans depending on the tunnel. If a scan
+gives no results:
+
+1. confirm the target is a real address, not fake-IP;
+2. run `--explain-target=<target>` and check `Route groups`;
+3. if several interfaces have default routes, pass `-if <name-or-index>` from
+   `--list-if` (the route-selected interface shown above is the first choice);
+4. if the link type is `UNSUPPORTED`, choose an Ethernet/Wi-Fi adapter.
+
+Scan startup rejects unsupported link types and prints a hint. A `RAW`/TUN
+interface is accepted, but if it cannot carry the scan, select the physical
+adapter explicitly. Do not force a TUN adapter just because it appears first;
+its route may be a fake-IP overlay rather than the path to the target.
+
 ## Permission, adapter and platform errors
 
 | Message | Cause and fix |
@@ -106,7 +141,7 @@ IPv6 has its own traps: a link-local source address must be given explicitly (`-
 - **`zbanner` grabs only the first banner segment** by default and then sends RST. Long banners, multi-segment TLS ServerHellos or large HTTP headers need `-scan-arg "-all-banner"` (optionally bounded with `-all-banner-limit <n>` inside the same string).
 - **TLS probes appear to return nothing.** `tls-state` reports a failed handshake at `info` level, and it sends no SNI or ALPN by default, so virtual hosts/CDNs may answer with their default certificate/site. Add `-show info`, use `-probe-arg "-sni <hostname> -alpn h2,http/1.1"` when the target IPs belong to one known vhost, or promote failures to `failed` with `-probe-arg "-fail-handshake"`; without an explicit SNI, treat stateful TLS evidence as the default virtual host, not as the requested hostname.
 
-These are design trade-offs in v2.44.1, not bugs; the full list with workarounds is in [Known limitations](./known-limitations.md).
+These are design trade-offs in v2.44.2, not bugs; the full list with workarounds is in [Known limitations](./known-limitations.md).
 
 ## Modules are missing or refuse to start
 

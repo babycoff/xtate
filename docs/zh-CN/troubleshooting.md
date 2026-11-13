@@ -57,6 +57,29 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http -scan-a
 - UDP 扫描存在同样的干扰，只是走的是 ICMP 端口不可达，这也是脚本要一并丢弃它的原因。
 - Windows 上没有随仓库提供的脚本；同样因为上述原因，基于握手的 banner 扫描在 Windows 上并不可靠。
 
+## TUN/VPN 网卡、fake-IP 与 RAW 链路类型
+
+Clash/Meta/Surge 一类的 TUN 网卡常使用 `198.18.0.0/15`（RFC 2544）这样的 fake-IP 段。即使目标有真实公网地址，`ping`/`Resolve-DnsName` 也可能返回这个假地址。请通过 DoH（`--doh`）或隧道之外的 DNS 解析出真实地址，再扫描真实地址；fake-IP 只在对应隧道内部有意义。
+
+先运行 `--explain-target`，它会打印路由选中的网卡和 pcap 链路类型：
+
+```text
+Route group 1:
+  Interface: \Device\NPF_{...}
+  Link type: RAW (12)
+  Source IPv4: 198.18.0.1
+  Gateway: 198.18.0.2
+```
+
+Xtate 支持 Ethernet（`EN10MB`）、`NULL` 和 `RAW` 链路类型。TUN/VPN 网卡的 `RAW` 模式直接发送不含 Ethernet 头的 IP 包，因此没有 MAC/ARP，而且隧道本身仍可能丢弃或改写扫描流量。如果扫描没有结果：
+
+1. 确认目标是真实地址，而不是 fake-IP；
+2. 运行 `--explain-target=<target>`，检查 `Route groups`；
+3. 如果有多个默认路由网卡，用 `--list-if` 查到名称/编号后传 `-if <name-or-index>`（上面显示的路由选中网卡是首选）；
+4. 如果链路类型是 `UNSUPPORTED`，请选择 Ethernet/Wi-Fi 网卡。
+
+扫描启动时会拒绝不支持的链路类型并打印提示。`RAW`/TUN 网卡会被接受，但如果它无法承载扫描，请显式选择物理网卡。不要仅仅因为 TUN 网卡排在前面就强制选它；它的路由可能只是 fake-IP 覆盖层，而不是通往目标的真实路径。
+
 ## 权限、网卡与平台错误
 
 | 报错信息 | 原因与处理 |
@@ -106,7 +129,7 @@ IPv6 有自己的坑：链路本地源地址必须显式给出（`-src-ip fe80::
 - **`zbanner` 默认只取第一个 banner 报文段**，随后发 RST。长 banner、多段 TLS ServerHello 或很长的 HTTP 头需要 `-scan-arg "-all-banner"`（可在同一个字符串里用 `-all-banner-limit <n>` 限制段数）。
 - **TLS 探测看起来没有返回。** `tls-state` 把握手失败记为 `info` 等级；默认也不发送 SNI 或 ALPN，所以虚拟主机/CDN 可能用默认证书/默认站点应答。加上 `-show info`；当目标 IP 属于一个已知 vhost 时，用 `-probe-arg "-sni <hostname> -alpn h2,http/1.1"`；或用 `-probe-arg "-fail-handshake"` 把失败提升为 `failed`。没有显式 SNI 时，请把有状态 TLS 的结果当作默认虚拟主机的证据，而不是你所请求主机名的证据。
 
-这些是 v2.44.1 的设计取舍，不是 bug；完整清单与规避方式见[已知限制](./known-limitations.md)。
+这些是 v2.44.2 的设计取舍，不是 bug；完整清单与规避方式见[已知限制](./known-limitations.md)。
 
 ## 模块缺失或启动失败
 

@@ -40,6 +40,14 @@ Delivered for 2.44.1:
   starts a private control plane in a child process, waits for readiness, and
   stops it on exit. `--control-connect` still attaches to an existing daemon.
 
+Delivered for 2.44.2:
+
+- corrected RAW link-type handling for TUN/VPN adapters and added link-type
+  preflight output in `--explain-target`; scan startup rejects unsupported link
+  types with an actionable message.
+- scan startup and meta output include the effective `Rate:` (default or
+  `--rate`).
+
 Still pending:
 
 - an agent evaluation suite and packaging;
@@ -166,7 +174,8 @@ See [MCP server](./mcp-server.md), [control plane](./control-plane.md) and
 2.42.1  Agent Skill (done, released)
 2.43.0  TUI control-plane dashboard (done, released)
 2.44.0  browser GUI for the control plane (done, released)
-2.44.1  one-command local TUI/GUI control-plane startup (done)
+2.44.1  one-command local TUI/GUI startup (done, released)
+2.44.2  RAW/TUN link preflight + startup rate display (done)
 next    evaluation suite and packaging
 later   MCP generate/stream input
 ```

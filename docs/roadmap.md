@@ -272,6 +272,15 @@ Delivered in 2.44.1:
 - one-command local TUI/GUI startup with a private control plane for the UI
   lifetime; `--control-connect` still attaches to an existing daemon.
 
+Delivered in 2.44.2:
+
+- corrected `PCAP_DLT_RAW` handling (`DLT_RAW` 12) so TUN/VPN adapters, including
+  fake-IP tunnels, are no longer rejected as unknown link types.
+- `--explain-target` reports the adapter link type and flags unsupported links;
+  scan startup rejects unsupported link types with an actionable hint and the
+  multiple-default-interface error points at `--explain-target`/`--list-if`.
+- scan startup and the meta file show the effective `Rate:` (default or `--rate`).
+
 Remaining:
 
 - agent evaluation suite and packaging;
@@ -286,7 +295,8 @@ Phases:
 2.42.1  Agent Skill + full-tree audit hardening (done)
 2.43.0  TUI control-plane dashboard (done, released)
 2.44.0  browser GUI for the control plane (done, released)
-2.44.1  one-command local TUI/GUI startup (done)
+2.44.1  one-command local TUI/GUI startup (done, released)
+2.44.2  RAW/TUN link preflight + startup rate display (done)
 next    evaluation suite and packaging
 later   MCP generate/stream input
 ```

@@ -52,7 +52,7 @@ try:
     bad = rpc({"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"start_scan","arguments":{"scan":"tcp-syn","targets":[SCAN_TARGET]}}})
     assert bad["result"]["isError"]
     out = os.environ.get("XTATE_TEST_OUT", "mcp-test.ndjson")
-    started = rpc({"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"start_scan","arguments":{"scan":"tcp-syn","targets":[SCAN_TARGET],"ports":[1],"result_path":out,"authorized":True}}})
+    started = rpc({"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"start_scan","arguments":{"scan":"tcp-syn","targets":[SCAN_TARGET],"ports":[1],"rate":1500,"result_path":out,"authorized":True}}})
     assert not started["result"]["isError"], started
     job = json.loads(started["result"]["content"][0]["text"])["result"]["job_id"]
     time.sleep(4)
@@ -62,6 +62,9 @@ try:
     assert stj["exit_code"] == 0
     assert os.path.exists(out)
     assert "log_path" in stj and "stderr_tail" in stj
+    with open(stj["log_path"], encoding="utf-8", errors="replace") as lf:
+        log_text = lf.read()
+    assert "Rate:       1500 packets/sec" in log_text, log_text[:400]
     man = rpc({"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"job_result_manifest","arguments":{"job_id":job}}}); assert not man["result"]["isError"]
     lst = rpc({"jsonrpc":"2.0","id":10,"method":"tools/call","params":{"name":"job_list","arguments":{}}}); assert not lst["result"]["isError"]
     mex = rpc({"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"explain_target","arguments":{"target":"8.8.8.8,2001:4860:4860::8888"}}})

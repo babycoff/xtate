@@ -55,6 +55,11 @@ int init_nic(XConf *xconf, bool has_ipv4_targets, bool has_ipv6_targets) {
             LOG(LEVEL_ERROR,
                 "multiple default interfaces detected (%d); use -if to choose explicitly\n",
                 n);
+            LOG(LEVEL_HINT,
+                "run \"--explain-target=<target>\" to see which interface the "
+                "target routes through\n");
+            LOG(LEVEL_HINT,
+                "run \"--list-if\" to list interfaces, then pass -if <name-or-index>\n");
             return -1;
         }
         /* no adapter specified, so find a default one */
@@ -100,6 +105,22 @@ int init_nic(XConf *xconf, bool has_ipv4_targets, bool has_ipv6_targets) {
     }
     xconf->nic.link_type = xconf->nic.adapter->link_type;
     LOG(LEVEL_DEBUG, "interface-type = %u\n", xconf->nic.link_type);
+    if (xconf->nic.link_type != PCAP_DLT_NULL &&
+        xconf->nic.link_type != PCAP_DLT_ETHERNET &&
+        xconf->nic.link_type != PCAP_DLT_RAW) {
+        LOG(LEVEL_ERROR,
+            "interface \"%s\" uses link type %u (%s), which cannot carry raw "
+            "IP packets\n",
+            ifname, xconf->nic.link_type,
+            rawsock_link_type_name(xconf->nic.link_type));
+        LOG(LEVEL_HINT,
+            "run \"--explain-target=<target>\" to inspect the interface, then "
+            "pick an Ethernet or Wi-Fi adapter with -if\n");
+        rawsock_close_adapter(xconf->nic.adapter);
+        xconf->nic.adapter = NULL;
+        rawsock_close_cache(tmp_acache);
+        return -1;
+    }
 
     rawsock_ignore_transmits(xconf->nic.adapter, ifname);
 

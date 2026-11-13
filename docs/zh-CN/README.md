@@ -2,11 +2,11 @@
 
 [English](../README.md) · **中文**
 
-本目录是 **Xtate v2.44.1** 的用户手册——一款面向互联网级测量的模块化全栈网络扫描器。
+本目录是 **Xtate v2.44.2** 的用户手册——一款面向互联网级测量的模块化全栈网络扫描器。
 
 项目 [README](../../README.zh-CN.md) 是落地页。如果你想上手使用 Xtate，而不是只扫一眼功能列表，就从这里开始。
 
-**发布说明：** [2.44.1](./release-notes/2.44.1.md)——本机 TUI/GUI 一条命令启动（私有控制面）；控制平面浏览器 GUI 与 TUI 任务面板；Agent Skill；审计加固与 Windows UTF-8 路径。
+**发布说明：** [2.44.2](./release-notes/2.44.2.md)——修正 TUN/VPN 网卡的 RAW 链路类型，`--explain-target` 与扫描启动增加链路类型预检，并包含 2.44.1 的 TUI/GUI 一条命令启动。
 
 ## 从哪里开始
 
@@ -103,7 +103,7 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-本文档基于 v2.44.1 的代码树编写。如果你在更新的 commit 上发现内容有出入，请以二进制为准，也欢迎提 issue。
+本文档基于 v2.44.2 的代码树编写。如果你在更新的 commit 上发现内容有出入，请以二进制为准，也欢迎提 issue。
 
 ## 计划中
 

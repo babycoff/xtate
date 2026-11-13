@@ -3,6 +3,7 @@
 #include "../target/target-rangev4.h"
 #include "../target/target-rangev6.h"
 #include "../rawsock/rawsock-route.h"
+#include "../stub/stub-pcap-dlt.h"
 #include "../target/target-ipaddress.h"
 #include <stdio.h>
 #include <stdint.h>
@@ -95,11 +96,30 @@ int explain_targets(const char *targets, bool check, const char *forced_if) {
             }
         }
     }
+    bool bad_link = false;
     printf("Targets: %llu\nRoute groups: %d\n", (unsigned long long)total, ng);
     for (int k = 0; k < ng; k++) {
         if (!groups[k].used) continue;
         printf("\nRoute group %d:\n  Targets: %llu\n  Interface: %s\n", k + 1,
                (unsigned long long)groups[k].count, groups[k].ifname);
+        if (groups[k].ifname[0] &&
+            strcmp(groups[k].ifname, "(no route)") != 0) {
+            unsigned link_type = 0;
+            if (rawsock_get_adapter_link_type(groups[k].ifname, &link_type) == 0) {
+                const char *link_name = rawsock_link_type_name(link_type);
+                printf("  Link type: %s (%u)\n", link_name, link_type);
+                if (link_type != PCAP_DLT_NULL &&
+                    link_type != PCAP_DLT_ETHERNET &&
+                    link_type != PCAP_DLT_RAW) {
+                    printf("  WARNING: this link type cannot carry raw IP packets; "
+                           "select an Ethernet or Wi-Fi adapter with -if.\n");
+                    bad_link = true;
+                } else if (link_type == PCAP_DLT_RAW) {
+                    printf("  Note: RAW link sends IP packets without an Ethernet "
+                           "header; MAC and ARP are not used.\n");
+                }
+            }
+        }
         if (groups[k].source.version == 4) {
             unsigned s = groups[k].source.ipv4;
             printf("  Source IPv4: %u.%u.%u.%u\n",(s>>24)&255,(s>>16)&255,(s>>8)&255,s&255);
@@ -123,8 +143,15 @@ int explain_targets(const char *targets, bool check, const char *forced_if) {
         if (groups[k].count && groups[k].nsamples == 8) printf(" ...");
         printf("\n");
     }
+    if (bad_link)
+        printf("\nWARNING: one or more route interfaces have an unsupported link "
+               "type. Raw scans cannot use them; choose an Ethernet or Wi-Fi "
+               "adapter with -if.\n");
     if (ng > 1) printf("\nWARNING: targets span %d routes; split into separate jobs.\n", ng);
+    if (check)
+        printf("\nCheck: %s\n",
+               bad_link ? "FAIL (unsupported link type)" : "OK");
     rangelist_rm_all(&set.ipv4); range6list_rm_all(&set.ipv6);
-    return 0;
+    return bad_link ? 1 : 0;
 }
 
