@@ -209,6 +209,10 @@ The console is designed for a single local user:
   once, and embedded in the page. Every `/api/*` request must send it as
   `X-Xtate-GUI-Token`; comparison is constant-time. The token is never accepted
   from a request body.
+- **Private-mode control token.** If the GUI starts its own control plane and
+  `XTATE_CONTROL_TOKEN` is not already set, it generates an ephemeral 128-bit
+  token for that child, so another local account cannot connect to the pipe or
+  socket. It is removed when the GUI exits and is not printed.
 - **Method allowlist.** The browser bridge forwards only `job.list`,
   `job.status`, `job.cancel`, `job.result_manifest` and `job.start`.
   `/api/results` is a separate read-only handler that accepts only a job id and

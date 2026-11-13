@@ -16,11 +16,12 @@ small authorized scan without composing JSON by hand.
 
 ## Requirements
 
-- A running control plane on the same host:
+- A running control plane on the same host (or the private one started by
+  `xtate --tui`):
   - Unix: `--control-plane=/tmp/xtate-ctl.sock`
   - Windows: `--control-plane=\\.\pipe\xtate-ctl`
-- The same `XTATE_CONTROL_TOKEN` value in the control-plane process and in the
-  TUI process when a token is configured.
+- For an attached daemon, the same `XTATE_CONTROL_TOKEN` value in the
+  control-plane process and in the TUI process when a token is configured.
 - A terminal that supports ANSI escape sequences. Windows 10/11 Terminal and
   current Windows consoles work; the TUI enables virtual-terminal processing.
 - A UTF-8 capable terminal for non-ASCII result paths.
@@ -61,8 +62,11 @@ xtate --control-plane=\\.\pipe\xtate-ctl
 xtate --tui --control-connect=\\.\pipe\xtate-ctl
 ```
 
-The private child inherits `XTATE_CONTROL_TOKEN` from the TUI process, so a
-token is still enforced when one is set.
+The private child inherits `XTATE_CONTROL_TOKEN` from the TUI process. If no
+token is configured, the TUI generates an ephemeral 128-bit one for the private
+control plane, so other local accounts cannot connect; it is removed when the
+TUI exits. Attached-daemon mode still uses the token from the environment, if
+any.
 
 ## Keys
 

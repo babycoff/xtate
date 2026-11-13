@@ -13,10 +13,10 @@ TUI 是一个全屏的**控制平面客户端**。它不在进程内扫描，也
 
 ## 前提
 
-- 同一台主机上已经有一个控制平面：
+- 同一台主机上已经有一个控制平面（或使用 `xtate --tui` 自动启动的私有控制平面）：
   - Unix：`--control-plane=/tmp/xtate-ctl.sock`
   - Windows：`--control-plane=\\.\pipe\xtate-ctl`
-- 如果设置了控制令牌，控制平面和 TUI 进程必须使用相同的
+- 连接已有控制平面时，如果设置了控制令牌，两者必须使用相同的
   `XTATE_CONTROL_TOKEN`。
 - 终端支持 ANSI 转义序列。Windows 10/11 Terminal 和较新的 Windows 控制台可用；
   TUI 会主动开启虚拟终端处理。
@@ -56,7 +56,9 @@ xtate --control-plane=\\.\pipe\xtate-ctl
 xtate --tui --control-connect=\\.\pipe\xtate-ctl
 ```
 
-私有子进程会继承 TUI 进程的 `XTATE_CONTROL_TOKEN`，因此设置令牌时仍然会校验。
+私有子进程会继承 TUI 进程的 `XTATE_CONTROL_TOKEN`；如果环境未设置令牌，TUI 会为
+私有控制平面生成一个临时 128 位令牌，使本机其他账户无法连接，并在 TUI 退出时清除。
+连接已有控制平面时仍使用环境中的令牌（如果有）。
 
 ## 按键
 

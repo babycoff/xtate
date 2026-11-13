@@ -7,7 +7,8 @@ Xtate 通过 stdio 提供 Model Context Protocol（MCP）服务。它是控制�
 ## 启动
 
 本机 MCP 客户端只需一条命令：`xtate --mcp` 会在子进程中启动私有控制面，在其上
-提供 stdio MCP，并在会话结束时停止该控制面：
+提供 stdio MCP，并在会话结束时停止该控制面。如果未设置 `XTATE_CONTROL_TOKEN`，
+会为私有子进程生成临时令牌，避免本机其他账户直接连接：
 
 ```bash
 xtate --mcp

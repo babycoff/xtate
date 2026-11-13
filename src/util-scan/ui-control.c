@@ -2,6 +2,7 @@
 #include "control-client.h"
 #include "../crypto/crypto-json.h"
 
+#include <openssl/rand.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,6 +26,45 @@
 
 #define UI_PING_ATTEMPTS 60
 #define UI_PING_WAIT_MS 100
+
+/*
+ * A UI-started control plane is a private child of this process.  When the
+ * caller did not configure a token, generate an ephemeral one so other local
+ * accounts cannot drive the pipe/socket.  The parent and child share it
+ * through the environment; explicit --control-plane servers are unchanged.
+ */
+static int g_generated_token;
+
+static int ensure_private_token(void) {
+    const char *existing = getenv("XTATE_CONTROL_TOKEN");
+    unsigned char raw[16];
+    char token[33];
+    int i;
+
+    if (existing && existing[0]) return 0;
+    if (RAND_bytes(raw, sizeof(raw)) != 1) return -1;
+    for (i = 0; i < (int)sizeof(raw); i++)
+        snprintf(token + i * 2, sizeof(token) - (size_t)i * 2, "%02x", raw[i]);
+#ifdef _WIN32
+    /* _putenv_s updates both the CRT environment used by getenv() and the
+     * Win32 environment block inherited by CreateProcessW. */
+    if (_putenv_s("XTATE_CONTROL_TOKEN", token) != 0) return -1;
+#else
+    if (setenv("XTATE_CONTROL_TOKEN", token, 1) != 0) return -1;
+#endif
+    g_generated_token = 1;
+    return 0;
+}
+
+static void clear_private_token(void) {
+    if (!g_generated_token) return;
+#ifdef _WIN32
+    _putenv_s("XTATE_CONTROL_TOKEN", "");
+#else
+    unsetenv("XTATE_CONTROL_TOKEN");
+#endif
+    g_generated_token = 0;
+}
 
 #ifdef _WIN32
 static HANDLE g_process = NULL;
@@ -89,28 +129,37 @@ int ui_control_start(const char *exe_path, char *endpoint, size_t endpoint_size)
     (void)exe_path;
     if (!endpoint || endpoint_size < 64) return -1;
     if (g_process) return -1;
+    if (ensure_private_token() != 0) return -1;
 
-    if (GetModuleFileNameW(NULL, wexe, (DWORD)(sizeof(wexe) / sizeof(wexe[0]))) == 0)
+    if (GetModuleFileNameW(NULL, wexe, (DWORD)(sizeof(wexe) / sizeof(wexe[0]))) == 0) {
+        clear_private_token();
         return -1;
+    }
 
     pid = GetCurrentProcessId();
     tick = GetTickCount64();
     snprintf(endpoint, endpoint_size, "\\\\.\\pipe\\xtate-ui-%lu-%llu",
              (unsigned long)pid, (unsigned long long)tick);
     if (utf8_to_wide(endpoint, wendpoint,
-                     (int)(sizeof(wendpoint) / sizeof(wendpoint[0]))) <= 0)
+                     (int)(sizeof(wendpoint) / sizeof(wendpoint[0]))) <= 0) {
+        clear_private_token();
         return -1;
+    }
     if (swprintf(wcmd, sizeof(wcmd) / sizeof(wcmd[0]),
-                 L"\"%ls\" --control-plane=%ls", wexe, wendpoint) < 0)
+                 L"\"%ls\" --control-plane=%ls", wexe, wendpoint) < 0) {
+        clear_private_token();
         return -1;
+    }
 
     ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);
     ZeroMemory(&pi, sizeof(pi));
     if (!CreateProcessW(wexe, wcmd, NULL, NULL, FALSE,
                         CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP,
-                        NULL, NULL, &si, &pi))
+                        NULL, NULL, &si, &pi)) {
+        clear_private_token();
         return -1;
+    }
 
     g_process = pi.hProcess;
     g_thread  = pi.hThread;
@@ -158,6 +207,7 @@ void ui_control_stop(void) {
         CloseHandle(g_thread);
         g_thread = NULL;
     }
+    clear_private_token();
 }
 #else
 int ui_control_start(const char *exe_path, char *endpoint, size_t endpoint_size) {
@@ -167,6 +217,7 @@ int ui_control_start(const char *exe_path, char *endpoint, size_t endpoint_size)
 
     if (!exe_path || !exe_path[0] || !endpoint || endpoint_size < 64) return -1;
     if (g_child > 0) return -1;
+    if (ensure_private_token() != 0) return -1;
 
     snprintf(endpoint, endpoint_size, "/tmp/xtate-ui-%lu-%lu.sock",
              (unsigned long)getuid(), (unsigned long)getpid());
@@ -174,7 +225,10 @@ int ui_control_start(const char *exe_path, char *endpoint, size_t endpoint_size)
     unlink(endpoint);
 
     pid = fork();
-    if (pid < 0) return -1;
+    if (pid < 0) {
+        clear_private_token();
+        return -1;
+    }
     if (pid == 0) {
         int fd = open("/dev/null", O_RDWR);
         char arg[1100];
@@ -225,7 +279,10 @@ int ui_control_start(const char *exe_path, char *endpoint, size_t endpoint_size)
 void ui_control_stop(void) {
     int status;
     int i;
-    if (g_child <= 0) return;
+    if (g_child <= 0) {
+        clear_private_token();
+        return;
+    }
     kill(g_child, SIGTERM);
     for (i = 0; i < 30; i++) {
         pid_t r = waitpid(g_child, &status, WNOHANG);
@@ -233,6 +290,7 @@ void ui_control_stop(void) {
             g_child = -1;
             unlink(g_endpoint);
             g_endpoint[0] = 0;
+            clear_private_token();
             return;
         }
         struct timespec ts;
@@ -245,5 +303,6 @@ void ui_control_stop(void) {
     unlink(g_endpoint);
     g_endpoint[0] = 0;
     g_child = -1;
+    clear_private_token();
 }
 #endif

@@ -335,21 +335,25 @@ def main():
             return 1
 
         # Without --control-connect, --gui starts a private control plane.
+        auto_env = env.copy()
+        auto_env.pop("XTATE_CONTROL_TOKEN", None)
         auto = subprocess.Popen(
             [exe, "--gui", "--gui-listen=127.0.0.1:0", "--gui-no-open"],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            env=env, text=True, encoding="utf-8", errors="replace",
+            env=auto_env, text=True, encoding="utf-8", errors="replace",
             bufsize=1)
         try:
             auto_output = "".join(auto.stdout.readline() for _ in range(3))
             auto_match = re.search(r"http://127\.0\.0\.1:(\d+)/", auto_output)
             auto_token = re.search(r"GUI session token: ([0-9a-f]+)", auto_output)
-            if not auto_match or not auto_token:
+            auto_endpoint_match = re.search(r"Control endpoint: (.+)", auto_output)
+            if not auto_match or not auto_token or not auto_endpoint_match:
                 print("private GUI did not start:\n" + auto_output,
                       file=sys.stderr)
                 return 1
             auto_port = int(auto_match.group(1))
             auto_tok = auto_token.group(1)
+            auto_endpoint = auto_endpoint_match.group(1).strip()
             if not wait_port(auto_port):
                 print("private GUI port did not become ready", file=sys.stderr)
                 return 1
@@ -359,6 +363,16 @@ def main():
             if "xtate-ui-" not in private_endpoint:
                 print("private GUI did not use a private control plane:",
                       status, body[:200], file=sys.stderr)
+                return 1
+            # A private control plane must reject a client without its
+            # ephemeral token even though the endpoint is local.
+            probe = subprocess.run(
+                [exe, "--control-ping=" + auto_endpoint],
+                env=auto_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                text=True, encoding="utf-8", errors="replace", timeout=10)
+            if "UNAUTHORIZED" not in probe.stdout:
+                print("private control plane accepted a tokenless client:",
+                      probe.stdout[:200], probe.stderr[:200], file=sys.stderr)
                 return 1
             status, body = http_json(
                 auto_port, "/api/rpc", auto_tok,

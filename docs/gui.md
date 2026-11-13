@@ -10,8 +10,10 @@ service and does not expose the control plane over TCP.
 
 ## Requirements
 
-- A control plane endpoint (Unix socket or Windows Named Pipe).
-- The same `XTATE_CONTROL_TOKEN` as the control plane, if one is configured.
+- An attached control-plane endpoint (Unix socket or Windows Named Pipe), or
+  the default private control plane started by `xtate --gui`.
+- For an attached daemon, the same `XTATE_CONTROL_TOKEN` as that daemon, if one
+  is configured.
 - A modern browser with `fetch` and `<dialog>` support.
 
 See [control-plane.md](control-plane.md) for starting the daemon.
@@ -32,9 +34,13 @@ Windows PowerShell:
 .\bin\xtate.exe --gui
 ```
 
-Jobs started in this private mode stop when the GUI exits. To attach to an
-already-running control plane instead (for long-lived jobs or another client),
-pass its endpoint explicitly:
+Jobs started in this private mode stop when the GUI exits. If
+`XTATE_CONTROL_TOKEN` is not already set, the GUI generates an ephemeral
+128-bit token for the private control plane and passes it to the child, so
+other local accounts cannot drive the pipe or socket. The token is removed
+when the GUI exits and is never printed. To attach to an already-running
+control plane instead (for long-lived jobs or another client), pass its
+endpoint explicitly:
 
 ```bash
 export XTATE_CONTROL_TOKEN='change-me'
@@ -118,10 +124,11 @@ arguments are editable in the Method panel.
   result path reported by that job's manifest, never an arbitrary client path.
 - **No shell.** The GUI is in-process C; the optional browser launch uses
   `ShellExecuteW` on Windows and `xdg-open` on Unix.
-- **Token handling.** The control-plane token is read from the environment and
-  added by the server; page JavaScript never receives it. The browser session
-  token is visible in the page source, so treat the browser profile as trusted
-  local state.
+- **Token handling.** An attached daemon's control-plane token is read from the
+  environment and added by the server; page JavaScript never receives it. In
+  private mode the GUI creates an ephemeral token when the environment has none
+  and removes it on exit. The browser session token is visible in the page
+  source, so treat the browser profile as trusted local state.
 
 The GUI is not a security boundary for scanning. Authorization, target limits,
 rate limits, route preflight and result-path checks remain in the control plane

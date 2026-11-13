@@ -133,6 +133,7 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 
 - **仅回环。** `--gui-listen` 拒绝除 `127.0.0.1` 或 `localhost` 以外的任何值。服务器还会拒绝 `Host` 头不是回环的请求，从而阻断 DNS rebinding 攻击。
 - **每会话 token。** 启动时生成一个 128 位随机 token，只打印一次，并嵌入页面。每个 `/api/*` 请求都必须把它放在 `X-Xtate-GUI-Token` 中；比较是常数时间的。绝不从请求体接受该 token。
+- **私有模式控制 token。** 如果 GUI 自行启动控制平面且环境中未设置 `XTATE_CONTROL_TOKEN`，它会为该子进程生成一个临时 128 位 token，使本机其他账户无法连接管道或 socket。该 token 在 GUI 退出时清除，且不会打印。
 - **方法白名单。** 浏览器桥只转发 `job.list`、`job.status`、`job.cancel`、`job.result_manifest` 和 `job.start`。`/api/results` 是独立的只读处理器，只接受 job id，并分页读取该 job manifest 指向的结果文件；两条路径都不能调用任意控制方法。
 - **服务端授权。** 除非请求带有 `params.authorized: true`，否则 `job.start` 会被拒绝。浏览器复选框只是便利，不是强制点。
 - **无 shell、无任意路径。** GUI 服务器不执行命令，也不读取任意文件。结果通过守护进程的 manifest 读取，页面只渲染服务器数据。

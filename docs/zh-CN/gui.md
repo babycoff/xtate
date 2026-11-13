@@ -8,8 +8,10 @@ GUI 面向本机分析工作站，不是公网 Web 服务，也不会通过 TCP 
 
 ## 前提
 
-- 一个控制平面端点（Unix socket 或 Windows Named Pipe）。
-- 如果控制平面设置了 `XTATE_CONTROL_TOKEN`，GUI 必须使用同一个值。
+- 一个已连接的控制平面端点（Unix socket 或 Windows Named Pipe），或直接使用
+  `xtate --gui` 自动启动的私有控制平面。
+- 连接已有控制平面时，如果该控制平面设置了 `XTATE_CONTROL_TOKEN`，GUI 必须使用
+  同一个值。
 - 支持 `fetch` 与 `<dialog>` 的现代浏览器。
 
 控制平面的启动方式见 [control-plane.md](control-plane.md)。
@@ -29,8 +31,10 @@ Windows PowerShell：
 .\bin\xtate.exe --gui
 ```
 
-这种私有模式下启动的任务会随 GUI 退出而停止。若要连接已有控制面（用于长任务或其他
-客户端），显式传入端点：
+这种私有模式下启动的任务会随 GUI 退出而停止。如果环境中尚未设置
+`XTATE_CONTROL_TOKEN`，GUI 会为私有控制平面生成一个临时的 128 位令牌并传给子进程，
+因此本机其他账户无法直接连接该管道或 socket；令牌在 GUI 退出时清除，且不会打印。
+若要连接已有控制面（用于长任务或其他客户端），显式传入端点：
 
 ```bash
 export XTATE_CONTROL_TOKEN='change-me'
@@ -101,9 +105,10 @@ JSON 控制 API；scan/probe 参数可在 Method 面板中编辑。
   指向的结果文件，绝不接受客户端任意路径。
 - **不经过 shell。** GUI 是进程内 C 代码；自动打开浏览器在 Windows 使用
   `ShellExecuteW`，在 Unix 使用 `xdg-open`。
-- **token 处理。** 控制平面 token 只从环境读取并由服务端添加；页面 JavaScript
-  不会拿到它。浏览器会话 token 会出现在页面源码中，因此应把浏览器配置视为可信
-  本机状态。
+- **token 处理。** 连接已有控制平面时，其 token 只从环境读取并由服务端添加；
+  页面 JavaScript 不会拿到它。私有模式下若环境没有 token，GUI 会生成临时 token
+  并在退出时清除。浏览器会话 token 会出现在页面源码中，因此应把浏览器配置视为
+  可信本机状态。
 
 GUI 不是扫描的安全边界。授权、目标数量、速率、路由预检和结果路径检查仍在控制平面
 与 MCP server 中执行。

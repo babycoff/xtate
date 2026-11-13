@@ -9,7 +9,8 @@ Discovery runs the same executable with a fixed argument vector.
 
 For a local MCP client, one command is enough: `xtate --mcp` starts a private
 control plane in a child process, serves stdio MCP on it, and stops it when the
-MCP session ends:
+MCP session ends. If `XTATE_CONTROL_TOKEN` is not set, an ephemeral token is
+generated for the private child so other local accounts cannot connect:
 
 ```bash
 xtate --mcp
