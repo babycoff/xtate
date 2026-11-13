@@ -296,6 +296,7 @@ typedef struct XtateConf {
     char    *control_endpoint;
     char    *control_ping;
     unsigned mcp_mode : 1;
+    unsigned tui_mode : 1;
     char    *control_connect;
     char    *control_request;
     uint64_t result_chunk_size;

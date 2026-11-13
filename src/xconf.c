@@ -943,6 +943,13 @@ static ConfRes SET_mcp_mode(void *conf, const char *name, const char *value) {
     xconf->mcp_mode = (unsigned)conf_parse_bool(value);
     return Conf_OK;
 }
+
+static ConfRes SET_tui_mode(void *conf, const char *name, const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    xconf->tui_mode = (unsigned)conf_parse_bool(value);
+    return Conf_OK;
+}
 static ConfRes SET_control_ping(void *conf, const char *name,
                                const char *value) {
     XConf *xconf = (XConf *)conf;
@@ -3433,6 +3440,12 @@ ConfParam config_parameters[] = {
      {0},
      "Write a result chunk index file.",
      "Write result index."},
+    {"tui",
+     SET_tui_mode,
+     Type_FLAG,
+     {0},
+     "Run the control-plane TUI dashboard; requires --control-connect.",
+     "Run TUI dashboard."},
     {"mcp",
      SET_mcp_mode,
      Type_FLAG,

@@ -22,6 +22,11 @@ Delivered for 2.42.1:
 - a reviewed Agent Skill (documentation and policy, not a privileged binary) at
   [`skills/xtate/`](../skills/xtate/SKILL.md).
 
+Delivered for 2.43.0:
+
+- a full-screen TUI control-plane client (`xtate --tui`) that shares the same
+  job/control API; it does not add another scanning path.
+
 Still pending:
 
 - an agent evaluation suite and packaging;
@@ -145,7 +150,8 @@ See [MCP server](./mcp-server.md), [control plane](./control-plane.md) and
 
 ```text
 2.42.0  jobs + control plane + MCP server (done)
-2.42.1  Agent Skill (done, unreleased)
+2.42.1  Agent Skill (done, released)
+2.43.0  TUI control-plane dashboard (done)
 next    evaluation suite and packaging
 later   MCP generate/stream input
 ```

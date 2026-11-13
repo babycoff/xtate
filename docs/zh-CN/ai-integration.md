@@ -19,6 +19,11 @@ CLI 仍是事实来源；控制面拥有 job，MCP server 只是控制面的轻�
 - 经过审查的 Agent Skill（文档与策略，不是特权二进制），位于
   [`skills/xtate/`](../../skills/xtate/SKILL.md)。
 
+2.43.0 已交付：
+
+- 全屏 TUI 控制平面客户端（`xtate --tui`），复用同一套 job/控制 API，不新增扫描
+  路径。
+
 仍待完成：
 
 - agent 评测套件与打包；
@@ -141,7 +146,8 @@ resource 路径限制为固定白名单
 
 ```text
 2.42.0  job + 控制面 + MCP server（已完成）
-2.42.1  Agent Skill（已完成，未发布）
+2.42.1  Agent Skill（已完成，已发布）
+2.43.0  TUI 控制平面任务面板（已完成）
 下一步  评测套件与打包
 以后    MCP generate/流式输入
 ```

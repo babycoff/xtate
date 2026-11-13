@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.42.1-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.43.0-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -388,6 +388,22 @@ xtate --help-scan zbanner     # module-specific parameters
 xtate --lang zh --help        # Chinese human help (English fallback for untranslated strings)
 xtate --interact              # interactive shell (TTY: completion/history; pipe: scripts)
 ```
+
+## TUI dashboard
+
+Xtate includes a full-screen terminal client for managed jobs. It talks to the
+same local control plane as MCP and never scans in-process:
+
+```bash
+xtate --control-plane=/tmp/xtate-ctl.sock
+# in another terminal, with the same XTATE_CONTROL_TOKEN if one is set:
+xtate --tui --control-connect=/tmp/xtate-ctl.sock
+```
+
+Use `↑/↓` or `j/k` to select jobs, `r` to refresh, `s` to start an authorized
+scan, `c` to cancel, `Enter` for status and result manifest, and `q` to quit.
+When output is piped, `--tui` prints one plain-text snapshot instead. See
+[TUI dashboard](docs/tui.md) for keys, limits and interface selection.
 
 ## AI integration (MCP / Agent Skill)
 

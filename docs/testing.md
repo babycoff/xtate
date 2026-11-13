@@ -146,6 +146,7 @@ and RSS are noisy on shared runners. See `tests/bench/README.md`.
 | i18n | `tests/i18n/test.sh` | Chinese help coverage |
 | target syntax | `tests/target/test.sh` | address/CIDR/explicit/component ranges |
 | interactive | `tests/interactive/test.sh` | non-TTY commands/help/state |
+| TUI control client | `python tests/tui/test_tui.py` | non-TTY snapshot, endpoint required, Windows Named Pipe / Unix socket |
 | JARM aggregation | `tests/jarm/test.sh` | output-side parts, stats, retry list |
 | module templates | `tests/module-examples/test.sh` | compile all four module interface examples |
 | parameter parser | `tests/config/test.sh` | unknown/missing/help/CLI parser basics |

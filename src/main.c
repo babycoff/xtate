@@ -35,6 +35,7 @@
 #include "util-scan/control-client.h"
 #include "util-scan/result-store.h"
 #include "util-scan/mcp-server.h"
+#include "util-scan/tui.h"
 #include "util-scan/explain-target.h"
 #include <sys/stat.h>
 
@@ -1118,6 +1119,14 @@ static int xtate_main(int argc, char *argv[]) {
             return 1;
         fputs(resp, stdout);
         return 0;
+    }
+
+    if (xconf->tui_mode) {
+        if (!xconf->control_connect) {
+            fprintf(stderr, "xtate: --tui requires --control-connect\n");
+            return 1;
+        }
+        return tui_run(xconf->control_connect);
     }
 
     if (xconf->control_endpoint)

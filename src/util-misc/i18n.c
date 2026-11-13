@@ -386,6 +386,7 @@ static const I18nParamEntry i18n_global_help[] = {
     {"result-compress", "设置结果分块压缩方式：none 或 zstd（构建时启用了 zstd 才可用）。"},
     {"result-index", "写结果分块索引文件，记录各分块的位置和元数据。"},
     {"mcp", "运行 MCP stdio 服务器；用 --control-connect 指定控制端点。"},
+    {"tui", "运行控制平面全屏任务面板；需用 --control-connect 指定控制端点。"},
     {"control-connect", "设置发送单次原始控制请求所用的控制端点。"},
     {"control-request", "设置要发送的原始 JSON 控制请求，配合 --control-connect 使用。"},
     {"control-ping", "向控制端点发送 ping 并打印响应，用于检查服务是否可用。"},

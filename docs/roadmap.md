@@ -256,6 +256,11 @@ Delivered in 2.42.1:
 - full-tree audit fixes for memory safety, Windows UTF-8 paths, control-plane
   framing/validation and result-store JSON escaping.
 
+Delivered in 2.43.0:
+
+- a full-screen TUI control-plane client (`xtate --tui`) for job listing, start,
+  cancellation and manifest details, plus docs EN/ZH.
+
 Remaining:
 
 - agent evaluation suite and packaging;
@@ -268,6 +273,7 @@ Phases:
 ```text
 2.42.0  JSON contracts + jobs + control plane + MCP server (done)
 2.42.1  Agent Skill + full-tree audit hardening (done)
+2.43.0  TUI control-plane dashboard (done)
 next    evaluation suite and packaging
 later   MCP generate/stream input
 ```

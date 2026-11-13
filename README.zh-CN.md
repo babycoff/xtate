@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.42.1-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.43.0-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -367,6 +367,21 @@ xtate --help-scan zbanner     # 模块专有参数
 xtate --lang zh --help        # 中文人类帮助（未翻译内容回退英文）
 xtate --interact              # 交互式 shell（TTY：补全/历史；管道：脚本）
 ```
+
+## TUI 任务面板
+
+Xtate 提供一个全屏终端客户端来管理 job。它和 MCP 使用同一个本地控制平面，不会在
+TUI 进程内扫描：
+
+```bash
+xtate --control-plane=/tmp/xtate-ctl.sock
+# 另一个终端；如果设置了 XTATE_CONTROL_TOKEN，需要相同值：
+xtate --tui --control-connect=/tmp/xtate-ctl.sock
+```
+
+用 `↑/↓` 或 `j/k` 选择任务，`r` 刷新，`s` 启动已授权扫描，`c` 取消，`Enter` 查看
+状态与结果 manifest，`q` 退出。输出被管道接管时，`--tui` 只打印一次纯文本快照。
+按键、限制和接口选择见 [TUI 任务面板](docs/zh-CN/tui.md)。
 
 ## AI 集成（MCP / Agent Skill）
 
