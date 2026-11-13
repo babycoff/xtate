@@ -26,8 +26,8 @@ Xtate 是一款面向大规模主动测量的模块化全栈网络扫描器。�
 |:---|:---|:---|:---|
 | Ubuntu 24.04 | GCC 13.3 | 构建 + `--selftest` 通过，模块 12/59/7/5 | OpenSSL、PCRE2、LibXml2、BSON、mongoc、ngtcp2/GnuTLS |
 | Ubuntu 24.04 | Clang 18.1 | 构建 + `--selftest` 通过，模块 12/59/7/5 | OpenSSL、PCRE2、LibXml2、BSON、mongoc、ngtcp2/GnuTLS |
-| Windows 10/11 | MSVC 19.5x（Visual Studio 2022/2026） | 构建 + `--selftest` 通过；探测模块数量取决于可选库 | 通过 Scoop 装 OpenSSL；未装 PCRE2/BSON/mongoc |
-| Windows 10/11 | Clang 23（clang-cl） | 构建 + `--selftest` 通过；探测模块数量取决于可选库 | 通过 Scoop 装 OpenSSL；未装 PCRE2/BSON/mongoc |
+| Windows 10/11 | MSVC 19.5x（Visual Studio 2022/2026） | 构建 + `--selftest` 通过；探测模块数量取决于可选库 | 通过 Scoop 装 OpenSSL；未装 PCRE2/BSON/mongoc/zstd |
+| Windows 10/11 | Clang 23（clang-cl） | 构建 + `--selftest` 通过；探测模块数量取决于可选库 | 通过 Scoop 装 OpenSSL；未装 PCRE2/BSON/mongoc/zstd |
 | Windows 10/11 | MinGW-w64 GCC 16 | 构建 + `--selftest` 通过；探测模块数量取决于可选库 | 无 OpenSSL（Scoop 包是 MSVC ABI） |
 
 模块数量是最快的自检方式：**59 个探测 + 7 个输出 + 12 个扫描（含 `quic-state`）** 表示依赖齐全；Windows 上未启用 ngtcp2/GnuTLS 时扫描模块为 11 个。数量变少说明至少有一个可选库没有被找到。
@@ -88,6 +88,7 @@ Fedora/Arch 上安装对应软件包（`libpcap`、`openssl`、`pcre2`、`libxml
 | PCRE2（8-bit） | `hello`、`http`、`recog`、`nmap` 中的正则匹配 | `-DWITH_PCRE2=OFF` |
 | LibXml2 | Recog XML 指纹文件 | `-DWITH_LIBXML2=OFF` |
 | libbson / libmongoc | `bson` 与 `mongodb` 输出 | `-DWITH_BSON=OFF`、`-DWITH_MONGOC=OFF` |
+| zstd | 分片结果压缩（`--result-compress=zstd`） | `-DWITH_ZSTD=OFF` |
 
 Debian/Ubuntu 的 `libpcre2-dev` 只提供 pkg-config 元数据，不提供 CMake 包配置；构建时会自动回退到 `pkg-config`。因此需要同时安装 `pkg-config` 和 `libpcre2-dev`，否则 `--version` 会显示 `PCRE2 (null)`，并少 6 个 probe。
 
@@ -128,13 +129,13 @@ Scoop 目前没有 PCRE2 开发文件、libbson 或 libmongoc。要获得完整�
 
 ```powershell
 scoop install vcpkg
-vcpkg install pcre2 libxml2 mongo-c-driver --triplet x64-windows
+vcpkg install pcre2 libxml2 mongo-c-driver zstd --triplet x64-windows
 
 cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
   -DCMAKE_TOOLCHAIN_FILE="$env:USERPROFILE\scoop\apps\vcpkg\current\scripts\buildsystems\vcpkg.cmake"
 ```
 
-没有 PCRE2 时，Windows 构建得到 15 个 probe 而不是 21 个；没有 libbson/mongoc 时，得到 5 个 output 而不是 7 个。这是依赖缺失的预期结果，不是构建失败。
+没有 PCRE2 时，Windows 构建得到 15 个 probe 而不是 21 个；没有 libbson/mongoc 时，得到 5 个 output 而不是 7 个。没有 zstd 时，`--result-compress=zstd` 会回退为未压缩分片，`--list-capabilities` 显示 `zstd:false`。这是依赖缺失的预期结果，不是构建失败。
 
 ### MSVC
 

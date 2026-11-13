@@ -89,7 +89,8 @@ manifest 和分片。
 ### 可选 zstd
 
 `-DWITH_ZSTD=ON` 启用 zstd 检测。缺少 zstd 时定义 `NOT_FOUND_ZSTD`；
-`--result-compress=zstd` 会退化为未压缩分片。默认 `none`（关闭）。
+`--result-compress=zstd` 会退化为未压缩分片，`--list-capabilities` 显示 `zstd:false`。Windows 上请先用 vcpkg 安装
+`zstd:x64-windows`（构建脚本会自动传入工具链）再重新构建。默认 `none`（关闭）。
 
 ## 每 job 结果配置
 

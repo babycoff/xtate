@@ -58,7 +58,19 @@ cmake --build build -j 8
 1. Install Visual Studio 2022 or 2026 with **Desktop development with C++**.
 2. Install CMake ≥ 3.13 and Npcap (WinPcap-compatible mode).
 3. Install OpenSSL: `scoop install openssl-lts`.
-4. Build from a normal PowerShell (scans still need an elevated shell):
+4. Optional: install the vcpkg dependencies for the full module set and zstd
+   result compression:
+
+   ```powershell
+   scoop install vcpkg
+   vcpkg install pcre2 libxml2 mongo-c-driver zstd --triplet x64-windows
+   ```
+
+   `scripts\build-windows.ps1` finds `VCPKG_ROOT` and passes the toolchain
+   automatically. For the manual CMake command below, also pass
+   `-DCMAKE_TOOLCHAIN_FILE="$env:USERPROFILE\scoop\apps\vcpkg\current\scripts\buildsystems\vcpkg.cmake"`.
+
+5. Build from a normal PowerShell (scans still need an elevated shell):
 
 ```powershell
 cmake -S . -B build-msvc -G "Visual Studio 17 2022" -A x64 `
@@ -77,7 +89,9 @@ pwsh -File .\scripts\build-windows.ps1 -Toolchain msvc -Config Release -Yes
 A complete build has 12 scans, 60 probes, 7 output modules and 5 generate
 modules. Without ngtcp2/GnuTLS (the default on Windows) expect 11 scans and 59
 probes; missing PCRE2 or OpenSSL removes more probes. Fewer modules is not a
-build failure — it means an optional library was not found. See
+build failure — it means an optional library was not found. Without zstd,
+`--result-compress=zstd` falls back to uncompressed chunks and
+`--list-capabilities` reports `zstd:false`. See
 [Getting started](../getting-started.md) for the full dependency matrix.
 
 ### Permissions

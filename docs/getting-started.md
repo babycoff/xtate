@@ -27,8 +27,8 @@ dependencies are present, so the complete module set is compiled in.
 |:---|:---|:---|:---|
 | Ubuntu 24.04 | GCC 13.3 | build + `--selftest` pass, 12/60/7/5 modules | OpenSSL, PCRE2, LibXml2, BSON, mongoc, ngtcp2/GnuTLS |
 | Ubuntu 24.04 | Clang 18.1 | build + `--selftest` pass, 12/60/7/5 modules | OpenSSL, PCRE2, LibXml2, BSON, mongoc, ngtcp2/GnuTLS |
-| Windows 10/11 | MSVC 19.5x (Visual Studio 2022/2026) | build + `--selftest` pass; probe count depends on optional libs | OpenSSL via Scoop; PCRE2/BSON/mongoc not installed |
-| Windows 10/11 | Clang 23 (clang-cl) | build + `--selftest` pass; probe count depends on optional libs | OpenSSL via Scoop; PCRE2/BSON/mongoc not installed |
+| Windows 10/11 | MSVC 19.5x (Visual Studio 2022/2026) | build + `--selftest` pass; probe count depends on optional libs | OpenSSL via Scoop; PCRE2/BSON/mongoc/zstd not installed |
+| Windows 10/11 | Clang 23 (clang-cl) | build + `--selftest` pass; probe count depends on optional libs | OpenSSL via Scoop; PCRE2/BSON/mongoc/zstd not installed |
 | Windows 10/11 | MinGW-w64 GCC 16 | build + `--selftest` pass; probe count depends on optional libs | no OpenSSL (Scoop build is MSVC-only) |
 
 The module counts are a quick way to verify your dependencies: 60 probes, 7
@@ -96,6 +96,7 @@ disappear at compile time.
 | PCRE2 (8-bit) | regex matching in `hello`, `http`, `recog`, `nmap` | `-DWITH_PCRE2=OFF` |
 | LibXml2 | Recog XML fingerprint files | `-DWITH_LIBXML2=OFF` |
 | libbson / libmongoc | `bson` and `mongodb` output | `-DWITH_BSON=OFF`, `-DWITH_MONGOC=OFF` |
+| zstd | chunked result compression (`--result-compress=zstd`) | `-DWITH_ZSTD=OFF` |
 
 On Debian/Ubuntu, `libpcre2-dev` ships pkg-config metadata but no CMake package
 config. The build automatically falls back to `pkg-config` for PCRE2, so install
@@ -153,7 +154,7 @@ standalone):
 
 ```powershell
 scoop install vcpkg
-vcpkg install pcre2 libxml2 mongo-c-driver --triplet x64-windows
+vcpkg install pcre2 libxml2 mongo-c-driver zstd --triplet x64-windows
 
 cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
   -DCMAKE_TOOLCHAIN_FILE="$env:USERPROFILE\scoop\apps\vcpkg\current\scripts\buildsystems\vcpkg.cmake"
@@ -161,7 +162,9 @@ cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
 
 Without PCRE2, a full build has 54 probes instead of 60 (a Windows build without
 ngtcp2 has 53 instead of 59). Without libbson/mongoc, it has 5 output modules
-instead of 7. Those are expected results, not build failures.
+instead of 7. Without zstd, `--result-compress=zstd` falls back to
+uncompressed chunks and `--list-capabilities` reports `zstd:false`. Those are
+expected results, not build failures.
 
 ### MSVC
 

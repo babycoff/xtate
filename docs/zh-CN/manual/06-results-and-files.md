@@ -176,7 +176,7 @@ xtate --job-run=request.json --job-result=out.ndjson \
    "total_bytes":10485760,"total_records":20000}
   ```
 
-  使用 zstd 时分片路径以 `.ndjson.zst` 结尾，`compression` 是 `zstd`，`bytes` 是压缩后大小。构建没有 zstd 时，Xtate 会警告并写入未压缩分片。
+  使用 zstd 时分片路径以 `.ndjson.zst` 结尾，`compression` 是 `zstd`，`bytes` 是压缩后大小。构建没有 zstd 时，Xtate 会警告并写入未压缩分片。Windows 上应在构建前通过 vcpkg 安装 `zstd:x64-windows`；`--list-capabilities` 会报告 zstd 是否可用。
 - `--result-index` 额外写 `out.ndjson.index.json`，包含同样的 `chunks` 数组，但没有 format 和总计。
 - 分片只为到达终态的 job 构建。CLI 的 `--job-run` 路径只在 job 完成时构建；控制面对任何终态都构建，因此被取消或超时的 job 也能产生分片的部分结果。
 

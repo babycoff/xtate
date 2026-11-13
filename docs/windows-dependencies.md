@@ -2,7 +2,7 @@
 
 **English** · [中文](zh-CN/windows-dependencies.md)
 
-Xtate builds and runs without these libraries. They only add optional modules:
+Xtate builds and runs without these libraries. They only add optional features and modules:
 
 | Dependency | Enables | Required? |
 |:---|:---|:---|
@@ -10,17 +10,19 @@ Xtate builds and runs without these libraries. They only add optional modules:
 | PCRE2 | `recog`, `nmap` and other regex-based probes | optional |
 | LibXml2 | Recog XML parsing | optional |
 | libbson + libmongoc | `bson` / `mongodb` output | optional |
+| zstd | optional NDJSON chunk compression (`--result-compress=zstd`) | optional |
 
 On Windows, missing dependencies simply remove the corresponding modules; the
 core scanner and `tcp-syn`/`zbanner` still build. `--version` shows `(null)` for
-each missing optional library.
+each missing optional library; `--list-capabilities` reports zstd and QUIC/HTTP3
+availability explicitly.
 
 ## Recommended: Scoop + vcpkg (MSVC / ClangCL)
 
 ```powershell
 scoop install vcpkg
 # Scoop sets VCPKG_ROOT for new shells.
-vcpkg install pcre2 libxml2 mongo-c-driver --triplet x64-windows
+vcpkg install pcre2 libxml2 mongo-c-driver zstd --triplet x64-windows
 ```
 
 `scripts\build-windows.ps1` automatically:
@@ -31,7 +33,7 @@ vcpkg install pcre2 libxml2 mongo-c-driver --triplet x64-windows
 4. copies vcpkg's app-local runtime DLLs into the project `bin\`.
 
 A full MSVC build then reports PCRE2, LibXml2, libbson and libmongoc in
-`xtate --version`.
+`xtate --version`; `xtate --list-capabilities` reports `"zstd":true`.
 
 If you invoke CMake manually, pass the toolchain yourself:
 
@@ -55,6 +57,7 @@ From an MSYS2 MINGW64 shell:
 pacman -S mingw-w64-x86_64-pcre2 \
   mingw-w64-x86_64-libxml2 \
   mingw-w64-x86_64-mongo-c-driver \
+  mingw-w64-x86_64-zstd \
   mingw-w64-x86_64-openssl
 ```
 
@@ -67,6 +70,7 @@ Build with the MSYS2 MinGW compiler; CMake finds the libraries under
 vcpkg install pcre2:x64-mingw-static `
   libxml2:x64-mingw-static `
   mongo-c-driver:x64-mingw-static `
+  zstd:x64-mingw-static `
   openssl:x64-mingw-static
 ```
 
@@ -85,6 +89,8 @@ vcpkg to MinGW yet; the automatic path covers MSVC/ClangCL only.
 
 ## Expected CMake messages
 
+- zstd not found: `--result-compress=zstd` falls back to uncompressed chunks. Install
+  `zstd:x64-windows`, then rebuild with `scripts\build-windows.ps1`.
 - A found-but-incomplete PCRE2 from Conda/Miniconda:
   `missing: PCRE2_INCLUDE_DIR 8BIT` — the Conda CMake config is incomplete; it
   is not an Xtate failure. Use vcpkg or MSYS2 instead.

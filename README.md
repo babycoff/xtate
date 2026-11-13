@@ -363,6 +363,7 @@ pwsh -File .\scripts\clean-windows.ps1 -IncludeStage  # also remove %LOCALAPPDAT
 | PCRE2 (8-bit) | regex matching in `hello`, `http`, `recog`, `nmap` | `-DWITH_PCRE2=OFF` |
 | LibXml2 | Recog XML fingerprint files | `-DWITH_LIBXML2=OFF` |
 | libbson / libmongoc | BSON and MongoDB output | `-DWITH_BSON=OFF`, `-DWITH_MONGOC=OFF` |
+| zstd | chunked result compression (`--result-compress=zstd`) | `-DWITH_ZSTD=OFF` |
 | libpcap / Npcap | packet I/O (runtime) | loaded dynamically |
 | PF_RING | zero-copy packet I/O on Linux (runtime) | optional |
 | Lua 5.3/5.4 | `lua-tcp`, `lua-udp` (runtime) | optional |
@@ -370,7 +371,7 @@ pwsh -File .\scripts\clean-windows.ps1 -IncludeStage  # also remove %LOCALAPPDAT
 
 `quic-state` and `http3-state` are currently Linux + ngtcp2/GnuTLS only; Windows MSVC omits them. OpenSSL backend support is a [roadmap TODO](docs/roadmap.md#windows-quic-state-todo).
 
-Missing optional libraries simply remove the corresponding modules at compile time — the core scanner still builds. On Windows, CMake may warn about a found-but-incomplete PCRE2 from Conda, or about LibXml2/libbson/libmongoc not being installed; those are optional. Install a matching vcpkg triplet (for example `vcpkg install pcre2 libxml2 mongo-c-driver --triplet x64-windows`; see [Windows optional dependencies](docs/windows-dependencies.md) for MinGW/MSYS2 and full setup) if you need those modules.
+Missing optional libraries simply remove the corresponding modules at compile time — the core scanner still builds. On Windows, CMake may warn about a found-but-incomplete PCRE2 from Conda, or about LibXml2/libbson/libmongoc/zstd not being installed; those are optional. Install a matching vcpkg triplet (for example `vcpkg install pcre2 libxml2 mongo-c-driver zstd --triplet x64-windows`; see [Windows optional dependencies](docs/windows-dependencies.md) for MinGW/MSYS2 and full setup) if you need those modules.
 </details>
 
 > [!NOTE]

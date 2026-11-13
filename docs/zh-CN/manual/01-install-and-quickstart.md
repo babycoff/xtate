@@ -53,7 +53,17 @@ cmake --build build -j 8
 1. 安装 Visual Studio 2022 或 2026，勾选 **使用 C++ 的桌面开发**。
 2. 安装 CMake ≥ 3.13 和 Npcap（WinPcap 兼容模式）。
 3. 安装 OpenSSL：`scoop install openssl-lts`。
-4. 在普通 PowerShell 中构建（扫描仍需要提权的 shell）：
+4. 可选：安装 vcpkg 依赖，获得完整模块集与 zstd 结果压缩：
+
+   ```powershell
+   scoop install vcpkg
+   vcpkg install pcre2 libxml2 mongo-c-driver zstd --triplet x64-windows
+   ```
+
+   `scripts\build-windows.ps1` 会自动读取 `VCPKG_ROOT` 并传入工具链。若手动执行下面的 CMake 命令，还需加
+   `-DCMAKE_TOOLCHAIN_FILE="$env:USERPROFILE\scoop\apps\vcpkg\current\scripts\buildsystems\vcpkg.cmake"`。
+
+5. 在普通 PowerShell 中构建（扫描仍需要提权的 shell）：
 
 ```powershell
 cmake -S . -B build-msvc -G "Visual Studio 17 2022" -A x64 `
@@ -69,7 +79,7 @@ cmake --build build-msvc --config Release -j 8
 pwsh -File .\scripts\build-windows.ps1 -Toolchain msvc -Config Release -Yes
 ```
 
-完整构建有 12 个扫描、60 个探测、7 个输出模块和 5 个生成模块。没有 ngtcp2/GnuTLS（Windows 上的默认情况）时应为 11 个扫描、59 个探测；缺少 PCRE2 或 OpenSSL 会再移除一些探测。模块变少不是构建失败——它表示某个可选库没有被找到。完整依赖矩阵见[快速上手](../getting-started.md)。
+完整构建有 12 个扫描、60 个探测、7 个输出模块和 5 个生成模块。没有 ngtcp2/GnuTLS（Windows 上的默认情况）时应为 11 个扫描、59 个探测；缺少 PCRE2 或 OpenSSL 会再移除一些探测。模块变少不是构建失败——它表示某个可选库没有被找到。没有 zstd 时，`--result-compress=zstd` 会回退为未压缩分片，`--list-capabilities` 显示 `zstd:false`。完整依赖矩阵见[快速上手](../getting-started.md)。
 
 ### 权限
 

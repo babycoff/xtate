@@ -224,7 +224,8 @@ xtate --job-run=request.json --job-result=out.ndjson \
 
   With zstd the chunk paths end in `.ndjson.zst`, `compression` is `zstd`, and
   `bytes` is the compressed size. If the build has no zstd, Xtate warns and
-  writes uncompressed chunks.
+  writes uncompressed chunks. On Windows, install `zstd:x64-windows` with vcpkg
+  before building; `--list-capabilities` reports whether zstd is available.
 - `--result-index` additionally writes `out.ndjson.index.json`, containing the
   same `chunks` array without the format and totals.
 - Chunks are only built for a job that reaches a terminal state. The CLI

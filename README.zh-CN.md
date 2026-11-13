@@ -342,6 +342,7 @@ pwsh -File .\scripts\clean-windows.ps1 -IncludeStage  # 同时删除 %LOCALAPPDA
 | PCRE2（8 位） | `hello`、`http`、`recog`、`nmap` 中的正则匹配 | `-DWITH_PCRE2=OFF` |
 | LibXml2 | Recog XML 指纹文件 | `-DWITH_LIBXML2=OFF` |
 | libbson / libmongoc | BSON 和 MongoDB 输出 | `-DWITH_BSON=OFF`、`-DWITH_MONGOC=OFF` |
+| zstd | 分片结果压缩（`--result-compress=zstd`） | `-DWITH_ZSTD=OFF` |
 | libpcap / Npcap | 数据包 I/O（运行时） | 动态加载 |
 | PF_RING | Linux 上的零拷贝数据包 I/O（运行时） | 可选 |
 | Lua 5.3/5.4 | `lua-tcp`、`lua-udp`（运行时） | 可选 |
@@ -349,7 +350,7 @@ pwsh -File .\scripts\clean-windows.ps1 -IncludeStage  # 同时删除 %LOCALAPPDA
 
 `quic-state` 与 `http3-state` 目前仅支持 Linux + ngtcp2/GnuTLS；Windows MSVC 会省略它们。OpenSSL backend 支持见 [roadmap TODO](docs/zh-CN/roadmap.md#windows-quic-state-todo)。
 
-缺少可选库只会在编译时移除相应模块——核心扫描器仍可正常构建。Windows 上 CMake 可能提示 Conda 里的 PCRE2 找到但配置不完整，或提示 LibXml2/libbson/libmongoc 未安装；这些依赖都是可选的。需要对应模块时，请安装匹配的 vcpkg triplet（例如 `vcpkg install pcre2 libxml2 mongo-c-driver --triplet x64-windows`；MinGW/MSYS2 与完整安装说明见 [Windows 可选依赖](docs/zh-CN/windows-dependencies.md)）。
+缺少可选库只会在编译时移除相应模块——核心扫描器仍可正常构建。Windows 上 CMake 可能提示 Conda 里的 PCRE2 找到但配置不完整，或提示 LibXml2/libbson/libmongoc/zstd 未安装；这些依赖都是可选的。需要对应模块时，请安装匹配的 vcpkg triplet（例如 `vcpkg install pcre2 libxml2 mongo-c-driver zstd --triplet x64-windows`；MinGW/MSYS2 与完整安装说明见 [Windows 可选依赖](docs/zh-CN/windows-dependencies.md)）。
 </details>
 
 > [!NOTE]

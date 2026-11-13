@@ -2,7 +2,7 @@
 
 [English](../windows-dependencies.md) · **中文**
 
-没有这些库 Xtate 也能构建和运行；它们只增加可选模块：
+没有这些库 Xtate 也能构建和运行；它们只增加可选功能与模块：
 
 | 依赖 | 解锁 | 是否必需 |
 |:---|:---|:---|
@@ -10,16 +10,17 @@
 | PCRE2 | `recog`、`nmap` 等正则类探测 | 可选 |
 | LibXml2 | Recog XML 解析 | 可选 |
 | libbson + libmongoc | `bson` / `mongodb` 输出 | 可选 |
+| zstd | 可选的 NDJSON 分片压缩（`--result-compress=zstd`） | 可选 |
 
 Windows 上缺少依赖只会移除对应模块；核心扫描器和 `tcp-syn`/`zbanner` 仍可构建。
-`--version` 中每个缺失的可选库显示 `(null)`。
+`--version` 中每个缺失的可选库显示 `(null)`；`--list-capabilities` 会单独报告 zstd 与 QUIC/HTTP3 是否可用。
 
 ## 推荐：Scoop + vcpkg（MSVC / ClangCL）
 
 ```powershell
 scoop install vcpkg
 # Scoop 会为新 shell 设置 VCPKG_ROOT
-vcpkg install pcre2 libxml2 mongo-c-driver --triplet x64-windows
+vcpkg install pcre2 libxml2 mongo-c-driver zstd --triplet x64-windows
 ```
 
 `scripts\build-windows.ps1` 会自动：
@@ -29,7 +30,7 @@ vcpkg install pcre2 libxml2 mongo-c-driver --triplet x64-windows
 3. 给 **MSVC** 和 **ClangCL** 传 `CMAKE_TOOLCHAIN_FILE`；
 4. 把 vcpkg 的运行时 DLL 复制到项目 `bin\`。
 
-完整 MSVC 构建的 `xtate --version` 会显示 PCRE2、LibXml2、libbson、libmongoc。
+完整 MSVC 构建的 `xtate --version` 会显示 PCRE2、LibXml2、libbson、libmongoc；`xtate --list-capabilities` 会显示 `"zstd":true`。
 
 手动运行 CMake 时需要自己传：
 
@@ -52,6 +53,7 @@ vcpkg 的 `x64-windows` 包是 **MSVC ABI**，MinGW 不能链接。不要让 Min
 pacman -S mingw-w64-x86_64-pcre2 \
   mingw-w64-x86_64-libxml2 \
   mingw-w64-x86_64-mongo-c-driver \
+  mingw-w64-x86_64-zstd \
   mingw-w64-x86_64-openssl
 ```
 
@@ -63,6 +65,7 @@ pacman -S mingw-w64-x86_64-pcre2 \
 vcpkg install pcre2:x64-mingw-static `
   libxml2:x64-mingw-static `
   mongo-c-driver:x64-mingw-static `
+  zstd:x64-mingw-static `
   openssl:x64-mingw-static
 ```
 
@@ -80,6 +83,8 @@ cmake -S . -B build-mingw -G "MinGW Makefiles" `
 
 ## 预期 CMake 提示
 
+- 未找到 zstd：`--result-compress=zstd` 会回退为未压缩分片。安装
+  `zstd:x64-windows`，然后用 `scripts\build-windows.ps1` 重新构建。
 - Conda/Miniconda 里找到但不完整的 PCRE2：
   `missing: PCRE2_INCLUDE_DIR 8BIT` —— 是 Conda 的 CMake 配置不完整，不是 Xtate 构建失败；
   请改用 vcpkg 或 MSYS2。
