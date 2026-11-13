@@ -14,9 +14,13 @@ CLI 仍是事实来源；控制面拥有 job，MCP server 只是控制面的轻�
 - 分片结果文件和 manifest；结果不会内联返回；
 - scan-request、模块、结果和错误码的 JSON 契约。
 
+2.42.1 已交付：
+
+- 经过审查的 Agent Skill（文档与策略，不是特权二进制），位于
+  [`skills/xtate/`](../../skills/xtate/SKILL.md)。
+
 仍待完成：
 
-- 经过审查的 Agent Skill（文档与策略，不是特权二进制）；
 - agent 评测套件与打包；
 - 通过 MCP 暴露 generate/流式输入（MCP 目前只支持静态 `targets` 或
   `include_file`）。
@@ -39,21 +43,23 @@ MCP 工具返回 JSON 文本，agent 不需要解析带颜色的 CLI 输出。MC
 封闭子集（scan/probe 名称、目标语法、端口范围、速率、互斥字段），控制面再校验
 job 请求。
 
-### 2. Agent Skill（待完成）
+### 2. Agent Skill
 
-Skill 应教会 agent：
+Skill 教会 agent：
 
 ```text
-先询问目标授权
+确认目标授权与精确范围
 先运行 explain_target / check
 只对有状态扫描开放必要的 Linux 防火墙规则
 选择 scan/probe 组合和有上限的速率
-启动有边界的 job
+启动有边界、带专用 result_path 的 job
 读取 manifest 和分片，而不是整个结果文件
 取消 job 或等待超时
 ```
 
-Skill 是策略和文档，不能强制工具边界；边界由 MCP server 执行。
+从 [`skills/xtate/`](../../skills/xtate/SKILL.md) 安装；参见
+[Agent Skill](./agent-skill.md)。Skill 是策略和文档，不能强制工具边界；边界由
+MCP server 执行。
 
 ### 3. MCP server
 
@@ -135,7 +141,7 @@ resource 路径限制为固定白名单
 
 ```text
 2.42.0  job + 控制面 + MCP server（已完成）
-下一步  Agent Skill
+2.42.1  Agent Skill（已完成，未发布）
 下一步  评测套件与打包
 以后    MCP generate/流式输入
 ```

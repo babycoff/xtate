@@ -25,7 +25,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 | DNS over TLS | [DNS over TLS](./dns-over-tls.md) |
 | Input/output audit | [Input/output audit](./input-output-audit.md) |
 | Job model | [Job model](./job-model.md) |
-| Automating scans / AI client | [MCP server](./mcp-server.md) → [Control plane](./control-plane.md) |
+| Automating scans / AI client | [Agent Skill](./agent-skill.md) → [MCP server](./mcp-server.md) → [Control plane](./control-plane.md) |
 | Large target files or stream input | [Input modules](./input-modules.md) |
 | Error codes | [Error codes](./error-codes.md) |
 | JSON contracts | [JSON contracts](./json-contracts.md) |
@@ -73,6 +73,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 - [Control plane](./control-plane.md) — local JSON-lines API shared by MCP/TUI/GUI
 - [Job model](./job-model.md) — managed jobs, timeout, heartbeat, cancellation and results
 - [Input modules](./input-modules.md) — static targets vs generate streams and error policy
+- [Agent Skill](./agent-skill.md) — installable playbook for external agents using MCP
 - [JSON contracts](./json-contracts.md) — scan-request, module metadata and error schemas
 - [AI integration design](./ai-integration.md) — boundaries, safety requirements and remaining work
 

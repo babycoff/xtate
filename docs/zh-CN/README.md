@@ -25,7 +25,7 @@
 | DNS over TLS | [DNS over TLS](./dns-over-tls.md) |
 | 输入/输出审查 | [输入/输出审查](./input-output-audit.md) |
 | Job 模型 | [Job 模型](./job-model.md) |
-| 自动化扫描 / AI 客户端 | [MCP server](./mcp-server.md) → [控制面](./control-plane.md) |
+| 自动化扫描 / AI 客户端 | [Agent Skill](./agent-skill.md) → [MCP server](./mcp-server.md) → [控制面](./control-plane.md) |
 | 大目标文件或流式输入 | [输入模块](./input-modules.md) |
 | 错误码 | [错误码](./error-codes.md) |
 | JSON 契约 | [JSON 契约](./json-contracts.md) |
@@ -73,6 +73,7 @@
 - [控制面](./control-plane.md)——MCP/TUI/GUI 共用的本地 JSON-lines API
 - [Job 模型](./job-model.md)——托管 job、超时、心跳、取消与结果
 - [输入模块](./input-modules.md)——静态目标与 generate 流、错误策略
+- [Agent Skill](./agent-skill.md)——供外部 agent 通过 MCP 使用的可安装操作手册
 - [JSON 契约](./json-contracts.md)——scan-request、模块元数据与错误 schema
 - [AI 集成设计](./ai-integration.md)——边界、安全要求与剩余工作
 

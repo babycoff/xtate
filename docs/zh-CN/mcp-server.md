@@ -100,6 +100,7 @@ include 文件发现路由尚未实现，服务不会声称已经校验。
 - 内联 `targets` 最多 20000 个数组元素；端口必须在 0-65535。
 - `rate` 上限为 10000 包/秒。
 - 启动前会探测 `result_path` 是否可写。
+- `dry_run` 默认为 `false`（真实扫描）。设为 `true` 时只列出计划目标，不发送报文。
 - 超过 MCP 参数缓冲区的超大请求会被干净拒绝。
 - `start_scan` 会向 MCP 进程工作目录下的 `xtate-mcp-audit.log` 追加审计记录，
   包含 rate 和截断后的配置。
@@ -113,3 +114,8 @@ token、`job_list` 分页、分片 manifest，以及从任意工作目录读取 
 
 `tests/mcp/test_mcp_stability.py` 覆盖超时、取消、并发请求、畸形 JSON、超大配置、
 控制面重启和第二个 MCP 客户端。两套测试在 Windows 和 Linux 上均通过。
+
+## Agent Skill
+
+[Xtate Agent Skill](./agent-skill.md) 是供调用这些工具的 agent 安装的操作手册。
+它只提供指导；这里的校验仍是强制边界。

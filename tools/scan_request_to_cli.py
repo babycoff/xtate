@@ -18,10 +18,14 @@ SCHEMA = json.loads((ROOT / "schemas/scan-request.schema.json").read_text())
 
 def build(req):
     Draft202012Validator(SCHEMA).validate(req)
-    if req.get("dry_run", True) is not False:
-        # still build the argv; the caller must not execute it without confirmation
-        pass
-    argv = ["-scan", req["scan"], "-ip", ",".join(req["targets"])]
+    # This adapter emits a direct-scan argv, not a managed job. Job-only fields
+    # (result_path, timeout_sec, chunk_size, quota_bytes, compression, index,
+    # interface) are validated but not translated; use --job-run or MCP for jobs.
+    argv = ["-scan", req["scan"]]
+    if "targets" in req:
+        argv += ["-ip", ",".join(req["targets"])]
+    else:
+        argv += ["--include-file", req["include_file"]]
     if req.get("probe"):
         argv += ["-probe", req["probe"]]
     if req.get("ports"):
@@ -32,6 +36,8 @@ def build(req):
         argv += ["-probe-arg", " ".join(f"--{k.replace(chr(95), chr(45))}={v}" for k, v in req["probe_args"].items())]
     if req.get("scan_args"):
         argv += ["-scan-arg", " ".join(f"--{k.replace(chr(95), chr(45))}={v}" for k, v in req["scan_args"].items())]
+    if req.get("dry_run"):
+        argv += ["--dry-run"]
     return argv
 
 if __name__ == "__main__":

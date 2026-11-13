@@ -35,8 +35,9 @@ xtate --scan-request=request.json
 ```
 
 It builds the internal configuration without a shell or subprocess. `dry_run`
-maps to a target-listing operation, so no packets are sent. Errors are emitted
-as `{"error":{"code":"...","message":"..."}}`.
+defaults to `false`; set it to `true` to only list the planned targets and send
+no packets. Errors are emitted as
+`{"error":{"code":"...","message":"..."}}`.
 
 Reference scan-request adapter:
 
@@ -55,7 +56,8 @@ does not execute anything.
 - `scan-request` is data, never a shell string. No command substitution, pipes
   or redirection.
 - `targets` are exactly what the caller supplied; no implicit expansion.
-- `dry_run` defaults to `true` for agent-originated requests.
+- `dry_run` defaults to `false`; only `true` lists targets without sending. The
+  MCP server requires `authorized: true` separately.
 - Results must validate against `result.schema.json`; report values are scalar.
 - Errors use stable uppercase `code` values, not localized prose.
 

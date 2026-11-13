@@ -258,6 +258,7 @@ The README is the landing page. The manual lives in [`docs/`](docs/README.md):
 - [Platform support](docs/platform-support.md) — CMake 3.13, old distros, Ninja and musl builds
 - [Build artifacts](docs/build-artifacts.md) — aliases, exact toolchain names, Debug/DLL layout
 - [Testing policy](docs/testing.md) — required Tier 0/1/2 checks after a change
+- [Agent Skill](docs/agent-skill.md) — installable playbook for external AI agents using MCP
 - [MCP server](docs/mcp-server.md) — stdio tools, resources, route planning and safety limits
 - [Control plane](docs/control-plane.md) — local JSON-lines API shared by MCP/TUI/GUI
 - [Job model](docs/job-model.md) — managed scan jobs, timeouts, heartbeats and results
@@ -388,10 +389,12 @@ xtate --lang zh --help        # Chinese human help (English fallback for untrans
 xtate --interact              # interactive shell (TTY: completion/history; pipe: scripts)
 ```
 
-## AI integration (MCP)
+## AI integration (MCP / Agent Skill)
 
-Xtate ships an MCP stdio server for AI clients. Start a control plane, then
-connect the MCP server to it with the same token:
+Xtate ships an MCP stdio server and a reviewed Agent Skill for AI clients. The
+skill is a Markdown playbook; it is not an embedded agent or a privilege
+boundary. Start a control plane, then connect the MCP server to it with the same
+token:
 
 ```bash
 export XTATE_CONTROL_TOKEN="$(openssl rand -hex 16)"
@@ -402,9 +405,11 @@ xtate --mcp --control-connect=/tmp/xtate-ctl.sock
 The tools list modules, explain target routes, validate a closed scan request,
 start a managed job, and query job status/manifests. `start_scan` requires
 `authorized: true`; results stay in chunked files and are never returned inline.
-The server never executes a shell command. See [MCP server](docs/mcp-server.md),
-[control plane](docs/control-plane.md), [job model](docs/job-model.md) and
-[input modules](docs/input-modules.md) for the contract and limits.
+The server never executes a shell command. Install the Agent Skill from
+[`skills/xtate/`](skills/xtate/SKILL.md); see [Agent Skill](docs/agent-skill.md),
+[MCP server](docs/mcp-server.md), [control plane](docs/control-plane.md),
+[job model](docs/job-model.md) and [input modules](docs/input-modules.md) for the
+contract and limits.
 
 ## Papers and citation
 

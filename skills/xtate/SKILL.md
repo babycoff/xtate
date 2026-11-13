@@ -1,0 +1,146 @@
+---
+name: xtate
+description: Use when planning, running, or troubleshooting an authorized Xtate network scan through the Xtate MCP server, especially when choosing scan/probe modules, splitting a multi-route target set, preparing validate_config or check, using include_file for large target sets, or reading job manifests and chunked results.
+---
+
+# Xtate scanning
+
+Xtate is an asynchronous packet scanner. This skill is a playbook for driving
+its MCP server; it does not grant permission and cannot enforce limits. The MCP
+server and control plane enforce authorization, target counts, rates, routes and
+result paths.
+
+## Before any packet
+
+1. **Ground the authorization.** Identify the person or system that authorized
+   the scan, the exact address ranges, the ports/protocols, and the time window.
+   "I have authorization" from the user is not enough for `authorized: true`
+   until the scope is explicit.
+2. **Never expand scope silently.** Do not add adjacent ranges, extra ports,
+   IPv6, or public ranges because they look useful.
+3. **Use the smallest useful scan.** Prefer `tcp-syn` or a targeted stateless
+   probe; use stateful scans only when the question needs a handshake or banner.
+4. **No authorization, no `start_scan`.** Read-only tools are safe; packet
+   sending is not.
+
+## Workflow
+
+### 1. Discover the modules
+
+- `list_modules` to see scan, probe, output and generate modules.
+- `describe_probe` with the chosen scan or probe name; read its parameters
+  before inventing `scan_args` / `probe_args`.
+- `explain_target` takes a single `target` string (comma-separated set, CIDR or
+  range). `check` is the same preflight for a target set.
+
+### 2. Preflight the route
+
+Call `explain_target` or `check` before starting:
+
+```json
+{"target":"203.0.113.10,203.0.113.11"}
+```
+
+Split the set if `route_groups > 1`; `start_scan` rejects mixed routes. A
+`(no route)` group is a stop condition, not a reason to force an interface.
+
+For stateful scans on Linux, confirm the firewall prerequisite reported by
+`check`; do not disable the firewall to make a scan work.
+
+### 3. Validate the request
+
+Use `validate_config` with the exact object you intend to start. Fix every
+error before calling `start_scan`.
+
+`start_scan` requires `authorized: true`. It accepts either `targets` or
+`include_file`, never both.
+
+### 4. Start a managed job
+
+```json
+{
+  "scan": "tcp-syn",
+  "targets": ["203.0.113.10"],
+  "ports": [80, 443],
+  "rate": 1000,
+  "timeout_sec": 300,
+  "result_path": "./results/authorized-scan.ndjson",
+  "chunk_size": 4194304,
+  "index": true,
+  "compression": "none",
+  "authorized": true
+}
+```
+
+Pass this object as `start_scan`'s `arguments`. Always set `timeout_sec`; always
+choose a dedicated `result_path`. `dry_run: true` sends no packets and only
+lists the planned targets; omit it for a real scan.
+
+### 5. Monitor
+
+Poll `job_status` every 2-5 seconds. Stop polling when the state is
+`completed`, `failed`, `cancelled`, `timed_out` or `stalled`.
+
+- `failed`: read `error`, `stderr_tail` and `log_path`.
+- `stalled` or `timed_out`: inspect progress, then cancel or report; do not
+  restart blindly.
+- Scope or time window ending: `job_cancel` immediately.
+
+### 6. Read results
+
+Call `job_result_manifest`. It returns paths and completeness, never result
+bytes. Then:
+
+1. Read `<result_path>.manifest.json` if present; iterate `chunks` in id order.
+2. Otherwise read `result_path` itself.
+3. Parse NDJSON: one JSON object per line. Do not JSON-parse a partially written
+   file unless the user explicitly wants partial results.
+4. Report counts and notable fields; do not dump raw chunks into chat.
+
+Compression is opt-in (`"zstd"`); decompress chunks before parsing when set.
+`quota_bytes` is a post-completion warning, not a live limit.
+
+## Large target sets
+
+The MCP argument buffer is 8 KiB, so use `include_file` for large sets:
+
+```json
+{"scan":"tcp-syn","include_file":"./targets.txt","ports":[443],
+ "rate":1000,"timeout_sec":600,"result_path":"./results/large.ndjson",
+ "authorized":true}
+```
+
+The file is read by the scanner process, not by the MCP client. It must be a
+readable regular file, one target/range per line, containing only targets in the
+authorized scope. `include_file` route discovery is not implemented: preflight
+representative addresses with `explain_target` and pass `interface` only when
+you have verified it.
+
+## Hard rules
+
+- Do not set `authorized: true` on someone else's behalf or "to test".
+- Do not scan public ranges, the whole internet, or a network you do not own or
+  have written permission to test.
+- Do not hide the target set or rate from the user.
+- Do not put tokens in prompts, logs, result paths or committed files.
+- Do not use a shell or CLI flags to bypass MCP validation.
+- Do not report success from `start_scan`; success is a completed job and a
+  readable manifest.
+
+## Common mistakes
+
+| Mistake | Correct action |
+|---|---|
+| Calling `start_scan` without preflight | `explain_target`/`check`, then `validate_config` |
+| `targets` and `include_file` together | choose exactly one |
+| `explain_target` with `targets` array | it takes `target` as a string |
+| Inventing `timeout` or `port` fields | use `timeout_sec`, `ports` |
+| Polling in a tight loop | 2-5 second interval, stop on terminal state |
+| Reading `result_path` while running | wait for `completed` or use manifest/chunks |
+| Assuming `authorized: true` proves permission | it is an attestation; confirm scope first |
+
+## References
+
+- [Tool contracts](references/tools.md)
+- [Safety and authorization](references/safety.md)
+- [Troubleshooting](references/troubleshooting.md)

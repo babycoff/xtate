@@ -115,6 +115,8 @@ to verify it.
 - Inline `targets` are limited to 20000 array entries; port values must be 0-65535.
 - `rate` is capped at 10000 packets per second.
 - `result_path` is probed for writability before the job starts.
+- `dry_run` defaults to `false` (a real scan). Set `dry_run: true` to list the
+  planned targets and send no packets.
 - Large inline arguments above the MCP buffer are rejected cleanly.
 - `start_scan` appends an audit record to `xtate-mcp-audit.log` in the MCP
   process working directory; the record contains rate and the truncation-bounded
@@ -132,3 +134,9 @@ arbitrary working directory.
 `tests/mcp/test_mcp_stability.py` covers timeouts, cancellation, concurrent
 requests, malformed JSON, oversized configuration, control-plane restart and a
 second MCP client. Both suites pass on Windows and Linux.
+
+## Agent Skill
+
+The [Xtate Agent Skill](./agent-skill.md) is an installable playbook for agents
+that call these tools. It is guidance only; the validation described here remains
+the enforcement boundary.

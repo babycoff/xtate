@@ -34,8 +34,9 @@ C 运行时直连：
 xtate --scan-request=request.json
 ```
 
-不经过 shell/子进程，直接生成内部配置。`dry_run` 映射为目标列表操作，不发送报文。
-错误以 `{"error":{"code":"...","message":"..."}}` 返回。
+不经过 shell/子进程，直接生成内部配置。`dry_run` 默认为 `false`；设为 `true` 时
+只列出计划目标，不发送报文。错误以
+`{"error":{"code":"...","message":"..."}}` 返回。
 
 参考 scan-request 适配器：
 
@@ -51,7 +52,8 @@ python3 tools/scan_request_to_cli.py < request.json
 - 请求边界拒绝未知字段（`additionalProperties: false`）。
 - `scan-request` 是数据，不是 shell 字符串；不允许命令替换、管道、重定向。
 - `targets` 只能是调用者给出的内容，不做隐式扩展。
-- Agent 发起的请求默认 `dry_run: true`。
+- `dry_run` 默认为 `false`；只有 `true` 才只列目标、不发送。MCP 另行要求
+  `authorized: true`。
 - 结果必须符合 `result.schema.json`；report 值为标量。
 - 错误使用稳定的大写 `code`，不使用本地化文本。
 

@@ -36,6 +36,25 @@ def main():
                 continue
             raise AssertionError(f"invalid fixture accepted: {path}")
 
+    # Alignment guards for fields where the MCP/runtime contract is easy to
+    # drift from the schema: dry_run must default to false (omitted means a real
+    # scan), and chunk_size/rate/compression follow the runtime validation.
+    sr = validators["scan-request"]
+    base = {"scan": "tcp-syn", "targets": ["127.0.0.1"]}
+    if sr.schema["properties"]["dry_run"].get("default") is not False:
+        raise AssertionError("scan-request: dry_run default must be false")
+    sr.validate({**base, "rate": 0})
+    for bad in (
+        {**base, "rate": 10001},
+        {**base, "chunk_size": 0},
+        {**base, "compression": "gzip"},
+    ):
+        try:
+            sr.validate(bad)
+        except Exception:
+            continue
+        raise AssertionError(f"scan-request accepted invalid alignment case: {bad}")
+
     for path in sorted((HERE / "real-results").glob("*.ndjson")):
         with open(path, encoding="utf-8") as f:
             for lineno, line in enumerate(f, 1):

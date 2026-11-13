@@ -17,9 +17,13 @@ Implemented in 2.42.0:
 - chunked result files with a manifest; results are never returned inline;
 - JSON contracts for scan requests and error codes.
 
+Delivered for 2.42.1:
+
+- a reviewed Agent Skill (documentation and policy, not a privileged binary) at
+  [`skills/xtate/`](../skills/xtate/SKILL.md).
+
 Still pending:
 
-- a reviewed Agent Skill (documentation and policy, not a privileged binary);
 - an agent evaluation suite and packaging;
 - exposing generate/stream input through MCP (MCP is static `targets` or
   `include_file` only).
@@ -42,22 +46,23 @@ MCP tools return JSON text, so an agent never parses colored CLI output. The MCP
 server validates a closed subset itself (scan/probe names, target syntax, port
 range, rate, mutual exclusion) and the control plane validates the job request.
 
-### 2. Agent skill (pending)
+### 2. Agent skill
 
-The skill should teach an agent to:
+The skill teaches an agent to:
 
 ```text
-ask for target authorization
+confirm target authorization and the exact scope
 run explain_target / check first
 open only the required Linux firewall rules for stateful scans
 choose a scan/probe pair and a bounded rate
-start a bounded job
+start a bounded job with a dedicated result_path
 read the manifest and chunks, not the whole result file
 cancel or let the job time out
 ```
 
-A skill is policy and documentation. It cannot enforce tool boundaries; the MCP
-server does that.
+It is installed from [`skills/xtate/`](../skills/xtate/SKILL.md); see
+[Agent Skill for Xtate](./agent-skill.md). A skill is policy and documentation.
+It cannot enforce tool boundaries; the MCP server does that.
 
 ### 3. MCP server
 
@@ -140,7 +145,7 @@ See [MCP server](./mcp-server.md), [control plane](./control-plane.md) and
 
 ```text
 2.42.0  jobs + control plane + MCP server (done)
-next    Agent Skill
+2.42.1  Agent Skill (done, unreleased)
 next    evaluation suite and packaging
 later   MCP generate/stream input
 ```

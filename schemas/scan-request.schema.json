@@ -29,12 +29,16 @@
       "type": "object",
       "additionalProperties": {"type": ["string", "number", "boolean"]}
     },
-    "rate": {"type": "integer", "minimum": 1},
+    "rate": {"type": "integer", "minimum": 0, "maximum": 10000},
     "timeout_sec": {"type": "integer", "minimum": 1, "maximum": 86400},
-    "dry_run": {"type": "boolean", "default": true},
+    "dry_run": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, only list the planned targets and send no packets. Omitted means a real scan."
+    },
     "result_path": {"type": "string", "minLength": 1},
-    "chunk_size": {"type": "integer", "minimum": 0},
-    "compression": {"type": "string", "minLength": 1},
+    "chunk_size": {"type": "integer", "minimum": 1},
+    "compression": {"type": "string", "enum": ["none", "zstd"]},
     "index": {"type": "boolean"},
     "quota_bytes": {"type": "integer", "minimum": 0},
     "authorized": {
