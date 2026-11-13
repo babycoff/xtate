@@ -98,6 +98,15 @@ Rate is in packets per second (1–10000, default 1000). Timeout is the total
 wall-clock limit in seconds (1–86400, default 300). Output is fixed to NDJSON
 with a result manifest; the console does not choose output modules.
 
+**Module parameters.** Below the method cards, *Module parameters* lists the
+flags and text arguments exposed by the selected scan engine and probe. Flags
+are checkboxes and value arguments are text fields; empty fields are omitted.
+Values are sent as `scan_args` and `probe_args` with `job.start`, the same names
+the CLI uses for `--scan-arg` and `--probe-arg`. The list is rebuilt when the
+scan or probe changes. Preflight does not validate parameter names or values;
+if the worker rejects one, the job fails and its `stderr_tail`/log shows the
+argument error.
+
 **03 Interface.** *Auto (from route)* lets preflight resolve the route for the
 sampled targets. A TUN/VPN adapter appears as a RAW link type and has no MAC, so
 banner and stateful scans may not work through it; pick the physical adapter

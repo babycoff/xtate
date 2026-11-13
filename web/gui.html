@@ -144,6 +144,19 @@ input.invalid, textarea.invalid { border-color: rgba(242,125,125,.7); }
 .method .m-check { position: absolute; right: 10px; top: 10px; width: 7px; height: 7px; border-radius: 50%; background: transparent; border: 1px solid var(--line); }
 .method.active .m-check { background: var(--mint); border-color: var(--mint); }
 
+.module-params { border-top: 1px solid var(--line-soft); padding-top: 14px; }
+.module-params summary { cursor: pointer; display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 11.5px; list-style: none; }
+.module-params summary::-webkit-details-marker { display: none; }
+.module-params summary:hover { color: var(--text); }
+.arg-grid { display: grid; gap: 14px; margin-top: 14px; }
+.arg-group { border: 1px solid var(--line-soft); border-radius: 9px; background: #0b1118; padding: 12px; }
+.arg-group-title { color: var(--faint); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 9px; }
+.arg-row { display: grid; grid-template-columns: minmax(120px, .8fr) minmax(0, 1.2fr); gap: 12px; align-items: center; padding: 5px 0; }
+.arg-row .arg-name { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+.arg-row input[type="text"] { padding: 7px 9px; font-size: 11.5px; }
+.arg-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--mint); }
+.arg-desc { grid-column: 2; color: var(--faint); font-size: 10px; line-height: 1.4; margin-top: -2px; }
+.arg-empty { color: var(--faint); font-size: 11px; margin-top: 12px; }
 .iface-line {
   display: flex; align-items: center; gap: 10px; border: 1px solid var(--line-soft);
   border-radius: 9px; background: #0b1118; padding: 10px 11px;
@@ -341,6 +354,10 @@ footer .mono { color: var(--faint); }
                 <div class="iface-line" style="padding:8px 10px"><span class="mono small muted">NDJSON · manifest</span></div>
               </div>
             </div>
+            <details class="module-params" id="module-params">
+              <summary><span>Module parameters</span><span class="mono" id="module-params-count">none</span></summary>
+              <div class="arg-grid" id="module-args"></div>
+            </details>
           </div>
         </section>
 
@@ -481,6 +498,7 @@ const state = {
   job: null,
   pollTimer: null,
   dirty: true,
+  argValues: new Map(),
 };
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? "" : s);
@@ -554,6 +572,8 @@ function parsePreflightInput() {
     rate: +$("rate").value,
     timeout_sec: +$("timeout").value,
     interface: $("interface").value || undefined,
+    scan_args: collectModuleArgs("scan"),
+    probe_args: collectModuleArgs("probe"),
   };
 }
 function markDirty() {
@@ -742,11 +762,63 @@ function scanInfo(name) {
     return {ports: true, probe: null};
   return {ports: false, probe: null};
 }
+function selectedModule(kind, name) {
+  return (state.modules || []).find((m) => m.kind === kind && m.name === name) || null;
+}
+function moduleArgValue(kind, name, type) {
+  const key = kind + ":" + name;
+  if (!state.argValues.has(key)) state.argValues.set(key, type === "flag" ? false : "");
+  return state.argValues.get(key);
+}
+function collectModuleArgs(kind) {
+  const out = {};
+  for (const el of document.querySelectorAll('[data-arg-kind="' + kind + '"]')) {
+    const name = el.dataset.argName;
+    if (el.dataset.argType === "flag") {
+      if (el.checked) out[name] = true;
+    } else if (el.value.trim()) {
+      out[name] = el.value.trim();
+    }
+  }
+  return out;
+}
+function renderModuleArgs() {
+  const host = $("module-args");
+  if (!host) return;
+  const groups = [];
+  const scan = selectedModule("scan", state.scan);
+  const probeName = $("probe").value;
+  const probe = probeName ? selectedModule("probe", probeName) : null;
+  for (const [kind, mod] of [["scan", scan], ["probe", probe]]) {
+    if (!mod || !(mod.parameters || []).length) continue;
+    const rows = mod.parameters.map((p) => {
+      const type = p.type === "flag" ? "flag" : "arg";
+      const key = kind + ":" + p.name;
+      const val = moduleArgValue(kind, p.name, type);
+      const control = type === "flag"
+        ? '<input type="checkbox" data-arg-kind="' + kind + '" data-arg-name="' + esc(p.name) + '" data-arg-type="flag"' + (val ? " checked" : "") + ">"
+        : '<input type="text" spellcheck="false" autocomplete="off" data-arg-kind="' + kind + '" data-arg-name="' + esc(p.name) + '" data-arg-type="arg" value="' + esc(val) + '" placeholder="value">';
+      return '<div class="arg-row"><span class="arg-name mono">' + esc(p.name) + "</span>" + control + "</div>" +
+        (p.description ? '<div class="arg-desc">' + esc(p.description) + "</div>" : "");
+    }).join("");
+    groups.push('<div class="arg-group"><div class="arg-group-title mono">' + kind + " · " + esc(mod.name) + "</div>" + rows + "</div>");
+  }
+  host.innerHTML = groups.length ? groups.join("") : '<div class="arg-empty">No module parameters are required for this selection.</div>';
+  const count = host.querySelectorAll("[data-arg-kind]").length;
+  $("module-params-count").textContent = count ? count + " available" : "none";
+  for (const el of host.querySelectorAll("[data-arg-kind]")) {
+    el.addEventListener(el.dataset.argType === "flag" ? "change" : "input", () => {
+      const key = el.dataset.argKind + ":" + el.dataset.argName;
+      state.argValues.set(key, el.dataset.argType === "flag" ? el.checked : el.value);
+      schedulePreflight();
+    });
+  }
+}
 function updateProbeVisibility() {
   const info = scanInfo(state.scan);
   $("ports-field").classList.toggle("hidden", !info.ports);
   $("probe-field").classList.toggle("hidden", !info.probe);
-  if (!info.probe) { $("probe").value = ""; return; }
+  if (!info.probe) { $("probe").value = ""; renderModuleArgs(); return; }
   const probes = (state.probes || []).filter((m) => m.probe_type === info.probe);
   const current = $("probe").value;
   $("probe").innerHTML = '<option value="">— choose probe —</option>' + probes.map((m) =>
@@ -754,6 +826,7 @@ function updateProbeVisibility() {
   const preferred = {tcp: "http", udp: "dns", state: "http-state"}[info.probe];
   if (probes.some((m) => m.name === current)) $("probe").value = current;
   else if (probes.some((m) => m.name === preferred)) $("probe").value = preferred;
+  renderModuleArgs();
 }
 
 async function startScan() {
@@ -772,8 +845,14 @@ async function startScan() {
     params.ports = ports.slice(0, 4096);
   }
   if (info.probe && $("probe").value) params.probe = $("probe").value;
+  const scanArgs = collectModuleArgs("scan");
+  const probeArgs = collectModuleArgs("probe");
+  if (Object.keys(scanArgs).length) params.scan_args = scanArgs;
+  if (Object.keys(probeArgs).length) params.probe_args = probeArgs;
   const payload = {id: Date.now(), method: "job.start", params, compression: "none", index: false};
+  const route = (state.preflight.routes && state.preflight.routes[0]) || {};
   if ($("interface").value) payload.interface = $("interface").value;
+  else if (route.interface) payload.interface = route.interface;
   $("btn-start").disabled = true;
   $("start-hint").textContent = "Starting scan…";
   try {
@@ -886,7 +965,7 @@ function init() {
   $("ports").addEventListener("input", schedulePreflight);
   $("rate").addEventListener("input", schedulePreflight);
   $("timeout").addEventListener("input", schedulePreflight);
-  $("probe").addEventListener("change", schedulePreflight);
+  $("probe").addEventListener("change", () => { renderModuleArgs(); schedulePreflight(); });
   $("interface").addEventListener("change", schedulePreflight);
   $("auth").addEventListener("change", () => {
     $("btn-start").disabled = !(state.preflight && state.preflight.ok && $("auth").checked && !state.dirty);

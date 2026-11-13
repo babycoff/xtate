@@ -75,6 +75,8 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 
 速率单位是包/秒（1–10000，默认 1000）。超时是总的墙钟时限，单位秒（1–86400，默认 300）。输出固定为带结果 manifest 的 NDJSON；控制台不选择输出模块。
 
+**模块参数。** 方法卡片下方的 *Module parameters* 列出当前扫描引擎和探测暴露的开关与文本参数。开关是复选框，取值参数是文本框；留空即不发送。这些值会作为 `scan_args` 和 `probe_args` 随 `job.start` 发送，与 CLI 的 `--scan-arg`/`--probe-arg` 同名。切换扫描或探测时会重建列表。预检不校验参数名或取值；如果 worker 拒绝某个参数，job 会失败，`stderr_tail`/日志中会显示参数错误。
+
 **03 Interface.** *Auto (from route)* 让预检为采样目标解析路由。TUN/VPN 网卡显示为 RAW 链路类型且没有 MAC，因此 banner 和有状态扫描可能无法通过它工作；请改选物理网卡。预检无法在路由之间决定时，会要求你显式选择接口。
 
 **04 Authorization.** 复选框的文字是 *I own the targets or have written permission. The exact scope, rate, interface and time window above are what will be sent.* 它是开始扫描的必要条件，服务器还会再检查一次。它不能替代法律意义上的许可。

@@ -112,6 +112,9 @@ def main():
         if "__XTATE_GUI_TOKEN__" in text or token not in text:
             print("GUI token was not injected", file=sys.stderr)
             return 1
+        if 'id="module-params"' not in text or "scan_args" not in text:
+            print("GUI module parameter editor is missing", file=sys.stderr)
+            return 1
 
         # Info and job.list require the session token.
         status, body = http_json(port, "/api/info", token)

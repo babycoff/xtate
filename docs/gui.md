@@ -82,6 +82,10 @@ The GUI is scan-first: the default page is **New scan**, not a job table.
 - **Start scan** stays disabled until the preflight is ready, the authorization
   checkbox is ticked, and the form has not changed since the preflight. The
   bridge also rejects `job.start` unless `params.authorized` is literally `true`.
+- **Module parameters** exposes the selected scan engine and probe flags and text
+  arguments. Values are sent as `scan_args`/`probe_args`; empty fields are omitted.
+  Preflight does not validate argument names or values, so a bad value fails the
+  job with the worker argument error in `stderr_tail`/the log.
 - **Live** polls `job.status` every 1.5 seconds, shows phase, sent/targets,
   heartbeat, elapsed time, exit code, result/log path and the bounded stderr
   tail, and cancels a queued or running job after confirmation.
@@ -91,9 +95,9 @@ The GUI is scan-first: the default page is **New scan**, not a job table.
   flag, link type and raw-IP capability. **Modules** searches the module catalog;
   **Settings** shows runtime, capability and security state.
 
-The output path is managed by the server. For probe arguments, scan arguments,
-include files, chunking or quota settings, use the MCP server or the JSON
-control API directly.
+The output path is managed by the server. For include files, chunking or quota
+settings, use the MCP server or the JSON control API directly. Scan and probe
+arguments are editable in the Method panel.
 
 ## Security model
 

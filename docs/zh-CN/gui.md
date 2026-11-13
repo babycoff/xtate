@@ -73,14 +73,17 @@ GUI 以扫描为中心：默认页是 **New scan**，不是任务表格。
   引擎只给 UDP 端口以及非法数值。预检不发包。
 - **Start scan** 只有在预检通过、勾选授权、且预检后表单未改动时才可用。桥接层仍会
   拒绝 `params.authorized` 不为字面 `true` 的 `job.start`。
+- **模块参数** 会显示当前扫描引擎和探测的开关与文本参数，作为 `scan_args`/
+  `probe_args` 发送；留空即不发送。预检不校验参数名或取值，非法值会让 job 失败，
+  并在 `stderr_tail`/日志中出现 worker 参数错误。
 - **Live** 每 1.5 秒轮询 `job.status`，显示阶段、sent/targets、心跳、耗时、退出码、
   结果/日志路径和有界 stderr 尾部；queued/running 任务经确认可取消。
 - **Results** 通过 `job.list` 列出任务，打开后显示清单状态、结果字节数与路径。
 - **Interfaces** 显示采集网卡的 IPv4/IPv6、MAC、网关、默认标记、链路类型和 raw-IP
   能力；**Modules** 搜索模块目录；**Settings** 显示运行时、能力和安全状态。
 
-输出路径由服务端管理。probe 参数、scan 参数、include_file、分块和配额等高级字段
-请直接使用 MCP server 或 JSON 控制 API。
+输出路径由服务端管理。include_file、分块和配额等高级字段请直接使用 MCP server 或
+JSON 控制 API；scan/probe 参数可在 Method 面板中编辑。
 
 ## 安全模型
 
