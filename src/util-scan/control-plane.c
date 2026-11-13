@@ -383,14 +383,28 @@ static int make_state_subdir(char *out, size_t cap, const char *name) {
 }
 
 static int default_result_path(char *out, size_t cap) {
-    char dir[2048];
-    if (!make_state_subdir(dir, sizeof(dir), "results")) return 0;
+    char runs[2048], dir[2100];
+    char stamp[32];
+    time_t now = time(NULL);
+    struct tm tmv;
+    unsigned long seq = next_name_seq();
 #ifdef _WIN32
-    return snprintf(out, cap, "%s\\xtate-job-%lld-%lu.ndjson", dir,
-                    (long long)time(NULL), next_name_seq()) < (int)cap;
+    localtime_s(&tmv, &now);
 #else
-    return snprintf(out, cap, "%s/xtate-job-%lld-%lu.ndjson", dir,
-                    (long long)time(NULL), next_name_seq()) < (int)cap;
+    localtime_r(&now, &tmv);
+#endif
+    strftime(stamp, sizeof(stamp), "%Y%m%d-%H%M%S", &tmv);
+    if (!make_state_subdir(runs, sizeof(runs), "runs")) return 0;
+#ifdef _WIN32
+    if (snprintf(dir, sizeof(dir), "%s\\%s-%lu", runs, stamp, seq) >= (int)sizeof(dir))
+        return 0;
+    if (!ensure_dir(dir)) return 0;
+    return snprintf(out, cap, "%s\\scan.ndjson", dir) < (int)cap;
+#else
+    if (snprintf(dir, sizeof(dir), "%s/%s-%lu", runs, stamp, seq) >= (int)sizeof(dir))
+        return 0;
+    if (!ensure_dir(dir)) return 0;
+    return snprintf(out, cap, "%s/scan.ndjson", dir) < (int)cap;
 #endif
 }
 

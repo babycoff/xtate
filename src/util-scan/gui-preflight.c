@@ -8,6 +8,7 @@
 */
 
 #include "gui-data.h"
+#include "scan-request.h"
 
 #include <math.h>
 #include <stdint.h>
@@ -316,6 +317,45 @@ char *gui_preflight_json(const char *body) {
         if (targetset_add_port_str(&targets, "o:0", 0) != 0)
             add_error(root, "could not initialize target set");
     }
+    JsonNode *global_node = member(input, "global_args");
+    if (global_node) {
+        int gcount = 0;
+        if (global_node->tag != JSON_OBJECT) {
+            add_error(root, "global_args must be an object");
+        } else {
+            for (JsonNode *n = global_node->children.head; n; n = n->next) {
+                const char *name = n->key ? n->key : "";
+                char num[64];
+                const char *val = NULL;
+                if (++gcount > 24) {
+                    add_error(root, "too many global parameters (maximum 24)");
+                    break;
+                }
+                if (!scan_request_global_arg_allowed(name)) {
+                    add_error(root, "global_args contains an option the GUI cannot set");
+                    continue;
+                }
+                if (scan_request_global_arg_is_flag(name)) {
+                    if (n->tag != JSON_BOOL)
+                        add_error(root, "global flag parameters must be true or false");
+                    continue;
+                }
+                if (n->tag == JSON_STRING) val = n->string_;
+                else if (n->tag == JSON_NUMBER) {
+                    snprintf(num, sizeof(num), "%.17g", n->number_);
+                    val = num;
+                }
+                if (!val) {
+                    add_error(root, "global argument values must be strings or numbers");
+                } else if (strlen(val) > 512) {
+                    add_error(root, "a global argument value is too long (maximum 512 bytes)");
+                } else if (!scan_request_global_arg_value_valid(name, val)) {
+                    add_error(root, "a global argument has an invalid value");
+                }
+            }
+        }
+    }
+
     if (rate_node) {
         if (rate_node->tag != JSON_NUMBER || !isfinite(rate_node->number_) ||
             rate_node->number_ != floor(rate_node->number_)) {

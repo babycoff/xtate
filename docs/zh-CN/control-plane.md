@@ -42,6 +42,14 @@ xtate --control-connect=/tmp/xtate-ctl.sock --control-request='{"id":1,"method":
 `compression`、`index`、`quota_bytes` 和 `interface`。扫描请求本身由 worker 校验；
 非法请求会异步失败，并通过 `job.status` 查看。
 
+省略 `result_path` 时，控制面会在状态根目录下创建每次运行独立的目录：
+`<state>/runs/<YYYYMMDD-HHMMSS>-<seq>/scan.ndjson`，以及对应的
+`scan.ndjson.log`、manifest 和 index。Windows 的状态根目录是
+`%LOCALAPPDATA%\xtate`（含回退路径），Linux 上是 `$XDG_STATE_HOME/xtate` 或
+`$HOME/.local/state/xtate`，可用 `XTATE_STATE_DIR` 覆盖。Windows 的 `--gui`
+优先使用 `xtate.exe` 同级、可见的 `xtate-state`。请求文件位于
+`<state>/requests`，job 进入终态时删除。
+
 没有 `job.events` 方法，也没有服务端推送。客户端轮询 `job.status` / `job.list`。
 
 ## 状态

@@ -105,6 +105,9 @@ a { color: var(--mint); text-decoration: none; }
 .nav button.active { color: var(--text); background: var(--surface-2); border-color: var(--line-soft); }
 .top-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .conn { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; }
+.lang-switch { display: inline-flex; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.lang-switch button { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 12px; padding: 4px 9px; border-radius: 6px; cursor: pointer; }
+.lang-switch button.active { background: var(--surface-2); color: var(--text); box-shadow: 0 1px 0 var(--line); }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
 .dot.ok { background: var(--mint); box-shadow: 0 0 0 3px rgba(11,107,83,.12); }
 .dot.bad { background: var(--red); }
@@ -187,6 +190,17 @@ input.invalid, textarea.invalid { border-color: rgba(180,35,24,.7); }
 .arg-row input[type="text"] { padding: 7px 9px; font-size: 11.5px; }
 .arg-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--mint); }
 .arg-desc { grid-column: 2; color: var(--faint); font-size: 10px; line-height: 1.4; margin-top: -2px; }
+.global-tools { display: flex; gap: 10px; margin-top: 12px; }
+.global-tools input { flex: 1; }
+.global-list { max-height: 420px; overflow: auto; display: grid; gap: 8px; margin-top: 12px; }
+.global-row { display: grid; grid-template-columns: 20px minmax(130px,.7fr) minmax(120px,1fr); gap: 10px; align-items: start; padding: 9px 10px; border: 1px solid var(--line-soft); border-radius: 8px; background: var(--input); }
+.global-row.selected { border-color: rgba(11,107,83,.36); }
+.global-row input[type=checkbox] { margin-top: 2px; }
+.global-row .gname { font-family: var(--mono); font-size: 12px; }
+.global-row .gdesc { color: var(--muted); font-size: 11.5px; margin-top: 2px; line-height: 1.4; }
+.global-row .gval input { width: 100%; }
+.global-row .gval input:disabled { opacity: .45; }
+.global-row .gtype { color: var(--faint); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
 .arg-empty { color: var(--faint); font-size: 11px; margin-top: 12px; }
 .iface-line {
   display: flex; align-items: center; gap: 10px; border: 1px solid var(--line-soft);
@@ -353,6 +367,24 @@ textarea { font-size: 13.5px; line-height: 1.5; }
 .module-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
 .module-tab { border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 6px 11px; font-size: 12px; }
 .module-tab.active { background: var(--mint); border-color: var(--mint); color: var(--on-accent); }
+
+.module-card { cursor: pointer; }
+.module-card.expanded { grid-column: 1 / -1; border-color: rgba(11,107,83,.28); }
+.module-head { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.module-head h3 { margin: 0; }
+.module-arrow { color: var(--faint); font-size: 13px; transition: transform .15s ease; }
+.module-card.expanded .module-arrow { transform: rotate(90deg); }
+.module-detail { display: none; margin-top: 12px; border-top: 1px solid var(--line-soft); padding-top: 12px; }
+.module-card.expanded .module-detail { display: block; }
+.module-detail .long { margin: 0 0 10px; color: var(--muted); font-size: 12.5px; line-height: 1.55; white-space: pre-wrap; }
+.param-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.param-table th { text-align: left; color: var(--faint); font-weight: 600; padding: 5px 8px; border-bottom: 1px solid var(--line-soft); }
+.param-table td { padding: 6px 8px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+.param-table td.name { font-family: var(--mono); white-space: nowrap; color: var(--text); }
+.param-table td.desc { color: var(--muted); }
+@media (max-width: 1200px) { .module-group .module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .module-group .module-grid { grid-template-columns: 1fr; } }
+
 .module-group { margin-bottom: 28px; }
 .module-group-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin: 0 0 10px; border-bottom: 1px solid var(--line-soft); padding-bottom: 8px; }
 .module-group-head h2 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
@@ -411,6 +443,10 @@ textarea { font-size: 13.5px; line-height: 1.5; }
     <button data-page="system">System</button>
   </nav>
   <div class="top-right">
+    <div class="lang-switch" role="group" aria-label="Language">
+      <button type="button" data-lang-set="en">EN</button>
+      <button type="button" data-lang-set="zh">中文</button>
+    </div>
     <div class="conn"><span class="dot" id="conn-dot"></span><span id="conn-text">connecting</span></div>
     <div class="avatar">SC</div>
   </div>
@@ -421,8 +457,8 @@ textarea { font-size: 13.5px; line-height: 1.5; }
     <div class="page-head">
       <div>
         <div class="eyebrow">Console / New scan</div>
-        <h1>Point, check, send.</h1>
-        <div class="sub">Resolve the route, check the parameters, then send. Preflight is local and silent — nothing leaves the host before you authorize it.</div>
+        <h1>New scan</h1>
+        <div class="sub">Choose the target, method and parameters. Nothing is sent until you authorize.</div>
       </div>
       <div class="badge" id="preflight-badge"><span class="dot"></span><span>waiting for target</span></div>
     </div>
@@ -478,6 +514,11 @@ textarea { font-size: 13.5px; line-height: 1.5; }
             <details class="module-params" id="module-params">
               <summary><span>Module parameters</span><span class="mono" id="module-params-count">none</span></summary>
               <div class="arg-grid" id="module-args"></div>
+            </details>
+            <details class="module-params" id="global-params">
+              <summary><span>Global parameters</span><span class="mono" id="global-params-count">none</span></summary>
+              <div class="global-tools"><input id="global-search" type="text" placeholder="Filter global parameters…" autocomplete="off"></div>
+              <div class="global-list" id="global-args"></div>
             </details>
           </div>
         </section>
@@ -535,7 +576,7 @@ textarea { font-size: 13.5px; line-height: 1.5; }
 
   <section id="page-live" class="hidden">
     <div class="page-head">
-      <div><div class="eyebrow">Console / Live scan</div><h1 id="live-title">No active scan.</h1><div class="sub" id="live-sub">Start a scan from New scan. Every packet is accounted for here.</div></div>
+      <div><div class="eyebrow">Console / Live scan</div><h1 id="live-title">Live scan</h1><div class="sub" id="live-sub">Start a scan from New scan. Every packet is accounted for here.</div></div>
       <div class="badge" id="live-state-badge">idle</div>
     </div>
     <div class="layout">
@@ -589,34 +630,34 @@ textarea { font-size: 13.5px; line-height: 1.5; }
   </section>
 
   <section id="page-results" class="hidden">
-    <div class="page-head"><div><div class="eyebrow">Console / Results</div><h1>Scans.</h1><div class="sub">Every scan managed by this control plane, newest first.</div></div><button class="btn ghost" id="btn-refresh-results">Refresh</button></div>
+    <div class="page-head"><div><div class="eyebrow">Console / Results</div><h1>Results</h1><div class="sub">Every scan managed by this control plane, newest first.</div></div><button class="btn ghost" id="btn-refresh-results">Refresh</button></div>
     <section class="card"><div class="card-head"><div class="card-title">Scan history</div><div class="field-hint mono" id="results-count">—</div></div>
       <div class="card-body" style="padding:0"><table class="table"><thead><tr><th>Scan</th><th>State</th><th>Result</th><th></th></tr></thead><tbody id="results-body"></tbody></table></div>
     </section>
   </section>
 
   <section id="page-interfaces" class="hidden">
-    <div class="page-head"><div><div class="eyebrow">Console / Interfaces</div><h1>Capture devices.</h1><div class="sub">Loopback, Ethernet, Wi-Fi and tunnel adapters reported by the capture stack.</div></div><div class="badge" id="iface-count">—</div></div>
+    <div class="page-head"><div><div class="eyebrow">Console / Interfaces</div><h1>Interfaces</h1><div class="sub">Loopback, Ethernet, Wi-Fi and tunnel adapters reported by the capture stack.</div></div><div class="badge" id="iface-count">—</div></div>
     <div class="iface-grid" id="iface-grid"></div>
   </section>
 
   <section id="page-modules" class="hidden">
-    <div class="page-head"><div><div class="eyebrow">Console / Modules</div><h1>What can be sent.</h1><div class="sub">Scan engines, protocol probes, output writers and target generators, grouped by role.</div></div></div>
+    <div class="page-head"><div><div class="eyebrow">Console / Modules</div><h1>Modules</h1><div class="sub">Scan, probe, output and generate modules, grouped by role. Open a module for its full description and parameters.</div></div></div>
     <div class="module-toolbar">
       <div class="search"><input id="module-search" type="text" placeholder="Filter by name, description or parameter…" autocomplete="off"></div>
       <div class="module-tabs" id="module-tabs">
         <button type="button" class="module-tab active" data-kind="all">All</button>
-        <button type="button" class="module-tab" data-kind="scan">Scan engines</button>
-        <button type="button" class="module-tab" data-kind="probe">Protocol probes</button>
-        <button type="button" class="module-tab" data-kind="output">Output</button>
-        <button type="button" class="module-tab" data-kind="generate">Generators</button>
+        <button type="button" class="module-tab" data-kind="scan">Scan modules</button>
+        <button type="button" class="module-tab" data-kind="probe">Probe modules</button>
+        <button type="button" class="module-tab" data-kind="output">Output modules</button>
+        <button type="button" class="module-tab" data-kind="generate">Generate modules</button>
       </div>
     </div>
     <div id="module-groups"></div>
   </section>
 
   <section id="page-system" class="hidden">
-    <div class="page-head"><div><div class="eyebrow">Console / System</div><h1>System &amp; preferences.</h1><div class="sub">Appearance, runtime capabilities and the local security model of this console.</div></div></div>
+    <div class="page-head"><div><div class="eyebrow">Console / System</div><h1>System</h1><div class="sub">Appearance, runtime capabilities and the local security model of this console.</div></div></div>
     <div class="system-grid">
       <section class="card">
         <div class="card-head"><div class="card-title">Appearance</div><div class="field-hint mono">saved in this browser</div></div>
@@ -659,7 +700,49 @@ textarea { font-size: 13.5px; line-height: 1.5; }
 
 <script>
 const TOKEN = "__XTATE_GUI_TOKEN__";
+const ZH = {"Xtate control plane — 3.0":"Xtate 控制台 — 3.0","xtate":"xtate","3.0":"3.0","SC":"SC","Main":"主菜单","New scan":"新建扫描","Live scan":"实时扫描","Results":"结果","Interfaces":"网卡","Modules":"模块","System":"系统","connecting":"正在连接","connected":"已连接","offline":"未连接","control plane · local":"控制平面 · 本地","Xtate 3.0 · local control plane":"Xtate 3.0 · 本地控制平面","Console / New scan":"控制台 / 新建扫描","Point, check, send.":"选目标，做预检，再发送。","Resolve the route, check the parameters, then send. Preflight is local and silent — nothing leaves the host before you authorize it.":"先解析路由、核对参数，再发送。预检在本机静默完成——在你授权之前，不会有任何数据包离开主机。","waiting for target":"等待目标","preflight ready":"预检通过","blocked":"已阻止","01 · Scope":"01 · 扫描范围","IPv4 · IPv6 · CIDR · ranges":"IPv4 · IPv6 · CIDR · 范围","Scan scope":"扫描范围","comma or newline separated · parsed locally":"逗号或换行分隔 · 在本机解析","Use sample":"使用示例","0 targets":"0 个目标","{n} targets":"{n} 个目标","+{n} more":"另 {n} 个","02 · Method":"02 · 扫描方式","engine · probe · ports":"引擎 · 探针 · 端口","Ports":"端口","0–65535":"0–65535","Probe":"探针","optional protocol probe":"可选协议探针","— none —":"— 无 —","— choose probe —":"— 选择探针 —","{name} — {short_description}":"{name} — {short_description}","Rate":"速率","packets / sec":"包 / 秒","Timeout":"超时","seconds":"秒","Output":"输出","server managed":"由服务端管理","NDJSON · manifest":"NDJSON · 清单","Module parameters":"模块参数","none":"无","{n} available":"{n} 个可用","No module parameters are required for this selection.":"当前选择不需要模块参数。","{kind} · {name}":"{kind} · {name}","value":"值","enabled":"已启用","off":"关闭","selected":"已选","03 · Interface":"03 · 网卡","auto-selected from the route":"按路由自动选择","Auto":"自动","route lookup will choose the capture device":"将根据路由选择抓包设备","Auto (from route)":"自动（按路由）","Capture interface":"抓包网卡","TUN/VPN adapters use RAW link type and have no MAC. If routes are ambiguous, choose the physical adapter explicitly.":"TUN/VPN 适配器使用 RAW 链路类型，没有 MAC。路由不明确时，请显式选择物理网卡。","04 · Authorization":"04 · 授权","required for Start":"开始前必填","I have authorization to scan this scope at this rate.":"我拥有按此速率扫描该范围的授权。","I own the targets or have written permission. The exact scope, rate, interface and time window above are what will be sent.":"我拥有这些目标，或已获得书面许可。上方的确切范围、速率、网卡和时间窗口就是将要发送的内容。","Preflight":"预检","PREFLIGHT · IDLE":"预检 · 空闲","PREFLIGHT · PENDING":"预检 · 等待","PREFLIGHT · PASSED":"预检 · 通过","PREFLIGHT · BLOCKED":"预检 · 未通过","PREFLIGHT · ERROR":"预检 · 出错","attempts":"尝试","Enter a scope to calculate targets and route.":"输入范围以计算目标数和路由。","Checking scope and route…":"正在检查范围与路由…","{n} addresses will be probed on {n} ports.":"将探测 {n} 个地址的 {n} 个端口。","{n} addresses will be probed on 1 port.":"将探测 {n} 个地址的 1 个端口。","{n} addresses will be scanned without ports.":"将扫描 {n} 个地址，不使用端口。","Request blocked.":"请求已阻止。","Targets":"目标","Interface":"网卡","Source":"源地址","Gateway":"网关","Link type":"链路类型","Target syntax and count verified":"目标语法与数量已校验","Route and link type resolved":"路由与链路类型已解析","Link type can carry raw IP":"链路类型支持原始 IP","RAW link: no Ethernet header or MAC/ARP":"RAW 链路：没有 Ethernet 头，也不使用 MAC/ARP","Preflight does not send packets. Changing any field invalidates the result and reruns it.":"预检不发送数据包。改动任意字段都会使结果失效并重新运行预检。","Start scan":"开始扫描","Waiting for a valid preflight.":"等待有效的预检结果。","Confirm authorization to enable Start.":"确认授权后可开始。","Ready to start.":"可以开始。","Fix the preflight errors above.":"请先修正上方的预检错误。","Starting scan…":"正在启动扫描…","Start failed. Check the preflight and try again.":"启动失败。请检查预检后重试。","Console / Live scan":"控制台 / 实时扫描","No active scan.":"当前没有扫描。","Scan {job_id}":"扫描 {job_id}","Start a scan from New scan. Every packet is accounted for here.":"从“新建扫描”开始。这里会记录每一个数据包。","No scan running":"没有扫描在运行","Start a scan from New scan. This page follows the current scan automatically.":"从“新建扫描”开始。本页会自动跟随当前扫描。","Starting scan":"正在启动扫描","Request accepted. Waiting for the worker to attach.":"请求已接受，正在等待工作进程接入。","Waiting for the control plane to report the first status.":"等待控制平面报告第一个状态。","Idle":"空闲","Starting":"正在启动","LIVE · POLLING":"实时 · 轮询中","The daemon owns the scan; closing this page does not stop it.":"扫描由守护进程负责；关闭本页不会停止扫描。","Scan counters":"扫描计数","live from the control plane":"来自控制平面的实时数据","Sent":"已发送","Throughput":"吞吐","Elapsed":"已用时间","Phase":"阶段","Heartbeat":"心跳","Exit code":"退出码","Result manifest":"结果清单","Result":"结果","Manifest":"清单","Bytes":"字节","Complete":"完成","yes":"是","no":"否","Worker log tail":"工作日志末尾","last lines":"最后几行","No output yet.":"暂无输出。","Waiting for worker output…":"正在等待工作进程输出…","No worker log output.":"工作进程没有日志输出。","Result records":"结果记录","Load records":"加载记录","Load more":"加载更多","No records loaded.":"尚未加载记录。","No records in this result file yet.":"该结果文件中还没有记录。","{n} loaded":"已加载 {n} 条","Log":"日志","Error":"错误","Cancel scan":"取消扫描","Refresh":"刷新","Open log":"打开日志","Open result":"打开结果","pps":"pps","Queued":"排队中","Waiting for a worker slot.":"等待工作进程空位。","Scanning":"扫描中","The daemon is sending packets. You can leave this page; the scan continues.":"守护进程正在发送数据包。可以离开本页，扫描会继续。","Scan complete":"扫描完成","The worker finished and the result manifest is available.":"工作进程已结束，结果清单可用。","Scan failed":"扫描失败","The worker stopped with an error. Check the log and the error detail.":"工作进程因错误停止。请查看日志和错误详情。","Scan cancelled":"扫描已取消","The job was cancelled. Partial results, if any, remain readable.":"任务已取消。已有的部分结果仍可读取。","Scan timed out":"扫描超时","The job exceeded its timeout. Partial results, if any, remain readable.":"任务已超过超时时间。已有的部分结果仍可读取。","Scan stalled":"扫描停滞","The worker heartbeat stopped. The control plane marked this job as stalled.":"工作进程心跳已停止。控制平面已将该任务标记为停滞。","State reported by the control plane.":"控制平面报告的状态。","unknown":"未知","Console / Results":"控制台 / 结果","Scans.":"扫描记录","Every scan managed by this control plane, newest first.":"此控制平面管理的所有扫描，最新的在前。","Scan history":"扫描历史","{n} shown":"显示 {n} 条","Scan":"扫描","State":"状态","No scans yet.":"暂无扫描。","Start one from New scan; it will appear here.":"从“新建扫描”开始；记录会出现在这里。","view →":"查看 →","Console / Interfaces":"控制台 / 网卡","Capture devices.":"抓包设备","Loopback, Ethernet, Wi-Fi and tunnel adapters reported by the capture stack.":"抓包栈报告的环回、以太网、Wi-Fi 和隧道适配器。","{n} interfaces":"{n} 个网卡","· default":"· 默认","IPv4":"IPv4","IPv6":"IPv6","MAC":"MAC","Link":"链路","Raw":"RAW","capable":"支持","not usable":"不可用","loopback":"回环","virtual":"虚拟","up":"已启用","no-ipv4":"无 IPv4","Cannot list interfaces:":"无法列出网卡：","Console / Modules":"控制台 / 模块","What can be sent.":"可发送的模块","Scan engines, protocol probes, output writers and target generators, grouped by role.":"扫描引擎、协议探针、输出写入器和目标生成器，按角色分组。","Filter by name, description or parameter…":"按名称、描述或参数筛选…","Filter global parameters…":"筛选全局参数…","All":"全部","Scan engines":"扫描引擎","Protocol probes":"协议探针","Generators":"生成器","Scan engines (group)":"扫描引擎","How packets are sent and what state is kept.":"数据包如何发送、保留什么状态。","Protocol probes (group)":"协议探针","What is read from a responding service.":"从响应的服务中读取什么。","Output writers":"输出写入器","How results are written.":"结果如何写入。","Target generators":"目标生成器","How target lists can be produced.":"目标列表如何生成。","No modules match.":"没有匹配的模块。","Try a different filter or category.":"试试其他筛选条件或分类。","{n} parameters ·":"{n} 个参数 ·","no parameters":"无参数","{n} modules shown":"显示 {n} 个模块","Cannot list modules:":"无法列出模块：","scan":"扫描","probe":"探测","output":"输出","generate":"生成","Console / System":"控制台 / 系统","System & preferences.":"系统与偏好设置","Appearance, runtime capabilities and the local security model of this console.":"本控制台的外观、运行时能力和本地安全模型。","Appearance":"外观","saved in this browser":"保存在此浏览器","Theme":"主题","Warm paper is easier on long sessions; graphite is for dark rooms.":"暖纸色适合长时间操作；石墨色适合暗光环境。","Paper":"暖纸","Graphite":"石墨","Density":"密度","Compact fits more rows; comfortable gives labels more air.":"紧凑模式可显示更多行；舒适模式让标签更舒展。","Comfortable":"舒适","Compact":"紧凑","Live refresh":"实时刷新","How often the Live page asks the control plane for status.":"实时页面向控制平面查询状态的间隔。","1.5 s":"1.5 秒","3 s":"3 秒","Runtime":"运行时","read only":"只读","Version":"版本","Platform":"平台","Control endpoint":"控制端点","Capabilities":"能力","build-dependent":"取决于构建","Raw sockets":"原始套接字","available":"可用","unavailable":"不可用","HTTP/3":"HTTP/3","compiled":"已编译","QUIC transport":"QUIC 传输","zstd results":"zstd 结果","Live result records":"实时结果记录","paged from disk":"从磁盘分页读取","Security model":"安全模型","loopback only":"仅限回环","The server binds to 127.0.0.1 only, validates the Host header, requires a per-session token, and exposes only allowlisted control methods. The scan child is owned by the control plane.":"服务器只绑定 127.0.0.1，校验 Host 头，要求每个会话一个令牌，并且只暴露允许的控制方法。扫描子进程由控制平面持有。","The GUI page never receives the control-plane token; the server adds it to control requests. Authorization is checked before Start and again by the server.":"GUI 页面不会拿到控制平面令牌；服务器会把令牌加入控制请求。授权在开始前检查一次，服务器端再检查一次。","Result and log files stay in the visible xtate-state folder beside xtate.exe on Windows (or the per-user state directory on Linux). Requests are removed when a scan finishes.":"结果和日志文件保存在 Windows 上 xtate.exe 旁的可见 xtate-state 文件夹中（Linux 上为用户级状态目录）。扫描结束后请求会被移除。","Control plane unavailable:":"控制平面不可用：","Scan started.":"扫描已启动。","Enter at least one port.":"至少输入一个端口。","Start failed:":"启动失败：","Cannot read scan status:":"无法读取扫描状态：","Cancel requested.":"已请求取消。","Scan is no longer running.":"扫描已不再运行。","Cancel failed:":"取消失败：","Cannot list scans:":"无法列出扫描：","Cannot read result records:":"无法读取结果记录：","Cannot open file:":"无法打开文件：","Opening the worker log…":"正在打开工作进程日志…","Opening the result file…":"正在打开结果文件…","control request failed":"控制请求失败","HTTP {status}":"HTTP {status}","Preflight request failed.":"预检请求失败。","control plane did not return a scan id":"控制平面未返回扫描 ID","no gateway":"无网关","English pattern":"中文 pattern","{n}s":"{n} 秒","{n}m {n}s":"{n} 分 {n} 秒","{n} ago":"{n} 前","Started from this console · {status}":"从本控制台启动 · {status}","{sent} sent":"已发送 {sent}","of {targets} targets":"共 {targets} 个目标","· {pps} pps · {elapsed} elapsed":"· {pps} pps · 已用 {elapsed}"};
+Object.assign(ZH, {
+  "Filter global parameters…": "筛选全局参数…",
+  "Choose the target, method and parameters. Nothing is sent until you authorize.": "选择目标、扫描方式和参数。授权前不会发送任何数据包。",
+  "Choose a scope, method and parameters. Nothing is sent until you authorize.": "选择范围、扫描方式和参数。授权前不会发送任何数据包。",
+  "How packets are sent.": "数据包如何发送。",
+  "How responses are interpreted.": "如何解析响应。",
+  "How results are written.": "结果如何写入。",
+  "How target lists are produced.": "目标列表如何生成。",
+  "Scan modules": "扫描模块",
+  "Probe modules": "探针模块",
+  "Output modules": "输出模块",
+  "Generate modules": "生成模块",
+  "{targets} addresses will be probed on {ports} ports.": "将探测 {targets} 个地址的 {ports} 个端口。",
+  "{targets} addresses will be probed on {ports} port.": "将探测 {targets} 个地址的 {ports} 个端口。",
+  "{targets} addresses will be scanned without ports.": "将扫描 {targets} 个地址，不使用端口。",
+  "Choose the target, method and parameters. Nothing is sent until you authorize.": "选择目标、扫描方式和参数。授权前不会发送任何数据包。",
+  "Every scan managed by this control plane, newest first.": "此控制平面管理的所有扫描，最新的在前。",
+  "Loopback, Ethernet, Wi-Fi and tunnel adapters reported by the capture stack.": "抓包栈报告的环回、以太网、Wi-Fi 和隧道适配器。",
+  "Scan engines, protocol probes, output writers and target generators, grouped by role.": "扫描引擎、协议探针、输出写入器和目标生成器，按角色分组。",
+  "Scan, probe, output and generate modules, grouped by role. Open a module for its full description and parameters.": "扫描、探针、输出与生成模块，按角色分组。展开模块可查看完整说明和参数。",
+  "Appearance, runtime capabilities and the local security model of this console.": "本控制台的外观、运行时能力和本地安全模型。",
+
+  "Scan modules": "扫描模块",
+  "Probe modules": "探针模块",
+  "Output modules": "输出模块",
+  "Generate modules": "生成模块",
+  "scan module": "扫描模块",
+  "probe module": "探针模块",
+  "output module": "输出模块",
+  "generate module": "生成模块",
+  "No parameter description.": "暂无参数说明。",
+  "Parameters": "参数",
+  "Name": "名称",
+  "Type": "类型",
+  "Description": "说明",
+  "Aliases": "别名",
+  "Global parameters": "全局参数",
+  "Module parameters": "模块参数",
+  "No modules match.": "没有匹配的模块。",
+});
 const state = {
+  lang: "en",
   page: "scan",
   system: null,
   interfaces: [],
@@ -673,14 +756,63 @@ const state = {
   pollTimer: null,
   dirty: true,
   argValues: new Map(),
+  globalOptions: [],
+  globalValues: new Map(),
   records: [],
   recordOffset: 0,
   logText: "",
   moduleKind: "all",
+  expandedModules: new Set(),
   prefs: {theme: "light", density: "comfortable", refresh: 1500},
 };
 const $ = (id) => document.getElementById(id);
+try { const __p = new URLSearchParams(location.search); const __e = __p.get("expand"); if (__e) state.expandedModules.add(__e); } catch (_) {}
 const esc = (s) => String(s == null ? "" : s);
+
+
+function t(s) {
+  if (state.lang !== "zh") return s;
+  return Object.prototype.hasOwnProperty.call(ZH, s) ? ZH[s] : s;
+}
+function tf(template, vars) {
+  let out = t(template);
+  for (const [k, v] of Object.entries(vars || {})) out = out.split("{" + k + "}").join(String(v));
+  return out;
+}
+function applyI18n(root) {
+  const scope = root || document.body;
+  const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  for (const node of nodes) {
+    const parent = node.parentElement;
+    if (!parent) continue;
+    if (parent.closest("pre, code, textarea, script, style, #live-log")) continue;
+    const m = node.nodeValue.match(/^(\s*)(.*?)(\s*)$/s);
+    if (!m || !m[2]) continue;
+    if (node.__en === undefined) node.__en = m[2];
+    const out = state.lang === "zh" ? t(node.__en) : node.__en;
+    node.nodeValue = m[1] + out + m[3];
+  }
+  for (const el of scope.querySelectorAll("[placeholder], [title], [aria-label]")) {
+    for (const attr of ["placeholder", "title", "aria-label"]) {
+      if (!el.hasAttribute(attr)) continue;
+      if (!el.__enAttr) el.__enAttr = {};
+      if (el.__enAttr[attr] === undefined) el.__enAttr[attr] = el.getAttribute(attr);
+      el.setAttribute(attr, state.lang === "zh" ? t(el.__enAttr[attr]) : el.__enAttr[attr]);
+    }
+  }
+}
+function setLang(lang) {
+  state.lang = lang === "zh" ? "zh" : "en";
+  try { localStorage.setItem("xtate.gui.lang", state.lang); } catch (_) {}
+  document.documentElement.lang = state.lang === "zh" ? "zh-CN" : "en";
+  for (const b of document.querySelectorAll("[data-lang-set]"))
+    b.classList.toggle("active", b.dataset.langSet === state.lang);
+  applyI18n();
+  loadModules();
+  loadOptions();
+}
 
 function loadPrefs() {
   try {
@@ -690,7 +822,17 @@ function loadPrefs() {
   if (!["light", "dark"].includes(state.prefs.theme)) state.prefs.theme = "light";
   if (!["comfortable", "compact"].includes(state.prefs.density)) state.prefs.density = "comfortable";
   if (![1500, 3000].includes(+state.prefs.refresh)) state.prefs.refresh = 1500;
+  try {
+    const forcedLang = new URLSearchParams(location.search).get("lang");
+    const savedLang = localStorage.getItem("xtate.gui.lang");
+    state.lang = forcedLang === "zh" || forcedLang === "en" ? forcedLang
+      : (savedLang ? (savedLang === "zh" ? "zh" : "en")
+      : ((navigator.language || "").toLowerCase().startsWith("zh") ? "zh" : "en"));
+  } catch (_) { state.lang = "en"; }
+  document.documentElement.lang = state.lang === "zh" ? "zh-CN" : "en";
+  for (const b of document.querySelectorAll("[data-lang-set]")) b.classList.toggle("active", b.dataset.langSet === state.lang);
   applyPrefs();
+  applyI18n();
 }
 function savePrefs() {
   try { localStorage.setItem("xtate.gui.prefs", JSON.stringify(state.prefs)); } catch (_) {}
@@ -754,6 +896,7 @@ function showPage(name) {
     if (state.pollTimer) { clearInterval(state.pollTimer); state.pollTimer = null; }
     pollJob();
   }
+  applyI18n();
   const hash = "#" + name;
   if (location.hash !== hash) history.replaceState(null, "", hash);
 }
@@ -782,6 +925,62 @@ function expandPorts(value) {
   }
   return out;
 }
+async function loadOptions() {
+  try {
+    const data = await api("/api/options?lang=" + encodeURIComponent(state.lang));
+    state.globalOptions = data.options || [];
+    renderGlobalArgs();
+  } catch (err) { toast("Cannot list global parameters: " + err.message, true); }
+}
+function collectGlobalArgs() {
+  const out = {};
+  for (const [name, value] of state.globalValues) {
+    if (value === true) out[name] = true;
+    else if (String(value).trim()) out[name] = String(value).trim();
+  }
+  return out;
+}
+function renderGlobalArgs() {
+  const host = $("global-args");
+  if (!host) return;
+  const q = ($("global-search").value || "").toLowerCase().trim();
+  const opts = (state.globalOptions || []).filter((o) =>
+    !q || (o.name + " " + (o.description || "") + " " + (o.aliases || []).join(" ")).toLowerCase().includes(q));
+  host.innerHTML = opts.map((o) => {
+    const selected = state.globalValues.has(o.name);
+    const val = state.globalValues.get(o.name);
+    const control = o.type === "flag"
+      ? '<span class="field-hint">' + (selected ? "enabled" : "off") + '</span>'
+      : '<input type="text" spellcheck="false" autocomplete="off" data-gvalue="' + esc(o.name) + '" value="' + esc(selected ? val : "") + '" placeholder="value"' + (selected ? "" : " disabled") + '>';
+    return '<div class="global-row ' + (selected ? "selected" : "") + '" data-grow="' + esc(o.name) + '">' +
+      '<input type="checkbox" data-genable="' + esc(o.name) + '"' + (selected ? " checked" : "") + ' aria-label="' + esc(o.name) + '">' +
+      '<div><div class="gname">' + esc(o.name) + '</div><div class="gtype">' + esc(o.type) + '</div>' +
+      '<div class="gdesc">' + esc(o.description || o.hint || "") + '</div></div>' +
+      '<div class="gval">' + control + '</div></div>';
+  }).join("");
+  const gTotal = (state.globalOptions || []).length;
+  $("global-params-count").textContent = state.globalValues.size
+    ? state.globalValues.size + " / " + gTotal + (state.lang === "zh" ? " 已选" : " selected")
+    : gTotal + (state.lang === "zh" ? " 个可用" : " available");
+  for (const cb of host.querySelectorAll("[data-genable]")) {
+    cb.addEventListener("change", () => {
+      const name = cb.dataset.genable;
+      const opt = state.globalOptions.find((o) => o.name === name);
+      if (cb.checked) state.globalValues.set(name, opt && opt.type === "flag" ? true : "");
+      else state.globalValues.delete(name);
+      renderGlobalArgs();
+      schedulePreflight();
+    });
+  }
+  for (const input of host.querySelectorAll("[data-gvalue]")) {
+    input.addEventListener("input", () => {
+      if (state.globalValues.has(input.dataset.gvalue)) {
+        state.globalValues.set(input.dataset.gvalue, input.value);
+        schedulePreflight();
+      }
+    });
+  }
+}
 function parsePreflightInput() {
   return {
     targets: $("scope").value,
@@ -793,6 +992,7 @@ function parsePreflightInput() {
     interface: $("interface").value || undefined,
     scan_args: collectModuleArgs("scan"),
     probe_args: collectModuleArgs("probe"),
+    global_args: collectGlobalArgs(),
   };
 }
 function markDirty() {
@@ -814,7 +1014,7 @@ async function runPreflight() {
   const input = parsePreflightInput();
   const seq = ++state.preflightSeq;
   if (!input.targets.trim()) {
-    $("scope-count").textContent = "0 targets";
+    $("scope-count").textContent = state.lang === "zh" ? "0 个目标" : "0 targets";
     $("parsed").innerHTML = "";
     $("pf-state").className = "pf-state idle";
     $("pf-state").innerHTML = '<span class="dot"></span><span>PREFLIGHT · IDLE</span>';
@@ -836,15 +1036,16 @@ async function runPreflight() {
     state.dirty = !res.ok;
     renderPreflight(res);
     const parts = splitTargets(input.targets);
-    $("scope-count").textContent = (res.targets != null ? res.targets : 0) + " targets";
+    $("scope-count").textContent = tf("{n} targets", {n: (res.targets != null ? res.targets : 0)});
     $("parsed").innerHTML = parts.slice(0, 8).map((p) => '<span class="chip">' + esc(p) + "</span>").join("") +
-      (parts.length > 8 ? '<span class="chip">+' + (parts.length - 8) + " more</span>" : "");
+      (parts.length > 8 ? '<span class="chip">' + tf("+{n} more", {n: parts.length - 8}) + "</span>" : "");
     $("preflight-badge").className = "badge " + (res.ok ? "mint" : "red");
-    $("preflight-badge").innerHTML = '<span class="dot"></span><span>' + (res.ok ? "preflight ready" : "blocked") + "</span>";
+    $("preflight-badge").innerHTML = '<span class="dot"></span><span>' + t(res.ok ? "preflight ready" : "blocked") + "</span>";
     $("btn-start").disabled = !(res.ok && $("auth").checked);
     $("start-hint").textContent = res.ok
-      ? ($("auth").checked ? "Ready to start." : "Confirm authorization to enable Start.")
-      : "Fix the preflight errors above.";
+      ? ($("auth").checked ? t("Ready to start.") : t("Confirm authorization to enable Start."))
+      : t("Fix the preflight errors above.");
+    applyI18n();
   } catch (err) {
     if (seq !== state.preflightSeq) return;
     state.preflight = null;
@@ -861,11 +1062,13 @@ function renderPreflight(res) {
   $("pf-state").innerHTML = '<span class="dot"></span><span>' + (res.ok ? "PREFLIGHT · PASSED" : "PREFLIGHT · BLOCKED") + "</span>";
   $("pf-attempts").textContent = res.attempts != null ? Number(res.attempts).toLocaleString() : "—";
   const targets = Number(res.targets || 0);
+  const portsN = Number(res.ports || 0);
   $("pf-summary").textContent = res.ok
-    ? (Number(res.ports) > 0
-        ? targets.toLocaleString() + " addresses will be probed on " + res.ports + " port" + (Number(res.ports) === 1 ? "" : "s") + "."
-        : targets.toLocaleString() + " addresses will be scanned without ports.")
-    : (res.errors && res.errors[0]) || "Request blocked.";
+    ? (portsN > 0
+        ? tf(portsN === 1 ? "{targets} addresses will be probed on {ports} port." : "{targets} addresses will be probed on {ports} ports.",
+             {targets: targets.toLocaleString(), ports: portsN})
+        : tf("{targets} addresses will be scanned without ports.", {targets: targets.toLocaleString()}))
+    : (res.errors && res.errors[0]) || t("Request blocked.");
   $("pf-targets").textContent = res.targets != null ? Number(res.targets).toLocaleString() : "—";
   $("pf-ports").textContent = Number(res.ports) > 0 ? res.ports : "—";
   $("pf-iface").textContent = shortIface(route.interface || "—");
@@ -885,6 +1088,7 @@ function renderPreflight(res) {
   (res.errors || []).forEach((e) => checks.push(["bad", e]));
   $("pf-checks").innerHTML = checks.map(([c, m]) =>
     '<div class="pf-check ' + c + '"><span class="mark">' + (c === "ok" ? "✓" : c === "warn" ? "!" : "×") + "</span><span>" + esc(m) + "</span></div>").join("");
+  applyI18n();
 }
 function shortIface(v) {
   if (!v) return "—";
@@ -917,6 +1121,7 @@ async function loadSystem() {
       ["zstd results", caps.zstd ? "compiled" : "unavailable"],
       ["Live result records", caps.live_results ? "available" : "paged from disk"],
     ].map(([k, v]) => '<div><span class="k">' + k + '</span><span class="v">' + esc(v) + "</span></div>").join("");
+    applyI18n();
   } catch (err) {
     setConn(false, "offline");
     toast("Control plane unavailable: " + err.message, true);
@@ -945,25 +1150,38 @@ async function loadInterfaces() {
         ].map(([k, v]) => '<div><span class="k">' + k + '</span><span class="v">' + esc(v) + "</span></div>").join("") +
         "</div></article>";
     }).join("");
+    applyI18n();
   } catch (err) { toast("Cannot list interfaces: " + err.message, true); }
 }
 
 const MODULE_GROUPS = [
-  {kind: "scan", title: "Scan engines", note: "How packets are sent and what state is kept."},
-  {kind: "probe", title: "Protocol probes", note: "What is read from a responding service."},
-  {kind: "output", title: "Output writers", note: "How results are written."},
-  {kind: "generate", title: "Target generators", note: "How target lists can be produced."},
+  {kind: "scan", title: "Scan modules", note: "How packets are sent."},
+  {kind: "probe", title: "Probe modules", note: "How responses are interpreted."},
+  {kind: "output", title: "Output modules", note: "How results are written."},
+  {kind: "generate", title: "Generate modules", note: "How target lists are produced."},
 ];
+const KIND_LABEL = {scan: "scan module", probe: "probe module", output: "output module", generate: "generate module"};
+
+function moduleKindLabel(kind) { return t(KIND_LABEL[kind] || (kind + " module")); }
 
 function moduleCard(m) {
-  const params = (m.parameters || []).map((p) => p.name);
-  const shown = params.slice(0, 6).join(", ") + (params.length > 6 ? " +" + (params.length - 6) + " more" : "");
-  return '<article class="module-card" data-module-text="' +
-    esc((m.name + " " + (m.short_description || "") + " " + params.join(" ")).toLowerCase()) + '">' +
-    '<div class="kind">' + esc(m.kind) + '</div><h3>' + esc(m.name) + "</h3>" +
+  const params = m.parameters || [];
+  const expanded = state.expandedModules && state.expandedModules.has(m.name);
+  const search = (m.name + " " + (m.short_description || "") + " " + (m.description || "") + " " +
+    params.map((p) => p.name + " " + (p.description || "") + " " + (p.aliases || []).join(" ")).join(" ")).toLowerCase();
+  const rows = params.map((p) => '<tr><td class="name">' + esc(p.name) + '</td><td class="mono">' + esc(p.type || "arg") +
+    '</td><td class="desc">' + esc(p.description || t("No parameter description.")) +
+    ((p.aliases || []).length ? '<div class="mono" style="font-size:10px;margin-top:2px">' + t("Aliases") + ': ' + esc(p.aliases.join(", ")) + '</div>' : "") +
+    "</td></tr>").join("");
+  return '<article class="module-card ' + (expanded ? "expanded" : "") + '" data-module-text="' + esc(search) + '">' +
+    '<div class="module-head" data-expand="' + esc(m.name) + '" role="button" tabindex="0" aria-expanded="' + (expanded ? "true" : "false") + '">' +
+      '<div><div class="kind">' + esc(moduleKindLabel(m.kind)) + '</div><h3>' + esc(m.name) + "</h3></div>" +
+      '<span class="module-arrow">›</span></div>' +
     '<p>' + esc(m.short_description || m.description || "") + "</p>" +
-    (params.length ? '<div class="desc mono" title="' + esc(params.join(", ")) + '">' + params.length + " parameters · " + esc(shown) + "</div>" : '<div class="desc mono">no parameters</div>') +
-    "</article>";
+    (params.length ? '<div class="desc mono">' + params.length + " " + t("Parameters").toLowerCase() + " · " + esc(params.slice(0, 6).map((p) => p.name).join(", ")) + (params.length > 6 ? " +" + (params.length - 6) : "") + "</div>" : '<div class="desc mono">' + t("No parameter description.") + "</div>") +
+    '<div class="module-detail"><div class="long">' + esc(m.description || m.short_description || "") + "</div>" +
+      (params.length ? '<table class="param-table"><thead><tr><th>' + t("Name") + '</th><th>' + t("Type") + '</th><th>' + t("Description") + '</th></tr></thead><tbody>' + rows + "</tbody></table>" : "") +
+    "</div></article>";
 }
 
 function renderModulesPage() {
@@ -973,20 +1191,25 @@ function renderModulesPage() {
   const parts = [];
   for (const group of MODULE_GROUPS) {
     if (kind !== "all" && kind !== group.kind) continue;
-    const items = (state.modules || []).filter((m) => m.kind === group.kind &&
-      (!q || (m.name + " " + (m.short_description || "") + " " + (m.parameters || []).map((p) => p.name).join(" ")).toLowerCase().includes(q)));
+    const items = (state.modules || []).filter((m) => {
+      if (m.kind !== group.kind) return false;
+      if (!q) return true;
+      return moduleCard(m).indexOf('data-module-text="') >= 0 &&
+        (m.name + " " + (m.short_description || "") + " " + (m.description || "") + " " +
+          (m.parameters || []).map((p) => p.name + " " + (p.description || "") + " " + (p.aliases || []).join(" ")).join(" ")).toLowerCase().includes(q);
+    });
     if (!items.length) continue;
     total += items.length;
-    parts.push('<section class="module-group"><div class="module-group-head"><div><h2>' + esc(group.title) + '</h2><div class="sd">' + esc(group.note) + '</div></div><div class="count">' + items.length + '</div></div><div class="module-grid">' + items.map(moduleCard).join("") + "</div></section>");
+    parts.push('<section class="module-group"><div class="module-group-head"><div><h2>' + esc(t(group.title)) + '</h2><div class="sd">' + esc(t(group.note)) + '</div></div><div class="count">' + items.length + '</div></div><div class="module-grid">' + items.map(moduleCard).join("") + "</div></section>");
   }
   $("module-groups").innerHTML = parts.length ? parts.join("") :
-    '<div class="empty"><b>No modules match.</b>Try a different filter or category.</div>';
+    '<div class="empty"><b>' + esc(t("No modules match.")) + '</b></div>';
   $("module-search").setAttribute("aria-label", total + " modules shown");
 }
 
 async function loadModules() {
   try {
-    const data = await api("/api/modules");
+    const data = await api("/api/modules?lang=" + encodeURIComponent(state.lang));
     state.modules = data.modules || [];
     const scans = state.modules.filter((m) => m.kind === "scan");
     const probes = state.modules.filter((m) => m.kind === "probe");
@@ -1005,6 +1228,7 @@ async function loadModules() {
       });
     }
     updateProbeVisibility();
+    applyI18n();
   } catch (err) { toast("Cannot list modules: " + err.message, true); }
 }
 function scanInfo(name) {
@@ -1059,7 +1283,9 @@ function renderModuleArgs() {
   }
   host.innerHTML = groups.length ? groups.join("") : '<div class="arg-empty">No module parameters are required for this selection.</div>';
   const count = host.querySelectorAll("[data-arg-kind]").length;
-  $("module-params-count").textContent = count ? count + " available" : "none";
+  $("module-params-count").textContent = count
+    ? tf("{n} available", {n: count})
+    : t("none");
   for (const el of host.querySelectorAll("[data-arg-kind]")) {
     el.addEventListener(el.dataset.argType === "flag" ? "change" : "input", () => {
       const key = el.dataset.argKind + ":" + el.dataset.argName;
@@ -1103,6 +1329,8 @@ async function startScan() {
   const probeArgs = collectModuleArgs("probe");
   if (Object.keys(scanArgs).length) params.scan_args = scanArgs;
   if (Object.keys(probeArgs).length) params.probe_args = probeArgs;
+  const globalArgs = collectGlobalArgs();
+  if (Object.keys(globalArgs).length) params.global_args = globalArgs;
   const payload = {id: Date.now(), method: "job.start", params, compression: "none", index: false};
   const route = (state.preflight.routes && state.preflight.routes[0]) || {};
   if ($("interface").value) payload.interface = $("interface").value;
@@ -1121,6 +1349,12 @@ async function startScan() {
   }
 }
 
+function jobLabel(job, fallback) {
+  const path = (job && (job.result || job.result_path)) || "";
+  const m = path.match(/runs[\\/](\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})-\d+/);
+  if (m) return m[1] + "-" + m[2] + "-" + m[3] + " " + m[4] + ":" + m[5] + ":" + m[6];
+  return fallback || (job && job.job_id) || "";
+}
 function fmtDuration(ms) {
   if (ms == null) return "—";
   const s = Math.floor(ms / 1000);
@@ -1234,8 +1468,8 @@ async function pollJob() {
     const stateName = job.state || "unknown";
     const terminal = ["completed", "failed", "cancelled", "timed_out", "stalled"].includes(stateName);
     const label = LIVE_LABEL[stateName] || [stateName, "State reported by the control plane."];
-    $("live-title").textContent = "Scan " + state.jobId;
-    $("live-sub").textContent = "Started from this console · " + (stateName === "running" && job.phase ? job.phase : stateName);
+    $("live-title").textContent = jobLabel(job, state.jobId);
+    $("live-sub").textContent = tf("Started from this console · {status}", {status: t(stateName === "running" && job.phase ? job.phase : stateName)});
     $("live-state-badge").textContent = stateName;
     $("live-state-badge").className = "badge " + (stateName === "completed" ? "mint" : terminal ? "red" : "amber");
     $("live-kicker").textContent = label[0];
@@ -1307,10 +1541,11 @@ async function loadResults() {
       return;
     }
     $("results-body").innerHTML = jobs.map((j) =>
-      '<tr data-job="' + esc(j.job_id) + '"><td class="id">' + esc(j.job_id) + '</td><td><span class="state ' + esc(j.state) + '">' + esc(j.state) + '</span></td><td class="mono">' + esc(j.result || "—") + '</td><td class="muted">view →</td></tr>').join("");
+      '<tr data-job="' + esc(j.job_id) + '"><td class="id">' + esc(jobLabel(j, j.job_id)) + '<div class="mono muted small">' + esc(j.job_id) + '</div></td><td><span class="state ' + esc(j.state) + '">' + esc(j.state) + '</span></td><td class="mono">' + esc((j.result || "—").split(/[\\/]/).pop()) + '</td><td class="muted">view →</td></tr>').join("");
     for (const row of document.querySelectorAll("[data-job]")) {
       row.addEventListener("click", () => beginLive(row.dataset.job));
     }
+    applyI18n();
   } catch (err) { toast("Cannot list scans: " + err.message, true); }
 }
 
@@ -1339,6 +1574,23 @@ function init() {
   $("btn-refresh-live").addEventListener("click", pollJob);
   $("btn-refresh-results").addEventListener("click", loadResults);
   $("module-search").addEventListener("input", renderModulesPage);
+  $("global-search").addEventListener("input", renderGlobalArgs);
+  $("module-groups").addEventListener("click", (event) => {
+    const head = event.target.closest("[data-expand]");
+    if (!head) return;
+    const name = head.dataset.expand;
+    if (state.expandedModules.has(name)) state.expandedModules.delete(name); else state.expandedModules.add(name);
+    renderModulesPage();
+  });
+  $("module-groups").addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const head = event.target.closest("[data-expand]");
+    if (!head) return;
+    event.preventDefault();
+    const name = head.dataset.expand;
+    if (state.expandedModules.has(name)) state.expandedModules.delete(name); else state.expandedModules.add(name);
+    renderModulesPage();
+  });
   for (const tab of document.querySelectorAll("[data-kind]")) {
     tab.addEventListener("click", () => {
       state.moduleKind = tab.dataset.kind;
@@ -1346,6 +1598,7 @@ function init() {
       renderModulesPage();
     });
   }
+  for (const b of document.querySelectorAll("[data-lang-set]")) b.addEventListener("click", () => setLang(b.dataset.langSet));
   for (const b of document.querySelectorAll("[data-theme-set]")) b.addEventListener("click", () => setPrefs({theme: b.dataset.themeSet}));
   for (const b of document.querySelectorAll("[data-density-set]")) b.addEventListener("click", () => setPrefs({density: b.dataset.densitySet}));
   for (const b of document.querySelectorAll("[data-refresh]")) b.addEventListener("click", () => setPrefs({refresh: +b.dataset.refresh}));
@@ -1354,7 +1607,8 @@ function init() {
   const deepJob = new URLSearchParams(location.search).get("job");
   if (/^job-\d+$/.test(deepJob || "")) beginLive(deepJob);
   else if (["scan", "live", "results", "interfaces", "modules", "system"].includes(initial)) showPage(initial);
-  loadSystem().then(loadInterfaces).then(loadModules).then(schedulePreflight);
+  loadSystem().then(loadInterfaces).then(loadModules).then(loadOptions).then(schedulePreflight);
+  try { const __open = new URLSearchParams(location.search).get("open"); if (__open === "global") setTimeout(() => { const d = $("global-params"); if (d) { d.open = true; d.scrollIntoView({block:"center"}); } }, 350); } catch (_) {}
 }
 init();
 </script>

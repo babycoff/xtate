@@ -64,9 +64,15 @@ endpoint. On Windows the endpoint is a named pipe such as
 ## Page tour
 
 The left navigation has six entries: **New scan**, **Live scan**, **Results**,
-**Interfaces**, **Modules** and **System**. The top bar shows the connection
-state to the control plane; the footer shows the console version and the
-endpoint currently in use.
+**Interfaces**, **Modules** and **System**. The top bar shows the language
+switch, the connection state to the control plane; the footer shows the console
+version and the endpoint currently in use.
+
+**Language.** The **EN / 中文** switch in the top bar changes the whole console,
+including module descriptions and global-parameter help. The choice is stored in
+the browser; `?lang=en` or `?lang=zh` overrides it for one page load. Help text
+comes from the same translation catalog as `--help`, so the console and CLI
+describe options the same way.
 
 ### New scan
 
@@ -103,9 +109,18 @@ flags and text arguments exposed by the selected scan engine and probe. Flags
 are checkboxes and value arguments are text fields; empty fields are omitted.
 Values are sent as `scan_args` and `probe_args` with `job.start`, the same names
 the CLI uses for `--scan-arg` and `--probe-arg`. The list is rebuilt when the
-scan or probe changes. Preflight does not validate parameter names or values;
-if the worker rejects one, the job fails and its `stderr_tail`/log shows the
-argument error.
+scan or probe changes. Preflight does not validate module parameter names or
+values; if the worker rejects one, the job fails and its `stderr_tail`/log shows
+the argument error.
+
+**Global parameters.** *Global parameters* is a controlled list of 23 safe
+scan-wide options (seed, packet TTL, TCP window/MSS, buffer sizing, dedup and
+similar), with search. Each row shows a description and takes a checkbox for a
+flag or a text value for an argument. Values are sent as `global_args`; preflight
+rejects unknown names, wrong types and out-of-range or unsafe values. Options
+that would break the job contract — process/file/script modes, control-plane or
+job internals, and targets/ports/rate/interface/module arguments — are not
+offered here.
 
 **03 Interface.** *Auto (from route)* lets preflight resolve the route for the
 sampled targets. A TUN/VPN adapter appears as a RAW link type and has no MAC, so
@@ -167,18 +182,22 @@ is disabled in terminal states. Leaving the page does not stop the scan; the
 daemon continues and the job stays visible on Results.
 
 Result files are written to the visible `xtate-state` folder beside `xtate.exe`
-on Windows (easy to find and delete), or to the managed state directory:
-`$XDG_STATE_HOME/xtate/results`/`$HOME/.local/state/xtate/results` on Linux.
-Set `XTATE_STATE_DIR` to override it. Request files are removed when the job
-ends. If the portable directory cannot be created, the Windows build falls
-back to `%LOCALAPPDATA%\xtate`, then `%TEMP%\xtate-state`, then
-`xtate-state` in the current directory.
+on Windows (easy to find and delete), or to `$XDG_STATE_HOME/xtate`
+(`$HOME/.local/state/xtate` fallback) on Linux. Set `XTATE_STATE_DIR` to
+override it. Each scan gets its own folder under
+`runs/<YYYYMMDD-HHMMSS>-<seq>/` with `scan.ndjson`, `scan.ndjson.log`, the
+manifest and the index, so runs never overwrite each other. Request files are
+removed when the job ends. If the portable directory cannot be created, the
+Windows build falls back to `%LOCALAPPDATA%\xtate`, then `%TEMP%\xtate-state`,
+then `xtate-state` in the current directory.
 
 ### Results
 
-Lists jobs from `job.list` (up to 100) in a table: scan id, state,
-result path and a link back to Live scan. Selecting a row reopens its Live scan
-page. The empty state is *No scans yet.*
+Lists jobs from `job.list` (up to 100) in a table: run time, scan id, state,
+result file and a link back to Live scan. The run time is parsed from the
+managed `runs/<YYYYMMDD-HHMMSS>-<seq>/` folder, so runs are distinguishable even
+when they used the same parameters. Selecting a row reopens its Live scan page.
+The empty state is *No scans yet.*
 
 In Live scan, **Load records** reads the completed result file through
 `GET /api/results?job_id=...&offset=...&limit=...` and shows 50 JSON records at
@@ -196,11 +215,13 @@ same data drives the CLI's `--list-if`.
 
 ### Modules
 
-Shows the module catalog of the running daemon grouped by role — **Scan
-engines**, **Protocol probes**, **Output writers** and **Target generators** —
-with a count for each group. Each card shows the module name, its short
-description and the number/first few parameter names. The search box and the
-type tabs narrow the list. The catalog is the same one behind
+Shows the module catalog of the running daemon using Xtate's own taxonomy —
+**Scan modules**, **Probe modules**, **Output modules** and **Generate
+modules** — with a count for each group. Each card shows the module name, its
+short description and the number/first few parameter names. Click or press
+Enter on a card to expand the full description and parameter table
+(name/type/description/aliases); `?expand=<name>` opens a module directly. The
+search box and type tabs narrow the list. The catalog is the same one behind
 `--list-modules-json` and the per-module help, so the console cannot claim a
 module that the binary does not have.
 
@@ -233,9 +254,10 @@ The console is designed for a single local user:
   `job.status`, `job.cancel`, `job.result_manifest` and `job.start`.
   `/api/results` is a separate read-only handler that accepts only a job id and
   pages through that job's manifest result file; neither path can call arbitrary
-  control methods. `/api/open` accepts only a job id and `kind`
-  (`log`/`result`/`manifest`), resolves the path from the job status/manifest,
-  and never opens a client-supplied path.
+  control methods. `/api/options`, `/api/modules` and `/api/preflight` are
+  server-generated read-only handlers. `/api/open` accepts only a job id and
+  `kind` (`log`/`result`/`manifest`), resolves the path from the job
+  status/manifest, and never opens a client-supplied path.
 - **Server-side authorization.** `job.start` is refused unless the request
   carries `params.authorized: true`. The browser checkboxes are convenience,
   not the enforcement point.
@@ -260,8 +282,7 @@ job worker, and MCP applies its own restrictions (see
 The console covers the common scan workflow, not every CLI feature. These are
 deliberately left to the CLI, the control plane or MCP:
 
-- target files (`include_file`) and arbitrary scan/probe argument combinations
-  beyond the parameters exposed in the Method panel;
+- target files (`include_file`);
 - output-module selection, result chunking and per-job quotas;
 - scheduling, recurring scans or scan profiles;
 - remote access, multiple users or authentication beyond the session token;
@@ -284,13 +305,14 @@ For these, use [03 · CLI and jobs](./03-cli-and-jobs.md) or the
 | Start stays disabled | Preflight is blocked or still running, a field changed after the last preflight, or authorization is not confirmed |
 
 The GUI test suite is `python tests/gui/test_gui.py`; it covers the page/token
-handshake, the API endpoints, preflight accept/reject cases, the authorization
-gate, Host checking, private-mode startup and a dry-run managed job.
+handshake, the English/Chinese payloads, the API endpoints, `global_args`
+preflight accept/reject cases, per-run result folders, the authorization gate,
+Host checking, private-mode startup and a dry-run managed job.
 
 ## Related documentation
 
 - [03 · CLI and jobs](./03-cli-and-jobs.md)
-- [GUI reference (job dashboard)](../gui.md)
+- [GUI reference](../gui.md)
 - [Control plane](../control-plane.md) and [job model](../job-model.md)
 - [MCP server](../mcp-server.md) and [Agent Skill](../agent-skill.md)
 - [TUI](../tui.md) (2.44.x interface, deprecated in 3.0)

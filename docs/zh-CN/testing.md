@@ -137,7 +137,7 @@ Windows 构建在 `.github/workflows/windows.yml` 中运行，覆盖 MSVC、Clan
 | 目标语法 | `tests/target/test.sh` | address/CIDR/explicit/component ranges |
 | interactive | `tests/interactive/test.sh` | 非 TTY 命令/帮助/状态 |
 | TUI 控制客户端 | `python tests/tui/test_tui.py` | 一条命令自动启动私有控制面、非 TTY 快照、Windows 命名管道 / Unix socket |
-| GUI 控制客户端 | `python tests/gui/test_gui.py` | 一条命令自动启动私有控制面、内嵌页面与 token、Host/token 拒绝、预检/授权门禁、受管状态、结果分页、打开文件拒绝、dry-run 任务、manifest |
+| GUI 控制客户端 | `python tests/gui/test_gui.py` | 一条命令自动启动私有控制面、内嵌页面与 token、英文/中文模块/选项内容、全局参数预检、每次扫描独立目录、Host/token 拒绝、预检/授权门禁、受管状态、结果分页、打开文件拒绝、dry-run 任务、manifest |
 | JARM 聚合 | `tests/jarm/test.sh` | 输出侧 parts、统计、重试列表 |
 | 模块模板 | `tests/module-examples/test.sh` | 编译检查四类模块接口示例 |
 | 参数解析器 | `tests/config/test.sh` | 未知/缺失/help/CLI 解析基础 |

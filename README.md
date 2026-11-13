@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-rc.3-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-rc.4-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -412,11 +412,13 @@ xtate --gui --control-connect=/tmp/xtate-ctl.sock
 ```
 
 The page opens at `http://127.0.0.1:8787/` by default. New scan is the entry
-point: set targets, method, ports, rate and interface, run the server-side
-preflight, confirm authorization, then watch the live job and inspect results.
-Use `--gui-listen=127.0.0.1:PORT` to change the port, `--gui-no-open` to skip
-opening a browser, and read [GUI console](docs/gui.md) for the security model,
-limits and troubleshooting.
+point: set targets, method, ports, rate and interface, expand module details,
+choose from 23 validated global parameters, run the server-side preflight,
+confirm authorization, then watch the live job and inspect results. The console
+switches between English and Chinese, and each run gets its own timestamped
+folder under the managed state directory. Use `--gui-listen=127.0.0.1:PORT` to
+change the port, `--gui-no-open` to skip opening a browser, and read
+[GUI console](docs/gui.md) for the security model, limits and troubleshooting.
 
 ## AI integration (MCP / Agent Skill)
 

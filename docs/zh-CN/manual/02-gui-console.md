@@ -55,7 +55,9 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 
 ## 页面导览
 
-左侧导航有六项：**New scan**、**Live scan**、**Results**、**Interfaces**、**Modules** 和 **System**。顶栏显示与控制面的连接状态；页脚显示控制台版本和当前使用的端点。
+左侧导航有六项：**New scan**、**Live scan**、**Results**、**Interfaces**、**Modules** 和 **System**。顶栏包含语言切换和与控制面的连接状态；页脚显示控制台版本和当前使用的端点。
+
+**语言。** 顶栏的 **EN / 中文** 开关会切换整个控制台，包括模块说明和全局参数帮助。选择保存在浏览器中；`?lang=en` 或 `?lang=zh` 可对单次页面加载强制指定。帮助文本来自与 `--help` 相同的翻译目录，因此控制台和 CLI 对参数的描述一致。
 
 ### New scan
 
@@ -75,7 +77,9 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 
 速率单位是包/秒（1–10000，默认 1000）。超时是总的墙钟时限，单位秒（1–86400，默认 300）。输出固定为带结果 manifest 的 NDJSON；控制台不选择输出模块。
 
-**模块参数。** 方法卡片下方的 *Module parameters* 列出当前扫描引擎和探测暴露的开关与文本参数。开关是复选框，取值参数是文本框；留空即不发送。这些值会作为 `scan_args` 和 `probe_args` 随 `job.start` 发送，与 CLI 的 `--scan-arg`/`--probe-arg` 同名。切换扫描或探测时会重建列表。预检不校验参数名或取值；如果 worker 拒绝某个参数，job 会失败，`stderr_tail`/日志中会显示参数错误。
+**模块参数。** 方法卡片下方的 *Module parameters* 列出当前扫描引擎和探测暴露的开关与文本参数。开关是复选框，取值参数是文本框；留空即不发送。这些值会作为 `scan_args` 和 `probe_args` 随 `job.start` 发送，与 CLI 的 `--scan-arg`/`--probe-arg` 同名。切换扫描或探测时会重建列表。预检不校验模块参数名或取值；如果 worker 拒绝某个参数，job 会失败，`stderr_tail`/日志中会显示参数错误。
+
+**全局参数。** *Global parameters* 是一份受控的 23 项安全扫描级选项（seed、报文 TTL、TCP window/MSS、缓冲区大小、去重等），支持搜索。每行都有说明：开关显示为复选框，带值选项显示为文本框。取值作为 `global_args` 发送；预检会拒绝未知名称、错误类型以及越界或不安全的值。会破坏 job 契约的选项——进程/文件/脚本模式、控制面或 job 内部选项，以及目标/端口/速率/接口/模块参数——不会出现在这里。
 
 **03 Interface.** *Auto (from route)* 让预检为采样目标解析路由。TUN/VPN 网卡显示为 RAW 链路类型且没有 MAC，因此 banner 和有状态扫描可能无法通过它工作；请改选物理网卡。预检无法在路由之间决定时，会要求你显式选择接口。
 
@@ -108,11 +112,11 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 
 **Cancel** 立即发送 `job.cancel`，并用 toast 报告结果。终态下该按钮禁用。离开页面不会停止扫描；守护进程继续运行，job 仍会出现在 Results 中。
 
-结果文件写入 Windows 上 `xtate.exe` 同级、可见的 `xtate-state` 目录（方便直接找到和删除）；Linux 上写入 `$XDG_STATE_HOME/xtate/results`/`$HOME/.local/state/xtate/results`。设置 `XTATE_STATE_DIR` 可以覆盖它。job 结束时请求文件会被删除。如果便携目录无法创建，Windows 构建会依次回退到 `%LOCALAPPDATA%\xtate`、`%TEMP%\xtate-state`、当前目录下的 `xtate-state`。
+结果文件写入 Windows 上 `xtate.exe` 同级、可见的 `xtate-state` 目录（方便直接找到和删除）；Linux 上写入 `$XDG_STATE_HOME/xtate`（回退到 `$HOME/.local/state/xtate`）。设置 `XTATE_STATE_DIR` 可以覆盖它。每次扫描在 `runs/<YYYYMMDD-HHMMSS>-<seq>/` 下拥有独立目录，包含 `scan.ndjson`、`scan.ndjson.log`、manifest 和 index，多次扫描不会互相覆盖。job 结束时请求文件会被删除。如果便携目录无法创建，Windows 构建会依次回退到 `%LOCALAPPDATA%\xtate`、`%TEMP%\xtate-state`、当前目录下的 `xtate-state`。
 
 ### Results
 
-用 `job.list`（最多 100 条）把 job 列成表格：扫描 id、状态、结果路径和返回 Live scan 的链接。选中一行会重新打开它的 Live scan 页面。空状态显示 *No scans yet.*。
+用 `job.list`（最多 100 条）把 job 列成表格：运行时间、扫描 id、状态、结果文件和返回 Live scan 的链接。运行时间从托管目录 `runs/<YYYYMMDD-HHMMSS>-<seq>/` 解析，因此即使参数完全相同，多次扫描也能区分。选中一行会重新打开它的 Live scan 页面。空状态显示 *No scans yet.*。
 
 在 Live scan 中，**Load records** 通过 `GET /api/results?job_id=...&offset=...&limit=...` 读取已完成的结果文件，每次显示 50 条 JSON 记录。**Load more** 推进 offset。该端点只接受 `job-<数字>`，从 job manifest 解析路径；损坏或不完整的 NDJSON 行会作为跳过处理，不会渲染。
 
@@ -122,7 +126,7 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 
 ### Modules
 
-显示运行中守护进程的模块目录，按角色分组 —— **Scan engines**、**Protocol probes**、**Output writers** 与 **Target generators** —— 每组带计数。每张卡片显示模块名、简短描述和参数数量/前几个参数名。搜索框和类型标签页可缩小列表。该目录与 `--list-modules-json` 及模块帮助背后的是同一份，因此控制台不会声称二进制没有的模块。
+显示运行中守护进程的模块目录，使用 Xtate 自己的分类 —— **Scan modules**、**Probe modules**、**Output modules** 与 **Generate modules** —— 每组带计数。每张卡片显示模块名、简短描述和参数数量/前几个参数名。点击卡片（或按 Enter）会展开完整说明和参数表（名称/类型/说明/别名）；`?expand=<name>` 可直接打开某个模块。搜索框和类型标签页可缩小列表。该目录与 `--list-modules-json` 及模块帮助背后的是同一份，因此控制台不会声称二进制没有的模块。
 
 ### System
 
@@ -135,7 +139,7 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 - **仅回环。** `--gui-listen` 拒绝除 `127.0.0.1` 或 `localhost` 以外的任何值。服务器还会拒绝 `Host` 头不是回环的请求，从而阻断 DNS rebinding 攻击。
 - **每会话 token。** 启动时生成一个 128 位随机 token，只打印一次，并嵌入页面。每个 `/api/*` 请求都必须把它放在 `X-Xtate-GUI-Token` 中；比较是常数时间的。绝不从请求体接受该 token。
 - **私有模式控制 token。** 如果 GUI 自行启动控制平面且环境中未设置 `XTATE_CONTROL_TOKEN`，它会为该子进程生成一个临时 128 位 token，使本机其他账户无法连接管道或 socket。该 token 在 GUI 退出时清除，且不会打印。
-- **方法白名单。** 浏览器桥只转发 `job.list`、`job.status`、`job.cancel`、`job.result_manifest` 和 `job.start`。`/api/results` 是独立的只读处理器，只接受 job id，并分页读取该 job manifest 指向的结果文件；这两条路径都不能调用任意控制方法。`/api/open` 只接受 job id 加 `kind`（`log`/`result`/`manifest`），从 job status/manifest 解析路径，绝不打开客户端提供的路径。
+- **方法白名单。** 浏览器桥只转发 `job.list`、`job.status`、`job.cancel`、`job.result_manifest` 和 `job.start`。`/api/results` 是独立的只读处理器，只接受 job id，并分页读取该 job manifest 指向的结果文件；这两条路径都不能调用任意控制方法。`/api/options`、`/api/modules` 和 `/api/preflight` 是服务端生成的只读处理器。`/api/open` 只接受 job id 加 `kind`（`log`/`result`/`manifest`），从 job status/manifest 解析路径，绝不打开客户端提供的路径。
 - **服务端授权。** 除非请求带有 `params.authorized: true`，否则 `job.start` 会被拒绝。浏览器复选框只是便利，不是强制点。
 - **无 shell、无任意路径。** GUI 服务器不执行命令，也不读取任意文件。结果通过守护进程的 manifest 读取，页面只渲染服务器数据。
 - **有界请求。** 头部上限 128 KiB，正文 64 KiB，桥接回复使用 64 KiB 缓冲；服务端直接构建的模块目录可能更大。socket 超时 8 秒。页面设置严格的 Content-Security-Policy、`X-Frame-Options: DENY` 和 `no-store`。
@@ -147,7 +151,7 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 
 控制台覆盖常见扫描流程，而不是全部 CLI 功能。以下内容刻意留给 CLI、控制面或 MCP：
 
-- 目标文件（`include_file`），以及超出 Method 面板所暴露参数范围的任意扫描/探测参数组合；
+- 目标文件（`include_file`）；
 - 输出模块选择、结果分片和每 job 配额；
 - 调度、周期扫描或扫描配置档；
 - 远程访问、多用户，或会话 token 之外的认证；
@@ -167,12 +171,12 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 | `multiple default interfaces detected` | 路由有歧义。显式选择接口，或先用 `--explain-target` / `--list-if` |
 | Start 一直禁用 | 预检被阻塞或仍在运行、上次预检后字段有变化，或授权未确认 |
 
-GUI 测试套件是 `python tests/gui/test_gui.py`；它覆盖页面/token 握手、API 端点、预检接受/拒绝用例、授权门、Host 检查、私有模式启动和一次 dry-run 托管 job。
+GUI 测试套件是 `python tests/gui/test_gui.py`；它覆盖页面/token 握手、英文/中文内容、API 端点、`global_args` 预检接受/拒绝用例、每次扫描独立的结果目录、授权门、Host 检查、私有模式启动和一次 dry-run 托管 job。
 
 ## 相关文档
 
 - [03 · CLI 与 job](./03-cli-and-jobs.md)
-- [GUI 参考（job 看板）](../gui.md)
+- [GUI 参考](../gui.md)
 - [控制面](../control-plane.md)与 [job 模型](../job-model.md)
 - [MCP server](../mcp-server.md)与 [Agent Skill](../agent-skill.md)
 - [TUI](../tui.md)（2.44.x 界面，3.0 中已弃用）

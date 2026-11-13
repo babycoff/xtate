@@ -35,6 +35,8 @@ xtate --search-module banner
 
 模块名是稳定的标识符。它们区分大小写并使用连字符，例如 `tcp-syn`、`tcp-state`、`tls-state` 和 `http-state`。
 
+3.0 GUI 使用同一份注册表和同样的四类名称：**Scan modules**、**Probe modules**、**Output modules** 和 **Generate modules**。点击模块卡片会展开完整说明和参数表，可在选择前查看名称、类型、说明和别名。控制台还提供一个受控的 **Global parameters** 列表：其中暴露 23 个安全的扫描级选项，并作为 `global_args` 发送。进程/文件/脚本选项、控制面或 job 内部选项，以及表单已覆盖的字段（目标、端口、速率、接口、模块名）都被刻意排除。
+
 ## 传递参数
 
 模块选项不是全局 flag。它们以每个模块一个带引号的字符串传递：

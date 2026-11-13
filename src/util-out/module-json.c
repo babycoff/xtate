@@ -15,6 +15,7 @@
 #include "../generate-modules/generate-modules.h"
 #include "../util-data/json-escape.h"
 #include "../crypto/crypto-json.h"
+#include "../util-misc/i18n.h"
 
 static FILE *g_out = NULL;
 
@@ -31,7 +32,7 @@ static void jstr(const char *s) {
     if (s) json_escape_to(out_sink, g_out, (const unsigned char *)s, strlen(s));
     fputc('"', g_out);
 }
-static void jparams(ConfParam *p) {
+static void jparams(ConfParam *p, const char *module) {
     fputc('[', g_out);
     for (int first = 1; p && p->name; p++) {
         if (!first) fputc(',', g_out);
@@ -39,7 +40,8 @@ static void jparams(ConfParam *p) {
         fputc('{', g_out);
         fputs("\"name\":", g_out); jstr(p->name);
         fputs(",\"type\":", g_out); jstr(p->type == Type_FLAG ? "flag" : "arg");
-        fputs(",\"description\":", g_out); jstr(p->help_text);
+        fputs(",\"description\":", g_out);
+        jstr(i18n_tr_module_param(module, p->name, p->help_text));
         fputs(",\"aliases\":[", g_out);
         for (int i = 0; i < 8 && p->alt_names[i]; i++) {
             if (i) { fputc(',', g_out); } jstr(p->alt_names[i]);
@@ -60,9 +62,9 @@ void list_modules_json(void) {
         if (!first) { fputc(',', g_out); } first = 0;
         fputs("{\"name\":", g_out); jstr(m->name);
         fputs(",\"kind\":\"scan\",\"probe_type\":", g_out); jstr(ptype(m->required_probe_type));
-        fputs(",\"short_description\":", g_out); jstr(m->short_desc);
-        fputs(",\"description\":", g_out); jstr(m->desc);
-        fputs(",\"parameters\":", g_out); jparams(m->params);
+        fputs(",\"short_description\":", g_out); jstr(i18n_tr_module_desc(m->name, m->short_desc));
+        fputs(",\"description\":", g_out); jstr(i18n_tr_module_help_desc(m->name, m->desc));
+        fputs(",\"parameters\":", g_out); jparams(m->params, m->name);
         fputc('}', g_out);
     }
     for (int i = 0; probe_modules_list[i]; i++) {
@@ -70,27 +72,27 @@ void list_modules_json(void) {
         if (!first) { fputc(',', g_out); } first = 0;
         fputs("{\"name\":", g_out); jstr(m->name);
         fputs(",\"kind\":\"probe\",\"probe_type\":", g_out); jstr(ptype(m->type));
-        fputs(",\"short_description\":", g_out); jstr(m->short_desc);
-        fputs(",\"description\":", g_out); jstr(m->desc);
-        fputs(",\"parameters\":", g_out); jparams(m->params);
+        fputs(",\"short_description\":", g_out); jstr(i18n_tr_module_desc(m->name, m->short_desc));
+        fputs(",\"description\":", g_out); jstr(i18n_tr_module_help_desc(m->name, m->desc));
+        fputs(",\"parameters\":", g_out); jparams(m->params, m->name);
         fputc('}', g_out);
     }
     for (int i = 0; output_modules_list[i]; i++) {
         Output *m = output_modules_list[i];
         if (!first) { fputc(',', g_out); } first = 0;
         fputs("{\"name\":", g_out); jstr(m->name);
-        fputs(",\"kind\":\"output\",\"short_description\":", g_out); jstr(m->short_desc);
-        fputs(",\"description\":", g_out); jstr(m->desc);
-        fputs(",\"parameters\":", g_out); jparams(m->params);
+        fputs(",\"kind\":\"output\",\"short_description\":", g_out); jstr(i18n_tr_module_desc(m->name, m->short_desc));
+        fputs(",\"description\":", g_out); jstr(i18n_tr_module_help_desc(m->name, m->desc));
+        fputs(",\"parameters\":", g_out); jparams(m->params, m->name);
         fputc('}', g_out);
     }
     for (int i = 0; generate_modules_list[i]; i++) {
         Generator *m = generate_modules_list[i];
         if (!first) { fputc(',', g_out); } first = 0;
         fputs("{\"name\":", g_out); jstr(m->name);
-        fputs(",\"kind\":\"generate\",\"short_description\":", g_out); jstr(m->short_desc);
-        fputs(",\"description\":", g_out); jstr(m->desc);
-        fputs(",\"parameters\":", g_out); jparams(m->params);
+        fputs(",\"kind\":\"generate\",\"short_description\":", g_out); jstr(i18n_tr_module_desc(m->name, m->short_desc));
+        fputs(",\"description\":", g_out); jstr(i18n_tr_module_help_desc(m->name, m->desc));
+        fputs(",\"parameters\":", g_out); jparams(m->params, m->name);
         fputc('}', g_out);
     }
     fputs("]}\n", g_out);

@@ -122,6 +122,11 @@ def main():
         if 'id="live-records"' not in text or "/api/results" not in text:
             print("GUI result records browser is missing", file=sys.stderr)
             return 1
+        if ('id="global-params"' not in text or "global_args" not in text
+                or 'data-lang-set="zh"' not in text or "const ZH" not in text):
+            print("GUI global parameters or language switch is missing",
+                  file=sys.stderr)
+            return 1
 
         # Info and job.list require the session token.
         status, body = http_json(port, "/api/info", token)
@@ -159,6 +164,28 @@ def main():
         if status != 200 or not any(m.get("name") == "tcp-syn"
                                     for m in catalog.get("modules", [])):
             print("GUI modules failed:", status, body[:300], file=sys.stderr)
+            return 1
+        status, body = http_json(port, "/api/modules?lang=zh", token)
+        catalog_zh = json.loads(body.decode()) if status == 200 else {}
+        tcp_syn_zh = next((m for m in catalog_zh.get("modules", [])
+                           if m.get("name") == "tcp-syn"), {})
+        if (status != 200 or "扫描" not in tcp_syn_zh.get("short_description", "")):
+            print("GUI localized modules failed:", status, body[:300],
+                  file=sys.stderr)
+            return 1
+        status, body = http_json(port, "/api/options?lang=en", token)
+        options = json.loads(body.decode()) if status == 200 else {}
+        if (status != 200 or len(options.get("options", [])) < 20
+                or options["options"][0].get("name") != "seed"):
+            print("GUI global options failed:", status, body[:300],
+                  file=sys.stderr)
+            return 1
+        status, body = http_json(port, "/api/options?lang=zh", token)
+        options_zh = json.loads(body.decode()) if status == 200 else {}
+        if (status != 200 or not options_zh.get("options")
+                or "种子" not in options_zh["options"][0].get("description", "")):
+            print("GUI localized global options failed:", status, body[:300],
+                  file=sys.stderr)
             return 1
         status, body = http_json(port, "/api/system")
         if status != 403:
@@ -237,6 +264,27 @@ def main():
             print("preflight without token was not rejected:", status,
                   body[:200], file=sys.stderr)
             return 1
+        status, body = http_json(
+            port, "/api/preflight", token,
+            {"targets": "127.0.0.1", "ports": "80", "scan": "tcp-syn",
+             "rate": 1000, "timeout_sec": 300,
+             "global_args": {"seed": "123"}})
+        with_global = json.loads(body.decode()) if status == 200 else {}
+        if status != 200 or not with_global.get("ok"):
+            print("preflight rejected a valid global argument:", status,
+                  body[:300], file=sys.stderr)
+            return 1
+        for bad_global in ({"seed": "abc"}, {"repeat": True}):
+            status, body = http_json(
+                port, "/api/preflight", token,
+                {"targets": "127.0.0.1", "ports": "80", "scan": "tcp-syn",
+                 "rate": 1000, "timeout_sec": 300,
+                 "global_args": bad_global})
+            rejected_global = json.loads(body.decode()) if status == 200 else {}
+            if status != 200 or rejected_global.get("ok"):
+                print("preflight accepted an unsafe global argument:",
+                      bad_global, status, body[:300], file=sys.stderr)
+                return 1
 
         # Missing token and a non-loopback Host must be rejected.
         status, body = http_json(
@@ -293,6 +341,38 @@ def main():
             time.sleep(0.1)
         if state not in ("completed", "failed"):
             print("GUI job did not settle:", state, file=sys.stderr)
+            return 1
+
+        # A GUI-started job without an explicit result_path gets an isolated
+        # timestamped run folder under the managed state directory.
+        route_if = (preflight.get("routes") or [{}])[0].get("interface", "")
+        status, body = http_json(
+            port, "/api/rpc", token,
+            {"id": 41, "method": "job.start",
+             "params": {"scan": "tcp-syn", "targets": ["127.0.0.1"],
+                        "ports": [1], "dry_run": True, "authorized": True,
+                        "interface": route_if},
+             "timeout_sec": 20, "compression": "none", "index": False})
+        started2 = json.loads(body.decode()) if status == 200 else {}
+        job2 = started2.get("result", {}).get("job_id")
+        if status != 200 or not job2:
+            print("GUI default result job failed:", status, body[:300],
+                  file=sys.stderr)
+            return 1
+        result_path2 = ""
+        for _ in range(50):
+            status, body = http_json(
+                port, "/api/rpc", token,
+                {"id": 42, "method": "job.status", "job_id": job2})
+            status2 = json.loads(body.decode()) if status == 200 else {}
+            result_path2 = status2.get("result", {}).get("result", "") or ""
+            state2 = status2.get("result", {}).get("state", "")
+            if state2 in ("completed", "failed", "cancelled", "timed_out"):
+                break
+            time.sleep(0.1)
+        if state2 not in ("completed", "failed") or "/runs/" not in result_path2.replace("\\", "/"):
+            print("GUI default result path is not per-run:", state2,
+                  result_path2, file=sys.stderr)
             return 1
 
         # Result records are served from the completed job's NDJSON file with

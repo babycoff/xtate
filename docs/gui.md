@@ -1,9 +1,9 @@
 # Browser GUI
 
-Xtate ships a loopback-only browser dashboard for the control plane. It is a
-client, like MCP and the TUI: it renders jobs, starts authorized scans and
-cancels work, but the control plane still owns workers, timeouts, result files
-and the actual scan process.
+Xtate ships a loopback-only browser console for the control plane. It is a
+client, like MCP and the TUI: it starts authorized scans, observes them live,
+cancels work and opens results, but the control plane still owns workers,
+timeouts, result files and the actual scan process.
 
 The GUI is intended for a local analyst workstation. It is not a remote web
 service and does not expose the control plane over TCP.
@@ -75,14 +75,16 @@ printed once and is also injected into the page; requests without the matching
 
 On Windows, results and logs are written to the visible `xtate-state` folder
 beside `xtate.exe`, so they are easy to find and delete. On Linux the managed
-state directory is `$XDG_STATE_HOME/xtate/results` (falling back to
-`$HOME/.local/state/xtate/results`) on Linux. Set `XTATE_STATE_DIR` to override
-it. Request files live under the same state directory and are removed when the
-job reaches a terminal state. If the portable location cannot be created
-(for example the executable is in a read-only install directory), the Windows
-build falls back to `%LOCALAPPDATA%\xtate`, then `%TEMP%\xtate-state`, then
+state directory is `$XDG_STATE_HOME/xtate` (falling back to
+`$HOME/.local/state/xtate`). Set `XTATE_STATE_DIR` to override it. Each scan gets
+its own folder under `runs/<YYYYMMDD-HHMMSS>-<seq>/` containing `scan.ndjson`,
+`scan.ndjson.log`, the manifest and the index, so runs never overwrite one
+another. Request files live under `requests/` and are removed when the job
+reaches a terminal state. If the portable location cannot be created (for
+example the executable is in a read-only install directory), the Windows build
+falls back to `%LOCALAPPDATA%\xtate`, then `%TEMP%\xtate-state`, then
 `xtate-state` in the current directory; the selected root still contains
-`requests` and `results`.
+`requests` and `runs`.
 
 ## What the console does
 
@@ -99,10 +101,17 @@ The GUI is scan-first: the default page is **New scan**, not a job table.
 - **Start scan** stays disabled until the preflight is ready, the authorization
   checkbox is ticked, and the form has not changed since the preflight. The
   bridge also rejects `job.start` unless `params.authorized` is literally `true`.
+- **Global parameters** exposes the 23 safe scan-wide options (seed, TTL, TCP
+  window/MSS, buffer sizing, dedup and similar). Flags are checkboxes and value
+  options are text fields with their descriptions. Values are validated by
+  preflight and sent as `global_args`; invalid or unsafe options are rejected.
+  Process, file, script, job/control and target/port/rate/interface options are
+  deliberately not available here because they would break the job contract.
 - **Module parameters** exposes the selected scan engine and probe flags and text
   arguments. Values are sent as `scan_args`/`probe_args`; empty fields are omitted.
-  Preflight does not validate argument names or values, so a bad value fails the
-  job with the worker argument error in `stderr_tail`/the log.
+  Global options are preflight-validated; module argument names and values are
+  passed to the worker, so a bad module value fails the job with the worker
+  argument error in `stderr_tail`/the log.
 - **Live** polls `job.status` at a configurable interval and leads with a large
   status headline (`Scanning`, `Scan complete`, `Scan failed`, and so on) plus
   sent/targets, throughput, elapsed time, exit code, result/log path and a
@@ -116,10 +125,17 @@ The GUI is scan-first: the default page is **New scan**, not a job table.
   **Load more** pages through it. Only valid NDJSON records are returned;
   malformed or partial lines are skipped.
 - **Interfaces** lists capture adapters with IPv4/IPv6, MAC, gateway, default
-  flag, link type and raw-IP capability. **Modules** groups scan engines,
-  protocol probes, output writers and generators, with search and type tabs.
-  **System** has real appearance controls (Paper/Graphite theme, density, live
-  refresh), runtime counts, capabilities and the local security model.
+  flag, link type and raw-IP capability. **Modules** groups scan modules, probe
+  modules, output modules and generate modules, with search and type tabs.
+  Clicking a module expands its full description and parameter table, including
+  descriptions and aliases. **System** has real appearance controls
+  (Paper/Graphite theme, density, live refresh), runtime counts, capabilities
+  and the local security model.
+- **Language** switches the console between English and Chinese from the top
+  bar. Module and global-option descriptions come from the same translated help
+  catalog as the CLI, so they stay consistent with `--help` and the manuals.
+  The choice is stored in the browser and can be forced with `?lang=en` or
+  `?lang=zh`.
 
 The output path is managed by the server. For include files, chunking or quota
 settings, use the MCP server or the JSON control API directly. Scan and probe
@@ -135,9 +151,10 @@ arguments are editable in the Method panel.
   which prevents DNS-rebinding pages from reaching the API.
 - **Method allowlist.** Only `job.list`, `job.status`, `job.cancel`,
   `job.result_manifest` and `job.start` are forwarded through `/api/rpc`.
-  `/api/system`, `/api/interfaces`, `/api/modules`, `/api/preflight`,
-  `/api/results` and `/api/open` are server-side handlers; they cannot call
-  arbitrary control methods. `/api/results` accepts only `job-<digits>` and
+  `/api/system`, `/api/interfaces`, `/api/modules`, `/api/options`,
+  `/api/preflight`, `/api/results` and `/api/open` are server-side handlers;
+  they cannot call arbitrary control methods. `/api/results` accepts only
+  `job-<digits>` and
   reads the result path reported by that job's manifest, never an arbitrary
   client path. `/api/open` accepts only `job_id` plus `kind` (`log`, `result`
   or `manifest`); the server resolves the path from the job status/manifest and
@@ -175,10 +192,13 @@ python tests/gui/test_gui.py
 ```
 
 The test starts a real control plane and GUI bridge with a workspace
-`XTATE_STATE_DIR`, checks the page, token, system/interfaces/modules/preflight
-and results endpoints, rejects a non-loopback Host and a missing token, rejects
-invalid `/api/open` requests without launching an application, and starts a
-dry-run job and polls it to a terminal state. It does not require a browser.
+`XTATE_STATE_DIR`, checks the page, language switch markers, token,
+system/interfaces/modules/options/preflight and results endpoints, verifies
+English and Chinese module/option payloads, rejects a non-loopback Host and a
+missing token, rejects invalid `/api/open` requests without launching an
+application, validates `global_args` in preflight, checks the per-run result
+folder, and starts a dry-run job and polls it to a terminal state. It does not
+require a browser.
 
 ## Related
 

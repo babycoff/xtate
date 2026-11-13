@@ -1,7 +1,7 @@
 # 浏览器 GUI
 
-Xtate 提供一个仅监听环回地址的浏览器控制平面面板。它和 MCP、TUI 一样是客户端：
-负责展示 job、启动已授权扫描和取消任务；worker、超时、结果文件与真实扫描过程仍由
+Xtate 提供一个仅监听环回地址的浏览器控制平面控制台。它和 MCP、TUI 一样是客户端：
+负责启动已授权扫描、实时观察、取消任务和打开结果；worker、超时、结果文件与真实扫描过程仍由
 控制平面掌握。
 
 GUI 面向本机分析工作站，不是公网 Web 服务，也不会通过 TCP 暴露控制平面。
@@ -67,12 +67,14 @@ $env:XTATE_CONTROL_TOKEN = 'change-me'
 
 在 Windows 上，结果与日志写入 `xtate.exe` 同级、可见的 `xtate-state` 目录，
 方便直接找到和删除。控制平面使用托管状态目录：Windows 上是
-`xtate.exe` 同级的 `xtate-state`，Linux 上是 `$XDG_STATE_HOME/xtate/results`
-（回退到 `$HOME/.local/state/xtate/results`）。设置 `XTATE_STATE_DIR` 可以覆盖它。
-请求文件位于同一状态目录下，job 进入终态时会被删除。如果便携目录无法创建
+`xtate.exe` 同级的 `xtate-state`，Linux 上是 `$XDG_STATE_HOME/xtate`
+（回退到 `$HOME/.local/state/xtate`）。设置 `XTATE_STATE_DIR` 可以覆盖它。
+每次扫描在 `runs/<YYYYMMDD-HHMMSS>-<seq>/` 下拥有独立目录，包含 `scan.ndjson`、
+`scan.ndjson.log`、manifest 和 index，多次扫描不会互相覆盖。请求文件位于
+`requests/` 下，job 进入终态时会被删除。如果便携目录无法创建
 （例如二进制位于只读安装目录），Windows 构建会依次回退到
 `%LOCALAPPDATA%\xtate`、`%TEMP%\xtate-state`、当前目录下的 `xtate-state`；
-选中的根目录下仍然包含 `requests` 和 `results`。
+选中的根目录下仍然包含 `requests` 和 `runs`。
 
 ## 控制台功能
 
@@ -86,9 +88,13 @@ GUI 以扫描为中心：默认页是 **New scan**，不是 job 表格。
   引擎只给 UDP 端口以及非法数值。预检不发包。
 - **Start scan** 只有在预检通过、勾选授权、且预检后表单未改动时才可用。桥接层仍会
   拒绝 `params.authorized` 不为字面 `true` 的 `job.start`。
+- **全局参数** 提供 23 个安全的扫描级选项（seed、TTL、TCP window/MSS、缓冲区大小、
+  去重等）。开关显示为复选框，带值选项显示为文本输入框，并附说明。预检会校验取值，
+  通过后作为 `global_args` 发送；非法或不安全的选项会被拒绝。进程、文件、脚本、
+  job/控制面以及目标/端口/速率/接口类选项不会出现在这里，因为它们会破坏 job 契约。
 - **模块参数** 会显示当前扫描引擎和探测暴露的开关与文本参数，作为 `scan_args`/
-  `probe_args` 发送；留空即不发送。预检不校验参数名或取值，非法值会让 job 失败，
-  并在 `stderr_tail`/日志中出现 worker 参数错误。
+  `probe_args` 发送；留空即不发送。全局参数由预检校验；模块参数由 worker 解析，
+  非法模块值会让 job 失败，并在 `stderr_tail`/日志中出现 worker 参数错误。
 - **Live** 以可配置的间隔轮询 `job.status`，页面顶部是一个大号状态标题（`Scanning`、
   `Scan complete`、`Scan failed` 等），下面显示 sent/targets、吞吐、已用时间、退出码、
   结果/日志路径和清理过的 worker 日志尾部。没有进度条。**Open log** 与 **Open result**
@@ -98,9 +104,12 @@ GUI 以扫描为中心：默认页是 **New scan**，不是 job 表格。
   通过 `GET /api/results?job_id=...&offset=...&limit=...`（每页 50 条）读取已完成的
   结果文件，**Load more** 继续翻页。只返回合法的 NDJSON 记录；损坏或不完整的行会被跳过。
 - **Interfaces** 列出采集网卡及其 IPv4/IPv6 地址、MAC、网关、默认标志、链路类型和
-  raw-IP 能力。**Modules** 把扫描引擎、协议探测、输出写入器和生成器分组，支持搜索与
-  类型标签页。**System** 有真实的外观控制（Paper/Graphite 主题、密度、实时刷新）、
-  运行时计数、能力以及本地安全模型。
+  raw-IP 能力。**Modules** 把扫描模块、探测模块、输出模块和生成模块分组，支持搜索与
+  类型标签页；点击模块会展开完整说明和参数表，包含参数描述与别名。**System** 有真实的
+  外观控制（Paper/Graphite 主题、密度、实时刷新）、运行时计数、能力以及本地安全模型。
+- **语言** 顶栏可在 English 与中文之间切换。模块与全局参数说明直接复用 CLI 的翻译
+  目录，因此与 `--help` 和手册保持一致。选择会保存在浏览器中，也可用 `?lang=en` 或
+  `?lang=zh` 强制指定。
 
 输出路径由服务端管理。include 文件、分块和配额等设置请直接使用 MCP server 或
 JSON 控制 API。scan/probe 参数可在 Method 面板中编辑。
@@ -114,8 +123,9 @@ JSON 控制 API。scan/probe 参数可在 Method 面板中编辑。
 - **Host 校验。** 非环回 `Host` 请求会被拒绝，防止 DNS rebinding 页面访问 API。
 - **方法白名单。** `/api/rpc` 仅转发 `job.list`、`job.status`、`job.cancel`、
   `job.result_manifest` 和 `job.start`。`/api/system`、`/api/interfaces`、
-  `/api/modules`、`/api/preflight`、`/api/results` 和 `/api/open` 是服务端处理器，
-  不能调用任意控制方法。`/api/results` 只接受 `job-<数字>`，读取该 job manifest
+  `/api/modules`、`/api/options`、`/api/preflight`、`/api/results` 和
+  `/api/open` 是服务端处理器，不能调用任意控制方法。`/api/results` 只接受
+  `job-<数字>`，读取该 job manifest
   报告的结果路径，绝不接受客户端任意路径。`/api/open` 只接受 `job_id` 加 `kind`
   （`log`、`result` 或 `manifest`）；服务端从 job status/manifest 解析路径，绝不打开
   客户端提供的路径。
@@ -148,10 +158,11 @@ GUI 不是扫描的安全边界。授权、目标数量、速率、路由预检�
 python tests/gui/test_gui.py
 ```
 
-测试会启动真实控制平面和 GUI 桥接，使用工作区 `XTATE_STATE_DIR`，检查页面、token、
-system/interfaces/modules/preflight 和 results 端点，拒绝非环回 Host 与缺失 token，
-在不启动任何应用的情况下拒绝非法的 `/api/open` 请求，并启动一个 dry-run job 轮询到
-终态。无需浏览器。
+测试会启动真实控制平面和 GUI 桥接，使用工作区 `XTATE_STATE_DIR`，检查页面、
+语言切换标记、token、system/interfaces/modules/options/preflight 和 results 端点，
+验证英文/中文模块与选项内容，拒绝非环回 Host 与缺失 token，在不启动任何应用的情况下
+拒绝非法的 `/api/open` 请求，校验预检中的 `global_args`，检查每次扫描的独立结果目录，
+并启动一个 dry-run job 轮询到终态。无需浏览器。
 
 ## 相关文档
 

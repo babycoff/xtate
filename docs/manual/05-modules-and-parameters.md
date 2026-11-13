@@ -41,6 +41,15 @@ xtate --search-module banner
 Module names are stable identifiers. They are case-sensitive and use hyphens,
 for example `tcp-syn`, `tcp-state`, `tls-state` and `http-state`.
 
+The 3.0 GUI uses the same registry and the same four categories: **Scan
+modules**, **Probe modules**, **Output modules** and **Generate modules**.
+Clicking a module card expands its full description and parameter table, so you
+can inspect names, types, descriptions and aliases before selecting it. The
+console also has a controlled **Global parameters** list: 23 safe scan-wide
+options are exposed there and sent as `global_args`. Process/file/script
+options, control-plane or job internals, and fields already represented by the
+form (targets, ports, rate, interface, module names) are deliberately excluded.
+
 ## Passing arguments
 
 Module options are not global flags. They travel in one quoted string per

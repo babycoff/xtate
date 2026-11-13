@@ -20,6 +20,7 @@
 
 #include "../crypto/crypto-json.h"
 #include "../util-data/file-open.h"
+#include "../util-misc/i18n.h"
 #include "../util-out/module-json.h"
 #include "../version.h"
 #include "control-client.h"
@@ -416,6 +417,8 @@ static void gui_handle_info(gui_sock s, const char *endpoint) {
     free(text);
 }
 
+static char *gui_value_after(const char *query, const char *key);
+
 static void gui_handle_system(gui_sock s, const char *endpoint) {
     char *text = gui_system_json(endpoint);
     if (!text) {
@@ -438,8 +441,45 @@ static void gui_handle_interfaces(gui_sock s) {
     free(text);
 }
 
-static void gui_handle_modules(gui_sock s) {
-    char *text = module_json_string();
+static void gui_handle_options(gui_sock s, const char *query) {
+    I18nLanguage saved = i18n_get_language();
+    char *lang = gui_value_after(query, "lang");
+    char *text;
+
+    if (lang && (strcmp(lang, "zh") == 0 || strcmp(lang, "zh-CN") == 0 ||
+                 strcmp(lang, "cn") == 0))
+        i18n_set_language("zh-CN");
+    else
+        i18n_set_language("en");
+
+    text = gui_options_json();
+    free(lang);
+    i18n_set_language(saved == I18N_ZH_CN ? "zh-CN" : "en");
+
+    if (!text) {
+        gui_respond_error(s, 500, "OPTION_INFO_FAILED",
+                          "cannot enumerate global options");
+        return;
+    }
+    gui_respond(s, 200, "application/json", text, strlen(text));
+    free(text);
+}
+
+static void gui_handle_modules(gui_sock s, const char *query) {
+    I18nLanguage saved = i18n_get_language();
+    char *lang = gui_value_after(query, "lang");
+    char *text;
+
+    if (lang && (strcmp(lang, "zh") == 0 || strcmp(lang, "zh-CN") == 0 ||
+                 strcmp(lang, "cn") == 0))
+        i18n_set_language("zh-CN");
+    else
+        i18n_set_language("en");
+
+    text = module_json_string();
+    free(lang);
+    i18n_set_language(saved == I18N_ZH_CN ? "zh-CN" : "en");
+
     if (!text) {
         gui_respond_error(s, 500, "MODULE_INFO_FAILED",
                           "cannot enumerate modules");
@@ -726,6 +766,8 @@ static void gui_handle(gui_sock s, const char *endpoint, const char *token,
         route = 4;
     else if (strcmp(method, "GET") == 0 && strcmp(path, "/api/modules") == 0)
         route = 5;
+    else if (strcmp(method, "GET") == 0 && strcmp(path, "/api/options") == 0)
+        route = 9;
     else if (strcmp(method, "POST") == 0 && strcmp(path, "/api/preflight") == 0)
         route = 6;
     else if (strcmp(method, "GET") == 0 && strcmp(path, "/api/results") == 0)
@@ -751,10 +793,11 @@ static void gui_handle(gui_sock s, const char *endpoint, const char *token,
     case 2: gui_handle_rpc(s, endpoint, request + header_len); break;
     case 3: gui_handle_system(s, endpoint); break;
     case 4: gui_handle_interfaces(s); break;
-    case 5: gui_handle_modules(s); break;
+    case 5: gui_handle_modules(s, query ? query : ""); break;
     case 6: gui_handle_preflight(s, request + header_len); break;
     case 7: gui_handle_results(s, endpoint, query ? query : ""); break;
     case 8: gui_handle_open(s, endpoint, request + header_len); break;
+    case 9: gui_handle_options(s, query ? query : ""); break;
     default: break;
     }
 }

@@ -11,8 +11,13 @@
 #include "../stub/stub-pcap-dlt.h"
 #include "../stub/stub-pcap.h"
 #include "../target/target-set.h"
+#include "../util-misc/configer.h"
+#include "../util-misc/i18n.h"
 #include "../util-out/module-json.h"
 #include "../version.h"
+#include "scan-request.h"
+
+extern ConfParam config_parameters[];
 
 static void append_string_array(JsonNode *object, const char *name,
                                 const char *value) {
@@ -233,6 +238,49 @@ char *gui_interfaces_json(void) {
         json_append_element(array, item);
     }
     if (all) PCAP.freealldevs(all);
+
+    text = json_stringify(root, NULL);
+    json_delete(root);
+    return text;
+}
+
+char *gui_options_json(void) {
+    JsonNode *root = json_mkobject();
+    JsonNode *array = json_mkarray();
+    char *text;
+
+    if (!root || !array) {
+        json_delete(root);
+        return NULL;
+    }
+    json_append_member(root, "options", array);
+
+    for (ConfParam *p = config_parameters; p && p->name; p++) {
+        JsonNode *item;
+        const char *desc;
+        if (!p->help_text || !scan_request_global_arg_allowed(p->name)) continue;
+
+        item = json_mkobject();
+        if (!item) continue;
+        json_append_member(item, "name", json_mkstring(p->name));
+        json_append_member(item, "type",
+                           json_mkstring(p->type == Type_FLAG ? "flag" : "arg"));
+        desc = i18n_tr_global_param(p->name, p->help_text);
+        json_append_member(item, "description", json_mkstring(desc ? desc : ""));
+        if (p->short_hint && p->short_hint[0]) {
+            const char *hint = i18n_tr(p->short_hint);
+            json_append_member(item, "hint", json_mkstring(hint ? hint : p->short_hint));
+        }
+        {
+            JsonNode *aliases = json_mkarray();
+            if (aliases) {
+                for (int i = 0; i < 8 && p->alt_names[i]; i++)
+                    json_append_element(aliases, json_mkstring(p->alt_names[i]));
+                json_append_member(item, "aliases", aliases);
+            }
+        }
+        json_append_element(array, item);
+    }
 
     text = json_stringify(root, NULL);
     json_delete(root);

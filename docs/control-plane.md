@@ -46,6 +46,16 @@ local-only and does not listen on TCP.
 `interface`. The scan request itself is validated by the worker; an invalid
 request fails asynchronously and is visible through `job.status`.
 
+When `result_path` is omitted, the control plane creates a managed per-run
+folder under its state root:
+`<state>/runs/<YYYYMMDD-HHMMSS>-<seq>/scan.ndjson` with the matching
+`scan.ndjson.log`, manifest and index. The state root is `%LOCALAPPDATA%\xtate`
+on Windows (with fallbacks), `$XDG_STATE_HOME/xtate` or
+`$HOME/.local/state/xtate` on Linux, and can be overridden with
+`XTATE_STATE_DIR`. The Windows `--gui` build prefers the visible
+`xtate-state` folder beside `xtate.exe`. Request files live under
+`<state>/requests` and are removed when the job reaches a terminal state.
+
 There is no `job.events` method and no server-push channel. Clients poll
 `job.status` / `job.list`.
 

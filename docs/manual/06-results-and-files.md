@@ -269,9 +269,13 @@ chunks in the manifest) yourself; the control plane is not a result server.
 
 The GUI's **Live scan** page polls `job.status` and shows state, sent,
 targets, phase, heartbeat age, elapsed time, exit code and a result-manifest
-card. The **Results** page lists scans managed by the control plane (id, state,
-result path) newest first; selecting a scan returns to its Live view. The Live
-view also has a **Result records** card that pages the job's result through
+card. Each GUI scan gets a managed run folder
+`<state>/runs/<YYYYMMDD-HHMMSS>-<seq>/` containing `scan.ndjson`,
+`scan.ndjson.log`, the manifest and the index; the run time is shown in Live and
+Results, so identical scans remain distinguishable. The **Results** page lists
+scans managed by the control plane (run time, id, state, result file) newest
+first; selecting a scan returns to its Live view. The Live view also has a
+**Result records** card that pages the job's result through
 `/api/results` (50 valid NDJSON records at a time). It follows manifest chunks
 and transparently decompresses zstd chunks when the server was built with zstd;
 use your own tooling when you need the raw chunk bytes. This is also why result

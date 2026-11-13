@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-rc.3-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-rc.4-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -391,9 +391,10 @@ xtate --gui --control-connect=/tmp/xtate-ctl.sock
 ```
 
 默认打开 `http://127.0.0.1:8787/`。入口是 New scan：设置目标、方法、端口、速率和
-接口，执行服务端预检，确认授权后观察实时任务并查看结果。用
-`--gui-listen=127.0.0.1:PORT` 改端口，`--gui-no-open` 跳过打开浏览器；安全模型、
-限制与故障排查见 [GUI 控制台](docs/zh-CN/gui.md)。
+接口，展开模块详情，从 23 个经校验的全局参数中选择，执行服务端预检，确认授权后
+观察实时任务并查看结果。控制台支持英文/中文切换，每次扫描在托管状态目录下拥有
+独立的时间戳文件夹。用 `--gui-listen=127.0.0.1:PORT` 改端口，`--gui-no-open`
+跳过打开浏览器；安全模型、限制与故障排查见 [GUI 控制台](docs/zh-CN/gui.md)。
 
 ## AI 集成（MCP / Agent Skill）
 

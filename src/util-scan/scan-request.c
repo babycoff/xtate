@@ -24,10 +24,108 @@ static void req_error(ErrorCode code, const char *msg) {
 
 static bool allowed(const char *name) {
     static const char *ok[] = {"scan","probe","targets","ports","probe_args",
-                               "scan_args","rate","timeout_sec","dry_run","result_path",
+                               "scan_args","global_args","rate","timeout_sec","dry_run","result_path",
                                "chunk_size","compression","index","quota_bytes","authorized","interface","timeout_sec","include_file",0};
     for (int i=0; ok[i]; i++) if (strcmp(name, ok[i]) == 0) return true;
     return false;
+}
+
+extern ConfParam config_parameters[];
+
+static ConfParam *find_global_param(const char *name) {
+    if (!name || !name[0]) return NULL;
+    for (ConfParam *p = config_parameters; p && p->name; p++) {
+        if (!p->help_text) continue;
+        if (strcmp(p->name, name) == 0) return p;
+        for (int i = 0; i < 8 && p->alt_names[i]; i++)
+            if (strcmp(p->alt_names[i], name) == 0) return p;
+    }
+    return NULL;
+}
+
+int scan_request_global_arg_allowed(const char *name) {
+    /* Deliberately an allowlist, not a deny list.  These options only affect
+       scan semantics, packet fields, buffers or dedup.  Everything that can
+       change process mode, spawn programs, read/write caller paths, override
+       job/output/control fields or make a job non-terminating is excluded. */
+    static const char *ok[] = {
+        "seed", "no-cpu-bind", "packet-ttl", "tcp-init-window", "tcp-window",
+        "tcp-wscale", "tcp-mss", "tcp-sackok", "tcp-tsecho", "max-packet-len",
+        "adapter-snaplen", "stack-buf-count", "dispatch-buf-count", "no-dedup",
+        "dedup-win",
+        "shard", "static-seed", "tx-thread-count", "rx-handler-count",
+        "source-port", "adapter-vlan", "init-ipv4-adapter",
+        "init-ipv6-adapter", NULL};
+    if (!name || !find_global_param(name)) return 0;
+    for (int i = 0; ok[i]; i++)
+        if (strcmp(name, ok[i]) == 0) return 1;
+    return 0;
+}
+
+int scan_request_global_arg_is_flag(const char *name) {
+    ConfParam *p = find_global_param(name);
+    return p && p->type == Type_FLAG;
+}
+
+static int parse_u64(const char *s, uint64_t lo, uint64_t hi, uint64_t *out) {
+    char *end = NULL;
+    unsigned long long v;
+    if (!s || !s[0] || s[0] == '+' || s[0] == '-') return 0;
+    errno = 0;
+    v = strtoull(s, &end, 10);
+    if (errno || !end || *end || v < lo || v > hi) return 0;
+    *out = (uint64_t)v;
+    return 1;
+}
+
+static int power_of_two(uint64_t v) { return v && !(v & (v - 1)); }
+
+int scan_request_global_arg_value_valid(const char *name, const char *val) {
+    uint64_t v;
+    if (strcmp(name, "seed") == 0)
+        return strcmp(val, "time") == 0 || (val[0] != '-' &&
+               parse_u64(val, 0, UINT64_MAX, &v));
+    if (strcmp(name, "packet-ttl") == 0) return parse_u64(val, 0, 255, &v);
+    if (strcmp(name, "tcp-init-window") == 0 ||
+        strcmp(name, "tcp-window") == 0) return parse_u64(val, 0, 65535, &v);
+    if (strcmp(name, "tcp-wscale") == 0)
+        return strcmp(val, "true") == 0 || strcmp(val, "false") == 0 ||
+               parse_u64(val, 0, 14, &v);
+    if (strcmp(name, "tcp-mss") == 0)
+        return strcmp(val, "true") == 0 || strcmp(val, "false") == 0 ||
+               parse_u64(val, 0, 65535, &v);
+    if (strcmp(name, "tcp-tsecho") == 0)
+        return strcmp(val, "true") == 0 || strcmp(val, "false") == 0 ||
+               parse_u64(val, 0, UINT32_MAX, &v);
+    if (strcmp(name, "max-packet-len") == 0 ||
+        strcmp(name, "adapter-snaplen") == 0) return parse_u64(val, 64, 65535, &v);
+    if (strcmp(name, "stack-buf-count") == 0 ||
+        strcmp(name, "dispatch-buf-count") == 0) {
+        if (!parse_u64(val, 1024, 1048576, &v)) return 0;
+        return power_of_two(v);
+    }
+    if (strcmp(name, "dedup-win") == 0) return parse_u64(val, 1, 10000000, &v);
+    if (strcmp(name, "tx-thread-count") == 0) return parse_u64(val, 1, 64, &v);
+    if (strcmp(name, "rx-handler-count") == 0) {
+        if (!parse_u64(val, 1, 64, &v)) return 0;
+        return power_of_two(v);
+    }
+    if (strcmp(name, "source-port") == 0) return parse_u64(val, 0, 65535, &v);
+    if (strcmp(name, "adapter-vlan") == 0) return parse_u64(val, 0, 4095, &v);
+    if (strcmp(name, "shard") == 0) {
+        const char *slash = strchr(val, '/');
+        char a[16], b[16];
+        size_t alen;
+        uint64_t x, y;
+        if (!slash || slash == val) return 0;
+        alen = (size_t)(slash - val);
+        if (alen >= sizeof(a) || strlen(slash + 1) >= sizeof(b)) return 0;
+        memcpy(a, val, alen); a[alen] = 0;
+        snprintf(b, sizeof(b), "%s", slash + 1);
+        if (!parse_u64(a, 1, 1024, &x) || !parse_u64(b, 1, 1024, &y)) return 0;
+        return x <= y;
+    }
+    return 1;
 }
 
 static char *join_array(JsonNode *a, bool ports) {
@@ -172,7 +270,17 @@ int scan_request_build_argv(const char *filename, int *argc_out,
     }
     char *ip = has_targets ? join_array(targets,false) : NULL;
     if (has_targets && !ip) { req_error(ERR_TARGET_INVALID,"invalid targets"); json_delete(root); return -1; }
-    char **argv = CALLOC(36, sizeof(char*)); int ac=0;
+    JsonNode *ga = json_find_member(root, "global_args");
+    size_t ga_count = 0;
+    if (ga) {
+        if (ga->tag != JSON_OBJECT) {
+            req_error(ERR_INVALID_ARGUMENT, "global_args must be an object");
+            json_delete(root);
+            return -1;
+        }
+        for (JsonNode *n = ga->children.head; n; n = n->next) ga_count++;
+    }
+    char **argv = CALLOC(36 + 2 * ga_count + 1, sizeof(char*)); int ac=0;
     argv[ac++] = STRDUP("xtate");
     argv[ac++] = STRDUP("-scan"); argv[ac++] = STRDUP(scan->string_);
     JsonNode *probe=json_find_member(root,"probe");
@@ -195,6 +303,51 @@ int scan_request_build_argv(const char *filename, int *argc_out,
     if (pas) { argv[ac++]=STRDUP("-probe-arg"); argv[ac++]=pas; }
     JsonNode *sa=json_find_member(root,"scan_args"); char *sas=args_string(sa);
     if (sas) { argv[ac++]=STRDUP("-scan-arg"); argv[ac++]=sas; }
+    if (ga) {
+        for (JsonNode *n = ga->children.head; n; n = n->next) {
+            const char *name = n->key ? n->key : "";
+            if (!scan_request_global_arg_allowed(name)) {
+                req_error(ERR_INVALID_ARGUMENT, "global_args contains an unsupported option");
+                for (int i=0;i<ac;i++) free(argv[i]);
+                free(argv); json_delete(root); return -1;
+            }
+            if (scan_request_global_arg_is_flag(name)) {
+                if (n->tag != JSON_BOOL) {
+                    req_error(ERR_INVALID_ARGUMENT, "global flag arguments must be true or false");
+                    for (int i=0;i<ac;i++) free(argv[i]);
+                    free(argv); json_delete(root); return -1;
+                }
+                if (n->bool_) {
+                    size_t ln = strlen(name) + 3;
+                    char *a = MALLOC(ln);
+                    snprintf(a, ln, "--%s", name);
+                    argv[ac++] = a;
+                }
+            } else {
+                char num[64];
+                const char *val = NULL;
+                if (n->tag == JSON_STRING) val = n->string_;
+                else if (n->tag == JSON_NUMBER) {
+                    snprintf(num, sizeof(num), "%.17g", n->number_);
+                    val = num;
+                }
+                if (!val) {
+                    req_error(ERR_INVALID_ARGUMENT, "global argument values must be strings or numbers");
+                    for (int i=0;i<ac;i++) free(argv[i]);
+                    free(argv); json_delete(root); return -1;
+                }
+                if (!scan_request_global_arg_value_valid(name, val)) {
+                    req_error(ERR_INVALID_ARGUMENT, "invalid value for a global argument");
+                    for (int i=0;i<ac;i++) free(argv[i]);
+                    free(argv); json_delete(root); return -1;
+                }
+                size_t ln = strlen(name) + strlen(val) + 4;
+                char *a = MALLOC(ln);
+                snprintf(a, ln, "--%s=%s", name, val);
+                argv[ac++] = a;
+            }
+        }
+    }
     JsonNode *dry=json_find_member(root,"dry_run");
     if (dry && dry->tag==JSON_BOOL && dry->bool_) argv[ac++]=STRDUP("--list-target");
     argv[ac]=NULL; *argc_out=ac; *argv_out=argv; json_delete(root); return 0;

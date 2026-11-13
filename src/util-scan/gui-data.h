@@ -14,6 +14,7 @@
 
 char *gui_system_json(const char *endpoint);
 char *gui_interfaces_json(void);
+char *gui_options_json(void);
 
 /*
     Validate a scan request without sending a packet.  The request body is

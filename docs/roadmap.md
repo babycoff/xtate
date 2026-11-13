@@ -281,13 +281,16 @@ Delivered in 2.44.2:
   multiple-default-interface error points at `--explain-target`/`--list-if`.
 - scan startup and the meta file show the effective `Rate:` (default or `--rate`).
 
-Delivered in 3.0.0-rc.3 (release candidate):
+Delivered in 3.0.0-rc.4 (release candidate):
 
 - redesigned scan-first browser console: readable Paper/Graphite themes,
-  grouped module catalog, real System preferences, large live-status headline,
-  result-record paging and open-in-default-app job files;
-- server-side preflight and managed result/state directories, with request and
-  heartbeat files cleaned up after jobs;
+  English/Chinese switch, Xtate module taxonomy with expandable descriptions and
+  parameter tables, 23 validated global parameters, real System preferences,
+  large live-status headline, result-record paging and open-in-default-app job
+  files;
+- per-run timestamped result folders and managed state directories, with
+  request/heartbeat files cleaned up after jobs;
+- server-side preflight and validation of `global_args` before a worker starts;
 - one-command `xtate --gui` and `xtate --mcp` private control-plane startup;
 - `--list-capabilities`, plus MCP `capabilities`, `iface.list`,
   `preflight`, `job.records` and token-protected private control planes;
@@ -313,7 +316,7 @@ Phases:
 2.44.0  browser GUI for the control plane (done, released)
 2.44.1  one-command local TUI/GUI startup (done, released)
 2.44.2  RAW/TUN link preflight + startup rate display (done)
-3.0.0-rc.3  redesigned GUI + AI/MCP tools + capability reporting (candidate)
+3.0.0-rc.4  redesigned GUI + AI/MCP tools + capability reporting (candidate)
 next    RC trial fixes, evaluation suite and packaging
 later   MCP generate/stream input
 ```
