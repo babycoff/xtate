@@ -1,0 +1,120 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    name: Linux release artifact
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build full-feature image
+        run: |
+          VERSION="$(sed -n 's/^#define XTATE_VERSION[[:space:]]*"\(.*\)"/\1/p' src/version.h | head -1)"
+          test -n "$VERSION"
+          echo "XTATE_VERSION=$VERSION" >> "$GITHUB_ENV"
+          docker build -f docker/ubuntu24-build/Dockerfile -t "xtate:${GITHUB_REF_NAME}" .
+          docker create --name xtate-release "xtate:${GITHUB_REF_NAME}"
+          docker cp xtate-release:/usr/local/bin/xtate reports/docker-out/xtate-linux
+          docker rm xtate-release
+          docker image inspect --format '{{json .}}' "xtate:${GITHUB_REF_NAME}" > "docker-image-${GITHUB_REF_NAME}.json"
+
+      - name: Package
+        run: |
+          chmod +x reports/docker-out/xtate-linux scripts/package-release.sh
+          scripts/package-release.sh \
+            --binary reports/docker-out/xtate-linux \
+            --version "$XTATE_VERSION" \
+            --out dist \
+            --docker-image "xtate:${GITHUB_REF_NAME}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-linux
+          path: |
+            dist/*.tar.gz
+            dist/SHA256SUMS-linux.txt
+            dist/capabilities-linux.json
+            docker-image-*.json
+          if-no-files-found: error
+
+  windows:
+    name: Windows release artifact
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up vcpkg optional dependencies
+        shell: pwsh
+        run: |
+          $vcpkg = Join-Path $env:RUNNER_TEMP 'vcpkg'
+          git clone --depth 1 https://github.com/microsoft/vcpkg $vcpkg
+          & "$vcpkg\bootstrap-vcpkg.bat" -disableMetrics
+          & "$vcpkg\vcpkg.exe" install pcre2 libxml2 mongo-c-driver zstd --triplet x64-windows
+          "VCPKG_ROOT=$vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Build
+        shell: pwsh
+        run: |
+          ./scripts/build-windows.ps1 -Toolchain msvc -Config Release -Yes
+
+      - name: Version, capability and selftest
+        shell: pwsh
+        run: |
+          .\bin\xtate.exe --version
+          .\bin\xtate.exe --selftest
+          .\bin\xtate.exe --list-capabilities | Out-File -Encoding utf8 capabilities-windows.json
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $version = & .\bin\xtate.exe --version
+          $version = ($version -split ' ')[2]
+          ./scripts/package-release.ps1 -Version $version -OutputDir dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: |
+            dist/*.zip
+            dist/SHA256SUMS-windows.txt
+            capabilities-windows.json
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub pre-release
+    needs: [linux, windows]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+
+      - name: Flatten assets
+        run: |
+          find release-assets -type f -exec cp {} . \;
+          ls -la
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: ${{ contains(github.ref_name, '-rc') }}
+          generate_release_notes: true
+          files: |
+            *.zip
+            *.tar.gz
+            SHA256SUMS-*.txt
+            capabilities-*.json
+            docker-image-*.json

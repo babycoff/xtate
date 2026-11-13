@@ -56,6 +56,7 @@ typedef int gui_sock;
 #define GUI_MAX_BODY (64 * 1024)
 #define GUI_RESPONSE_SIZE (64 * 1024)
 #define GUI_TOKEN_SIZE 33
+#define GUI_COOKIE_NAME "xtate_gui_session"
 
 static const char *GUI_PLACEHOLDER = "__XTATE_GUI_TOKEN__";
 
@@ -110,6 +111,21 @@ static int gui_respond(gui_sock s, int code, const char *type,
     if (gui_send_all(s, header, (size_t)n) < 0) return -1;
     if (len && gui_send_all(s, body, len) < 0) return -1;
     return 0;
+}
+
+static int gui_respond_bootstrap(gui_sock s, const char *token) {
+    char header[1024];
+    int n = snprintf(header, sizeof(header),
+                     "HTTP/1.1 303 See Other\r\n"
+                     "Location: /\r\n"
+                     "Set-Cookie: " GUI_COOKIE_NAME
+                     "=%s; HttpOnly; SameSite=Strict; Path=/\r\n"
+                     "Content-Length: 0\r\n"
+                     "Cache-Control: no-store\r\n"
+                     "Connection: close\r\n\r\n",
+                     token);
+    if (n < 0 || (size_t)n >= sizeof(header)) return -1;
+    return gui_send_all(s, header, (size_t)n);
 }
 
 static void gui_respond_error(gui_sock s, int status, const char *code,
@@ -235,6 +251,57 @@ static int gui_token_equal(const char *a, const char *b) {
     if (la != lb) return 0;
     for (i = 0; i < la; i++) diff |= (unsigned)(a[i] ^ b[i]);
     return diff == 0;
+}
+
+static int gui_query_token(const char *query, char *out, size_t cap) {
+    const char *p = query;
+    if (!query || !cap) return 0;
+    while (*p) {
+        if (strncmp(p, "token=", 6) == 0) {
+            const char *v = p + 6;
+            size_t n = 0;
+            while (v[n] && v[n] != '&' && n + 1 < cap) {
+                out[n] = v[n];
+                n++;
+            }
+            out[n] = 0;
+            return n > 0;
+        }
+        p = strchr(p, '&');
+        if (!p) break;
+        p++;
+    }
+    out[0] = 0;
+    return 0;
+}
+
+static int gui_cookie_token(const char *request, size_t header_len, char *out,
+                            size_t cap) {
+    char cookie[2048];
+    const char *p;
+    if (!gui_header_value(request, header_len, "Cookie", cookie, sizeof(cookie)))
+        return 0;
+    p = cookie;
+    while (*p) {
+        size_t name_len = strlen(GUI_COOKIE_NAME);
+        if (strncmp(p, GUI_COOKIE_NAME, name_len) == 0 &&
+            p[name_len] == '=') {
+            const char *v = p + name_len + 1;
+            size_t n = 0;
+            while (v[n] && v[n] != ';' && v[n] != ' ' && n + 1 < cap) {
+                out[n] = v[n];
+                n++;
+            }
+            out[n] = 0;
+            return n > 0;
+        }
+        p = strchr(p, ';');
+        if (!p) break;
+        p++;
+        while (*p == ' ') p++;
+    }
+    out[0] = 0;
+    return 0;
 }
 
 static int gui_make_token(char out[GUI_TOKEN_SIZE]) {
@@ -380,11 +447,21 @@ static void gui_handle_rpc(gui_sock s, const char *endpoint,
                           "the GUI server supplies the control token");
         return;
     }
-    if (strcmp(method->string_, "job.start") == 0 && !gui_start_authorized(root)) {
-        json_delete(root);
-        gui_respond_error(s, 403, "AUTHORIZATION_REQUIRED",
-                          "job.start requires params.authorized=true");
-        return;
+    if (strcmp(method->string_, "job.start") == 0) {
+        JsonNode *rp;
+        if (!gui_start_authorized(root)) {
+            json_delete(root);
+            gui_respond_error(s, 403, "AUTHORIZATION_REQUIRED",
+                              "job.start requires params.authorized=true");
+            return;
+        }
+        /* The console always uses the server-managed per-run path; never let
+         * a browser-supplied path truncate an arbitrary file. */
+        rp = json_find_member(root, "result_path");
+        if (rp) {
+            json_remove_from_parent(rp);
+            json_delete(rp);
+        }
     }
     if (!json_find_member(root, "id"))
         json_append_member(root, "id", json_mknumber(1));
@@ -733,6 +810,8 @@ static void gui_handle(gui_sock s, const char *endpoint, const char *token,
     char method[8];
     char path[1024];
     char supplied[GUI_TOKEN_SIZE + 8];
+    char token_from_query[GUI_TOKEN_SIZE];
+    char token_from_cookie[GUI_TOKEN_SIZE];
     size_t header_len = 0;
     int total;
     int route;
@@ -768,6 +847,27 @@ static void gui_handle(gui_sock s, const char *endpoint, const char *token,
     }
     if (strcmp(method, "GET") == 0 &&
         (strcmp(path, "/") == 0 || strcmp(path, "/index.html") == 0)) {
+        int have_header =
+            gui_header_value(request, header_len, "X-Xtate-GUI-Token", supplied,
+                             sizeof(supplied)) &&
+            gui_token_equal(supplied, token);
+        int have_cookie = gui_cookie_token(request, header_len, token_from_cookie,
+                                           sizeof(token_from_cookie)) &&
+                          gui_token_equal(token_from_cookie, token);
+        int have_query = gui_query_token(query, token_from_query,
+                                         sizeof(token_from_query)) &&
+                         gui_token_equal(token_from_query, token);
+        if (have_query && !have_cookie && !have_header) {
+            if (gui_respond_bootstrap(s, token) < 0)
+                gui_respond_error(s, 500, "GUI_PAGE_FAILED",
+                                  "cannot start GUI session");
+            return;
+        }
+        if (!have_header && !have_cookie) {
+            gui_respond_error(s, 403, "GUI_TOKEN_REQUIRED",
+                              "open the URL printed by the GUI");
+            return;
+        }
         gui_serve_page(s, token);
         return;
     }
@@ -797,9 +897,12 @@ static void gui_handle(gui_sock s, const char *endpoint, const char *token,
         gui_respond_error(s, 404, "NOT_FOUND", "no such endpoint");
         return;
     }
-    if (!gui_header_value(request, header_len, "X-Xtate-GUI-Token", supplied,
-                          sizeof(supplied)) ||
-        !gui_token_equal(supplied, token)) {
+    if (!(gui_header_value(request, header_len, "X-Xtate-GUI-Token", supplied,
+                           sizeof(supplied)) &&
+          gui_token_equal(supplied, token)) &&
+        !(gui_cookie_token(request, header_len, token_from_cookie,
+                           sizeof(token_from_cookie)) &&
+          gui_token_equal(token_from_cookie, token))) {
         gui_respond_error(s, 403, "GUI_TOKEN_REQUIRED",
                           "missing or invalid GUI session token");
         return;
@@ -824,6 +927,7 @@ int gui_run(const char *endpoint, const char *listen_addr) {
     socklen_t addr_len;
     char token[GUI_TOKEN_SIZE];
     char url[128];
+    char open_url[1600];
     const char *public_url;
     int port = 0;
     int actual_port = 0;
@@ -905,12 +1009,23 @@ int gui_run(const char *endpoint, const char *listen_addr) {
     printf("Control endpoint: %s\n", endpoint);
     printf("GUI session token: %s\n", token);
     if (public_url && public_url[0])
-        printf("Open %s in your browser.\n", public_url);
+        snprintf(open_url, sizeof(open_url), "%s%stoken=%s", public_url,
+                 strchr(public_url, '?') ? "&" : "?", token);
     else if (bind_any)
-        printf("Open http://127.0.0.1:%d/ on the host after publishing this "
-               "port (or set XTATE_GUI_PUBLIC_URL).\n", actual_port);
+        snprintf(open_url, sizeof(open_url),
+                 "http://127.0.0.1:%d/?token=%s", actual_port, token);
     else
-        printf("Open this address in your browser. The server is loopback-only.\n");
+        snprintf(open_url, sizeof(open_url), "%s?token=%s", url, token);
+    if (bind_any && !(public_url && public_url[0]))
+        printf("Open %s on the host after publishing this port (or set "
+               "XTATE_GUI_PUBLIC_URL).\n", open_url);
+    else if (bind_any)
+        printf("Open %s in your browser. Remote GUI access is enabled by "
+               "XTATE_GUI_ALLOW_REMOTE; keep it behind host loopback or a "
+               "firewall.\n", open_url);
+    else
+        printf("Open %s in your browser. The server is loopback-only.\n",
+               open_url);
     printf("Press Ctrl-C to stop.\n");
     fflush(stdout);
 

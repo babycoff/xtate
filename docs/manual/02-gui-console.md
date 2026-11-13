@@ -5,9 +5,10 @@ of the local control plane, exactly like the TUI and the MCP server: scans run
 in the daemon, not in the browser, and the console lists and controls the jobs
 that daemon owns.
 
-The page is available only on loopback. It is not a remote dashboard, it does
-not listen on a network interface, and it has no user accounts. Authorization
-to scan is a separate, explicit step.
+The page binds loopback by default. It is not a remote dashboard, it has no
+user accounts, and remote binding is only an explicit container opt-in
+(`XTATE_GUI_ALLOW_REMOTE=1`, normally published on host loopback).
+Authorization to scan is a separate, explicit step.
 
 ## Starting the console
 
@@ -29,6 +30,9 @@ Control endpoint: <endpoint>
 GUI session token: <32 hex characters>
 This server is loopback-only. Press Ctrl-C to stop.
 ```
+
+With `XTATE_GUI_ALLOW_REMOTE=1` the last line instead warns that remote access
+is enabled and should stay behind host loopback publishing or a firewall.
 
 The console does not launch a browser. Open the printed URL yourself; the
 process keeps serving until Ctrl-C.

@@ -2,20 +2,20 @@
 
 **English** · [中文](zh-CN/README.md)
 
-This directory is the user manual for **Xtate v3.0.0-rc.6** — a modular all-stack network scanner for Internet-scale surveys.
+This directory is the user manual for **Xtate v3.0.0-rc.7** — a modular all-stack network scanner for Internet-scale surveys.
 
 The [README](../README.md) is the landing page. Start here if you want to use Xtate rather than skim its feature list.
 
-**Release notes:** [3.0.0-rc.6](./release-notes/3.0.0-rc.6.md) — hardened MCP/Agent Skill contract, an Ubuntu 24.04 full-feature Docker image with host GUI access, direct fast log/result opening, complete module help with probe transport badges, and the refreshed README. This is a release candidate for hands-on trial, not the final 3.0.0.
+**Release notes:** [3.0.0-rc.7](./release-notes/3.0.0-rc.7.md) — release engineering (CI integration, checksummed Windows/Linux assets, Docker provenance), version-consistency checks, help wrapping and documentation fixes, GUI session-token hardening, and the 2.44.x → 3.0 migration guide. This is a release candidate for hands-on trial, not the final 3.0.0.
 
 ## Where to start
 
 | If you are… | Read |
 |---|---|
-| New to Xtate | [Getting started](./getting-started.md) |
+| New to Xtate | [3.0 manual](./manual/README.md) → [Getting started](./getting-started.md) |
+| Upgrading from 2.44.x | [Migration guide](./migration-3.0.md) |
 | Planning a scan | [Targets and ports](./targets-and-ports.md) → [Scanning modes](./scanning-modes.md) |
 | Wiring results into a pipeline | [Output](./output.md) → [Aggregation](./aggregation.md) |
-| New to Xtate | [3.0 manual](./manual/README.md) |
 | Choosing a module | [Modules](./modules.md) |
 | Writing a module | [Module development](./module-development.md) |
 | Planned work | [Roadmap](./roadmap.md) → [P3/P4 feasibility](./feasibility.md) |
@@ -72,6 +72,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 ### Automation and integration
 
 - [3.0 manual](./manual/README.md) — task-oriented install, GUI, CLI, modules, results, protocols and troubleshooting
+- [Migration to 3.0](./migration-3.0.md) — breaking changes from 2.44.x, result paths, MCP shape and rollback
 - [MCP server](./mcp-server.md) — stdio tools, resources, prompts, route planning and limits
 - [GUI console](./gui.md) — scan-first loopback console with preflight, live view, interfaces and modules
 - [TUI dashboard](./tui.md) — legacy full-screen control-plane client; deprecated in 3.0
@@ -106,13 +107,15 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-The docs are written against the v3.0.0-rc.6 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
+The docs are written against the v3.0.0-rc.7 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
 
-## Planned
+## Generated reference and recipes
 
-These are not written yet:
+The machine-readable module catalog is available from the binary itself:
 
-- Generated CLI and per-module reference
+```bash
+xtate --list-modules-json
+```
 
 Recipes for common surveys (HTTP banners, TLS certificates, IPv6, LAN discovery)
 live in [Scanning modes](./scanning-modes.md#recipes).

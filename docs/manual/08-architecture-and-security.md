@@ -197,8 +197,9 @@ and clients read the manifest and chunk files. Completed results can be split
 into `<result>.<id>.ndjson` chunks plus `<result>.manifest.json` (and an
 optional index) with `--result-chunk-size`/`--result-index`. Compression is
 opt-in zstd (default none); a build without zstd falls back to uncompressed
-chunks rather than failing the job. `quota_bytes` is checked after completion
-and reported as a warning — it is not a hard mid-scan limit.
+chunks rather than failing the job. `quota_bytes` is enforced during the run:
+when the result file reaches the quota, the scan stops and the job reports a
+quota error — it is a hard mid-scan limit.
 
 The operational consequences: one control-plane thread, serialized manager
 calls; the daemon owns the workers; a daemon restart terminates its jobs (there
@@ -208,16 +209,19 @@ because there is no server-push event stream.
 ## GUI: loopback console
 
 The GUI is a local scan console served by the same process. The browser page,
-its assets and the API are local: the server binds loopback only (`--gui-listen`
-must be `127.0.0.1:PORT`), serves the page from the binary, and exposes a small
-JSON API — `/api/info`, `/api/system`, `/api/interfaces`, `/api/modules`,
+its assets and the API are local by default: the server binds `127.0.0.1` and
+`--gui-listen` must be `host:port`. Binding a non-loopback address requires the
+explicit `XTATE_GUI_ALLOW_REMOTE=1` opt-in (for Docker host publishing), and
+Host-header validation still rejects non-loopback names. The page is served from
+the binary and exposes a small JSON API — `/api/info`, `/api/system`, `/api/interfaces`, `/api/modules`,
 `/api/preflight`, `/api/results` and `/api/rpc` for the job allowlist. The GUI never shells out
 and never forwards an arbitrary method to the control plane.
 
 The security contract for the loopback API is the important part:
 
-- **Loopback bind and Host validation** — the listener is loopback-only, and
-  every request must carry a loopback `Host` (`127.0.0.1:PORT` or
+- **Loopback bind and Host validation** — the listener binds loopback by default
+  (remote binding requires `XTATE_GUI_ALLOW_REMOTE=1`), and every request must
+  carry a loopback `Host` (`127.0.0.1:PORT` or
   `localhost:PORT`); anything else is rejected, which blocks DNS-rebinding
   attacks.
 - **Per-run token** — `/api/*` requests must carry `X-Xtate-GUI-Token`, a

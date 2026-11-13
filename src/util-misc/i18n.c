@@ -47,9 +47,9 @@ static const I18nEntry i18n_catalog[] = {
     {"basic use examples of xtate:\n", "Xtate 基础用法示例：\n"},
     {"use TcpSyn ScanModule to scan web ports on 10.x.x.x at 10kpps.\n",
      "使用 TcpSyn 扫描模块以 10kpps 扫描 10.x.x.x 的 Web 端口。\n"},
-    {"use UdpProbe ScanModule to scan UDP 80 port with echo ProbeModule and "
+    {"use udp ScanModule to scan UDP 80 port with echo ProbeModule and "
      "also show info results.\n",
-     "使用 UdpProbe 扫描模块和 echo 探测模块扫描 UDP 80 端口，并显示 info "
+     "使用 udp 扫描模块和 echo 探测模块扫描 UDP 80 端口，并显示 info "
      "结果。\n"},
     {"use IcmpEcho ScanModule to do ping scan and record TTL.\n",
      "使用 IcmpEcho 扫描模块做 ping 扫描并记录 TTL。\n"},
@@ -57,9 +57,9 @@ static const I18nEntry i18n_catalog[] = {
      "ScanModule-specific param.\n",
      "使用 ZBanner 扫描模块和 http 探测模块抓取 HTTP "
      "banner，并传入扫描模块参数。\n"},
-    {"use SctpInit ScanModule to scan SCTP 38412(36412) port and show fail "
+    {"use SctpInit ScanModule to scan SCTP port 38412 and show fail "
      "results.\n",
-     "使用 SctpInit 扫描模块扫描 SCTP 38412(36412) 端口并显示 fail 结果。\n"},
+     "使用 SctpInit 扫描模块扫描 SCTP 38412 端口并显示 fail 结果。\n"},
     {"do ARP scan with LAN mode in local network.\n",
      "在本地网络中使用 LAN 模式做 ARP 扫描。\n"},
     {"do NDP NS scan with a link-local source IP in local network.\n",
@@ -83,7 +83,7 @@ static const I18nEntry i18n_catalog[] = {
      "以下是 Xtate "
      "全部参数的详细帮助。希望对你有所帮助；\n如有问题或建议，欢迎联系作者。"
      "\n"},
-    {"BASIC PARAMITERS", "基础参数"},
+    {"BASIC PARAMETERS", "基础参数"},
     {"TARGET SETTINGS", "目标设置"},
     {"INTERFACE ADJUSTMENT", "网卡调整"},
     {"OPERATION SELECTION", "操作选择"},
@@ -262,7 +262,7 @@ static const I18nParamEntry i18n_global_help[] = {
     {"wait", "所有发送线程结束后，继续接收和处理回包的秒数；默认 10 秒。调大可等待慢响应，但会延长进程退出时间。"},
     {"forever", "把 --wait 设为很大的值，用于持续接收/长期运行。"},
     {"shard", "用 x/y 把扫描空间分给多个实例：x 是当前实例编号（从 1 开始），y 是实例总数；例如 1/2 从索引 0 开始每隔一个发送，2/2 从索引 1 开始。仅默认 GenerateModule 实现该功能。"},
-    {"tx-thread-count", "设置发送线程数；默认 4。线程数不超过 CPU 内核时，每个线程会尝试绑定到独立内核。多个发送线程共享一个接收线程。"},
+    {"tx-thread-count", "设置发送线程数；默认 1。线程数不超过 CPU 内核时，每个线程会尝试绑定到独立内核。多个发送线程共享一个接收线程。"},
     {"rx-handler-count", "设置接收处理线程数；必须为 2 的幂，默认 1。回包按 (dst_IP,dst_Port,src_IP,src_Port) 分发到 handler；Lua 探针强制为 1。"},
     {"d", "按 -d/-dd/-ddd 提高日志级别：0 输出 OUT/HINT/ERROR/WARN；1 增加 INFO；2 增加 DEBUG；3 增加 DETAIL。"},
     {"interactive-mode", "启动交互式配置/扫描模式。需要支持控制字符的现代终端；会自动写 recover.conf，Linux 下完成扫描后可用该配置重启。"},
@@ -285,7 +285,7 @@ static const I18nParamEntry i18n_global_help[] = {
     {"exclude-asn-v6", "按 IPv6 ASN 排除目标；AS 信息来自 --ip2asn-v6 文件。"},
     {"adapter", "使用指定原始网卡接口（如 eth0、dna1）。未指定时选择第一个带默认网关的接口，或自动探测。"},
     {"source-ip", "设置发送报文的源 IP。可指定范围，但范围大小必须是 2 的幂（1/2/4/8/...）。IPv6 链路本地地址需要手动指定。"},
-    {"source-port", "设置发送报文的源端口或范围（范围大小必须是 2 的幂）。未指定时在 40000-60000 随机。建议用防火墙过滤这些端口，避免主机协议栈干扰回包。"},
+    {"source-port", "设置发送报文的源端口或范围（范围大小必须是 2 的幂）。未指定时在 40000-59999 随机。建议用防火墙过滤这些端口，避免主机协议栈干扰回包。"},
     {"source-mac", "设置发送报文的源 MAC；未指定时使用网卡绑定的第一个 MAC。"},
     {"router-ip", "设置 IPv4 路由器/网关 IP。"},
     {"router-mac", "设置发送报文的目标路由器 MAC；未指定时通过 ARP 获取网关 MAC。可用后缀分别设置 IPv4/IPv6 路由器 MAC。"},
@@ -483,8 +483,8 @@ static const I18nModuleParamEntry i18n_module_param_help[] = {
     {"record-all-len", "调试用途：记录所有非 SYN-ACK 段的 TCP payload 长度。"},
     {"port", "Yarrp 通过 'o:' 端口类型指定 TTL 范围，例如 -p o:1-32；该值表示 TTL 范围而不是传统目标端口。注意路径中间设备压力，合理设置范围。"},
     {"init-target-port", "设置 TTL=1 时的初始 UDP 目标端口；实际端口随 TTL 递增。默认 33434。注意初始端口 + TTL 不能超过 65535。"},
-    {"init-source-port", "设置 TTL=1 时的初始 UDP 源端口；实际源端口随 TTL 递减，用于判断响应归属。默认从 40000-60000 随机。注意初始端口 - TTL 不能下溢。"},
-    {"fixed-source-port", "为所有 Yarrp UDP 包使用固定源端口；默认源端口随 TTL 变化，初始值从 40000-60000 随机。"},
+    {"init-source-port", "设置 TTL=1 时的初始 UDP 源端口；实际源端口随 TTL 递减，用于判断响应归属。默认从 40000-59999 随机。注意初始端口 - TTL 不能下溢。"},
+    {"fixed-source-port", "为所有 Yarrp UDP 包使用固定源端口；默认源端口随 TTL 变化，初始值从 40000-59999 随机。"},
     {"no-record-status", "不输出解析出的 HTTP status code、reason 和 HTTP 版本。"},
     {"no-record-headers", "不输出解析出的 HTTP 响应头；原始响应仍可按其它参数记录。"},
     {"record-body", "记录解析出的 HTTP body（受 --max-body 限制）；未开启时只输出长度/头部等元数据。"},

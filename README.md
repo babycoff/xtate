@@ -11,7 +11,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-rc.6-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-rc.7-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -286,6 +286,7 @@ Writing your own is intentionally boring: each module is a struct plus one line 
 The README is the landing page. The manual lives in [`docs/`](docs/README.md):
 
 - [3.0 manual](docs/manual/README.md) — task-oriented install, GUI, CLI, modules, results and protocols
+- [Migration to 3.0](docs/migration-3.0.md) — breaking changes from 2.44.x, result paths, MCP shape and rollback
 - [Getting started](docs/getting-started.md) — build, permissions, first scan, firewall
 - [GUI console](docs/gui.md) — scan-first loopback console with preflight, live view and interfaces
 - [Targets and ports](docs/targets-and-ports.md) — IPv4/IPv6 input, files, ASN, excludes, sharding
@@ -417,8 +418,8 @@ pwsh -File .\scripts\clean-windows.ps1 -IncludeStage  # also remove %LOCALAPPDAT
 
 | Dependency | Unlocks | Switch |
 |:---|:---|:---|
-| OpenSSL ≥ 1.1.1 | `tls-state`, `jarm`, TLS-aware probes | `-DWITH_OPENSSL=OFF` |
-| PCRE2 (8-bit) | regex matching in `hello`, `http`, `recog`, `nmap` | `-DWITH_PCRE2=OFF` |
+| OpenSSL ≥ 1.1.1 | TLS/stateful probes such as `tls-state`, `jarm`, `ssh-kex`; some QUIC builds | `-DWITH_OPENSSL=OFF` |
+| PCRE2 (8-bit) | regex matching across `hello`, `http`, `recog`, `nmap` and several protocol probes | `-DWITH_PCRE2=OFF` |
 | LibXml2 | Recog XML fingerprint files | `-DWITH_LIBXML2=OFF` |
 | libbson / libmongoc | BSON and MongoDB output | `-DWITH_BSON=OFF`, `-DWITH_MONGOC=OFF` |
 | zstd | chunked result compression (`--result-compress=zstd`) | `-DWITH_ZSTD=OFF` |
@@ -503,10 +504,10 @@ xtate --mcp --control-connect=/tmp/xtate-ctl.sock
 The tools report protocol capabilities (`capabilities`), list modules
 (`list_modules`, `describe_probe`), enumerate capture interfaces (`iface.list`),
 run a packet-free preflight (`preflight`), explain target routes
-(`explain_target`), validate a closed scan request (`validate_config`), start a
-managed job (`start_scan`), and query status/manifests (`job_status`,
-`job_result_manifest`). Bounded result pages are available through
-`job.records`; `start_scan` requires `authorized: true`. The server never executes
+(`explain_target`, `check`), validate a closed scan request (`validate_config`),
+start a managed job (`start_scan`), and list/query/cancel jobs (`job_list`,
+`job_status`, `job_cancel`, `job_result_manifest`). Bounded result pages are
+available through `job.records`; `start_scan` requires `authorized: true`. The server never executes
 a shell command. Install the Agent Skill from
 [`skills/xtate/`](skills/xtate/SKILL.md); see [Agent Skill](docs/agent-skill.md),
 [MCP server](docs/mcp-server.md), [control plane](docs/control-plane.md),

@@ -11,7 +11,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-rc.6-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-rc.7-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -234,7 +234,7 @@ sudo ./bin/xtate -ip 10.0.0.0/24 -p s:38412 -scan sctp-init -show info
 
 下面的数量基于启用全部可选依赖的完整构建；缺少对应库的模块会直接消失。
 
-### 扫描模块（11）
+### 扫描模块（Windows 11；Linux + ngtcp2/GnuTLS 为 12）
 
 | 模块 | 探测 | 作用 |
 |:---|:---:|:---|
@@ -249,14 +249,17 @@ sudo ./bin/xtate -ip 10.0.0.0/24 -p s:38412 -scan sctp-init -show info
 | `ndp-ns` | — | IPv6 NDP 邻居请求。 |
 | `yarrp-echo` | — | 用 ICMP echo 做无状态拓扑探测。 |
 | `yarrp-udp` | — | 用 UDP + ICMP 错误包做无状态拓扑探测。 |
+| `quic-state` | STATE | 仅 Linux：QUIC v1 握手与证书探测，需要 ngtcp2 + GnuTLS。 |
 
-### 探测模块（27）
+### 探测模块（Windows 59；Linux 含 `http3-state` 为 60）
 
-- **通用：** `http`（+ 状态）、`hello`（+ UDP/状态）、`tls-hello`、`tls-state`、`dns`、`snmp`、`echo`、`ssh`、`jarm`、`h2c`、`h2`。
-- **指纹识别：** `recog`（+ UDP/状态，Recog XML）、`nmap`（+ UDP，nmap-service-probes）。
-- **可脚本化：** `lua-tcp`、`lua-udp`——丢一个 Lua 脚本进去，你就有了一个探测。
-- **基础件：** `get-state`、`close-state`、`null`。
-- **开发示例：** `slot-test`、`slot-test-udp`——两个 `ProbeSlot_Always` 示例，可直接当模板阅读。
+- **通用（26，含可选 `http3-state`）：** `http`（+ 状态）、`hello`（+ UDP/状态）、`tls-hello`、`tls-state`、`dns`、`snmp`、`echo`、`ssh`、`ssh-kex`、`jarm`、`h2c`、`h2`、`quic`、`redis`、`memcached`、`ntp`、`mqtt`、`socks5`、`telnet`、`doh`、`doh-h2`、`dot`，以及依赖 `quic-state` 的 `http3-state`。
+- **批量 B 协议（16）：** `mysql`（+ 状态）、`postgres`（+ 状态）、`mongodb`（+ 状态）、`smtp`（+ 状态）、`imap`（+ 状态）、`pop3`（+ 状态）、`ftp`（+ 状态）、`managesieve`（+ 状态）。
+- **批量 C 第一批（6）：** `ipp`（+ 状态）、`amqp`（+ 状态）、`pptp`（+ 状态）。
+- **指纹识别（5）：** `recog`（+ UDP/状态，Recog XML）、`nmap`（+ UDP，nmap-service-probes）。
+- **可脚本化（2）：** `lua-tcp`、`lua-udp`——丢一个 Lua 脚本进去，你就有了一个探测。
+- **开发示例（2）：** `slot-test`、`slot-test-udp`——两个 `ProbeSlot_Always` 示例，可直接当模板阅读。
+- **基础件（3）：** `null`、`get-state`、`close-state`。
 
 ### 输出与生成模块
 
@@ -270,6 +273,7 @@ sudo ./bin/xtate -ip 10.0.0.0/24 -p s:38412 -scan sctp-init -show info
 README 是落地页，手册在 [`docs/`](docs/zh-CN/README.md) 目录下：
 
 - [3.0 手册](docs/zh-CN/manual/README.md)——按任务组织的安装、GUI、CLI、模块、结果与协议
+- [迁移到 3.0](docs/zh-CN/migration-3.0.md)——2.44.x 的升级影响、结果路径、MCP 形状与回滚
 - [快速上手](docs/zh-CN/getting-started.md)——构建、权限、首次扫描、防火墙
 - [GUI 控制台](docs/zh-CN/gui.md)——扫描优先的环回控制台，含预检、实时视图与网卡
 - [目标与端口](docs/zh-CN/targets-and-ports.md)——IPv4/IPv6 输入、文件、ASN、排除、分片

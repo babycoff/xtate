@@ -22,7 +22,7 @@ Skill 位于仓库的 [`skills/xtate/`](../../skills/xtate/SKILL.md)。它只提
 → list_modules / describe_probe
 → explain_target 与 check（多路由时拆分）
 → validate_config
-→ start_scan，带 authorized:true 和专用 result_path
+→ start_scan，使用扁平字段和 authorized:true；result_path 可选
 → 轮询 job_status
 → job_result_manifest，按 id 顺序读取分片
 ```
@@ -90,8 +90,9 @@ skill。保持 `skills/xtate/` 中的示例与 [MCP server 指南](./mcp-server.
 [scan request schema](../../schemas/scan-request.schema.json) 一致。
 
 修改 skill 前，先在一个有边界的扫描场景上跑无 skill 基线并记录失败；修改后用同一
-场景验证 agent 使用 `target`（单数）、嵌套 `arguments`、`timeout_sec`、显式
-`result_path`，并明确确认范围。
+场景验证 agent 使用 `target`（单数）、扁平的 `start_scan` 字段（不要嵌套
+`arguments`）、`timeout_sec`，明确确认范围；提供 `result_path` 时使用专用路径，
+否则使用托管的运行目录。
 
 ## 相关
 

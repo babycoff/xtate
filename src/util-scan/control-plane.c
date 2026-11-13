@@ -462,6 +462,7 @@ static void read_log_tail(const char *path, char *out, size_t cap) {
 
 static void handle(JobManager *m, const char *line, ControlResponse *out) {
     char id[32] = "null";
+    char method[64];
     const char *p = strstr(line, "\"id\":");
     if (p) {
         p += 5; while (*p == ' ') p++;
@@ -475,11 +476,15 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
         send_json(out, id, NULL, "UNAUTHORIZED", "invalid or missing token");
         return;
     }
-    if (strstr(line, "\"ping\"")) {
+    if (!field_str(line, "method", method, sizeof(method))) {
+        send_json(out, id, NULL, "INVALID_ARGUMENT", "missing method");
+        return;
+    }
+    if (strcmp(method, "ping") == 0) {
         send_json(out, id, "{\"pong\":true}", NULL, NULL);
         return;
     }
-    if (strstr(line, "\"job.start\"")) {
+    if (strcmp(method, "job.start") == 0) {
         char req[2048], res[2048], params[16384];
         int64_t tmo = 0;
         if (field_int_checked(line, "timeout_sec", &tmo)) {
@@ -610,7 +615,7 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
         send_json(out, id, r, NULL, NULL);
         return;
     }
-    if (strstr(line, "\"job.list\"")) {
+    if (strcmp(method, "job.list") == 0) {
         int64_t offset = field_int(line, "offset", 0);
         int64_t limit  = field_int(line, "limit", 100);
         if (offset < 0) offset = 0;
@@ -646,6 +651,13 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
         send_json(out, id, buf, NULL, NULL);
         return;
     }
+    if (strcmp(method, "job.status") != 0 &&
+        strcmp(method, "job.cancel") != 0 &&
+        strcmp(method, "job.results") != 0 &&
+        strcmp(method, "job.result_manifest") != 0) {
+        send_json(out, id, NULL, "UNKNOWN_METHOD", "unknown control method");
+        return;
+    }
     const char *jid = strstr(line, "\"job_id\":");
     if (!jid) { send_json(out, id, NULL, "INVALID_ARGUMENT", "missing job_id"); return; }
     jid += 9; while (*jid == ' ') jid++;
@@ -658,14 +670,14 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
     if (!j) { job_manager_unlock(m); send_json(out, id, NULL, "JOB_NOT_FOUND", "unknown job"); return; }
     job_poll(j);
     finalize_job(j);
-    if (strstr(line, "\"job.cancel\"")) {
+    if (strcmp(method, "job.cancel") == 0) {
         bool ok = job_cancel(j);
         job_manager_unlock(m);
         send_json(out, id, ok ? "{\"cancelled\":true}" : "{\"cancelled\":false}", NULL, NULL);
         return;
     }
-    if (strstr(line, "\"job.results\"") ||
-        strstr(line, "\"job.result_manifest\"")) {
+    if (strcmp(method, "job.results") == 0 ||
+        strcmp(method, "job.result_manifest") == 0) {
         char *path = json_encode_string(job_result_path(j) ? job_result_path(j) : "");
         char manifest_path[4200];
         snprintf(manifest_path, sizeof(manifest_path), "%s.manifest.json",
@@ -746,6 +758,13 @@ int control_plane_serve(const char *endpoint) {
     for (;;) {
         int c = accept(fd, NULL, NULL);
         if (c < 0) break;
+#ifndef _WIN32
+        {
+            struct timeval tv = {30, 0};
+            setsockopt(c, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+            setsockopt(c, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+        }
+#endif
         FILE *in = fdopen(c, "r");
         if (!in) { close(c); continue; }
         char line[65536];

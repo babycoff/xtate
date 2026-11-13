@@ -25,7 +25,7 @@ confirm authorization and exact scope
 → list_modules / describe_probe
 → explain_target and check (split multi-route sets)
 → validate_config
-→ start_scan with authorized:true and a dedicated result_path
+→ start_scan with flat fields and authorized:true; result_path is optional
 → poll job_status
 → job_result_manifest, then read chunks in id order
 ```
@@ -103,8 +103,9 @@ the [MCP server guide](./mcp-server.md) and the
 
 Before changing the skill, run a no-skill baseline on a scoped scan scenario and
 record the failure. After changing it, run the same scenario and check that the
-agent uses `target` (singular), nested `arguments`, `timeout_sec`, an explicit
-`result_path`, and an explicit scope confirmation.
+agent uses `target` (singular), flat `start_scan` fields (no nested `arguments`),
+`timeout_sec`, an explicit scope confirmation, and a dedicated `result_path` when
+one is supplied (otherwise the managed run directory is used).
 
 ## Related
 

@@ -59,7 +59,7 @@ Translated so far:
 - welcome/description/author/GitHub/contact chrome;
 - usage headings and the common example explanations;
 - global help section headings;
-- **all 120 global parameter descriptions**;
+- **all 144 global parameter descriptions**;
 - **all module parameter descriptions** (keyed by parameter name, shared across
   modules where the meaning is the same);
 - **all module descriptions and short descriptions** (concise summaries keyed

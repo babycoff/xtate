@@ -55,6 +55,21 @@ jobs:
           XTATE_BIN=./bin/xtate.exe bash tests/target/test.sh
           XTATE_BIN=./bin/xtate.exe bash tests/i18n/test.sh
 
+      - name: MCP, Agent Skill and version contracts
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check jsonschema
+          $env:XTATE_BIN = (Resolve-Path .\bin\xtate.exe).Path
+          $env:XTATE_STATE_DIR = Join-Path $env:RUNNER_TEMP 'xtate-state'
+          $env:XTATE_MCP_DOCS_DIR = (Get-Location).Path
+          New-Item -ItemType Directory -Force -Path $env:XTATE_STATE_DIR | Out-Null
+          python tests/release/test_version_consistency.py --skip-docs
+          python tests/mcp/test_mcp_contract.py
+          python tests/skill/test_skill_contract.py
+          python tests/schema/test_scan_request_runtime.py
+          python tests/schema/validate_schemas.py
+          python tests/schema/validate_modules.py
+
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:

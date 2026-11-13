@@ -1,6 +1,6 @@
 # Browser GUI
 
-Xtate ships a loopback-only browser console for the control plane. It is a
+Xtate ships a browser console that binds loopback by default. It is a
 client, like MCP and the TUI: it starts authorized scans, observes them live,
 cancels work and opens results, but the control plane still owns workers,
 timeouts, result files and the actual scan process.

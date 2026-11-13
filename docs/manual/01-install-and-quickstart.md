@@ -116,7 +116,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 What you should see:
 
 - One result line per host/port on **stdout**, for example
-  `[+] host: 192.168.1.10 port: 80 "open" because "syn-ack"`.
+  `[+] host: 192.168.1.10 port: 80 in tcp is "open" because "syn-ack"`.
 - Only `success`-level results by default. Add `-show failed` to see closed
   ports, `-show info` for informational records, or `-show all` for everything.
 - A live status bar on **stderr**, so `> results.txt` keeps the file clean.
@@ -126,7 +126,9 @@ What you should see:
 
 Ports are required for port-scoped scans (`tcp-syn`, `zbanner`, `tcp-state`,
 `udp`, `sctp-init`, `yarrp-udp`). Without `-p`, Xtate warns and substitutes a
-fake `o:0` endpoint, which sends nothing.
+fake `o:0` endpoint. Most engines ignore it, but YARRP topology scans use the
+port field as a TTL; for those, `o:0` still builds a packet with TTL 0 — pass a
+real TTL instead.
 
 ### Check the route before scanning
 
@@ -178,7 +180,8 @@ sudo ./bin/xtate --gui
 The process prints the listening URL, the control endpoint and a per-session
 token. It does **not** launch a browser; open the printed address yourself. The
 default address is `http://127.0.0.1:8787/`; `--gui-listen=127.0.0.1:0` picks a
-free port. Only loopback addresses are accepted.
+free port. Loopback is the default; a non-loopback bind requires the explicit
+`XTATE_GUI_ALLOW_REMOTE=1` container opt-in.
 
 In the browser:
 

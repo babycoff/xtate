@@ -98,58 +98,91 @@ static unsigned _display_width(uint32_t cp) {
     return 1;
 }
 
+static void _emit_line(const char *line, size_t len, unsigned indent,
+                       int newline) {
+    while (len > 0 && line[len - 1] == ' ')
+        len--;
+    if (len > 0) {
+        printf("%*s", indent, "");
+        i18n_write(line, len);
+    }
+    if (newline)
+        putchar('\n');
+}
+
+/*
+ * Keep one output line in a buffer so an overlong line can break at the last
+ * space rather than in the middle of "-control-connect" or "\x01". The buffer
+ * is intentionally stack-allocated: help lines are short, and a larger token
+ * is flushed as a long word instead of being truncated.
+ */
 static void _xprint_impl(const char *text, unsigned indent, unsigned count,
                          int trim_leading_spaces) {
     size_t len = strlen(text);
     if (len == 0)
         return;
-    if (count == 0)
-        return;
     if (count <= indent)
         return;
 
-    unsigned c = 0;
+    char     line[8192];
+    size_t   line_len = 0;
+    unsigned line_width = 0;
+    size_t   last_space = (size_t)-1;
     size_t   i = 0;
+
     while (i < len) {
         size_t   advance = 1;
         uint32_t cp      = 0;
         _utf8_decode((const unsigned char *)text + i, len - i, &advance, &cp);
 
         if (cp == '\n') {
-            printf("\n%*s", indent, "");
-            c = indent;
+            _emit_line(line, line_len, indent, 1);
+            line_len = 0;
+            line_width = 0;
+            last_space = (size_t)-1;
             i += advance;
             continue;
         }
 
-        if (c == 0) {
-            printf("%*s", indent, "");
-            c = indent;
-        }
-
-        if (trim_leading_spaces && c == indent && cp == ' ') {
+        if (trim_leading_spaces && line_len == 0 && cp == ' ') {
             i += advance;
             continue;
         }
 
         unsigned width = _display_width(cp);
-        if (width > 0 && c > indent && c + width > count &&
+        if (width > 0 && line_len > 0 && line_width + width > count &&
             !_no_break_before(cp)) {
-            printf("\n");
-            c = 0;
-            /* Let the same character start the next indented line. */
-            continue;
+            if (last_space != (size_t)-1) {
+                size_t remainder = line_len - last_space - 1;
+                _emit_line(line, last_space, indent, 1);
+                memmove(line, line + last_space + 1, remainder);
+                line_len = remainder;
+                line_width = 0;
+                last_space = (size_t)-1;
+            } else {
+                _emit_line(line, line_len, indent, 1);
+                line_len = 0;
+                line_width = 0;
+            }
         }
 
-        i18n_write(text + i, advance);
-        c += width;
+        if (line_len + advance > sizeof(line)) {
+            _emit_line(line, line_len, indent, 1);
+            line_len = 0;
+            line_width = 0;
+            last_space = (size_t)-1;
+        }
+
+        if (cp == ' ')
+            last_space = line_len;
+        memcpy(line + line_len, text + i, advance);
+        line_len += advance;
+        line_width += width;
         i += advance;
-
-        if (c >= count) {
-            printf("\n");
-            c = 0;
-        }
     }
+
+    if (line_len > 0 || line_width > 0)
+        _emit_line(line, line_len, indent, line_width >= count);
 }
 
 void xprint(const char *text, unsigned indent, unsigned count) {

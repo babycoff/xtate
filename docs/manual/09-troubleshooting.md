@@ -115,10 +115,12 @@ Two startup messages are easy to miss:
 - `target IP address list empty.` — no targets were parsed. Check the target
   syntax, the `-ip` value, and any file/list expansion.
 - a warning that no ports were given, followed by a fake `o:0` endpoint. A TCP
-  scan with no `-p` quietly probes nothing. Always pass a port set.
+  scan with no `-p` quietly probes nothing; YARRP topology scans treat the port
+  field as TTL, so `o:0` still sends a TTL-0 packet.
 
 Ports also carry protocol prefixes: `U:` for UDP, `S:` for SCTP, `O:` for
-non-port slots. A UDP scan pointed at `443` (without `U:`) is a TCP scan.
+non-port slots. A UDP scan pointed at `443` (without `U:`) matches no ports and
+sends nothing for that port.
 
 ## 4. Interface and source address
 

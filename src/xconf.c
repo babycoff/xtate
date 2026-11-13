@@ -847,6 +847,11 @@ static ConfRes SET_explain_target(void *conf, const char *name,
                                   const char *value) {
     XConf *xconf = (XConf *)conf;
     UNUSEDPARM(name);
+    if (xconf->echo) {
+        if (xconf->diag_targets && xconf->diag_targets[0])
+            fprintf(xconf->echo, "explain-target = %s\n", xconf->diag_targets);
+        return 0;
+    }
     xconf->diag_targets = STRDUP(value);
     ipaddress ip = target_parse_ip(value);
     if (ip.version == 4 || ip.version == 6) xconf->diag_target = ip;
@@ -896,6 +901,12 @@ static ConfRes SET_result_chunk_size(void *conf, const char *name,
                                      const char *value) {
     XConf *xconf = (XConf *)conf;
     UNUSEDPARM(name);
+    if (xconf->echo) {
+        if (xconf->result_chunk_size)
+            fprintf(xconf->echo, "result-chunk-size = %llu\n",
+                    (unsigned long long)xconf->result_chunk_size);
+        return 0;
+    }
     xconf->result_chunk_size = conf_parse_size(value);
     return Conf_OK;
 }
@@ -903,6 +914,12 @@ static ConfRes SET_result_quota(void *conf, const char *name,
                                 const char *value) {
     XConf *xconf = (XConf *)conf;
     UNUSEDPARM(name);
+    if (xconf->echo) {
+        if (xconf->result_quota)
+            fprintf(xconf->echo, "result-quota = %llu\n",
+                    (unsigned long long)xconf->result_quota);
+        return 0;
+    }
     xconf->result_quota = conf_parse_size(value);
     return Conf_OK;
 }
@@ -910,6 +927,12 @@ static ConfRes SET_result_compress(void *conf, const char *name,
                                    const char *value) {
     XConf *xconf = (XConf *)conf;
     UNUSEDPARM(name);
+    if (xconf->echo) {
+        if (xconf->result_compress && xconf->result_compress[0])
+            fprintf(xconf->echo, "result-compress = %s\n",
+                    xconf->result_compress);
+        return 0;
+    }
     if (!value) return Conf_ERR;
     xconf->result_compress = STRDUP(value);
     return Conf_OK;
@@ -3003,7 +3026,7 @@ static ConfRes SET_send_queue(void *conf, const char *name, const char *value) {
 }
 
 ConfParam config_parameters[] = {
-    {"BASIC PARAMITERS", SET_nothing, 0, {0}, NULL},
+    {"BASIC PARAMETERS", SET_nothing, 0, {0}, NULL},
 
     {"seed",
      SET_seed,
@@ -3066,8 +3089,8 @@ ConfParam config_parameters[] = {
      " has multiple transmit threads but only one receive thread. Every "
      "thread will be lock on a CPU kernel if the number of all threads is no"
      " more than kernel's.\n"
-     "NOTE: Default valude is 4. However, 4 transmit threads could got a stable"
-     " and high send rate in most conditions.",
+     "NOTE: Default value is 1. More transmit threads can improve the send "
+     "rate on some systems, but also increase CPU usage.",
      "Specify the number of transmit threads."},
     {"rx-handler-count",
      SET_rx_handler_count,
@@ -3187,7 +3210,7 @@ ConfParam config_parameters[] = {
     {"exclude",
      SET_exclude_ip,
      Type_ARG,
-     {"exclude-range", "exlude-ranges", "exclude-ip", 0},
+     {"exclude-range", "exclude-ranges", "exlude-ranges", "exclude-ip", 0},
      "Blacklist IP addresses or ranges, preventing it from being scanned. "
      "This overrides any target specification, guaranteeing that this "
      "address/range won't be scanned. This has the same format as the normal "
@@ -3269,7 +3292,7 @@ ConfParam config_parameters[] = {
      Type_ARG,
      {"src-port", 0},
      "Send packets using this port number as the source. If not specified, a"
-     " random port will be chosen in the range 40000 through 60000. This port"
+     " random port will be chosen in the range 40000 through 59999. This port"
      " should be filtered by the host firewall (like iptables) to prevent the"
      " host network stack from interfering with arriving packets. Instead of "
      "a single port, a range can be specified, like 40000-40003.\n"
@@ -3298,7 +3321,7 @@ ConfParam config_parameters[] = {
      "and used.\n"
      "NOTE: We could specify different router MAC address for IPv4 and "
      "IPv6 by adding a suffix to the flag.",
-     "Set gateway router's MAC addressfor IPv4 and/or IPv6."},
+     "Set gateway router's MAC address for IPv4 and/or IPv6."},
     {"adapter-vlan",
      SET_adapter_vlan,
      Type_ARG,
@@ -3657,9 +3680,9 @@ ConfParam config_parameters[] = {
      Type_ARG,
      {"scan", "scanner", 0},
      "Specifies a ScanModule to perform scanning. Use --list-scan to get "
-     "informations of all ScanModules.\nNOTE: A ScanModule must be used in "
-     "every time we scan. TcpSynModule will be default if we did not "
-     "specify.",
+     "informations of all ScanModules.\nNOTE: A ScanModule must be specified "
+     "for every scan. Without it, " XTATE_NAME " prints usage instead of "
+     "starting a scan.",
      "Specifies a ScanModule to perform scanning."},
     {"list-scan-modules",
      SET_list_scan_modules,
@@ -3889,10 +3912,10 @@ ConfParam config_parameters[] = {
      SET_tcp_mss,
      Type_ARG,
      {0},
-     "Specifies whether or what value of TCP MMS(Maximum Segment Size) option"
+     "Specifies whether or what value of TCP MSS (Maximum Segment Size) option"
      " should TCP SYN packets use. e.g. --tcp-mss false, --tcp-mss 64000. The "
-     "default MMS value is 1460.",
-     "Specifies whether or what value of MMS option should SYN packets use."},
+     "default MSS value is 1460.",
+     "Specifies whether or what value of MSS option should SYN packets use."},
     {"tcp-sackok",
      SET_tcp_sackok,
      Type_FLAG,
@@ -3948,8 +3971,8 @@ ConfParam config_parameters[] = {
      {"max-pkt-len", 0},
      XTATE_NAME_TITLE_CASE
      " won't handle a received packet that is more than "
-     "max-packet-len. Default is 1514."
-     "NOTE: Be cared to the interaction with --tcp-win and --snaplen.",
+     "max-packet-len. Default is 1514. NOTE: Be careful about the interaction "
+     "with --tcp-win and --snaplen.",
      "Do not handle a received packet whose len is more than the specified "
      "size."},
 
@@ -3984,7 +4007,7 @@ ConfParam config_parameters[] = {
      SET_sendmmsg_retries,
      Type_ARG,
      {"sendmmsg-retry", 0},
-     "Max number of times to try to do sendmmsg syscall if failed. Default"
+     "Max number of times to try to do sendmmsg syscall if failed. Default "
      "is 64.",
      "Max number of times to try to do sendmmsg syscall if failed."},
     {"send-queue",
@@ -4010,7 +4033,7 @@ ConfParam config_parameters[] = {
      Type_FLAG,
      {0},
      "Force the use of the PF_RING driver. The program will exit if PF_RING "
-     "DNA drvers are not available.\n"
+     "DNA drivers are not available.\n"
      "NOTE: " XTATE_NAME_TITLE_CASE
      " will try to use PF_RING automatically in default.",
      "Force the use of the PF_RING driver."},
@@ -4031,8 +4054,8 @@ ConfParam config_parameters[] = {
      SET_read_conf,
      Type_ARG,
      {"conf-file", "conf", "resume", 0},
-     "Read configurations from specified file. If not specified, then will read"
-     " from /etc/xtate/xtate.conf by default. We could specifies a "
+     "Read configurations from specified file. On Unix-like systems, if not "
+     "specified, /etc/xtate/xtate.conf is read when present. We could specify a "
      "configuration file generated by " XTATE_NAME_TITLE_CASE
      " automatically after break by user to resume an unfinished scanning.",
      "Read configurations from specified file."},
@@ -4067,7 +4090,7 @@ ConfParam config_parameters[] = {
      Type_FLAG,
      {"no-ansi", "no-color", 0},
      "Print result and status to the screen without ANSI controlling(escape) "
-     "characters. Some old terminal does not support those charactors.\n"
+     "characters. Some old terminals do not support those characters.\n"
      "NOTE: displaying maybe not that good if no ansi escape chars.",
      "Print result and status to screen without controlling chars."},
     {"no-dedup",
@@ -4384,7 +4407,7 @@ void xconf_print_usage() {
     printf("\n");
     printf("  " XTATE_NAME
            " -p u:80 -ip 10.0.0.0/8 -scan udp -probe echo -show info\n");
-    xprint(i18n_tr("use UdpProbe ScanModule to scan UDP 80 port with echo "
+    xprint(i18n_tr("use udp ScanModule to scan UDP 80 port with echo "
                    "ProbeModule and also show info results.\n"),
            6, 80);
     printf("\n");
@@ -4401,7 +4424,7 @@ void xconf_print_usage() {
     printf("\n");
     printf("  " XTATE_NAME
            " -p s:38412 -ip 10.0.0.0/8 -scan sctp-init -show fail\n");
-    xprint(i18n_tr("use SctpInit ScanModule to scan SCTP 38412(36412) port "
+    xprint(i18n_tr("use SctpInit ScanModule to scan SCTP port 38412 "
                    "and show fail results.\n"),
            6, 80);
     printf("\n");

@@ -106,9 +106,17 @@ def main():
             print("GUI port did not become ready", file=sys.stderr)
             return 1
 
-        # Page is served without the API token, but contains the injected
-        # session token for its own same-origin fetch calls.
-        status, page = http_json(port, "/")
+        # A bare page request is rejected; the printed bootstrap URL sets a
+        # session cookie, after which the page is served.
+        status, _ = http_json(port, "/")
+        if status != 403:
+            print("GUI page without token was not rejected:", status, file=sys.stderr)
+            return 1
+        status, _ = http_json(port, "/?token=" + token)
+        if status != 303:
+            print("GUI bootstrap did not redirect:", status, file=sys.stderr)
+            return 1
+        status, page = http_json(port, "/", token)
         text = page.decode("utf-8", "replace")
         if status != 200 or "Xtate control plane" not in text:
             print("GUI page failed:", status, text[:200], file=sys.stderr)
@@ -319,7 +327,6 @@ def main():
             {"id": 4, "method": "job.start",
              "params": {"scan": "tcp-syn", "targets": ["127.0.0.1"],
                         "ports": [1], "dry_run": True, "authorized": True},
-             "result_path": "gui-test-result.ndjson",
              "timeout_sec": 20, "compression": "none", "index": False})
         if status != 200:
             print("GUI job.start failed:", status, body[:300], file=sys.stderr)
@@ -331,14 +338,20 @@ def main():
         job_id = started["result"]["job_id"]
 
         state = ""
+        job_result_path = ""
         for _ in range(50):
             status, body = http_json(
                 port, "/api/rpc", token,
                 {"id": 5, "method": "job.status", "job_id": job_id})
-            state = json.loads(body.decode())["result"]["state"]
+            st = json.loads(body.decode())["result"]
+            state = st["state"]
+            job_result_path = st.get("result") or job_result_path
             if state in ("completed", "failed", "cancelled", "timed_out"):
                 break
             time.sleep(0.1)
+        if not job_result_path:
+            print("GUI job returned no result path", file=sys.stderr)
+            return 1
         if state not in ("completed", "failed"):
             print("GUI job did not settle:", state, file=sys.stderr)
             return 1
@@ -383,7 +396,7 @@ def main():
             {"host": "127.0.0.1", "port": 443, "classification": "open"},
             {"host": "127.0.0.1", "port": 8080, "classification": "closed"},
         ]
-        with open("gui-test-result.ndjson", "w", encoding="utf-8") as out:
+        with open(job_result_path, "w", encoding="utf-8") as out:
             out.write(json.dumps(records[0]) + "\n")
             out.write("{not-json}\n")
             out.write(json.dumps(records[1]) + "\n")

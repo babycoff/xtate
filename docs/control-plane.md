@@ -90,8 +90,8 @@ result path; clients read the manifest and the chunk files from the filesystem.
 - Compression is optional zstd; the default is none.
 - `job.results` currently returns manifest metadata rather than byte ranges, so
   clients must not expect `offset`/`limit` paging over result content.
-- `quota_bytes` is checked after completion and reported as a warning; it is not
-  enforced during the scan.
+- `quota_bytes` is enforced during the scan: when the result file reaches the
+  quota, the scan stops and the job reports a quota error.
 - Completed-job TTL and maximum retained jobs are enforced by the manager.
 - Heartbeat is updated by the worker and read by the manager; clients see
   `heartbeat_age_ms` and `heartbeat`.
@@ -115,8 +115,9 @@ automatically) and rebuild. Compression is opt-in per job; the default is
 
 `job.start` accepts `chunk_size`, `compression`, `index` and `quota_bytes`.
 Completed jobs are finalized on the next control request: chunks and manifest
-are written automatically. `quota_bytes` is checked after completion and
-reported as a warning; enforcement during scanning is future work.
+are written automatically. `quota_bytes` is enforced while the scan runs; when
+the result file reaches the quota, the scan stops and the job reports a quota
+error.
 
 ## Batch explain
 

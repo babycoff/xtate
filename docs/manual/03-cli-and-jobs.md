@@ -58,7 +58,9 @@ includes. Target files and generators are covered in
 Ports accept `80`, `20-25`, `80,20-25`, `U:161`, `U:1024-1100` and
 `S:36412`. For port-scoped engines (`tcp-syn`, `zbanner`, `tcp-state`, `udp`,
 `sctp-init`, `yarrp-udp`) always pass `-p`: without it Xtate warns and
-substitutes a fake `o:0` endpoint, so no packets are sent.
+substitutes a fake `o:0` endpoint. Most engines ignore it; YARRP topology scans
+use the port field as a TTL, so `o:0` does build a TTL-0 packet — pass a real
+TTL for those scans.
 
 ## Scan and probe pairings
 
@@ -87,7 +89,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 Results stream to stdout, one line per reply:
 
 ```text
-[+] host: 192.168.1.10 port: 80 "open" because "syn-ack"
+[+] host: 192.168.1.10 port: 80 in tcp is "open" because "syn-ack"
 ```
 
 Only `success` results are shown by default; closed ports are `failed`:
@@ -291,7 +293,7 @@ Completed results become `<result>.<id>.ndjson` chunks plus
 `<result>.manifest.json` and an optional index; `job.result_manifest` returns
 the manifest path. Compression is `none` by default; `--result-compress=zstd`
 works when the build includes zstd (otherwise it falls back to uncompressed).
-`--result-quota` is checked after completion and reported as a warning; it does
+`--result-quota` is enforced while the scan runs; when the result file reaches the quota, the scan stops and the job reports a quota error; it does
 not stop a running scan. Completed-job retention and pruning are enforced by
 the job manager.
 

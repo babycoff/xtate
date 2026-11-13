@@ -116,6 +116,83 @@ jobs:
         run: |
           bash tests/interactive/tty.sh
 
+  integration:
+    name: Linux integration (MCP/Skill/GUI/control)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build and test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake ninja-build pkg-config \
+            libpcap-dev libssl-dev libpcre2-dev libxml2-dev \
+            libbson-dev libmongoc-dev python3 python3-jsonschema
+
+      - name: Build release binary
+        run: |
+          ./build.sh --compiler gcc --config release --generator ninja
+
+      - name: MCP, Agent Skill, GUI and control contracts
+        env:
+          XTATE_BIN: ./bin/xtate
+          XTATE_STATE_DIR: ${{ runner.temp }}/xtate-state
+          XTATE_MCP_DOCS_DIR: ${{ github.workspace }}
+        run: |
+          mkdir -p "$XTATE_STATE_DIR"
+          python3 tests/release/test_version_consistency.py --skip-docs
+          python3 tests/mcp/test_mcp_contract.py
+          python3 tests/skill/test_skill_contract.py
+          python3 tests/gui/test_gui.py
+          python3 tests/control/test_control.py
+          python3 tests/schema/test_scan_request_runtime.py
+          python3 tests/input/test_generate.py
+          python3 tests/schema/validate_schemas.py
+          python3 tests/schema/validate_modules.py
+
+  docker:
+    name: Ubuntu 24.04 full-feature Docker image
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: |
+          docker build -f docker/ubuntu24-build/Dockerfile -t xtate:ci .
+
+      - name: Capability and selftest gate
+        run: |
+          docker run --rm xtate:ci --selftest
+          docker run --rm xtate:ci --list-capabilities | tee /tmp/caps.json
+          python3 -c 'import json; caps=json.load(open("/tmp/caps.json")); assert all(caps[k] is True for k in ("raw_sockets","http3","quic_transport","zstd")), caps; assert caps["modules"]["scan"] == 12, caps'
+
+      - name: Host GUI and preflight smoke
+        run: |
+          docker run -d --name xtate-ci-gui \
+            -p 127.0.0.1:8787:8787 \
+            -e XTATE_GUI_ALLOW_REMOTE=1 \
+            -e XTATE_GUI_PUBLIC_URL=http://127.0.0.1:8787/ \
+            --cap-add=NET_RAW --cap-add=NET_ADMIN \
+            xtate:ci --gui --gui-listen=0.0.0.0:8787
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8787/ -o /tmp/page.html; then break; fi
+            sleep 1
+          done
+          test -s /tmp/page.html
+          TOKEN=$(docker logs xtate-ci-gui 2>&1 | sed -n 's/.*GUI session token: //p' | tail -1)
+          test -n "$TOKEN"
+          curl -fsS -H "X-Xtate-GUI-Token: $TOKEN" http://127.0.0.1:8787/api/system \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["capabilities"]["http3"] is True'
+          curl -fsS -X POST -H "X-Xtate-GUI-Token: $TOKEN" -H 'Content-Type: application/json' \
+            -d '{"scan":"tcp-syn","targets":["172.17.0.1"],"ports":[1],"rate":10,"timeout_sec":5,"authorized":true}' \
+            http://127.0.0.1:8787/api/preflight \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["ok"] is True, d'
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f xtate-ci-gui 2>/dev/null || true
+
   sanitizers:
     name: Linux clang ASan + UBSan
     runs-on: ubuntu-24.04
