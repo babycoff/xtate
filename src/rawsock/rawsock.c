@@ -336,7 +336,6 @@ void rawsock_list_adapters(void) {
                         strstr(desc, "Wi-Fi Direct") != NULL;
 
             unsigned ipv4 = 0;
-            ipv6address ipv6 = {0};
             macaddress_t mac = {{0}};
             unsigned gw = 0;
             bool has_gw = false;
@@ -345,7 +344,6 @@ void rawsock_list_adapters(void) {
              * adapter helpers; report their type without querying. */
             if (!loopback && !virt) {
                 ipv4 = rawsock_get_adapter_ip(name);
-                ipv6 = rawsock_get_adapter_ipv6(name);
                 unsigned char macbuf[6] = {0};
                 if (rawsock_get_adapter_mac(name, macbuf) == 0)
                     memcpy(mac.addr, macbuf, 6);

@@ -102,7 +102,6 @@ static unsigned imap_parse(DataPass *pass, ProbeState *state, OutConf *out,
         };
         char caps[768] = {0};
         const char *needle = "* CAPABILITY ";
-        const unsigned char *p = px;
         for (unsigned i = 0; i + 13 < sizeof_px; i++) {
             if (memcmp(px + i, needle, 13) == 0) {
                 unsigned j = i + 13;

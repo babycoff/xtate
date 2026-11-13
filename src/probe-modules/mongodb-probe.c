@@ -1,4 +1,5 @@
 #include "probe-modules.h"
+#include "../output-modules/output-modules.h"
 
 #include <stdio.h>
 #include <string.h>

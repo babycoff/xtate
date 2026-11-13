@@ -1,5 +1,6 @@
 #include "mcp-server.h"
 #include "control-client.h"
+#include "../version.h"
 #include "../util-out/module-json.h"
 #include "../crypto/crypto-json.h"
 #include "../scan-modules/scan-modules.h"
@@ -55,10 +56,6 @@ static bool json_str(const char *line, const char *key, char *out, size_t cap) {
     while (p[n] && p[n] != '"' && n + 1 < cap) { out[n] = p[n]; n++; }
     out[n] = 0;
     return true;
-}
-
-static void emit(const char *json) {
-    fputs(json, stdout); fputc('\n', stdout); fflush(stdout);
 }
 
 static void text_result(const char *id, const char *text, bool error) {
@@ -862,7 +859,7 @@ int mcp_server_run(const char *control_endpoint) {
             printf("{\"jsonrpc\":\"2.0\",\"id\":%s,\"result\":{"
                    "\"protocolVersion\":\"2024-11-05\","
                    "\"capabilities\":{\"tools\":{},\"resources\":{},\"prompts\":{}},"
-                   "\"serverInfo\":{\"name\":\"xtate\",\"title\":\"Xtate network scanner\",\"version\":\"2.42.0\"},"
+                   "\"serverInfo\":{\"name\":\"xtate\",\"title\":\"Xtate network scanner\",\"version\":\"" XTATE_VERSION "\"},"
                    "\"instructions\":%s}}\n", id, ins ? ins : "\"\"");
             free(ins); fflush(stdout);
         } else if (strcmp(method, "ping") == 0) {

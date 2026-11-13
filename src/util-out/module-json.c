@@ -42,7 +42,7 @@ static void jparams(ConfParam *p) {
         fputs(",\"description\":", g_out); jstr(p->help_text);
         fputs(",\"aliases\":[", g_out);
         for (int i = 0; i < 8 && p->alt_names[i]; i++) {
-            if (i) fputc(',', g_out); jstr(p->alt_names[i]);
+            if (i) { fputc(',', g_out); } jstr(p->alt_names[i]);
         }
         fputs("]}", g_out);
     }
@@ -57,7 +57,7 @@ void list_modules_json(void) {
     int first = 1;
     for (int i = 0; scan_modules_list[i]; i++) {
         Scanner *m = scan_modules_list[i];
-        if (!first) fputc(',', g_out); first = 0;
+        if (!first) { fputc(',', g_out); } first = 0;
         fputs("{\"name\":", g_out); jstr(m->name);
         fputs(",\"kind\":\"scan\",\"probe_type\":", g_out); jstr(ptype(m->required_probe_type));
         fputs(",\"short_description\":", g_out); jstr(m->short_desc);
@@ -67,7 +67,7 @@ void list_modules_json(void) {
     }
     for (int i = 0; probe_modules_list[i]; i++) {
         Probe *m = probe_modules_list[i];
-        if (!first) fputc(',', g_out); first = 0;
+        if (!first) { fputc(',', g_out); } first = 0;
         fputs("{\"name\":", g_out); jstr(m->name);
         fputs(",\"kind\":\"probe\",\"probe_type\":", g_out); jstr(ptype(m->type));
         fputs(",\"short_description\":", g_out); jstr(m->short_desc);
@@ -77,7 +77,7 @@ void list_modules_json(void) {
     }
     for (int i = 0; output_modules_list[i]; i++) {
         Output *m = output_modules_list[i];
-        if (!first) fputc(',', g_out); first = 0;
+        if (!first) { fputc(',', g_out); } first = 0;
         fputs("{\"name\":", g_out); jstr(m->name);
         fputs(",\"kind\":\"output\",\"short_description\":", g_out); jstr(m->short_desc);
         fputs(",\"description\":", g_out); jstr(m->desc);
@@ -86,7 +86,7 @@ void list_modules_json(void) {
     }
     for (int i = 0; generate_modules_list[i]; i++) {
         Generator *m = generate_modules_list[i];
-        if (!first) fputc(',', g_out); first = 0;
+        if (!first) { fputc(',', g_out); } first = 0;
         fputs("{\"name\":", g_out); jstr(m->name);
         fputs(",\"kind\":\"generate\",\"short_description\":", g_out); jstr(m->short_desc);
         fputs(",\"description\":", g_out); jstr(m->desc);

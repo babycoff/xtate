@@ -230,16 +230,14 @@ static void json_unescape_inplace(char *s) {
     *w = 0;
 }
 
-static FILE *open_write_utf8(const char *path) {
 #ifdef _WIN32
+static FILE *open_write_utf8(const char *path) {
     wchar_t wpath[2048];
     if (!path || MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath,
             (int)(sizeof(wpath) / sizeof(wpath[0]))) <= 0) return NULL;
     return _wfopen(wpath, L"wb");
-#else
-    return fopen(path, "wb");
-#endif
 }
+#endif
 
 static void jesc(const char *s, char *out, size_t cap) {
     size_t n = 0;

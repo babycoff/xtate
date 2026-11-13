@@ -954,22 +954,22 @@ static int run_job_cli(XConf *xconf, const char *exe) {
         argv[ac++] = xconf->nic.ifname;
     }
     argv[ac] = NULL;
-    char log[1024];
+    char log[1200];
     snprintf(log, sizeof(log), "%s.log", result);
     unsigned timeout = xconf->job_timeout;
     if (!timeout) timeout = scan_request_timeout(xconf->job_run_file);
     Job *job = job_start(m, argv, result, log, timeout);
+    if (!job) {
+        printf("{\"error\":{\"code\":\"JOB_LIMIT_REACHED\"}}\n");
+        job_manager_destroy(m);
+        return 1;
+    }
     job_set_stall_timeout(job, xconf->job_stall_timeout);
     char hbpath[1200];
     snprintf(hbpath, sizeof(hbpath), "%s.heartbeat", result);
     job_set_heartbeat(job, hbpath,
                       xconf->job_heartbeat_timeout ? xconf->job_heartbeat_timeout
                                                    : 30);
-    if (!job) {
-        printf("{\"error\":{\"code\":\"JOB_LIMIT_REACHED\"}}\n");
-        job_manager_destroy(m);
-        return 1;
-    }
     while (!job_is_terminal(job)) {
         job_poll(job);
         if (job_is_terminal(job)) break;

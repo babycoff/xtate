@@ -25,17 +25,6 @@
 #include <iphlpapi.h>
 #include "../stub/stub-pcap.h"
 
-static char *wstr_to_mb(const wchar_t *w, char *out, size_t out_size) {
-    if (!w || !out || !out_size)
-        return NULL;
-    int n = WideCharToMultiByte(CP_UTF8, 0, w, -1, out, (int)out_size, NULL,
-                                NULL);
-    if (n <= 0)
-        return NULL;
-    out[n - 1] = '\0';
-    return out;
-}
-
 static int pcap_name_for_guid(const char *guid, char *out, size_t out_size) {
     pcap_if_t *alldevs = NULL;
     char       errbuf[PCAP_ERRBUF_SIZE];
@@ -187,7 +176,7 @@ int rawsock_route_lookup(ipaddress target, RawRoute *out) {
                      NO_ERROR;
     if (have_best) {
         ifindex = best.InterfaceIndex;
-    } else if (GetBestInterfaceEx((const SOCKADDR *)&dst, &ifindex) != NO_ERROR) {
+    } else if (GetBestInterfaceEx((SOCKADDR *)&dst, &ifindex) != NO_ERROR) {
         return -1;
     }
 
@@ -205,7 +194,8 @@ int rawsock_route_lookup(ipaddress target, RawRoute *out) {
         for (PIP_ADAPTER_ADDRESSES cur = a; cur; cur = cur->Next) {
             if (cur->IfIndex != ifindex)
                 continue;
-            wstr_to_mb(cur->AdapterName, guid, sizeof(guid));
+            /* AdapterName is the adapter GUID as an ANSI string. */
+            safe_strcpy(guid, sizeof(guid), cur->AdapterName);
             break;
         }
     }

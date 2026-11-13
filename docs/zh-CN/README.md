@@ -2,11 +2,11 @@
 
 [English](../README.md) · **中文**
 
-本目录是 **Xtate v2.42.0** 的用户手册——一款面向互联网级测量的模块化全栈网络扫描器。
+本目录是 **Xtate v2.42.1** 的用户手册——一款面向互联网级测量的模块化全栈网络扫描器。
 
 项目 [README](../../README.zh-CN.md) 是落地页。如果你想上手使用 Xtate，而不是只扫一眼功能列表，就从这里开始。
 
-**发布说明：** [2.42.0](./release-notes/2.42.0.md)——托管 job、控制面与 MCP server。
+**发布说明：** [2.42.1](./release-notes/2.42.1.md)——Agent Skill、审计加固与 Windows UTF-8 路径。
 
 ## 从哪里开始
 
@@ -101,7 +101,7 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-本文档基于 v2.42.0 的代码树编写。如果你在更新的 commit 上发现内容有出入，请以二进制为准，也欢迎提 issue。
+本文档基于 v2.42.1 的代码树编写。如果你在更新的 commit 上发现内容有出入，请以二进制为准，也欢迎提 issue。
 
 ## 计划中
 

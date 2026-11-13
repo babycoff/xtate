@@ -2,6 +2,7 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 
 #ifndef NOT_FOUND_OPENSSL
 #include <openssl/err.h>

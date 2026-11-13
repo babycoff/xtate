@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import json, os, subprocess, sys, tempfile, time
 BIN = os.environ["XTATE_BIN"]; TOKEN = "mcp-test-token"
+# Linux loopback has no MAC address; TEST-NET-3 routes through the normal interface.
+SCAN_TARGET = "127.0.0.1" if os.name == "nt" else "203.0.113.1"
 ep = ("\\\\.\\pipe\\xtate-mcp-test-" + str(os.getpid())) if sys.platform == "win32" else os.path.join(tempfile.mkdtemp(), "ctl.sock")
 env = dict(os.environ, XTATE_CONTROL_TOKEN=TOKEN)
 ctlp = subprocess.Popen([BIN, "--control-plane=" + ep], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -14,6 +16,8 @@ def rpc(obj):
 try:
     init = rpc({"jsonrpc":"2.0","id":1,"method":"initialize"})["result"]
     assert init["serverInfo"]["name"] == "xtate"
+    vernoise = subprocess.check_output([BIN, "--version"], text=True, encoding="utf-8", errors="replace")
+    assert init["serverInfo"]["version"] in vernoise, (init["serverInfo"], vernoise)
     assert len(init["instructions"]) > 200
     assert "tools" in init["capabilities"]
     mp.stdin.write(json.dumps({"jsonrpc":"2.0","method":"notifications/initialized"})+"\n"); mp.stdin.flush()
@@ -45,10 +49,10 @@ try:
     exp = rpc({"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"explain_target","arguments":{"target":"198.18.0.48,8.8.8.8"}}})
     assert not exp["result"]["isError"]
     text = exp["result"]["content"][0]["text"]; assert '"route_groups"' in text and '"groups"' in text
-    bad = rpc({"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"start_scan","arguments":{"scan":"tcp-syn","targets":["127.0.0.1"]}}})
+    bad = rpc({"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"start_scan","arguments":{"scan":"tcp-syn","targets":[SCAN_TARGET]}}})
     assert bad["result"]["isError"]
     out = os.environ.get("XTATE_TEST_OUT", "mcp-test.ndjson")
-    started = rpc({"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"start_scan","arguments":{"scan":"tcp-syn","targets":["8.8.8.8"],"ports":[53],"result_path":out,"authorized":True}}})
+    started = rpc({"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"start_scan","arguments":{"scan":"tcp-syn","targets":[SCAN_TARGET],"ports":[1],"result_path":out,"authorized":True}}})
     assert not started["result"]["isError"], started
     job = json.loads(started["result"]["content"][0]["text"])["result"]["job_id"]
     time.sleep(4)
@@ -94,14 +98,14 @@ try:
     bw = rpc({"jsonrpc":"2.0","id":35,"method":"tools/call","params":{"name":"start_scan","arguments":{"scan":"tcp-syn","targets":["8.8.8.8"],"result_path":blocked,"authorized":True}}})
     assert bw["result"]["isError"]
     cj = rpc({"jsonrpc":"2.0","id":15,"method":"tools/call","params":{"name":"start_scan","arguments":{
-        "scan":"tcp-syn","targets":["127.0.0.1"],"ports":[1],
+        "scan":"tcp-syn","targets":[SCAN_TARGET],"ports":[1],
         "result_path":out,"authorized":True}}})
     cid = json.loads(cj["result"]["content"][0]["text"])["result"]["job_id"]
     cc = rpc({"jsonrpc":"2.0","id":16,"method":"tools/call","params":{"name":"job_cancel","arguments":{"job_id":cid}}})
     assert not cc["result"]["isError"]
     out2 = os.environ.get("XTATE_TEST_CHUNK", "mcp-chunk.ndjson")
     cs = rpc({"jsonrpc":"2.0","id":17,"method":"tools/call","params":{"name":"start_scan","arguments":{
-        "scan":"tcp-syn","targets":["8.8.8.8"],"ports":[53],
+        "scan":"tcp-syn","targets":[SCAN_TARGET],"ports":[1],
         "result_path":out2,"chunk_size":100,"index":True,"quota_bytes":100000,
         "authorized":True}}})
     assert not cs["result"]["isError"]
@@ -122,7 +126,7 @@ try:
     os.makedirs(udir, exist_ok=True)
     uout = os.path.join(udir, "scan file.ndjson")
     ur = rpc({"jsonrpc":"2.0","id":40,"method":"tools/call","params":{"name":"start_scan","arguments":{
-        "scan":"tcp-syn","targets":["8.8.8.8"],"ports":[53],
+        "scan":"tcp-syn","targets":[SCAN_TARGET],"ports":[1],
         "result_path":uout,"authorized":True}}})
     assert not ur["result"]["isError"], ur
     ujid = json.loads(ur["result"]["content"][0]["text"])["result"]["job_id"]
@@ -144,10 +148,10 @@ try:
     finally:
         mp_nt.terminate()
     c1 = rpc({"jsonrpc":"2.0","id":42,"method":"tools/call","params":{"name":"start_scan","arguments":{
-        "scan":"tcp-syn","targets":["8.8.8.8"],"ports":[53],
+        "scan":"tcp-syn","targets":[SCAN_TARGET],"ports":[1],
         "result_path":out + ".c1.ndjson","authorized":True}}})
     c2 = rpc({"jsonrpc":"2.0","id":43,"method":"tools/call","params":{"name":"start_scan","arguments":{
-        "scan":"tcp-syn","targets":["1.1.1.1"],"ports":[53],
+        "scan":"tcp-syn","targets":[SCAN_TARGET],"ports":[1],
         "result_path":out + ".c2.ndjson","authorized":True}}})
     assert not c1["result"]["isError"] and not c2["result"]["isError"]
     j1 = json.loads(c1["result"]["content"][0]["text"])["result"]["job_id"]

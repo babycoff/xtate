@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
 import os, subprocess, tempfile
 BIN = os.environ["XTATE_BIN"]
+# Linux loopback has no MAC address; use the default-route interface there.
+PROBE_TARGET = "127.0.0.1" if os.name == "nt" else "8.8.8.8"
 d = tempfile.mkdtemp(prefix="xtate-gen-")
+def gen_iface():
+    out = subprocess.run([BIN, "--explain-target=" + PROBE_TARGET],
+                         capture_output=True, text=True).stdout
+    return [l.split("Interface:")[1].strip() for l in out.splitlines() if "Interface:" in l][0]
 def run(gen, arg, lines, name):
     path = os.path.join(d, name)
     with open(path, "w", encoding="utf-8") as f:
         f.write(lines)
-    iface = subprocess.run([BIN, "--explain-target=8.8.8.8"], capture_output=True, text=True).stdout
-    iface = [l.split("Interface:")[1].strip() for l in iface.splitlines() if "Interface:" in l][0]
+    iface = gen_iface()
     out = os.path.join(d, gen + ".ndjson")
     cmd = [BIN, "--generate", gen, "--gen-arg", arg.replace("FILE", path),
            "-scan", "tcp-syn", "-if", iface, "-rate", "100", "-wait", "0",
@@ -30,8 +35,7 @@ def run_raw(gen, arg, lines, name, extra_env=None):
     path = os.path.join(d, name)
     with open(path, "w", encoding="utf-8") as f:
         f.write(lines)
-    iface = subprocess.run([BIN, "--explain-target=8.8.8.8"], capture_output=True, text=True).stdout
-    iface = [l.split("Interface:")[1].strip() for l in iface.splitlines() if "Interface:" in l][0]
+    iface = gen_iface()
     env = dict(os.environ); env.update(extra_env or {})
     cmd = [BIN, "--generate", gen, "--gen-arg", arg.replace("FILE", path),
            "-scan", "tcp-syn", "-if", iface, "-wait", "0",

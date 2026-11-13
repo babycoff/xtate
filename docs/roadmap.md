@@ -249,9 +249,15 @@ Delivered in 2.42.0:
 6. Safety boundaries: no shell, registered module names only, target/rate limits,
    explicit `authorized:true`, audit log and local-only control transport.
 
+Delivered in 2.42.1:
+
+- Agent Skill at `skills/xtate/`, with English/Chinese docs and a schema-aligned
+  `dry_run` contract;
+- full-tree audit fixes for memory safety, Windows UTF-8 paths, control-plane
+  framing/validation and result-store JSON escaping.
+
 Remaining:
 
-- Agent Skill (workflow and policy documentation);
 - agent evaluation suite and packaging;
 - MCP generate/stream input (static `targets` and `include_file` only for now);
 - per-job disk quota enforcement during scanning (currently reported after
@@ -261,7 +267,7 @@ Phases:
 
 ```text
 2.42.0  JSON contracts + jobs + control plane + MCP server (done)
-next    Agent Skill
+2.42.1  Agent Skill + full-tree audit hardening (done)
 next    evaluation suite and packaging
 later   MCP generate/stream input
 ```

@@ -1,4 +1,5 @@
 #include "probe-modules.h"
+#include "../output-modules/output-modules.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -151,7 +152,7 @@ static const char *find_header(const char *headers, const char *name) {
         if ((size_t)(e - p) > nlen && strncasecmp(p, name, nlen) == 0 &&
             p[nlen] == ':') {
             p += nlen + 1;
-            while (*p == ' ' || *p == '\\t') p++;
+            while (*p == ' ' || *p == '\t') p++;
             return p;
         }
         p = e + 2;
