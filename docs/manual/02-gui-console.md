@@ -154,6 +154,7 @@ Fields and panels:
 - packets per second, derived from sent packets and elapsed time;
 - result manifest: result path, manifest path, size and completeness;
 - a bounded tail of the worker log (stderr);
+- a bounded result-record browser for the completed job (50 records per page);
 - result, log and error fields when the daemon reports them.
 
 **Cancel** sends `job.cancel` immediately and reports the outcome in a toast. It
@@ -165,6 +166,12 @@ daemon continues and the job stays visible on Results.
 Lists jobs from `job.list` (up to 100) in a table: scan id, state,
 result path and a link back to Live scan. Selecting a row reopens its Live scan
 page. The empty state is *No scans yet.*
+
+In Live scan, **Load records** reads the completed result file through
+`GET /api/results?job_id=...&offset=...&limit=...` and shows 50 JSON records at
+a time. **Load more** advances the offset. The endpoint accepts only
+`job-<digits>`, resolves the path from the job manifest, and returns malformed
+or partial NDJSON lines as skipped rather than rendering them.
 
 ### Interfaces
 
@@ -203,17 +210,21 @@ The console is designed for a single local user:
   `X-Xtate-GUI-Token`; comparison is constant-time. The token is never accepted
   from a request body.
 - **Method allowlist.** The browser bridge forwards only `job.list`,
-  `job.status`, `job.cancel`, `job.result_manifest` and `job.start`. It cannot
-  run `ping`, page result bytes or call arbitrary methods.
+  `job.status`, `job.cancel`, `job.result_manifest` and `job.start`.
+  `/api/results` is a separate read-only handler that accepts only a job id and
+  pages through that job's manifest result file; neither path can call arbitrary
+  control methods.
 - **Server-side authorization.** `job.start` is refused unless the request
   carries `params.authorized: true`. The browser checkboxes are convenience,
   not the enforcement point.
 - **No shell, no arbitrary paths.** The GUI server does not execute commands and
   does not read arbitrary files. Results are read from the daemon's manifest,
   and the pages render server data.
-- **Bounded requests.** Headers are capped at 128 KiB, bodies at 64 KiB,
-  responses at 64 KiB, with an 8-second socket timeout. The page sets a strict
-  Content-Security-Policy, `X-Frame-Options: DENY` and `no-store`.
+- **Bounded requests.** Headers are capped at 128 KiB, bodies at 64 KiB and
+  bridge replies use a 64 KiB buffer; the server-built module catalog may be
+  larger because it is generated directly. Sockets time out after 8 seconds.
+  The page sets a strict Content-Security-Policy, `X-Frame-Options: DENY` and
+  `no-store`.
 - **No TLS.** Traffic never leaves the host; plain HTTP on loopback is the
   design. Do not expose the port through a proxy or tunnel.
 
@@ -230,7 +241,6 @@ deliberately left to the CLI, the control plane or MCP:
 - target files (`include_file`) and scan/probe arguments;
 - output-module selection, result chunking and per-job quotas;
 - scheduling, recurring scans or scan profiles;
-- reading result bytes in the browser (use the manifest and the result files);
 - remote access, multiple users or authentication beyond the session token;
 - stateful-scan firewall setup — on Linux you must install the rules yourself,
   see [01 · Install and quick start](./01-install-and-quickstart.md).

@@ -442,6 +442,15 @@ footer .mono { color: var(--faint); }
         <section class="card"><div class="card-head"><div class="card-title">Worker log tail</div><div class="field-hint mono">last lines</div></div>
           <div class="card-body"><pre class="log-tail" id="live-log">No output yet.</pre></div>
         </section>
+        <section class="card"><div class="card-head"><div class="card-title">Result records</div><div class="field-hint mono" id="live-record-meta">—</div></div>
+          <div class="card-body">
+            <div style="display:flex;gap:9px;margin-bottom:10px">
+              <button class="btn ghost" id="btn-records" disabled>Load records</button>
+              <button class="btn ghost" id="btn-records-more" disabled>Load more</button>
+            </div>
+            <pre class="log-tail" id="live-records">No records loaded.</pre>
+          </div>
+        </section>
       </div>
       <aside class="card preflight"><div class="pf-hero"><div class="pf-state idle"><span class="dot"></span><span>LIVE · POLLING</span></div><div class="pf-big"><span id="live-pps">—</span> <small>pps</small></div><div class="small muted">The daemon owns the scan; closing this page does not stop it.</div></div>
         <div class="card-body"><div class="pf-line"><span class="k">Result</span><span class="v" id="live-result">—</span></div><div class="pf-line"><span class="k">Log</span><span class="v" id="live-logpath">—</span></div><div class="pf-line"><span class="k">Error</span><span class="v" id="live-error">—</span></div></div>
@@ -875,6 +884,36 @@ function fmtDuration(ms) {
   const s = Math.floor(ms / 1000);
   return s < 60 ? s + "s" : Math.floor(s / 60) + "m " + (s % 60) + "s";
 }
+async function apiGet(path) {
+  const res = await fetch(path, {headers: {"X-Xtate-GUI-Token": TOKEN}});
+  const text = await res.text();
+  let data = null;
+  try { data = JSON.parse(text); } catch (_) { data = null; }
+  if (!res.ok) {
+    const msg = data && data.error ? data.error.message : text.slice(0, 160);
+    throw new Error(msg || ("HTTP " + res.status));
+  }
+  return data;
+}
+
+async function loadRecords(more) {
+  if (!state.jobId) return;
+  if (!more) { state.records = []; state.recordOffset = 0; }
+  try {
+    const data = await apiGet("/api/results?job_id=" + encodeURIComponent(state.jobId) +
+      "&offset=" + state.recordOffset + "&limit=50");
+    state.recordOffset = data.next_offset || (state.recordOffset + (data.records ? data.records.length : 0));
+    state.records = (state.records || []).concat(data.records || []);
+    $("live-records").textContent = state.records.length
+      ? state.records.map((r) => JSON.stringify(r)).join("\n")
+      : "No records in this result file yet.";
+    $("live-record-meta").textContent = state.records.length + " loaded";
+    $("btn-records-more").disabled = !data.records || data.records.length < 50;
+  } catch (err) {
+    toast("Cannot read result records: " + err.message, true);
+  }
+}
+
 async function pollJob() {
   if (!state.jobId) {
     $("live-title").textContent = "No active scan.";
@@ -886,7 +925,8 @@ async function pollJob() {
     $("live-elapsed").textContent = "—"; $("live-exit").textContent = "—";
     $("live-progress").style.width = "0%"; $("live-pps").textContent = "—";
     $("live-manifest").innerHTML = ""; $("live-log").textContent = "No output yet.";
-    $("btn-cancel").disabled = true;
+    $("live-records").textContent = "No records loaded."; $("live-record-meta").textContent = "—";
+    $("btn-cancel").disabled = true; $("btn-records").disabled = true; $("btn-records-more").disabled = true;
     return;
   }
   try {
@@ -912,6 +952,7 @@ async function pollJob() {
     $("live-progress").style.width = pct + "%";
     $("live-pps").textContent = job.elapsed_ms && job.sent ? Math.round(job.sent * 1000 / job.elapsed_ms).toLocaleString() : "—";
     $("btn-cancel").disabled = terminal;
+    $("btn-records").disabled = !job.result;
     if (job.stderr_tail) $("live-log").textContent = job.stderr_tail;
     if (terminal || state.jobId) {
       const man = await api("/api/rpc", {method: "POST", body: {id: Date.now(), method: "job.result_manifest", job_id: state.jobId}});
@@ -975,6 +1016,8 @@ function init() {
   });
   $("btn-start").addEventListener("click", startScan);
   $("btn-cancel").addEventListener("click", cancelScan);
+  $("btn-records").addEventListener("click", () => loadRecords(false));
+  $("btn-records-more").addEventListener("click", () => loadRecords(true));
   $("btn-refresh-live").addEventListener("click", pollJob);
   $("btn-refresh-results").addEventListener("click", loadResults);
   $("module-search").addEventListener("input", () => {

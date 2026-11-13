@@ -104,6 +104,7 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 - 每秒包数，由已发送包数和已用时间推算；
 - 结果 manifest：结果路径、manifest 路径、大小和完整性；
 - worker 日志（stderr）的有界尾部；
+- 已完成 job 的有界结果记录浏览器（每页 50 条）；
 - 守护进程上报时的 result、log 和 error 字段。
 
 **Cancel** 立即发送 `job.cancel`，并用 toast 报告结果。终态下该按钮禁用。离开页面不会停止扫描；守护进程继续运行，job 仍会出现在 Results 中。
@@ -111,6 +112,8 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 ### Results
 
 用 `job.list`（最多 100 条）把 job 列成表格：扫描 id、状态、结果路径和返回 Live scan 的链接。选中一行会重新打开它的 Live scan 页面。空状态显示 *No scans yet.*。
+
+在 Live scan 中，**加载记录** 通过 `GET /api/results?job_id=...&offset=...&limit=...` 读取已完成的结果文件，每次显示 50 条 JSON 记录。**加载更多** 推进 offset。该端点只接受 `job-<数字>`，从 job manifest 解析路径；损坏或不完整的 NDJSON 行会被跳过，不会渲染。
 
 ### Interfaces
 
@@ -130,10 +133,10 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 
 - **仅回环。** `--gui-listen` 拒绝除 `127.0.0.1` 或 `localhost` 以外的任何值。服务器还会拒绝 `Host` 头不是回环的请求，从而阻断 DNS rebinding 攻击。
 - **每会话 token。** 启动时生成一个 128 位随机 token，只打印一次，并嵌入页面。每个 `/api/*` 请求都必须把它放在 `X-Xtate-GUI-Token` 中；比较是常数时间的。绝不从请求体接受该 token。
-- **方法白名单。** 浏览器桥只转发 `job.list`、`job.status`、`job.cancel`、`job.result_manifest` 和 `job.start`。它不能执行 `ping`、分页读取结果字节或调用任意方法。
+- **方法白名单。** 浏览器桥只转发 `job.list`、`job.status`、`job.cancel`、`job.result_manifest` 和 `job.start`。`/api/results` 是独立的只读处理器，只接受 job id，并分页读取该 job manifest 指向的结果文件；两条路径都不能调用任意控制方法。
 - **服务端授权。** 除非请求带有 `params.authorized: true`，否则 `job.start` 会被拒绝。浏览器复选框只是便利，不是强制点。
 - **无 shell、无任意路径。** GUI 服务器不执行命令，也不读取任意文件。结果通过守护进程的 manifest 读取，页面只渲染服务器数据。
-- **有界请求。** 头部上限 128 KiB，正文 64 KiB，响应 64 KiB，socket 超时 8 秒。页面设置严格的 Content-Security-Policy、`X-Frame-Options: DENY` 和 `no-store`。
+- **有界请求。** 头部上限 128 KiB，正文 64 KiB，桥接回复使用 64 KiB 缓冲；服务端直接构建的模块目录可能更大。socket 超时 8 秒。页面设置严格的 Content-Security-Policy、`X-Frame-Options: DENY` 和 `no-store`。
 - **无 TLS。** 流量从不离开主机；回环上的明文 HTTP 就是设计。不要通过代理或隧道暴露该端口。
 
 控制台不是扫描本身的安全边界：速率限制、目标限制、路由预检和结果路径规则由守护进程与 job worker 强制执行，MCP 还有自己的限制（见 [MCP server](../mcp-server.md)）。
@@ -145,7 +148,6 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 - 目标文件（`include_file`）以及扫描/探测参数；
 - 输出模块选择、结果分片和每 job 配额；
 - 调度、周期扫描或扫描配置档；
-- 在浏览器中读取结果字节（请用 manifest 和结果文件）；
 - 远程访问、多用户，或会话 token 之外的认证；
 - 有状态扫描的防火墙配置——在 Linux 上你必须自己安装规则，见 [01 · 安装与快速上手](./01-install-and-quickstart.md)。
 

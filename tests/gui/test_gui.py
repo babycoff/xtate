@@ -115,6 +115,9 @@ def main():
         if 'id="module-params"' not in text or "scan_args" not in text:
             print("GUI module parameter editor is missing", file=sys.stderr)
             return 1
+        if 'id="live-records"' not in text or "/api/results" not in text:
+            print("GUI result records browser is missing", file=sys.stderr)
+            return 1
 
         # Info and job.list require the session token.
         status, body = http_json(port, "/api/info", token)
@@ -281,6 +284,54 @@ def main():
             time.sleep(0.1)
         if state not in ("completed", "failed"):
             print("GUI job did not settle:", state, file=sys.stderr)
+            return 1
+
+        # Result records are served from the completed job's NDJSON file with
+        # bounded paging.  The dry-run job above only lists targets, so write
+        # representative result records to exercise the reader deterministically.
+        records = [
+            {"host": "127.0.0.1", "port": 80, "classification": "open"},
+            {"host": "127.0.0.1", "port": 443, "classification": "open"},
+            {"host": "127.0.0.1", "port": 8080, "classification": "closed"},
+        ]
+        with open("gui-test-result.ndjson", "w", encoding="utf-8") as out:
+            out.write(json.dumps(records[0]) + "\n")
+            out.write("{not-json}\n")
+            out.write(json.dumps(records[1]) + "\n")
+            out.write(json.dumps(records[2]) + "\n")
+        status, body = http_json(
+            port, "/api/results?job_id=%s&offset=0&limit=2" % job_id, token)
+        page = json.loads(body.decode()) if status == 200 else {}
+        if (status != 200 or page.get("count") != 2
+                or page.get("next_offset") != 2
+                or page.get("records", [{}])[0].get("port") != 80):
+            print("GUI result records failed:", status, body[:300],
+                  file=sys.stderr)
+            return 1
+        status, body = http_json(
+            port, "/api/results?job_id=%s&offset=2&limit=2" % job_id, token)
+        page = json.loads(body.decode()) if status == 200 else {}
+        if status != 200 or page.get("count") != 1 or page.get("next_offset") != 3:
+            print("GUI result records paging failed:", status, body[:300],
+                  file=sys.stderr)
+            return 1
+        status, body = http_json(
+            port, "/api/results?job_id=../../etc/passwd&offset=0&limit=2", token)
+        if status != 400:
+            print("GUI invalid job id was not rejected:", status, body[:200],
+                  file=sys.stderr)
+            return 1
+        status, body = http_json(
+            port, "/api/results?job_id=job-999&offset=0&limit=2", token)
+        if status != 404:
+            print("GUI unknown job result was not 404:", status, body[:200],
+                  file=sys.stderr)
+            return 1
+        status, body = http_json(
+            port, "/api/results?job_id=%s&offset=0&limit=2" % job_id)
+        if status != 403:
+            print("GUI result records without token were allowed:", status,
+                  body[:200], file=sys.stderr)
             return 1
 
         # Without --control-connect, --gui starts a private control plane.

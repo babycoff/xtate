@@ -90,7 +90,10 @@ The GUI is scan-first: the default page is **New scan**, not a job table.
   heartbeat, elapsed time, exit code, result/log path and the bounded stderr
   tail, and cancels a queued or running job after confirmation.
 - **Results** lists jobs from `job.list`; opening one shows the manifest state,
-  result bytes and paths.
+  result bytes and paths. In **Live**, **Load records** reads the completed
+  result file through `GET /api/results?job_id=...&offset=...&limit=...`
+  (50 records per page) and **Load more** pages through it. Only valid NDJSON
+  records are returned; malformed or partial lines are skipped.
 - **Interfaces** lists capture adapters with IPv4/IPv6, MAC, gateway, default
   flag, link type and raw-IP capability. **Modules** searches the module catalog;
   **Settings** shows runtime, capability and security state.
@@ -109,8 +112,10 @@ arguments are editable in the Method panel.
   which prevents DNS-rebinding pages from reaching the API.
 - **Method allowlist.** Only `job.list`, `job.status`, `job.cancel`,
   `job.result_manifest` and `job.start` are forwarded through `/api/rpc`.
-  `/api/system`, `/api/interfaces`, `/api/modules` and `/api/preflight` are
-  server-side read-only handlers; they cannot call arbitrary control methods.
+  `/api/system`, `/api/interfaces`, `/api/modules`, `/api/preflight` and
+  `/api/results` are server-side read-only handlers; they cannot call arbitrary
+  control methods. `/api/results` accepts only `job-<digits>` and reads the
+  result path reported by that job's manifest, never an arbitrary client path.
 - **No shell.** The GUI is in-process C; the optional browser launch uses
   `ShellExecuteW` on Windows and `xdg-open` on Unix.
 - **Token handling.** The control-plane token is read from the environment and

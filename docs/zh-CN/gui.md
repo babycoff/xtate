@@ -77,7 +77,9 @@ GUI 以扫描为中心：默认页是 **New scan**，不是任务表格。
   `probe_args` 发送；留空即不发送。预检不校验参数名或取值，非法值会让 job 失败，
   并在 `stderr_tail`/日志中出现 worker 参数错误。
 - **Live** 每 1.5 秒轮询 `job.status`，显示阶段、sent/targets、心跳、耗时、退出码、
-  结果/日志路径和有界 stderr 尾部；queued/running 任务经确认可取消。
+  结果/日志路径和有界 stderr 尾部；queued/running 任务经确认可取消。完成后的结果可
+  通过 **加载记录** 分页查看（`GET /api/results?job_id=...&offset=...&limit=...`，
+  每页 50 条合法 NDJSON 记录；损坏或不完整的行会跳过）。
 - **Results** 通过 `job.list` 列出任务，打开后显示清单状态、结果字节数与路径。
 - **Interfaces** 显示采集网卡的 IPv4/IPv6、MAC、网关、默认标记、链路类型和 raw-IP
   能力；**Modules** 搜索模块目录；**Settings** 显示运行时、能力和安全状态。
@@ -94,7 +96,9 @@ JSON 控制 API；scan/probe 参数可在 Method 面板中编辑。
 - **Host 校验。** 非环回 `Host` 请求会被拒绝，防止 DNS rebinding 页面访问 API。
 - **方法白名单。** `/api/rpc` 仅转发 `job.list`、`job.status`、`job.cancel`、
   `job.result_manifest` 和 `job.start`；`/api/system`、`/api/interfaces`、
-  `/api/modules` 和 `/api/preflight` 是服务端只读处理器，不能调用任意控制方法。
+  `/api/modules`、`/api/preflight` 和 `/api/results` 是服务端只读处理器，
+  不能调用任意控制方法。`/api/results` 只接受 `job-<数字>`，读取该任务清单
+  指向的结果文件，绝不接受客户端任意路径。
 - **不经过 shell。** GUI 是进程内 C 代码；自动打开浏览器在 Windows 使用
   `ShellExecuteW`，在 Unix 使用 `xdg-open`。
 - **token 处理。** 控制平面 token 只从环境读取并由服务端添加；页面 JavaScript
