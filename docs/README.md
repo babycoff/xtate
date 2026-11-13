@@ -2,11 +2,11 @@
 
 **English** · [中文](zh-CN/README.md)
 
-This directory is the user manual for **Xtate v2.44.2** — a modular all-stack network scanner for Internet-scale surveys.
+This directory is the user manual for **Xtate v3.0.0-rc.1** — a modular all-stack network scanner for Internet-scale surveys.
 
 The [README](../README.md) is the landing page. Start here if you want to use Xtate rather than skim its feature list.
 
-**Release notes:** [2.44.2](./release-notes/2.44.2.md) — RAW link-type fix for TUN/VPN adapters, link-type preflight in `--explain-target` and scan startup, plus the 2.44.1 one-command TUI/GUI startup.
+**Release notes:** [3.0.0-rc.1](./release-notes/3.0.0-rc.1.md) — scan-first browser console, server-side preflight, one-command MCP/GUI startup, capability reporting, and the Linux-only HTTP/3 + QUIC contract. This is a release candidate for hands-on trial, not the final 3.0.0.
 
 ## Where to start
 
@@ -15,6 +15,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 | New to Xtate | [Getting started](./getting-started.md) |
 | Planning a scan | [Targets and ports](./targets-and-ports.md) → [Scanning modes](./scanning-modes.md) |
 | Wiring results into a pipeline | [Output](./output.md) → [Aggregation](./aggregation.md) |
+| New to Xtate | [3.0 manual](./manual/README.md) |
 | Choosing a module | [Modules](./modules.md) |
 | Writing a module | [Module development](./module-development.md) |
 | Planned work | [Roadmap](./roadmap.md) → [P3/P4 feasibility](./feasibility.md) |
@@ -69,9 +70,10 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 
 ### Automation and integration
 
+- [3.0 manual](./manual/README.md) — task-oriented install, GUI, CLI, modules, results, protocols and troubleshooting
 - [MCP server](./mcp-server.md) — stdio tools, resources, prompts, route planning and limits
-- [GUI dashboard](./gui.md) — loopback browser client for jobs, start, cancel, details and manifest
-- [TUI dashboard](./tui.md) — full-screen control-plane client for jobs, start, cancel and details
+- [GUI console](./gui.md) — scan-first loopback console with preflight, live view, interfaces and modules
+- [TUI dashboard](./tui.md) — legacy full-screen control-plane client; deprecated in 3.0
 - [Control plane](./control-plane.md) — local JSON-lines API shared by MCP/TUI/GUI
 - [Job model](./job-model.md) — managed jobs, timeout, heartbeat, cancellation and results
 - [Input modules](./input-modules.md) — static targets vs generate streams and error policy
@@ -103,7 +105,7 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-The docs are written against the v2.44.2 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
+The docs are written against the v3.0.0-rc.1 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
 
 ## Planned
 

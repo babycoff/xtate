@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Xtate 3.0 — Command console</title>
+<style>
+  :root {
+    --bg: #080c11;
+    --rail: #0c1218;
+    --surface: #101820;
+    --surface-2: #141e28;
+    --line: #22303c;
+    --line-soft: #1a252f;
+    --text: #e9f0f6;
+    --muted: #8b9bad;
+    --dim: #5f7082;
+    --mint: #67e8c2;
+    --mint-ink: #05211a;
+    --blue: #7cc7ff;
+    --amber: #f1b45e;
+    --ok: #74d69c;
+    --mono: "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    --sans: "Segoe UI Variable", "Segoe UI", Inter, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 var(--sans);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  .app { display: grid; grid-template-columns: 228px 1fr; height: 100vh; }
+  .rail {
+    background:
+      radial-gradient(420px 220px at 0% 0%, rgba(103,232,194,.06), transparent 70%),
+      var(--rail);
+    border-right: 1px solid var(--line-soft);
+    padding: 24px 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 0 8px; }
+  .mark {
+    width: 30px; height: 30px; border-radius: 9px;
+    display: grid; place-items: center;
+    background: linear-gradient(145deg, #8ff5d5, #40c9a5);
+    color: #05211a; font-weight: 800; font-size: 17px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.14) inset, 0 8px 24px rgba(64,201,165,.22);
+  }
+  .brand-name { font-weight: 680; letter-spacing: .2px; font-size: 16px; }
+  .brand-ver {
+    margin-left: auto; font: 10px/1 var(--mono); color: var(--mint);
+    border: 1px solid rgba(103,232,194,.32); background: rgba(103,232,194,.07);
+    border-radius: 999px; padding: 4px 7px;
+  }
+  .nav-label { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); padding: 0 12px 8px; }
+  nav { display: flex; flex-direction: column; gap: 2px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 11px; padding: 10px 12px;
+    border-radius: 9px; color: var(--muted); text-decoration: none; font-size: 13.5px;
+    border: 1px solid transparent;
+  }
+  .nav-item svg { width: 17px; height: 17px; opacity: .85; }
+  .nav-item.active {
+    color: var(--text); background: linear-gradient(90deg, rgba(103,232,194,.12), rgba(103,232,194,.03));
+    border-color: rgba(103,232,194,.16);
+  }
+  .nav-item.active svg { color: var(--mint); opacity: 1; }
+  .nav-sep { height: 1px; background: var(--line-soft); margin: 14px 12px; }
+  .rail-foot { margin-top: auto; display: grid; gap: 10px; }
+  .control {
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 11px;
+    display: flex; align-items: center; gap: 9px; background: rgba(255,255,255,.015);
+  }
+  .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 4px rgba(116,214,156,.10); }
+  .control small { display: block; color: var(--dim); font-size: 10.5px; line-height: 1.2; }
+  .control b { font-size: 11.5px; font-weight: 560; color: var(--muted); }
+  .rail-meta { padding: 0 4px; color: var(--dim); font: 10.5px/1.6 var(--mono); }
+  .main { display: flex; flex-direction: column; min-width: 0; }
+  .top {
+    height: 54px; border-bottom: 1px solid var(--line-soft);
+    display: flex; align-items: center; padding: 0 30px; gap: 14px;
+    background: rgba(8,12,17,.72); backdrop-filter: blur(10px);
+  }
+  .crumb { color: var(--dim); font-size: 12.5px; }
+  .crumb b { color: var(--muted); font-weight: 550; }
+  .top-right { margin-left: auto; display: flex; align-items: center; gap: 9px; }
+  .icon-btn {
+    width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line);
+    background: transparent; color: var(--muted); display: grid; place-items: center;
+  }
+  .icon-btn svg { width: 15px; height: 15px; }
+  .avatar {
+    width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line);
+    display: grid; place-items: center; color: var(--mint); font: 11px var(--mono);
+    background: var(--surface);
+  }
+  .page { overflow: auto; padding: 28px 30px 34px; }
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 22px; }
+  h1 { margin: 0; font-size: 27px; line-height: 1.15; letter-spacing: -.025em; font-weight: 620; }
+  .sub { margin: 7px 0 0; color: var(--muted); font-size: 13px; }
+  .head-actions { display: flex; gap: 8px; }
+  .btn {
+    height: 36px; border-radius: 9px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--text); padding: 0 13px;
+    font: 12.5px var(--sans); display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn svg { width: 15px; height: 15px; }
+  .btn.ghost { background: transparent; color: var(--muted); }
+  .content { display: grid; grid-template-columns: minmax(0, 1fr) 366px; gap: 18px; align-items: start; }
+  .stack { display: grid; gap: 14px; }
+  .card {
+    background: linear-gradient(180deg, rgba(255,255,255,.018), transparent 140px), var(--surface);
+    border: 1px solid var(--line); border-radius: 13px;
+  }
+  .card-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 18px 12px; border-bottom: 1px solid var(--line-soft);
+  }
+  .step {
+    width: 21px; height: 21px; border-radius: 6px; display: grid; place-items: center;
+    font: 10.5px var(--mono); color: var(--mint); background: rgba(103,232,194,.08);
+    border: 1px solid rgba(103,232,194,.20);
+  }
+  .card-title { font-size: 12.5px; font-weight: 600; letter-spacing: .01em; }
+  .card-hint { margin-left: auto; color: var(--dim); font-size: 11px; }
+  .card-body { padding: 16px 18px 18px; }
+  .field-label { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; color: var(--muted); font-size: 11.5px; }
+  .field-label span:last-child { color: var(--dim); font: 10.5px var(--mono); }
+  .input-wrap { position: relative; }
+  .target-input {
+    width: 100%; height: 46px; border-radius: 9px; border: 1px solid #2b3c4b;
+    background: #0b1219; color: var(--text); padding: 0 108px 0 13px;
+    font: 13px var(--mono); letter-spacing: .01em; outline: none;
+    box-shadow: 0 0 0 3px rgba(103,232,194,.06);
+  }
+  .target-input::placeholder { color: #536475; }
+  .input-suffix { position: absolute; right: 8px; top: 8px; display: flex; align-items: center; gap: 6px; }
+  .count-chip { font: 10.5px var(--mono); color: var(--mint); background: rgba(103,232,194,.08); border-radius: 6px; padding: 5px 7px; }
+  .file-btn { height: 30px; padding: 0 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); font-size: 11px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+  .chip {
+    font: 10.5px var(--mono); color: var(--muted); border: 1px solid var(--line);
+    background: rgba(255,255,255,.02); border-radius: 999px; padding: 4px 8px;
+  }
+  .chip i { font-style: normal; color: var(--dim); margin-left: 4px; }
+  .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .mode {
+    border: 1px solid var(--line); border-radius: 9px; padding: 11px 11px 10px;
+    background: rgba(255,255,255,.012); position: relative;
+  }
+  .mode.selected { border-color: rgba(103,232,194,.52); background: rgba(103,232,194,.065); box-shadow: 0 0 0 1px rgba(103,232,194,.14) inset; }
+  .mode.selected:after {
+    content: ""; position: absolute; right: 9px; top: 9px; width: 6px; height: 6px;
+    border-radius: 50%; background: var(--mint); box-shadow: 0 0 9px var(--mint);
+  }
+  .mode b { display: block; font-size: 12px; font-weight: 580; }
+  .mode small { display: block; color: var(--dim); font-size: 10.5px; margin-top: 3px; }
+  .mode .tag { display: inline-block; margin-top: 7px; font: 9.5px var(--mono); color: var(--muted); }
+  .two { display: grid; grid-template-columns: 1.35fr .65fr; gap: 10px; }
+  .select, .text-input {
+    width: 100%; height: 40px; border-radius: 8px; border: 1px solid #2a3a48;
+    background: #0b1219; color: var(--text); padding: 0 11px; font: 12px var(--sans); outline: none;
+  }
+  .text-input.mono { font-family: var(--mono); font-size: 11.5px; }
+  .iface {
+    display: flex; align-items: center; gap: 11px; border: 1px solid #2b3c4b;
+    border-radius: 9px; padding: 10px 11px; background: #0b1219;
+  }
+  .iface-icon {
+    width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center;
+    background: rgba(124,199,255,.09); color: var(--blue); border: 1px solid rgba(124,199,255,.15);
+  }
+  .iface-icon svg { width: 16px; height: 16px; }
+  .iface b { display: block; font-size: 12px; font-weight: 560; }
+  .iface small { display: block; color: var(--dim); font: 10.5px var(--mono); margin-top: 2px; }
+  .iface .end { margin-left: auto; display: flex; gap: 5px; align-items: center; }
+  .pill { font: 9.5px var(--mono); padding: 3px 6px; border-radius: 5px; border: 1px solid var(--line); color: var(--muted); }
+  .pill.good { color: var(--ok); border-color: rgba(116,214,156,.24); background: rgba(116,214,156,.06); }
+  .advanced {
+    display: flex; align-items: center; gap: 8px; padding: 12px 16px;
+    color: var(--muted); font-size: 12px;
+  }
+  .advanced .chev { margin-left: auto; color: var(--dim); }
+  .preflight { position: sticky; top: 0; }
+  .pf-head { padding: 16px 18px 13px; border-bottom: 1px solid var(--line-soft); display: flex; align-items: center; }
+  .pf-head h2 { margin: 0; font-size: 13px; font-weight: 600; }
+  .status {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+    color: var(--ok); font: 10.5px var(--mono); text-transform: uppercase; letter-spacing: .08em;
+  }
+  .status:before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px rgba(116,214,156,.5); }
+  .pf-body { padding: 16px 18px; }
+  .target-summary { display: flex; align-items: baseline; gap: 8px; padding-bottom: 13px; border-bottom: 1px dashed var(--line); }
+  .target-summary b { font: 25px/1 var(--mono); letter-spacing: -.03em; font-weight: 520; }
+  .target-summary span { color: var(--dim); font-size: 11px; }
+  .route { display: grid; gap: 9px; margin: 14px 0 15px; }
+  .route-row { display: grid; grid-template-columns: 78px 1fr; gap: 8px; align-items: baseline; font-size: 11.5px; }
+  .route-row dt { color: var(--dim); }
+  .route-row dd { margin: 0; font-family: var(--mono); font-size: 11px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .route-row dd.good { color: var(--ok); }
+  .link-note {
+    border: 1px solid rgba(124,199,255,.16); background: rgba(124,199,255,.045);
+    color: #a9cce7; border-radius: 8px; padding: 9px 10px; font-size: 10.5px; line-height: 1.5;
+    margin: 0 0 14px;
+  }
+  .checks { display: grid; gap: 8px; border-top: 1px solid var(--line-soft); padding-top: 13px; }
+  .check { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11.5px; }
+  .check .tick { width: 15px; height: 15px; border-radius: 50%; display: grid; place-items: center; background: rgba(116,214,156,.10); color: var(--ok); font-size: 9px; }
+  .auth {
+    margin: 15px 0 13px; border: 1px solid var(--line); border-radius: 9px;
+    padding: 11px 11px; display: flex; gap: 9px; background: rgba(255,255,255,.015);
+  }
+  .box { width: 15px; height: 15px; border-radius: 4px; background: var(--mint); color: var(--mint-ink); display: grid; place-items: center; font-size: 10px; flex: 0 0 auto; }
+  .auth p { margin: 0; font-size: 10.5px; line-height: 1.5; color: var(--muted); }
+  .auth p b { color: var(--text); font-weight: 550; }
+  .start {
+    width: 100%; height: 44px; border: 0; border-radius: 9px; cursor: pointer;
+    background: linear-gradient(180deg, #8bf6d6, #55d9b3); color: #03231c;
+    font: 600 13px var(--sans); letter-spacing: .01em;
+    box-shadow: 0 8px 22px rgba(85,217,179,.18), 0 0 0 1px rgba(255,255,255,.10) inset;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .start svg { width: 15px; height: 15px; }
+  .pf-foot { display: flex; justify-content: space-between; color: var(--dim); font: 10px var(--mono); padding: 0 18px 14px; }
+  .tip { margin: 0 18px 16px; color: #627486; font-size: 10.5px; line-height: 1.55; }
+  .missing { color: var(--amber); }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="brand">
+      <div class="mark">x</div>
+      <div class="brand-name">xtate</div>
+      <div class="brand-ver">3.0</div>
+    </div>
+
+    <div>
+      <div class="nav-label">Workspace</div>
+      <nav>
+        <a class="nav-item active" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16M4 12h10M4 18h7"/><path d="M18.5 15.5v4M16.5 17.5h4"/></svg>
+          New scan
+        </a>
+        <a class="nav-item" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h4l2.2-6 4.2 12 2.2-6H21"/></svg>
+          Live scan <span style="margin-left:auto;font:10px var(--mono);color:var(--dim)">0</span>
+        </a>
+        <a class="nav-item" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+          Results
+        </a>
+        <a class="nav-item" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="11" rx="2"/><path d="M7 19h10"/></svg>
+          Interfaces
+        </a>
+        <a class="nav-item" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h7v6H4zM13 5h7v6h-7zM4 13h7v6H4zM13 13h7v6h-7z"/></svg>
+          Modules &amp; help
+        </a>
+      </nav>
+      <div class="nav-sep"></div>
+      <div class="nav-label">Session</div>
+      <nav>
+        <a class="nav-item" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2"/></svg>
+          Scan history
+        </a>
+        <a class="nav-item" href="#">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l7 4v5c0 4.4-3 7.5-7 9-4-1.5-7-4.6-7-9V7z"/><path d="M9.5 12l1.7 1.7 3.3-3.4"/></svg>
+          Authorization
+        </a>
+      </nav>
+    </div>
+
+    <div class="rail-foot">
+      <div class="control">
+        <span class="pulse"></span>
+        <div><b>Local console</b><small>control plane connected</small></div>
+      </div>
+      <div class="rail-meta">Windows · Npcap 1.79<br>xtate 2.44.2</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="top">
+      <div class="crumb">Console&nbsp;&nbsp;/&nbsp;&nbsp;<b>New scan</b></div>
+      <div class="top-right">
+        <button class="icon-btn" title="Documentation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M8 8h8M8 12h6"/></svg>
+        </button>
+        <button class="icon-btn" title="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1.2l2-1.5-2-3.4-2.3 1a7 7 0 00-2-1.2L14.2 3h-4.4l-.4 2.7a7 7 0 00-2 1.2l-2.3-1-2 3.4 2 1.5A7 7 0 005 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-1a7 7 0 002 1.2l.4 2.7h4.4l.4-2.7a7 7 0 002-1.2l2.3 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>
+        </button>
+        <div class="avatar">SC</div>
+      </div>
+    </header>
+
+    <div class="page">
+      <div class="page-head">
+        <div>
+          <h1>New scan</h1>
+          <p class="sub">Choose a target, confirm the route, then start. Nothing is sent until you authorize.</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn ghost">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+            Presets
+          </button>
+          <button class="btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0L7 9m5-5l5 5"/><path d="M5 16v3h14v-3"/></svg>
+            Import targets
+          </button>
+        </div>
+      </div>
+
+      <div class="content">
+        <form class="stack">
+          <section class="card">
+            <div class="card-head">
+              <span class="step">01</span><span class="card-title">Targets</span>
+              <span class="card-hint">IPv4, IPv6, CIDR, ranges</span>
+            </div>
+            <div class="card-body">
+              <div class="field-label"><span>Scan scope</span><span>comma or newline separated</span></div>
+              <div class="input-wrap">
+                <input class="target-input" value="198.18.0.0/24, 203.0.113.10-203.0.113.40">
+                <div class="input-suffix">
+                  <span class="count-chip">296 targets</span>
+                  <button type="button" class="file-btn">File…</button>
+                </div>
+              </div>
+              <div class="chips">
+                <span class="chip">198.18.0.0/24 <i>256</i></span>
+                <span class="chip">203.0.113.10–40 <i>31</i></span>
+                <span class="chip">no exclusions</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <span class="step">02</span><span class="card-title">Method</span>
+              <span class="card-hint">scan mode selects the packet engine</span>
+            </div>
+            <div class="card-body">
+              <div class="modes">
+                <div class="mode selected">
+                  <b>TCP SYN</b><small>Fast reachability. Stateless.</small><span class="tag">default</span>
+                </div>
+                <div class="mode">
+                  <b>TCP state</b><small>Handshake + banner capture.</small><span class="tag">stateful</span>
+                </div>
+                <div class="mode">
+                  <b>zbanner</b><small>Protocol probes and banners.</small><span class="tag">deep</span>
+                </div>
+              </div>
+              <div style="height:12px"></div>
+              <div class="two">
+                <div>
+                  <div class="field-label"><span>Probe</span><span id="dep">openssl</span></div>
+                  <select class="select">
+                    <option>http — HTTP/1.1 banner and headers</option>
+                    <option>tls — TLS handshake and certificate</option>
+                    <option>ssh — SSH identification</option>
+                  </select>
+                </div>
+                <div>
+                  <div class="field-label"><span>Ports</span><span>0–65535</span></div>
+                  <input class="text-input mono" value="80,443,8080">
+                </div>
+              </div>
+              <div style="height:10px"></div>
+              <div class="two">
+                <div>
+                  <div class="field-label"><span>Rate</span><span>packets / second</span></div>
+                  <input class="text-input mono" value="1000">
+                </div>
+                <div>
+                  <div class="field-label"><span>Timeout</span><span>seconds</span></div>
+                  <input class="text-input mono" value="300">
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <span class="step">03</span><span class="card-title">Interface</span>
+              <span class="card-hint">auto-selected from the route</span>
+            </div>
+            <div class="card-body">
+              <div class="iface">
+                <div class="iface-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 9a12 12 0 0118 0M6.5 12.5a7.5 7.5 0 0111 0M10 16a3 3 0 014 0"/><circle cx="12" cy="19" r=".8" fill="currentColor"/></svg>
+                </div>
+                <div><b>Wi-Fi · Intel Wi-Fi 6E AX211</b><small>\Device\NPF_{DBDB…01D1} · 192.168.1.24</small></div>
+                <div class="end">
+                  <span class="pill good">DEFAULT</span>
+                  <span class="pill">EN10MB</span>
+                </div>
+              </div>
+              <div style="height:9px"></div>
+              <div class="field-label"><span>Advanced parameters</span><span>optional</span></div>
+              <div class="advanced" style="padding:0">
+                <span class="missing">No module parameters required.</span>
+                <span class="chev">⌄</span>
+              </div>
+            </div>
+          </section>
+        </form>
+
+        <aside class="card preflight">
+          <div class="pf-head">
+            <h2>Preflight</h2>
+            <span class="status">Ready</span>
+          </div>
+          <div class="pf-body">
+            <div class="target-summary"><b>296</b><span>targets · 3 ports · 888 attempts</span></div>
+            <dl class="route">
+              <div class="route-row"><dt>Interface</dt><dd>Wi-Fi</dd></div>
+              <div class="route-row"><dt>Source</dt><dd>192.168.1.24</dd></div>
+              <div class="route-row"><dt>Gateway</dt><dd>192.168.1.1</dd></div>
+              <div class="route-row"><dt>Link type</dt><dd class="good">EN10MB (1)</dd></div>
+            </dl>
+            <p class="link-note">Route resolved on-link. RAW header is not required; MAC address will be used.</p>
+            <div class="checks">
+              <div class="check"><span class="tick">✓</span>Target syntax valid</div>
+              <div class="check"><span class="tick">✓</span>Result path writable</div>
+              <div class="check"><span class="tick">✓</span>Probe dependency available</div>
+            </div>
+            <label class="auth">
+              <span class="box">✓</span>
+              <p><b>I have authorization</b> to scan this scope at the stated rate. This is recorded with the scan.</p>
+            </label>
+            <button class="start">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 5l11 7-11 7z"/></svg>
+              Start scan
+            </button>
+            <div class="pf-foot"><span>~0.9 s at 1000 pps</span><span>Ctrl ↵</span></div>
+          </div>
+          <p class="tip">Preflight is local and sends no packets. <span style="color:var(--muted)">Changing any method or target re-runs it.</span></p>
+        </aside>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

@@ -35,6 +35,7 @@
 #include "util-scan/control-client.h"
 #include "util-scan/result-store.h"
 #include "util-scan/mcp-server.h"
+#include "util-scan/capabilities.h"
 #include "util-scan/tui.h"
 #include "util-scan/gui.h"
 #include "util-scan/ui-control.h"
@@ -1128,6 +1129,18 @@ static int xtate_main(int argc, char *argv[]) {
     if (request_mode)
         LOG_set_json_error(ERR_INTERNAL_ERROR);
 
+    if (xconf->list_capabilities) {
+        char *caps = capabilities_json();
+        if (!caps) {
+            fprintf(stderr, "xtate: cannot read module catalog\n");
+            return 1;
+        }
+        fputs(caps, stdout);
+        fputc('\n', stdout);
+        free(caps);
+        return 0;
+    }
+
     if (xconf->control_connect && xconf->control_request) {
         char resp[8192];
         char req[8192];
@@ -1142,8 +1155,22 @@ static int xtate_main(int argc, char *argv[]) {
         fputs(resp, stdout);
         return 0;
     }
-    if (xconf->mcp_mode)
-        return mcp_server_run(xconf->control_connect);
+    if (xconf->mcp_mode) {
+        char endpoint[512];
+        const char *ep = xconf->control_connect;
+        int started = 0;
+        if (!ep) {
+            if (ui_control_start(argv[0], endpoint, sizeof(endpoint)) != 0) {
+                fprintf(stderr, "xtate: cannot start a private control plane for --mcp\n");
+                return 1;
+            }
+            ep = endpoint;
+            started = 1;
+        }
+        int mrc = mcp_server_run(ep);
+        if (started) ui_control_stop();
+        return mrc;
+    }
     if (xconf->control_ping) {
         char req[512], resp[8192];
         const char *tok = getenv("XTATE_CONTROL_TOKEN");

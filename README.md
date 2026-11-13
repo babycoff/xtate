@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.44.2-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-rc.1-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -56,8 +56,8 @@ Most fast scanners stop at "port open"; most service scanners give up at Interne
 
 - ⚡ **ZBanner** — real TCP responses without a per-target connection table. The peer's TCP stack holds the state; a SipHash cookie proves the reply is yours.
 - 🧬 **HLTCP** — a hybrid-state user-space TCP stack, created only where needed. It completes TLS handshakes and speaks HTTP inside them.
-- 🛰 **QUIC capability** — sends a real QUIC v1 Initial and classifies Version Negotiation/Retry/Initial/Handshake without claiming a completed HTTP/3 handshake.
-- 🌐 **HTTP and DNS protocol breadth** — HTTP/1.0/1.1, HTTP/2 (HPACK including Huffman), HTTP/3 over QUIC, and HTTPS/TLS; DNS over UDP, DNSSEC evidence (`--dnssec`), DoT (`dot`), DoH over HTTP/1.1 (`doh`) and DoH over HTTP/2 (`doh-h2`).
+- 🛰 **QUIC capability (Linux build with ngtcp2/GnuTLS)** — sends a real QUIC v1 Initial and classifies Version Negotiation/Retry/Initial/Handshake without claiming a completed HTTP/3 handshake. Windows builds report HTTP/3 and QUIC transport as unavailable.
+- 🌐 **HTTP and DNS protocol breadth** — HTTP/1.0/1.1, HTTP/2 (HPACK including Huffman), HTTP/3 over QUIC when the build supports it, and HTTPS/TLS; DNS over UDP, DNSSEC evidence (`--dnssec`), DoT (`dot`), DoH over HTTP/1.1 (`doh`) and DoH over HTTP/2 (`doh-h2`).
 - 🔐 **TLS evidence** — a full handshake plus structured certificate details (subject, issuer, SAN, validity, serial, key, signature, ALPN), including SMTP/IMAP/POP3/FTP STARTTLS upgrades.
 - 🧪 **JARM** — the ten standard Salesforce probes, with `--first-probe` to rotate which standard probe is sent first and burst-ordered follow-ups; output stays order-independent.
 - 🧩 **Modules** — 12 scan / 60 probe / 7 output / 5 generate modules in a full build, with `quic-state` and `http3-state` present when ngtcp2/GnuTLS is available. Four interfaces, one pipeline, no runtime plugin magic.
@@ -242,7 +242,9 @@ Writing your own is intentionally boring: each module is a struct plus one line 
 
 The README is the landing page. The manual lives in [`docs/`](docs/README.md):
 
+- [3.0 manual](docs/manual/README.md) — task-oriented install, GUI, CLI, modules, results and protocols
 - [Getting started](docs/getting-started.md) — build, permissions, first scan, firewall
+- [GUI console](docs/gui.md) — scan-first loopback console with preflight, live view and interfaces
 - [Targets and ports](docs/targets-and-ports.md) — IPv4/IPv6 input, files, ASN, excludes, sharding
 - [Scanning modes](docs/scanning-modes.md) — stateless vs stateful, scan/probe pairings, recipes
 - [Output](docs/output.md) — result levels, formats, MongoDB
@@ -380,7 +382,8 @@ Missing optional libraries simply remove the corresponding modules at compile ti
 xtate --usage                 # short usage and examples
 xtate --help                  # every global parameter
 xtate --intro                 # the architecture tour
-xtate --list-scan             # 11, or 12 with quic-state
+xtate --list-capabilities     # JSON: module counts, HTTP/3 and QUIC availability
+xtate --list-scan             # 11, or 12 with quic-state on Linux
 xtate --list-probe            # 59, or 60 with http3-state
 xtate --list-out              # 7 output modules
 xtate --list-gen              # 5 generate modules
@@ -391,8 +394,8 @@ xtate --interact              # interactive shell (TTY: completion/history; pipe
 
 ## Browser GUI
 
-Xtate includes a loopback-only browser dashboard for managed jobs. It is another
-control-plane client and never scans in-process:
+Xtate includes a scan-first loopback browser console. It is another control-plane
+client and never scans in-process:
 
 ```bash
 xtate --gui
@@ -407,49 +410,35 @@ xtate --control-plane=/tmp/xtate-ctl.sock
 xtate --gui --control-connect=/tmp/xtate-ctl.sock
 ```
 
-The page opens at `http://127.0.0.1:8787/` by default. It lists jobs, shows state,
-counters, stderr tail and the result manifest, cancels jobs with confirmation, and
-starts an authorized scan through a wizard. Use `--gui-listen=127.0.0.1:PORT` to
-change the port, `--gui-no-open` to skip opening a browser, and read
-[GUI dashboard](docs/gui.md) for the security model, limits and troubleshooting.
-
-## TUI dashboard
-
-Xtate includes a full-screen terminal client for managed jobs. It talks to the
-same local control plane as MCP and never scans in-process:
-
-```bash
-xtate --tui
-```
-
-Without `--control-connect`, the TUI starts a private control plane for its own
-lifetime and stops it on exit. To attach to an existing daemon instead:
-
-```bash
-xtate --control-plane=/tmp/xtate-ctl.sock
-# in another terminal, with the same XTATE_CONTROL_TOKEN if one is set:
-xtate --tui --control-connect=/tmp/xtate-ctl.sock
-```
-
-Use `↑/↓` or `j/k` to select jobs, `r` to refresh, `s` to start an authorized
-scan, `c` to cancel, `Enter` for status and result manifest, and `q` to quit.
-When output is piped, `--tui` prints one plain-text snapshot instead. See
-[TUI dashboard](docs/tui.md) for keys, limits and interface selection.
+The page opens at `http://127.0.0.1:8787/` by default. New scan is the entry
+point: set targets, method, ports, rate and interface, run the server-side
+preflight, confirm authorization, then watch the live job and inspect results.
+Use `--gui-listen=127.0.0.1:PORT` to change the port, `--gui-no-open` to skip
+opening a browser, and read [GUI console](docs/gui.md) for the security model,
+limits and troubleshooting.
 
 ## AI integration (MCP / Agent Skill)
 
 Xtate ships an MCP stdio server and a reviewed Agent Skill for AI clients. The
 skill is a Markdown playbook; it is not an embedded agent or a privilege
-boundary. Start a control plane, then connect the MCP server to it with the same
-token:
+boundary. `xtate --mcp` starts a private control plane for its own lifetime, so
+one command is enough:
 
 ```bash
 export XTATE_CONTROL_TOKEN="$(openssl rand -hex 16)"
+xtate --mcp
+```
+
+To attach an MCP server to an already-running daemon instead, pass the endpoint
+and the same token to both sides:
+
+```bash
 xtate --control-plane=/tmp/xtate-ctl.sock
 xtate --mcp --control-connect=/tmp/xtate-ctl.sock
 ```
 
-The tools list modules, explain target routes, validate a closed scan request,
+The tools report protocol capabilities, list modules and interfaces, run a
+packet-free preflight, explain target routes, validate a closed scan request,
 start a managed job, and query job status/manifests. `start_scan` requires
 `authorized: true`; results stay in chunked files and are never returned inline.
 The server never executes a shell command. Install the Agent Skill from

@@ -6,7 +6,7 @@ Xtate is a modular all-stack network scanner for large-scale active measurement.
 
 This page takes you from a source checkout to your first scan on Linux or Windows. It assumes you are comfortable with a shell, `sudo`, and basic TCP/IP; it is not a tutorial on scanning itself.
 
-> Documented against Xtate v2.44.2. If your build behaves differently, `--help` and the module help are authoritative.
+> Documented against Xtate v3.0.0-rc.1. If your build behaves differently, `--help` and the module help are authoritative.
 
 ## Requirements
 
@@ -353,7 +353,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http \
 | Learn what Xtate does not do | [Known limitations](./known-limitations.md) |
 | See the feature list and papers | [README](../README.md) |
 
-The CLI can also explain itself: `--usage`, `--help`, `--intro`, `--list-scan`, `--list-probe`, `--list-out`, `--list-gen`, and `--help-scan <module>` / `--help-probe <module>` for per-module parameters.
+The CLI can also explain itself: `--usage`, `--help`, `--intro`, `--list-capabilities` (JSON capability and module-count summary), `--list-scan`, `--list-probe`, `--list-out`, `--list-gen`, and `--help-scan <module>` / `--help-probe <module>` for per-module parameters.
 
 Human-facing help can be switched to Chinese with `--lang zh` (or `XTATE_LANG=zh`):
 `xtate --lang zh --help`. Parameter names, module names and result values stay

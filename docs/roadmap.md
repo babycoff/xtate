@@ -281,8 +281,19 @@ Delivered in 2.44.2:
   multiple-default-interface error points at `--explain-target`/`--list-if`.
 - scan startup and the meta file show the effective `Rate:` (default or `--rate`).
 
+Delivered in 3.0.0-rc.1 (release candidate):
+
+- scan-first browser console with server-side preflight, live job view,
+  interfaces, module catalog and settings;
+- one-command `xtate --gui` and `xtate --mcp` private control-plane startup;
+- `--list-capabilities` and the MCP `capabilities` tool;
+- explicit Linux-only HTTP/3 + QUIC capability reporting, with Windows
+  reporting the feature as unavailable;
+- structured bilingual manual work in progress under `docs/manual/`.
+
 Remaining:
 
+- final 3.0.0 only after RC trial feedback is fixed;
 - agent evaluation suite and packaging;
 - MCP generate/stream input (static `targets` and `include_file` only for now);
 - per-job disk quota enforcement during scanning (currently reported after
@@ -297,7 +308,8 @@ Phases:
 2.44.0  browser GUI for the control plane (done, released)
 2.44.1  one-command local TUI/GUI startup (done, released)
 2.44.2  RAW/TUN link preflight + startup rate display (done)
-next    evaluation suite and packaging
+3.0.0-rc.1  scan-first GUI + AI/MCP startup + capability reporting (candidate)
+next    RC trial fixes, evaluation suite and packaging
 later   MCP generate/stream input
 ```
 

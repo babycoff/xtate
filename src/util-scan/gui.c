@@ -19,8 +19,10 @@
 #include <openssl/rand.h>
 
 #include "../crypto/crypto-json.h"
+#include "../util-out/module-json.h"
 #include "../version.h"
 #include "control-client.h"
+#include "gui-data.h"
 #include "gui-page.h"
 
 #if defined(_WIN32)
@@ -412,6 +414,50 @@ static void gui_handle_info(gui_sock s, const char *endpoint) {
     free(text);
 }
 
+static void gui_handle_system(gui_sock s, const char *endpoint) {
+    char *text = gui_system_json(endpoint);
+    if (!text) {
+        gui_respond_error(s, 500, "SYSTEM_INFO_FAILED",
+                          "cannot collect system information");
+        return;
+    }
+    gui_respond(s, 200, "application/json; charset=utf-8", text, strlen(text));
+    free(text);
+}
+
+static void gui_handle_interfaces(gui_sock s) {
+    char *text = gui_interfaces_json();
+    if (!text) {
+        gui_respond_error(s, 500, "INTERFACE_INFO_FAILED",
+                          "cannot enumerate capture interfaces");
+        return;
+    }
+    gui_respond(s, 200, "application/json; charset=utf-8", text, strlen(text));
+    free(text);
+}
+
+static void gui_handle_modules(gui_sock s) {
+    char *text = module_json_string();
+    if (!text) {
+        gui_respond_error(s, 500, "MODULE_INFO_FAILED",
+                          "cannot enumerate modules");
+        return;
+    }
+    gui_respond(s, 200, "application/json; charset=utf-8", text, strlen(text));
+    free(text);
+}
+
+static void gui_handle_preflight(gui_sock s, const char *body) {
+    char *text = gui_preflight_json(body);
+    if (!text) {
+        gui_respond_error(s, 400, "PREFLIGHT_FAILED",
+                          "cannot validate the scan request");
+        return;
+    }
+    gui_respond(s, 200, "application/json; charset=utf-8", text, strlen(text));
+    free(text);
+}
+
 static int gui_host_allowed(const char *request, size_t header_len, int port) {
     char host[128];
     char want[64];
@@ -434,6 +480,7 @@ static void gui_handle(gui_sock s, const char *endpoint, const char *token,
     char supplied[GUI_TOKEN_SIZE + 8];
     size_t header_len = 0;
     int total;
+    int route;
     char *query;
 
     gui_set_timeouts(s);
@@ -470,13 +517,22 @@ static void gui_handle(gui_sock s, const char *endpoint, const char *token,
         return;
     }
     if (strcmp(method, "GET") == 0 && strcmp(path, "/api/info") == 0)
-        total = 1;
+        route = 1;
     else if (strcmp(method, "POST") == 0 && strcmp(path, "/api/rpc") == 0)
-        total = 2;
+        route = 2;
+    else if (strcmp(method, "GET") == 0 && strcmp(path, "/api/system") == 0)
+        route = 3;
+    else if (strcmp(method, "GET") == 0 &&
+             strcmp(path, "/api/interfaces") == 0)
+        route = 4;
+    else if (strcmp(method, "GET") == 0 && strcmp(path, "/api/modules") == 0)
+        route = 5;
+    else if (strcmp(method, "POST") == 0 && strcmp(path, "/api/preflight") == 0)
+        route = 6;
     else
-        total = 0;
+        route = 0;
 
-    if (!total) {
+    if (!route) {
         gui_respond_error(s, 404, "NOT_FOUND", "no such endpoint");
         return;
     }
@@ -487,11 +543,15 @@ static void gui_handle(gui_sock s, const char *endpoint, const char *token,
                           "missing or invalid GUI session token");
         return;
     }
-    if (total == 1) {
-        gui_handle_info(s, endpoint);
-        return;
+    switch (route) {
+    case 1: gui_handle_info(s, endpoint); break;
+    case 2: gui_handle_rpc(s, endpoint, request + header_len); break;
+    case 3: gui_handle_system(s, endpoint); break;
+    case 4: gui_handle_interfaces(s); break;
+    case 5: gui_handle_modules(s); break;
+    case 6: gui_handle_preflight(s, request + header_len); break;
+    default: break;
     }
-    gui_handle_rpc(s, endpoint, request + header_len);
 }
 
 static void gui_open_browser(const char *url) {

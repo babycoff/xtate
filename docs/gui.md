@@ -67,21 +67,33 @@ The browser URL is printed as `http://127.0.0.1:<port>/`. The session token is
 printed once and is also injected into the page; requests without the matching
 `X-Xtate-GUI-Token` header are rejected.
 
-## What the dashboard does
+## What the console does
 
-- Lists jobs from `job.list`, newest state refreshed every three seconds.
-- Shows the selected job's phase, sent/targets counters, heartbeat, elapsed
-  time, exit code, result and log path, error and bounded stderr tail.
-- Shows the result manifest (`complete`, result path, manifest path and bytes).
-- Starts a scan through a small wizard: scan module, targets, optional ports,
-  rate, timeout, result path and an optional interface. The scan starts only
-  after the operator ticks the explicit authorization checkbox; the bridge also
-  rejects `job.start` unless `params.authorized` is literally `true`.
-- Cancels a selected queued or running job after confirmation.
+The GUI is scan-first: the default page is **New scan**, not a job table.
 
-The wizard is intentionally smaller than the full scan-request schema. For
-probe arguments, scan arguments, include files, chunking or quota settings, use
-the MCP server or the JSON control API directly.
+- **New scan** accepts IPv4/IPv6 targets in comma, range or CIDR form, picks one
+  of the 11 scan engines, shows probe choices only when the engine needs one,
+  and hides ports for ICMP/ARP/NDP scans. Rate, timeout and an optional interface
+  are set here.
+- The server-side **preflight** (`POST /api/preflight`) parses the same request
+  as `job.start`, verifies target syntax and counts, resolves route, source,
+  gateway, link type and raw-IP capability, and rejects unknown scans/probes,
+  UDP-only ports for a TCP engine, and invalid numeric values. Nothing is sent.
+- **Start scan** stays disabled until the preflight is ready, the authorization
+  checkbox is ticked, and the form has not changed since the preflight. The
+  bridge also rejects `job.start` unless `params.authorized` is literally `true`.
+- **Live** polls `job.status` every 1.5 seconds, shows phase, sent/targets,
+  heartbeat, elapsed time, exit code, result/log path and the bounded stderr
+  tail, and cancels a queued or running job after confirmation.
+- **Results** lists jobs from `job.list`; opening one shows the manifest state,
+  result bytes and paths.
+- **Interfaces** lists capture adapters with IPv4/IPv6, MAC, gateway, default
+  flag, link type and raw-IP capability. **Modules** searches the module catalog;
+  **Settings** shows runtime, capability and security state.
+
+The output path is managed by the server. For probe arguments, scan arguments,
+include files, chunking or quota settings, use the MCP server or the JSON
+control API directly.
 
 ## Security model
 
@@ -92,8 +104,9 @@ the MCP server or the JSON control API directly.
 - **Host validation.** Requests with a non-loopback `Host` header are rejected,
   which prevents DNS-rebinding pages from reaching the API.
 - **Method allowlist.** Only `job.list`, `job.status`, `job.cancel`,
-  `job.result_manifest` and `job.start` are forwarded. The GUI cannot call
-  `ping`, `job.results` or arbitrary control methods.
+  `job.result_manifest` and `job.start` are forwarded through `/api/rpc`.
+  `/api/system`, `/api/interfaces`, `/api/modules` and `/api/preflight` are
+  server-side read-only handlers; they cannot call arbitrary control methods.
 - **No shell.** The GUI is in-process C; the optional browser launch uses
   `ShellExecuteW` on Windows and `xdg-open` on Unix.
 - **Token handling.** The control-plane token is read from the environment and
@@ -122,13 +135,15 @@ and MCP server.
 python tests/gui/test_gui.py
 ```
 
-The test starts a real control plane and GUI bridge, checks the page and token,
-rejects a non-loopback Host and a missing token, starts a dry-run job and polls
-it to a terminal state. It does not require a browser.
+The test starts a real control plane and GUI bridge, checks the page, token,
+system/interfaces/modules/preflight endpoints, rejects a non-loopback Host and
+a missing token, and starts a dry-run job and polls it to a terminal state. It
+does not require a browser.
 
 ## Related
 
+- [3.0 manual](manual/README.md)
 - [Control plane](control-plane.md)
 - [Job model](job-model.md)
-- [TUI dashboard](tui.md)
+- [TUI dashboard](tui.md) (deprecated in 3.0)
 - [MCP server](mcp-server.md)

@@ -7,7 +7,16 @@ Discovery runs the same executable with a fixed argument vector.
 
 ## Starting it
 
-Start a control plane and an MCP client with the same token (when one is set):
+For a local MCP client, one command is enough: `xtate --mcp` starts a private
+control plane in a child process, serves stdio MCP on it, and stops it when the
+MCP session ends:
+
+```bash
+xtate --mcp
+```
+
+To attach to an already-running control plane instead, use the same token in
+both processes:
 
 ```bash
 export XTATE_CONTROL_TOKEN="$(openssl rand -hex 16)"
@@ -27,10 +36,12 @@ connection; it does not listen on TCP.
 
 | Tool | Purpose |
 |---|---|
+| `capabilities` | Version, platform, raw-socket/HTTP3/QUIC capability and module counts |
 | `list_modules` | Full module metadata: scan, probe, output and generate modules |
 | `describe_probe` | Metadata for one named scan/probe module |
 | `explain_target` | Route groups, interface/source/gateway and Linux firewall state for a target set |
 | `check` | Same route/firewall report as `explain_target` |
+| `preflight` | Server-side, packet-free target/route/link/module preflight; returns counts, errors and warnings |
 | `validate_config` | Validate a closed scan-request object without starting a job |
 | `start_scan` | Start a managed scan job and return its `job_id` |
 | `job_list` | Paginated job list |

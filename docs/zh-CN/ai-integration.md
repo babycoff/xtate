@@ -41,8 +41,15 @@ CLI 仍是事实来源；控制面拥有 job，MCP server 只是控制面的轻�
   预检输出；扫描启动时以可操作的提示拒绝不支持的链路类型。
 - 扫描启动横幅和元信息输出实际 `Rate:`（默认值或 `--rate`）。
 
+3.0.0-rc.1 已交付（候选版本）：
+
+- `xtate --mcp` 一条命令启动私有控制面；
+- 面向代理宿主的 `capabilities` MCP 工具与 `--list-capabilities` JSON；
+- 以扫描优先的 GUI 预检与实时任务视图作为参考前端。
+
 仍待完成：
 
+- RC 试用反馈修复后发布正式 3.0.0；
 - agent 评测套件与打包；
 - 通过 MCP 暴露 generate/流式输入（MCP 目前只支持静态 `targets` 或
   `include_file`）。

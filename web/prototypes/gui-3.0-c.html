@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Xtate 3.0 — Focus console</title>
+<style>
+  :root {
+    --bg: #090d12;
+    --panel: #0f151c;
+    --panel-2: #131b24;
+    --line: #202c37;
+    --line-soft: #18232d;
+    --text: #edf3f7;
+    --muted: #91a0af;
+    --faint: #5e6e7e;
+    --mint: #69e9c3;
+    --mint-2: #3ec9a4;
+    --blue: #7fc6f2;
+    --amber: #e9b46a;
+    --mono: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    --sans: "Segoe UI Variable", "Segoe UI", Inter, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--sans); -webkit-font-smoothing: antialiased; overflow: hidden; }
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(700px 340px at 50% -10%, rgba(105,233,195,.055), transparent 65%),
+      linear-gradient(rgba(255,255,255,.012) 1px, transparent 1px);
+    background-size: auto, 100% 40px;
+  }
+  .top { height: 62px; border-bottom: 1px solid var(--line-soft); display: flex; align-items: center; padding: 0 34px; position: relative; z-index: 1; background: rgba(9,13,18,.66); backdrop-filter: blur(12px); }
+  .brand { display: flex; align-items: center; gap: 9px; }
+  .mark { width: 28px; height: 28px; border-radius: 8px; background: var(--mint); color: #04231b; display: grid; place-items: center; font-weight: 800; font-size: 16px; }
+  .brand b { font-size: 15.5px; font-weight: 660; letter-spacing: -.01em; }
+  .brand span { font: 9.5px var(--mono); color: var(--mint); border: 1px solid rgba(105,233,195,.26); background: rgba(105,233,195,.06); border-radius: 999px; padding: 3px 6px; margin-left: 1px; }
+  .topnav { position: absolute; left: 50%; transform: translateX(-50%); display: flex; gap: 2px; color: var(--faint); font-size: 12px; }
+  .topnav a { color: var(--faint); text-decoration: none; padding: 7px 10px; border-radius: 7px; }
+  .topnav a.on { color: var(--text); background: var(--panel-2); }
+  .top-right { margin-left: auto; display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 11px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: #55c99a; box-shadow: 0 0 0 4px rgba(85,201,154,.09); }
+  .avatar { width: 27px; height: 27px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; font: 9.5px var(--mono); color: var(--muted); background: var(--panel); }
+  .page { height: calc(100vh - 62px); overflow: auto; padding: 34px 34px 44px; position: relative; z-index: 1; }
+  .inner { max-width: 1140px; margin: 0 auto; }
+  .eyebrow { display: flex; align-items: center; gap: 9px; color: var(--mint); font: 10px var(--mono); letter-spacing: .18em; text-transform: uppercase; }
+  .eyebrow:before { content: ""; width: 20px; height: 1px; background: var(--mint); opacity: .65; }
+  h1 { margin: 10px 0 0; font-size: 35px; letter-spacing: -.04em; line-height: 1.1; font-weight: 610; }
+  .sub { margin: 8px 0 25px; color: var(--muted); font-size: 13px; max-width: 650px; }
+  .panel { background: linear-gradient(180deg, rgba(255,255,255,.018), transparent 120px), var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+  .scope { padding: 19px 20px 18px; }
+  .scope-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .label b { color: var(--text); font-weight: 600; }
+  .scope-top .right { margin-left: auto; color: var(--faint); font: 10px var(--mono); }
+  .input-row { display: flex; gap: 10px; align-items: stretch; }
+  .scope-input { flex: 1; min-width: 0; height: 52px; background: #0a1017; border: 1px solid #2a3b49; border-radius: 9px; display: flex; align-items: center; padding: 0 14px; }
+  .scope-input .text { flex: 1; font: 13px var(--mono); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .count { font: 10px var(--mono); color: var(--mint); background: rgba(105,233,195,.07); border: 1px solid rgba(105,233,195,.14); border-radius: 5px; padding: 4px 6px; white-space: nowrap; }
+  .file { height: 52px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-2); color: var(--muted); padding: 0 13px; font-size: 11px; white-space: nowrap; }
+  .pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .pill { font: 9.5px var(--mono); color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 4px 8px; background: rgba(255,255,255,.015); }
+  .pill i { font-style: normal; color: var(--faint); margin-left: 4px; }
+  .mid { display: grid; grid-template-columns: 1.22fr .78fr; gap: 14px; margin-top: 14px; }
+  .methods { padding: 17px 18px 18px; }
+  .seg { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; margin-top: 11px; }
+  .seg-item { border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,.012); padding: 10px 11px; }
+  .seg-item.on { border-color: rgba(105,233,195,.48); background: rgba(105,233,195,.055); position: relative; }
+  .seg-item.on:after { content: ""; position: absolute; right: 9px; top: 9px; width: 5px; height: 5px; border-radius: 50%; background: var(--mint); }
+  .seg-item b { display: block; font-size: 11.5px; font-weight: 620; }
+  .seg-item small { display: block; color: var(--faint); font-size: 9.5px; margin-top: 2px; }
+  .method-foot { display: flex; gap: 8px; margin-top: 9px; color: var(--faint); font: 9.5px var(--mono); }
+  .settings { padding: 17px 18px 18px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin-top: 11px; }
+  .field label { display: flex; justify-content: space-between; color: var(--muted); font-size: 10px; margin-bottom: 5px; }
+  .field label span { color: var(--faint); font: 9px var(--mono); }
+  .field input, .field select { width: 100%; height: 39px; border: 1px solid #293947; border-radius: 7px; background: #0a1017; color: var(--text); padding: 0 9px; font: 11.5px var(--mono); outline: none; }
+  .field select { font-family: var(--sans); }
+  .iface-box { margin-top: 11px; border: 1px solid var(--line); border-radius: 8px; background: #0a1017; padding: 9px 10px; display: flex; align-items: center; gap: 9px; }
+  .wifi { width: 26px; height: 26px; border-radius: 6px; display: grid; place-items: center; background: rgba(127,198,242,.08); color: var(--blue); }
+  .wifi svg { width: 14px; height: 14px; }
+  .iface-box b { display: block; font-size: 10.5px; font-weight: 560; }
+  .iface-box small { display: block; color: var(--faint); font: 9px var(--mono); margin-top: 1px; }
+  .iface-box .end { margin-left: auto; display: flex; gap: 4px; }
+  .tag { font: 8.5px var(--mono); color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 2px 4px; }
+  .tag.g { color: var(--mint); border-color: rgba(105,233,195,.22); background: rgba(105,233,195,.05); }
+  .preflight { margin-top: 14px; padding: 0; overflow: hidden; }
+  .pf-main { display: grid; grid-template-columns: 1fr 1fr 1fr 1.35fr; }
+  .pf-cell { padding: 13px 16px; border-right: 1px solid var(--line-soft); }
+  .pf-cell:last-child { border-right: 0; }
+  .k { color: var(--faint); font-size: 9.5px; text-transform: uppercase; letter-spacing: .09em; }
+  .v { margin-top: 4px; font: 11px var(--mono); color: var(--text); }
+  .v.good { color: var(--mint); }
+  .v small { font: 9.5px var(--sans); color: var(--faint); }
+  .pf-foot { border-top: 1px solid var(--line-soft); background: rgba(255,255,255,.012); display: flex; align-items: center; padding: 13px 16px; gap: 14px; }
+  .checks { display: flex; gap: 14px; color: var(--muted); font-size: 10px; }
+  .checks span { display: flex; align-items: center; gap: 5px; }
+  .checks i { width: 13px; height: 13px; border-radius: 50%; background: rgba(105,233,195,.09); color: var(--mint); display: grid; place-items: center; font-style: normal; font-size: 8px; }
+  .auth { margin-left: auto; display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; }
+  .auth .box { width: 14px; height: 14px; border-radius: 4px; background: var(--mint); color: #04231b; display: grid; place-items: center; font-size: 8px; }
+  .start { height: 40px; border: 0; border-radius: 8px; background: var(--mint); color: #04231b; font: 600 12px var(--sans); padding: 0 18px; display: flex; align-items: center; gap: 7px; box-shadow: 0 8px 24px rgba(105,233,195,.12); }
+  .start svg { width: 13px; height: 13px; }
+  .bottom { display: flex; align-items: center; gap: 13px; margin-top: 16px; color: var(--faint); font-size: 10px; }
+  .bottom .right { margin-left: auto; font: 9.5px var(--mono); }
+  .focus-note { display: flex; align-items: center; gap: 8px; margin-top: 14px; color: #5f7182; font-size: 10px; }
+  .focus-note:before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--amber); }
+  svg { display: block; }
+</style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><div class="mark">x</div><b>xtate</b><span>3.0</span></div>
+    <nav class="topnav"><a class="on" href="#">New scan</a><a href="#">Live</a><a href="#">Results</a><a href="#">Interfaces</a><a href="#">Modules</a></nav>
+    <div class="top-right"><span class="dot"></span> local control plane <div class="avatar">SC</div></div>
+  </header>
+
+  <div class="page">
+    <div class="inner">
+      <div class="eyebrow">New scan</div>
+      <h1>Point, check, send.</h1>
+      <p class="sub">One screen from target to first packet. Route and interface are resolved before anything leaves the host.</p>
+
+      <section class="panel scope">
+        <div class="scope-top">
+          <div class="label"><b>Scope</b> &nbsp;·&nbsp; IPv4, IPv6, CIDR, ranges</div>
+          <div class="right">parsed locally · no packets</div>
+        </div>
+        <div class="input-row">
+          <div class="scope-input">
+            <div class="text">198.18.0.0/24, 203.0.113.10-203.0.113.40</div>
+            <span class="count">287 targets</span>
+          </div>
+          <button class="file" type="button">Choose file…</button>
+        </div>
+        <div class="pills">
+          <span class="pill">198.18.0.0/24 <i>256</i></span>
+          <span class="pill">203.0.113.10–40 <i>31</i></span>
+          <span class="pill">no exclusions</span>
+        </div>
+      </section>
+
+      <div class="mid">
+        <section class="panel methods">
+          <div class="label"><b>Method</b></div>
+          <div class="seg">
+            <div class="seg-item on"><b>TCP SYN</b><small>Stateless reachability</small></div>
+            <div class="seg-item"><b>TCP state</b><small>Handshake + banner</small></div>
+            <div class="seg-item"><b>zbanner</b><small>Protocol probes</small></div>
+            <div class="seg-item"><b>UDP</b><small>Datagram probes</small></div>
+          </div>
+          <div class="method-foot"><span>selected: tcp-syn</span><span>·</span><span>1,000 pps default</span></div>
+        </section>
+
+        <section class="panel settings">
+          <div class="label"><b>Parameters</b></div>
+          <div class="grid2">
+            <div class="field"><label>Ports <span>80,443,8080</span></label><input value="80, 443, 8080"></div>
+            <div class="field"><label>Rate <span>pps</span></label><input value="1000"></div>
+            <div class="field"><label>Timeout <span>sec</span></label><input value="300"></div>
+            <div class="field"><label>Probe <span>openssl</span></label><select><option>http — HTTP/1.1</option><option>tls — certificate</option></select></div>
+          </div>
+          <div class="iface-box">
+            <div class="wifi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 9a12 12 0 0118 0M6.5 12.5a7.5 7.5 0 0111 0M10 16a3 3 0 014 0"/><circle cx="12" cy="19" r=".8" fill="currentColor"/></svg></div>
+            <div><b>Wi-Fi · Intel AX211</b><small>192.168.1.24</small></div>
+            <div class="end"><span class="tag g">DEFAULT</span><span class="tag">EN10MB</span></div>
+          </div>
+        </section>
+      </div>
+
+      <section class="panel preflight">
+        <div class="pf-main">
+          <div class="pf-cell"><div class="k">Route</div><div class="v good">on-link</div></div>
+          <div class="pf-cell"><div class="k">Source</div><div class="v">192.168.1.24</div></div>
+          <div class="pf-cell"><div class="k">Gateway</div><div class="v">192.168.1.1</div></div>
+          <div class="pf-cell"><div class="k">Link type</div><div class="v good">EN10MB (1) <small>· Ethernet + ARP</small></div></div>
+        </div>
+        <div class="pf-foot">
+          <div class="checks">
+            <span><i>✓</i>syntax</span><span><i>✓</i>result path</span><span><i>✓</i>dependency</span>
+          </div>
+          <div class="auth"><span class="box">✓</span> I have authorization for this scope</div>
+          <button class="start" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 5l11 7-11 7z"/></svg>Start scan</button>
+        </div>
+      </section>
+
+      <div class="bottom"><span>861 attempts · ~0.9 s at 1,000 pps · NDJSON output</span><span class="right">preflight OK · ready</span></div>
+      <div class="focus-note">The scan starts on this screen and moves to Live automatically. Stop is always one action away.</div>
+    </div>
+  </div>
+</body>
+</html>

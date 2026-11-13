@@ -3,532 +3,908 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="dark">
-<title>Xtate control plane</title>
+<title>Xtate control plane — 3.0</title>
 <style>
 :root {
-  --bg: #0b1017;
-  --panel: #121a24;
-  --panel-2: #172231;
-  --line: #253244;
-  --text: #dbe7f3;
-  --muted: #8fa3b8;
-  --accent: #4fd1c5;
-  --accent-2: #7aa2ff;
-  --danger: #ff6b7a;
-  --warn: #ffc857;
-  --ok: #58d68d;
-  --radius: 10px;
+  --bg: #090c11;
+  --bg-2: #0d1219;
+  --surface: #111821;
+  --surface-2: #151e29;
+  --line: #22303f;
+  --line-soft: #1a2532;
+  --text: #e8eef5;
+  --muted: #8595a5;
+  --faint: #637384;
+  --mint: #66e3bd;
+  --mint-dark: #0e2c27;
+  --amber: #f0c36a;
+  --red: #f27d7d;
+  --blue: #88b8f2;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --sans: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --radius: 12px;
 }
 * { box-sizing: border-box; }
-html, body { height: 100%; }
+html, body { margin: 0; min-height: 100%; }
 body {
-  margin: 0;
-  background: radial-gradient(1200px 600px at 15% -10%, #142438 0%, var(--bg) 60%);
+  background:
+    radial-gradient(1100px 500px at 50% -180px, rgba(102,227,189,.07), transparent 60%),
+    var(--bg);
   color: var(--text);
-  font: 14px/1.45 "Segoe UI", "Noto Sans", system-ui, sans-serif;
+  font: 13px/1.45 var(--sans);
+  letter-spacing: .005em;
 }
-button, input, select, textarea { font: inherit; }
-button {
-  border: 1px solid var(--line);
-  background: var(--panel-2);
-  color: var(--text);
-  border-radius: 7px;
-  padding: 7px 12px;
-  cursor: pointer;
-}
-button:hover:not(:disabled) { border-color: var(--accent-2); }
-button:disabled { opacity: .45; cursor: not-allowed; }
-button.primary { background: var(--accent); border-color: var(--accent); color: #06211d; font-weight: 600; }
-button.danger { color: var(--danger); border-color: #4a2631; }
-button.ghost { background: transparent; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: var(--mint); text-decoration: none; }
+.mono { font-family: var(--mono); }
+.hidden { display: none !important; }
+
 .topbar {
-  display: flex; align-items: center; gap: 16px;
-  padding: 14px 20px; border-bottom: 1px solid var(--line);
-  background: rgba(11, 16, 23, .75); backdrop-filter: blur(8px);
-  position: sticky; top: 0; z-index: 5;
+  height: 62px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 0 28px;
+  border-bottom: 1px solid var(--line-soft);
+  background: rgba(9,12,17,.92);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: blur(10px);
 }
-.brand { font-size: 18px; font-weight: 700; letter-spacing: .4px; }
-.brand span { color: var(--accent); }
-.sub { color: var(--muted); font-size: 12px; }
-.endpoint { margin-left: auto; display: flex; align-items: center; gap: 8px; min-width: 0; }
-.endpoint code {
-  max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  color: #b9cce0; background: #0a121c; border: 1px solid var(--line);
-  padding: 4px 8px; border-radius: 6px; font-size: 12px;
+.brand { display: flex; align-items: center; gap: 10px; min-width: 164px; }
+.brand-mark {
+  width: 27px; height: 27px; border-radius: 8px;
+  display: grid; place-items: center;
+  background: var(--mint); color: #06201a; font-weight: 800; font-size: 14px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.18) inset;
 }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; }
-.dot.on { background: var(--ok); box-shadow: 0 0 8px rgba(88, 214, 141, .6); }
-.dot.off { background: var(--danger); }
-main { padding: 18px 20px 28px; max-width: 1600px; margin: 0 auto; }
-.toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
-.toolbar .spacer { flex: 1; }
-.notice { color: var(--muted); font-size: 12px; }
-.layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr); gap: 16px; align-items: start; }
-.panel {
-  background: linear-gradient(180deg, rgba(23, 34, 49, .92), rgba(18, 26, 36, .92));
-  border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden;
+.brand-name { font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
+.version-chip {
+  font-family: var(--mono); font-size: 10px; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 999px; padding: 2px 7px;
 }
-.panel-head { display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
-.panel-head h2 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); }
-.panel-body { padding: 12px 14px; }
-.table-wrap { overflow: auto; max-height: 62vh; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th {
-  text-align: left; color: var(--muted); font-weight: 600; font-size: 11px;
-  text-transform: uppercase; letter-spacing: .6px; padding: 9px 12px;
-  border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel-2);
+.nav { display: flex; gap: 4px; align-items: center; }
+.nav button, .nav-link {
+  border: 1px solid transparent; background: transparent; color: var(--muted);
+  border-radius: 8px; padding: 7px 11px; font-size: 12.5px;
 }
-td { padding: 9px 12px; border-bottom: 1px solid rgba(37, 50, 68, .65); vertical-align: top; }
-tr.job { cursor: pointer; }
-tr.job:hover td { background: rgba(122, 162, 255, .06); }
-tr.job.sel td { background: rgba(79, 209, 197, .08); }
-.mono { font-family: "Cascadia Mono", Consolas, "SFMono-Regular", monospace; font-size: 12px; }
-.path { max-width: 34vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.nav button:hover, .nav-link:hover { color: var(--text); background: var(--surface); }
+.nav button.active { color: var(--text); background: var(--surface-2); border-color: var(--line-soft); }
+.top-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.conn { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+.dot.ok { background: var(--mint); box-shadow: 0 0 0 3px rgba(102,227,189,.12); }
+.dot.bad { background: var(--red); }
+.avatar {
+  width: 28px; height: 28px; border-radius: 50%; background: var(--surface-2);
+  border: 1px solid var(--line); display: grid; place-items: center;
+  font-size: 10px; color: var(--muted);
+}
+
+main { max-width: 1320px; margin: 0 auto; padding: 34px 28px 70px; }
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 26px; }
+.eyebrow { color: var(--mint); font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; }
+h1 { font-size: 34px; line-height: 1.05; letter-spacing: -.035em; margin: 9px 0 7px; font-weight: 650; }
+.sub { color: var(--muted); font-size: 13px; max-width: 680px; }
 .badge {
-  display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 11px;
-  border: 1px solid var(--line); color: var(--muted); background: #0c141e;
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--line); border-radius: 999px; padding: 4px 9px;
+  font-size: 11px; color: var(--muted); background: var(--surface);
 }
-.badge.completed { color: var(--ok); border-color: #22523b; background: #0d1f18; }
-.badge.running { color: var(--accent); border-color: #1c4d49; background: #0b1e1d; }
-.badge.queued { color: var(--warn); border-color: #4e3e1c; background: #1d180c; }
-.badge.failed, .badge.timed_out, .badge.stalled { color: var(--danger); border-color: #512732; background: #1f0d12; }
-.badge.cancelled { color: var(--muted); }
-.empty { padding: 28px 14px; color: var(--muted); text-align: center; }
-.kv { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 7px 10px; font-size: 12px; }
-.kv dt { color: var(--muted); }
-.kv dd { margin: 0; overflow-wrap: anywhere; }
-pre.tail {
-  margin: 10px 0 0; padding: 10px; max-height: 180px; overflow: auto;
-  background: #080e15; border: 1px solid var(--line); border-radius: 7px;
-  color: #c4d4e4; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere;
+.badge.mint { color: var(--mint); border-color: rgba(102,227,189,.35); background: var(--mint-dark); }
+.badge.amber { color: var(--amber); border-color: rgba(240,195,106,.35); background: rgba(240,195,106,.08); }
+.badge.red { color: var(--red); border-color: rgba(242,125,125,.35); background: rgba(242,125,125,.08); }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 352px; gap: 22px; align-items: start; }
+.card {
+  background: linear-gradient(180deg, rgba(255,255,255,.012), transparent 55%), var(--surface);
+  border: 1px solid var(--line-soft); border-radius: var(--radius);
 }
-.hint { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 18px; border-bottom: 1px solid var(--line-soft); }
+.card-title { font-size: 11px; letter-spacing: .10em; text-transform: uppercase; color: var(--muted); font-weight: 650; }
+.card-body { padding: 18px; }
+.field-label { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; color: var(--muted); font-size: 11.5px; margin-bottom: 7px; }
+.field-hint { color: var(--faint); font-size: 10.5px; }
+input[type="text"], input[type="number"], select, textarea {
+  width: 100%; background: #0b1118; border: 1px solid var(--line); border-radius: 8px;
+  padding: 10px 11px; outline: none; transition: border-color .15s, box-shadow .15s;
+}
+input:focus, select:focus, textarea:focus { border-color: rgba(102,227,189,.7); box-shadow: 0 0 0 2px rgba(102,227,189,.13); }
+textarea { resize: vertical; min-height: 74px; font-family: var(--mono); font-size: 12.5px; }
+input.invalid, textarea.invalid { border-color: rgba(242,125,125,.7); }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid-3 { display: grid; grid-template-columns: 1.25fr 1fr 1fr; gap: 14px; }
+.stack { display: grid; gap: 14px; }
+.scope-row { display: flex; gap: 10px; align-items: stretch; }
+.scope-row textarea { flex: 1; }
+.scope-side { width: 148px; display: flex; flex-direction: column; gap: 7px; }
+.file-btn {
+  border: 1px dashed var(--line); background: var(--bg-2); border-radius: 8px;
+  color: var(--muted); padding: 8px; font-size: 11.5px; text-align: center;
+}
+.file-btn:hover { color: var(--text); border-color: var(--faint); }
+.parsed { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; min-height: 22px; }
+.chip {
+  border: 1px solid var(--line); background: #0b1118; border-radius: 999px;
+  padding: 3px 8px; font-family: var(--mono); font-size: 10.5px; color: var(--muted);
+}
+.chip.mint { color: var(--mint); border-color: rgba(102,227,189,.30); }
+
+.method-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
+.method {
+  text-align: left; background: #0b1118; border: 1px solid var(--line-soft);
+  border-radius: 9px; padding: 11px 12px; position: relative;
+}
+.method:hover { border-color: var(--line); background: #0d151e; }
+.method.active { border-color: rgba(102,227,189,.65); background: linear-gradient(180deg, rgba(102,227,189,.075), transparent), #0b1118; }
+.method .m-name { color: var(--text); font-weight: 650; font-size: 12.5px; }
+.method .m-desc { color: var(--muted); font-size: 10.5px; margin-top: 3px; line-height: 1.35; }
+.method .m-check { position: absolute; right: 10px; top: 10px; width: 7px; height: 7px; border-radius: 50%; background: transparent; border: 1px solid var(--line); }
+.method.active .m-check { background: var(--mint); border-color: var(--mint); }
+
+.iface-line {
+  display: flex; align-items: center; gap: 10px; border: 1px solid var(--line-soft);
+  border-radius: 9px; background: #0b1118; padding: 10px 11px;
+}
+.iface-line .ico { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--line); display: grid; place-items: center; color: var(--mint); }
+.iface-line .name { font-weight: 600; font-size: 12px; }
+.iface-line .meta { color: var(--muted); font-family: var(--mono); font-size: 10px; margin-top: 2px; }
+.iface-line select { margin-left: auto; max-width: 260px; padding: 7px 9px; font-size: 11px; }
+
+.auth {
+  display: flex; gap: 11px; align-items: flex-start; padding: 12px;
+  border: 1px solid var(--line); border-radius: 9px; background: #0b1118;
+}
+.auth input { width: 19px; height: 19px; accent-color: var(--mint); margin-top: 1px; }
+.auth-label { color: var(--muted); font-size: 11.5px; line-height: 1.45; }
+.auth-label b { color: var(--text); font-weight: 600; }
+
+.preflight { position: sticky; top: 84px; }
+.pf-state { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 10px; letter-spacing: .10em; text-transform: uppercase; }
+.pf-state.ok { color: var(--mint); } .pf-state.bad { color: var(--red); } .pf-state.warn { color: var(--amber); } .pf-state.idle { color: var(--faint); }
+.pf-hero { padding: 17px 18px 14px; border-bottom: 1px solid var(--line-soft); }
+.pf-big { font-family: var(--mono); font-size: 27px; letter-spacing: -.04em; margin-top: 7px; }
+.pf-big small { font-family: var(--sans); font-size: 11px; color: var(--muted); letter-spacing: 0; }
+.pf-line { display: flex; justify-content: space-between; gap: 16px; padding: 7px 0; border-bottom: 1px solid var(--line-soft); font-size: 11.5px; }
+.pf-line:last-child { border-bottom: 0; }
+.pf-line .k { color: var(--muted); } .pf-line .v { text-align: right; font-family: var(--mono); font-size: 10.5px; overflow-wrap: anywhere; }
+.pf-checks { display: grid; gap: 6px; margin-top: 10px; }
+.pf-check { display: flex; gap: 7px; align-items: flex-start; font-size: 11px; color: var(--muted); }
+.pf-check .mark { width: 13px; flex: 0 0 13px; color: var(--mint); }
+.pf-check.bad .mark { color: var(--red); } .pf-check.warn .mark { color: var(--amber); }
+.pf-note { margin: 12px 18px 0; border: 1px solid rgba(102,227,189,.25); background: rgba(102,227,189,.05); border-radius: 8px; padding: 9px 10px; color: var(--muted); font-size: 10.5px; line-height: 1.45; }
+.pf-actions { padding: 15px 18px 17px; }
+.btn {
+  border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2);
+  color: var(--text); padding: 9px 13px; font-weight: 600; font-size: 12px;
+}
+.btn:hover { border-color: var(--faint); }
+.btn.mint { background: var(--mint); border-color: var(--mint); color: #06201a; }
+.btn.mint:hover { filter: brightness(1.06); }
+.btn.ghost { background: transparent; color: var(--muted); }
+.btn.danger { color: var(--red); border-color: rgba(242,125,125,.35); background: rgba(242,125,125,.06); }
+.btn[disabled] { opacity: .38; cursor: not-allowed; filter: none; }
+.btn-wide { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.btn-wide .arrow { font-size: 15px; line-height: 1; }
+
+.progress { height: 7px; background: #0b1118; border-radius: 999px; overflow: hidden; border: 1px solid var(--line-soft); }
+.progress > span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #3fbf9e, var(--mint)); transition: width .4s ease; }
+.kv-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.kv { border: 1px solid var(--line-soft); background: #0b1118; border-radius: 8px; padding: 10px 11px; }
+.kv .k { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.kv .v { margin-top: 4px; font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+.table { width: 100%; border-collapse: collapse; }
+.table th { text-align: left; color: var(--faint); font-size: 9.5px; letter-spacing: .10em; text-transform: uppercase; font-weight: 600; padding: 9px 12px; border-bottom: 1px solid var(--line-soft); }
+.table td { padding: 10px 12px; border-bottom: 1px solid var(--line-soft); font-size: 11.5px; }
+.table tr:last-child td { border-bottom: 0; }
+.table tbody tr { cursor: pointer; }
+.table tbody tr:hover { background: var(--surface-2); }
+.table .id { font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+.state { font-family: var(--mono); font-size: 10px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.state.completed { color: var(--mint); border-color: rgba(102,227,189,.35); }
+.state.running, .state.queued { color: var(--amber); border-color: rgba(240,195,106,.35); }
+.state.failed, .state.cancelled, .state.timed_out, .state.stalled { color: var(--red); border-color: rgba(242,125,125,.35); }
+.muted { color: var(--muted); } .faint { color: var(--faint); }
+.small { font-size: 11px; }
+.mono { font-family: var(--mono); }
+.section-label { color: var(--faint); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; font-weight: 650; margin: 0 0 10px; }
+.iface-grid, .module-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.iface-card { padding: 14px; border: 1px solid var(--line-soft); border-radius: 10px; background: #0b1118; }
+.iface-card.default { border-color: rgba(102,227,189,.34); }
+.iface-card h3 { margin: 0 0 2px; font-size: 13px; font-weight: 600; }
+.iface-card .desc { color: var(--muted); font-size: 11px; margin-bottom: 10px; }
+.kv-list { display: grid; gap: 5px; }
+.kv-list div { display: flex; justify-content: space-between; gap: 10px; font-size: 10.5px; }
+.kv-list .k { color: var(--faint); } .kv-list .v { font-family: var(--mono); text-align: right; overflow-wrap: anywhere; }
+.search { position: relative; max-width: 360px; }
+.search input { padding-left: 32px; }
+.search::before { content: "⌕"; position: absolute; left: 11px; top: 7px; color: var(--faint); font-size: 15px; }
+.module-card { padding: 12px 13px; border: 1px solid var(--line-soft); border-radius: 9px; background: #0b1118; }
+.module-card h3 { margin: 0; font-size: 12px; font-family: var(--mono); }
+.module-card .kind { color: var(--faint); font-size: 9px; text-transform: uppercase; letter-spacing: .1em; }
+.module-card p { margin: 6px 0 0; color: var(--muted); font-size: 10.5px; line-height: 1.4; }
 .toast {
-  position: fixed; right: 18px; bottom: 18px; max-width: min(520px, 90vw);
-  padding: 10px 14px; border-radius: 8px; border: 1px solid var(--line);
-  background: #111d2b; color: var(--text); box-shadow: 0 12px 28px rgba(0,0,0,.4);
-  opacity: 0; transform: translateY(8px); transition: opacity .18s, transform .18s;
-  pointer-events: none; z-index: 30;
+  position: fixed; right: 24px; bottom: 24px; max-width: 420px;
+  border: 1px solid var(--line); background: var(--surface-2); border-radius: 10px;
+  padding: 11px 13px; font-size: 11.5px; color: var(--text);
+  box-shadow: 0 14px 40px rgba(0,0,0,.35); z-index: 50;
 }
-.toast.show { opacity: 1; transform: translateY(0); }
-.toast.err { border-color: #5a2430; }
-dialog {
-  border: 1px solid var(--line); border-radius: 12px; padding: 0;
-  background: var(--panel); color: var(--text); width: min(620px, 92vw);
-  box-shadow: 0 24px 70px rgba(0,0,0,.55);
+.toast.bad { border-color: rgba(242,125,125,.4); }
+.empty { border: 1px dashed var(--line); border-radius: 10px; padding: 34px 20px; text-align: center; color: var(--muted); }
+.empty b { display: block; color: var(--text); font-size: 13px; margin-bottom: 5px; }
+.log-tail {
+  margin: 0; padding: 12px 13px; border: 1px solid var(--line-soft); border-radius: 9px;
+  background: #070a0e; color: #b8c7d6; font: 10.5px/1.5 var(--mono);
+  max-height: 260px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere;
 }
-dialog::backdrop { background: rgba(2, 6, 10, .72); }
-.dialog-head { padding: 14px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; }
-.dialog-head h2 { margin: 0; font-size: 15px; }
-.dialog-head button { margin-left: auto; }
-form { padding: 14px 16px 16px; }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.field { display: flex; flex-direction: column; gap: 5px; }
-.field label { color: var(--muted); font-size: 12px; }
-.field input, .field select, .field textarea {
-  width: 100%; border: 1px solid var(--line); border-radius: 7px;
-  background: #0b141e; color: var(--text); padding: 8px 9px;
-}
-.field textarea { min-height: 72px; resize: vertical; }
-.field input:focus, .field select:focus, .field textarea:focus {
-  outline: none; border-color: var(--accent-2); box-shadow: 0 0 0 2px rgba(122,162,255,.15);
-}
-.wide { grid-column: 1 / -1; }
-.authbox { display: flex; gap: 9px; align-items: flex-start; padding: 10px; border: 1px solid #3d3220; background: #19160d; border-radius: 8px; }
-.authbox input { margin-top: 3px; }
-.dialog-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
-.error { color: var(--danger); min-height: 18px; font-size: 12px; }
-@media (max-width: 900px) {
+footer { max-width: 1320px; margin: 0 auto; padding: 0 28px 30px; color: var(--faint); font-size: 10.5px; display: flex; justify-content: space-between; gap: 20px; }
+footer .mono { color: var(--faint); }
+@media (max-width: 980px) {
   .layout { grid-template-columns: 1fr; }
-  .endpoint code { max-width: 38vw; }
-  .grid2 { grid-template-columns: 1fr; }
+  .preflight { position: static; }
+  .grid-3 { grid-template-columns: 1fr 1fr; }
+  .grid-3 > :first-child { grid-column: 1 / -1; }
+}
+@media (max-width: 760px) {
+  .topbar { padding: 0 16px; gap: 10px; height: auto; flex-wrap: wrap; padding-top: 10px; padding-bottom: 10px; }
+  .brand { min-width: 0; }
+  .nav { order: 3; width: 100%; overflow-x: auto; }
+  main { padding: 24px 16px 54px; }
+  h1 { font-size: 27px; }
+  .grid-2, .grid-3, .kv-grid, .iface-grid, .module-grid { grid-template-columns: 1fr; }
+  .grid-3 > :first-child { grid-column: auto; }
+  .scope-row { flex-direction: column; }
+  .scope-side { width: auto; flex-direction: row; }
+  footer { padding: 0 16px 24px; flex-direction: column; }
 }
 </style>
 </head>
 <body>
 <header class="topbar">
-  <div>
-    <div class="brand">X<span>tate</span> <span class="sub">control plane</span></div>
-    <div class="sub">A local dashboard for jobs, results and safe starts.</div>
+  <div class="brand">
+    <div class="brand-mark">X</div>
+    <div class="brand-name">xtate</div>
+    <div class="version-chip" id="version-chip">3.0</div>
   </div>
-  <div class="endpoint">
-    <span id="connDot" class="dot"></span>
-    <code id="endpoint" title="control endpoint">connecting…</code>
+  <nav class="nav" aria-label="Main">
+    <button data-page="scan" class="active">New scan</button>
+    <button data-page="live">Live scan <span id="live-count" class="muted"></span></button>
+    <button data-page="results">Results</button>
+    <button data-page="interfaces">Interfaces</button>
+    <button data-page="modules">Modules</button>
+    <button data-page="settings">Settings</button>
+  </nav>
+  <div class="top-right">
+    <div class="conn"><span class="dot" id="conn-dot"></span><span id="conn-text">connecting</span></div>
+    <div class="avatar">SC</div>
   </div>
 </header>
+
 <main>
-  <div class="toolbar">
-    <button id="refreshBtn" class="ghost">Refresh</button>
-    <button id="startBtn" class="primary">Start scan</button>
-    <button id="cancelBtn" class="danger" disabled>Cancel selected</button>
-    <span class="spacer"></span>
-    <span id="summary" class="notice"></span>
-  </div>
-  <div class="layout">
-    <section class="panel">
-      <div class="panel-head"><h2>Jobs</h2><span id="count" class="notice"></span></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Job</th><th>State</th><th>Result</th></tr></thead>
-          <tbody id="jobs"></tbody>
-        </table>
-        <div id="empty" class="empty">No jobs yet. Start a scan or wait for another client.</div>
+  <section id="page-scan">
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">Console / New scan</div>
+        <h1>Point, check, send.</h1>
+        <div class="sub">Resolve the route, check the parameters, then send. Preflight is local and silent — nothing leaves the host before you authorize it.</div>
       </div>
+      <div class="badge" id="preflight-badge"><span class="dot"></span><span>waiting for target</span></div>
+    </div>
+
+    <div class="layout">
+      <div class="stack">
+        <section class="card">
+          <div class="card-head">
+            <div class="card-title">01 · Scope</div>
+            <div class="field-hint mono">IPv4 · IPv6 · CIDR · ranges</div>
+          </div>
+          <div class="card-body">
+            <div class="field-label"><span>Scan scope</span><span class="field-hint">comma or newline separated · parsed locally</span></div>
+            <div class="scope-row">
+              <textarea id="scope" spellcheck="false" placeholder="198.18.0.0/24, 203.0.113.10-40"></textarea>
+              <div class="scope-side">
+                <button class="file-btn" id="btn-sample" type="button">Use sample</button>
+                <div class="badge mint" id="scope-count">0 targets</div>
+              </div>
+            </div>
+            <div class="parsed" id="parsed"></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><div class="card-title">02 · Method</div><div class="field-hint mono">engine · probe · ports</div></div>
+          <div class="card-body stack">
+            <div class="method-grid" id="method-grid"></div>
+            <div class="grid-2">
+              <div id="ports-field">
+                <div class="field-label"><span>Ports</span><span class="field-hint mono">0–65535</span></div>
+                <input id="ports" type="text" value="80,443" spellcheck="false" autocomplete="off">
+              </div>
+              <div id="probe-field">
+                <div class="field-label"><span>Probe</span><span class="field-hint">optional protocol probe</span></div>
+                <select id="probe"><option value="">— none —</option></select>
+              </div>
+            </div>
+            <div class="grid-3">
+              <div>
+                <div class="field-label"><span>Rate</span><span class="field-hint mono">packets / sec</span></div>
+                <input id="rate" type="number" min="1" max="10000" value="1000">
+              </div>
+              <div>
+                <div class="field-label"><span>Timeout</span><span class="field-hint mono">seconds</span></div>
+                <input id="timeout" type="number" min="1" max="86400" value="300">
+              </div>
+              <div>
+                <div class="field-label"><span>Output</span><span class="field-hint">server managed</span></div>
+                <div class="iface-line" style="padding:8px 10px"><span class="mono small muted">NDJSON · manifest</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><div class="card-title">03 · Interface</div><div class="field-hint mono" id="iface-hint">auto-selected from the route</div></div>
+          <div class="card-body stack">
+            <div class="iface-line">
+              <div class="ico">⌁</div>
+              <div>
+                <div class="name" id="iface-name">Auto</div>
+                <div class="meta" id="iface-meta">route lookup will choose the capture device</div>
+              </div>
+              <select id="interface" aria-label="Capture interface"><option value="">Auto (from route)</option></select>
+            </div>
+            <p class="small muted" style="margin:0">TUN/VPN adapters use RAW link type and have no MAC. If routes are ambiguous, choose the physical adapter explicitly.</p>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><div class="card-title">04 · Authorization</div><div class="field-hint mono">required for Start</div></div>
+          <div class="card-body">
+            <label class="auth" for="auth">
+              <input id="auth" type="checkbox">
+              <span class="auth-label"><b>I have authorization to scan this scope at this rate.</b><br>
+                I own the targets or have written permission. The exact scope, rate, interface and time window above are what will be sent.</span>
+            </label>
+          </div>
+        </section>
+      </div>
+
+      <aside class="card preflight" aria-label="Preflight">
+        <div class="pf-hero">
+          <div class="pf-state idle" id="pf-state"><span class="dot"></span><span>PREFLIGHT · IDLE</span></div>
+          <div class="pf-big"><span id="pf-attempts">—</span> <small>attempts</small></div>
+          <div class="small muted" id="pf-summary">Enter a scope to calculate targets and route.</div>
+        </div>
+        <div class="card-body" style="padding-top:14px">
+          <div class="pf-line"><span class="k">Targets</span><span class="v" id="pf-targets">—</span></div>
+          <div class="pf-line"><span class="k">Ports</span><span class="v" id="pf-ports">—</span></div>
+          <div class="pf-line"><span class="k">Interface</span><span class="v" id="pf-iface">—</span></div>
+          <div class="pf-line"><span class="k">Source</span><span class="v" id="pf-source">—</span></div>
+          <div class="pf-line"><span class="k">Gateway</span><span class="v" id="pf-gateway">—</span></div>
+          <div class="pf-line"><span class="k">Link type</span><span class="v" id="pf-link">—</span></div>
+          <div class="pf-checks" id="pf-checks"></div>
+        </div>
+        <div class="pf-note" id="pf-note">Preflight does not send packets. Changing any field invalidates the result and reruns it.</div>
+        <div class="pf-actions">
+          <button class="btn mint btn-wide" id="btn-start" disabled><span class="arrow">▸</span> Start scan</button>
+          <div class="small faint" style="text-align:center;margin-top:8px" id="start-hint">Waiting for a valid preflight.</div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section id="page-live" class="hidden">
+    <div class="page-head">
+      <div><div class="eyebrow">Console / Live scan</div><h1 id="live-title">No active scan.</h1><div class="sub" id="live-sub">Start a scan from New scan. Every packet is accounted for here.</div></div>
+      <div class="badge" id="live-state-badge">idle</div>
+    </div>
+    <div class="layout">
+      <div class="stack">
+        <section class="card"><div class="card-head"><div class="card-title">Progress</div><div class="field-hint mono" id="live-eta">—</div></div>
+          <div class="card-body">
+            <div class="progress"><span id="live-progress"></span></div>
+            <div class="kv-grid" style="margin-top:14px">
+              <div class="kv"><div class="k">Sent</div><div class="v" id="live-sent">—</div></div>
+              <div class="kv"><div class="k">Targets</div><div class="v" id="live-targets">—</div></div>
+              <div class="kv"><div class="k">Phase</div><div class="v" id="live-phase">—</div></div>
+              <div class="kv"><div class="k">Heartbeat</div><div class="v" id="live-heartbeat">—</div></div>
+              <div class="kv"><div class="k">Elapsed</div><div class="v" id="live-elapsed">—</div></div>
+              <div class="kv"><div class="k">Exit code</div><div class="v" id="live-exit">—</div></div>
+            </div>
+            <div style="display:flex;gap:9px;margin-top:14px">
+              <button class="btn danger" id="btn-cancel" disabled>Cancel scan</button>
+              <button class="btn ghost" id="btn-refresh-live">Refresh</button>
+            </div>
+          </div>
+        </section>
+        <section class="card"><div class="card-head"><div class="card-title">Result manifest</div><div class="field-hint mono" id="live-manifest-state">—</div></div>
+          <div class="card-body"><div class="kv-list" id="live-manifest"></div></div>
+        </section>
+        <section class="card"><div class="card-head"><div class="card-title">Worker log tail</div><div class="field-hint mono">last lines</div></div>
+          <div class="card-body"><pre class="log-tail" id="live-log">No output yet.</pre></div>
+        </section>
+      </div>
+      <aside class="card preflight"><div class="pf-hero"><div class="pf-state idle"><span class="dot"></span><span>LIVE · POLLING</span></div><div class="pf-big"><span id="live-pps">—</span> <small>pps</small></div><div class="small muted">The daemon owns the scan; closing this page does not stop it.</div></div>
+        <div class="card-body"><div class="pf-line"><span class="k">Result</span><span class="v" id="live-result">—</span></div><div class="pf-line"><span class="k">Log</span><span class="v" id="live-logpath">—</span></div><div class="pf-line"><span class="k">Error</span><span class="v" id="live-error">—</span></div></div>
+      </aside>
+    </div>
+  </section>
+
+  <section id="page-results" class="hidden">
+    <div class="page-head"><div><div class="eyebrow">Console / Results</div><h1>Scans.</h1><div class="sub">Every scan managed by this control plane, newest first.</div></div><button class="btn ghost" id="btn-refresh-results">Refresh</button></div>
+    <section class="card"><div class="card-head"><div class="card-title">Scan history</div><div class="field-hint mono" id="results-count">—</div></div>
+      <div class="card-body" style="padding:0"><table class="table"><thead><tr><th>Scan</th><th>State</th><th>Result</th><th></th></tr></thead><tbody id="results-body"></tbody></table></div>
     </section>
-    <aside class="panel">
-      <div class="panel-head"><h2>Details</h2><span id="selectedId" class="sub"></span></div>
-      <div class="panel-body" id="details">
-        <div class="hint">Select a job to inspect its state, counters and result manifest.</div>
-      </div>
-    </aside>
-  </div>
+  </section>
+
+  <section id="page-interfaces" class="hidden">
+    <div class="page-head"><div><div class="eyebrow">Console / Interfaces</div><h1>Capture devices.</h1><div class="sub">Loopback, Ethernet, Wi-Fi and tunnel adapters reported by the capture stack.</div></div><div class="badge" id="iface-count">—</div></div>
+    <div class="iface-grid" id="iface-grid"></div>
+  </section>
+
+  <section id="page-modules" class="hidden">
+    <div class="page-head"><div><div class="eyebrow">Console / Modules</div><h1>What can be sent.</h1><div class="sub">Scan engines, protocol probes, output writers and target generators.</div></div>
+      <div class="search"><input id="module-search" type="text" placeholder="Filter modules…" autocomplete="off"></div>
+    </div>
+    <div class="module-grid" id="module-grid"></div>
+  </section>
+
+  <section id="page-settings" class="hidden">
+    <div class="page-head"><div><div class="eyebrow">Console / Settings</div><h1>Local session.</h1><div class="sub">This GUI is a loopback-only client for the local control plane.</div></div></div>
+    <div class="layout">
+      <section class="card"><div class="card-head"><div class="card-title">Runtime</div><div class="field-hint mono">read only</div></div><div class="card-body"><div class="kv-list" id="settings-runtime"></div></div></section>
+      <aside class="card"><div class="card-head"><div class="card-title">Security</div></div><div class="card-body stack small muted">
+        <p style="margin:0">The server binds to 127.0.0.1 only, validates the Host header, requires a per-session token, and exposes only allowlisted control methods. The scan child is owned by the control plane.</p>
+        <p style="margin:0">The GUI never stores the control token in the page; the server adds it to control requests.</p>
+        <p style="margin:0">Authorization is checked before start and again by the server. Do not scan systems you do not own.</p>
+      </div></aside>
+    </div>
+  </section>
 </main>
-
-<dialog id="startDialog">
-  <div class="dialog-head">
-    <h2>Start an authorized scan</h2>
-    <button id="closeStart" class="ghost" type="button">Close</button>
-  </div>
-  <form id="startForm">
-    <div class="grid2">
-      <div class="field">
-        <label for="scan">Scan module</label>
-        <input id="scan" value="tcp-syn" autocomplete="off">
-      </div>
-      <div class="field">
-        <label for="ports">Ports (comma separated, empty = module default)</label>
-        <input id="ports" placeholder="80,443" autocomplete="off">
-      </div>
-      <div class="field wide">
-        <label for="targets">Targets (one per line or comma separated)</label>
-        <textarea id="targets" placeholder="192.0.2.10&#10;192.0.2.0/24" required></textarea>
-      </div>
-      <div class="field">
-        <label for="rate">Rate (packets per second)</label>
-        <input id="rate" type="number" min="0" max="10000" value="1000">
-      </div>
-      <div class="field">
-        <label for="timeout">Timeout (seconds)</label>
-        <input id="timeout" type="number" min="1" max="86400" value="300">
-      </div>
-      <div class="field wide">
-        <label for="result">Result path</label>
-        <input id="result" autocomplete="off">
-      </div>
-      <div class="field wide">
-        <label for="iface">Interface (optional; paste the -if value from explain_target)</label>
-        <input id="iface" placeholder="leave empty to let the control plane choose" autocomplete="off">
-      </div>
-      <div class="wide authbox">
-        <input id="auth" type="checkbox">
-        <label for="auth">I have explicit authorization for the exact targets, ports and time window above. I understand that submitting this form starts real packets.</label>
-      </div>
-    </div>
-    <div id="formError" class="error"></div>
-    <div class="dialog-actions">
-      <button id="cancelStart" class="ghost" type="button">Cancel</button>
-      <button id="submitStart" class="primary" type="submit">Start scan</button>
-    </div>
-  </form>
-</dialog>
-
-<div id="toast" class="toast"></div>
+<footer><span>Xtate 3.0 · local control plane</span><span class="mono" id="footer-endpoint">—</span></footer>
+<div id="toast" class="toast hidden"></div>
 
 <script>
-"use strict";
 const TOKEN = "__XTATE_GUI_TOKEN__";
-let seq = 1;
-let jobs = [];
-let selected = null;
-let selectedStatus = null;
-let loading = false;
-let toastTimer = null;
-
+const state = {
+  page: "scan",
+  system: null,
+  interfaces: [],
+  modules: [],
+  scan: "tcp-syn",
+  preflight: null,
+  preflightSeq: 0,
+  preflightTimer: null,
+  jobId: null,
+  job: null,
+  pollTimer: null,
+  dirty: true,
+};
 const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? "" : s);
 
-function toast(message, isError) {
+function toast(message, bad) {
   const el = $("toast");
   el.textContent = message;
-  el.className = "toast show" + (isError ? " err" : "");
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.className = "toast"; }, 4200);
+  el.className = "toast" + (bad ? " bad" : "");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.add("hidden"), 5200);
 }
 
-async function api(method, extra) {
-  const body = Object.assign({ id: seq++, method }, extra || {});
-  const res = await fetch("/api/rpc", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Xtate-GUI-Token": TOKEN
-    },
-    body: JSON.stringify(body)
-  });
-  let data;
-  try { data = await res.json(); } catch (e) { throw new Error("invalid response from GUI server"); }
+async function api(path, options) {
+  const opts = options || {};
+  const headers = Object.assign({"X-Xtate-GUI-Token": TOKEN}, opts.headers || {});
+  if (opts.body && typeof opts.body !== "string") {
+    headers["Content-Type"] = "application/json";
+    opts.body = JSON.stringify(opts.body);
+  }
+  const res = await fetch(path, Object.assign({}, opts, {headers}));
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch (_) { data = {raw: text}; }
   if (!res.ok) {
-    const msg = data && data.error ? (data.error.message || data.error.code) : ("HTTP " + res.status);
-    throw new Error(msg);
+    const err = data && (data.error || data);
+    throw new Error((err && (err.message || err.code)) || ("HTTP " + res.status));
   }
-  if (data && data.error) {
-    throw new Error(String(data.error.code || "ERROR") + ": " + String(data.error.message || ""));
+  return data;
+}
+
+function showPage(name) {
+  state.page = name;
+  document.querySelectorAll("[data-page]").forEach((b) => b.classList.toggle("active", b.dataset.page === name));
+  ["scan", "live", "results", "interfaces", "modules", "settings"].forEach((p) => {
+    $("page-" + p).classList.toggle("hidden", p !== name);
+  });
+  if (name === "results") loadResults();
+  if (name === "live") pollJob();
+}
+
+function setConn(ok, text) {
+  $("conn-dot").className = "dot " + (ok ? "ok" : "bad");
+  $("conn-text").textContent = text || (ok ? "connected" : "offline");
+}
+
+function splitTargets(value) {
+  return value.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean);
+}
+function expandPorts(value) {
+  const out = [];
+  const seen = new Set();
+  for (const part of value.split(",").map((s) => s.trim()).filter(Boolean)) {
+    const m = part.match(/^(\d+)\s*-\s*(\d+)$/);
+    if (m) {
+      let a = +m[1], b = +m[2];
+      if (a > b) [a, b] = [b, a];
+      for (let p = a; p <= b && p <= 65535; p++) if (!seen.has(p)) { seen.add(p); out.push(p); }
+    } else {
+      const p = +part;
+      if (Number.isInteger(p) && p >= 0 && p <= 65535 && !seen.has(p)) { seen.add(p); out.push(p); }
+    }
   }
-  return data.result;
+  return out;
 }
-
-function setConnected(on) {
-  $("connDot").className = "dot " + (on ? "on" : "off");
-  $("summary").textContent = on ? "connected" : "control plane unavailable";
+function parsePreflightInput() {
+  return {
+    targets: $("scope").value,
+    ports: $("ports").value,
+    scan: state.scan,
+    probe: $("probe").value,
+    rate: +$("rate").value,
+    timeout_sec: +$("timeout").value,
+    interface: $("interface").value || undefined,
+  };
 }
-
-async function loadInfo() {
-  try {
-    const res = await fetch("/api/info", { headers: { "X-Xtate-GUI-Token": TOKEN } });
-    if (!res.ok) throw new Error("info unavailable");
-    const info = await res.json();
-    $("endpoint").textContent = info.endpoint || "control endpoint";
-    $("endpoint").title = info.endpoint || "";
-    setConnected(true);
-  } catch (e) {
-    $("endpoint").textContent = "control endpoint unavailable";
-    setConnected(false);
-  }
+function markDirty() {
+  state.dirty = true;
+  state.preflight = null;
+  $("btn-start").disabled = true;
+  $("start-hint").textContent = "Waiting for a valid preflight.";
+  $("pf-state").className = "pf-state idle";
+  $("pf-state").innerHTML = '<span class="dot"></span><span>PREFLIGHT · PENDING</span>';
+  $("pf-attempts").textContent = "—";
+  $("pf-summary").textContent = "Checking scope and route…";
 }
-
-function badge(state) {
-  const s = String(state || "unknown");
-  const allowed = ["completed","running","queued","failed","timed_out","stalled","cancelled"];
-  const cls = allowed.includes(s) ? s : "";
-  const span = document.createElement("span");
-  span.className = "badge " + cls;
-  span.textContent = s;
-  return span;
+function schedulePreflight() {
+  markDirty();
+  clearTimeout(state.preflightTimer);
+  state.preflightTimer = setTimeout(runPreflight, 320);
 }
-
-function renderJobs(total) {
-  const body = $("jobs");
-  body.textContent = "";
-  $("empty").style.display = jobs.length ? "none" : "block";
-  $("count").textContent = jobs.length ? (jobs.length + " / " + (total || jobs.length) + " shown") : "";
-  for (const job of jobs) {
-    const tr = document.createElement("tr");
-    tr.className = "job" + (job.job_id === selected ? " sel" : "");
-    tr.dataset.id = job.job_id;
-    const id = document.createElement("td");
-    id.className = "mono";
-    id.textContent = job.job_id || "(no id)";
-    const st = document.createElement("td");
-    st.appendChild(badge(job.state));
-    const result = document.createElement("td");
-    result.className = "path mono";
-    result.title = job.result || "";
-    result.textContent = job.result || "";
-    tr.append(id, st, result);
-    tr.addEventListener("click", () => selectJob(job.job_id));
-    body.appendChild(tr);
-  }
-  updateSelectionUI();
-}
-
-function updateSelectionUI() {
-  const active = selectedStatus && ("queued" === selectedStatus.state || "running" === selectedStatus.state);
-  $("cancelBtn").disabled = !selected || !active;
-  $("selectedId").textContent = selected || "";
-  $("cancelBtn").dataset.id = selected || "";
-}
-
-async function selectJob(id) {
-  if (!id) return;
-  selected = id;
-  for (const tr of document.querySelectorAll("tr.job")) {
-    tr.classList.toggle("sel", tr.dataset.id === id);
-  }
-  await loadDetails();
-}
-
-function cleanText(value) {
-  return String(value === undefined || value === null ? "" : value)
-    .replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "")
-    .replace(/\[K/g, "");
-}
-
-function addKV(dl, key, value) {
-  const dt = document.createElement("dt");
-  dt.textContent = key;
-  const dd = document.createElement("dd");
-  const text = cleanText(value);
-  dd.textContent = text === "" ? "—" : text;
-  dl.append(dt, dd);
-}
-
-async function loadDetails() {
-  const box = $("details");
-  if (!selected) {
-    box.textContent = "";
-    const hint = document.createElement("div");
-    hint.className = "hint";
-    hint.textContent = "Select a job to inspect its state, counters and result manifest.";
-    box.appendChild(hint);
-    selectedStatus = null;
-    updateSelectionUI();
+async function runPreflight() {
+  const input = parsePreflightInput();
+  const seq = ++state.preflightSeq;
+  if (!input.targets.trim()) {
+    $("scope-count").textContent = "0 targets";
+    $("parsed").innerHTML = "";
+    $("pf-state").className = "pf-state idle";
+    $("pf-state").innerHTML = '<span class="dot"></span><span>PREFLIGHT · IDLE</span>';
+    $("pf-summary").textContent = "Enter a scope to calculate targets and route.";
+    $("pf-targets").textContent = "—"; $("pf-ports").textContent = "—";
+    $("pf-iface").textContent = "—"; $("pf-source").textContent = "—";
+    $("pf-gateway").textContent = "—"; $("pf-link").textContent = "—";
+    $("pf-checks").innerHTML = "";
+    $("btn-start").disabled = true;
+    $("start-hint").textContent = "Waiting for a valid preflight.";
+    $("preflight-badge").className = "badge";
+    $("preflight-badge").innerHTML = '<span class="dot"></span><span>waiting for target</span>';
     return;
   }
-  const id = selected;
   try {
-    const [status, manifest] = await Promise.all([
-      api("job.status", { job_id: id }),
-      api("job.result_manifest", { job_id: id }).catch(() => null)
-    ]);
-    if (selected !== id) return;
-    selectedStatus = status;
-    box.textContent = "";
-    const dl = document.createElement("dl");
-    dl.className = "kv";
-    addKV(dl, "State", status.state);
-    addKV(dl, "Phase", status.phase);
-    addKV(dl, "Sent", status.sent);
-    addKV(dl, "Targets", status.targets);
-    addKV(dl, "Heartbeat", status.heartbeat_age_ms === undefined ? "—" : (status.heartbeat_age_ms + " ms"));
-    addKV(dl, "Elapsed", status.elapsed_ms === undefined ? "—" : (status.elapsed_ms + " ms"));
-    addKV(dl, "Exit code", status.exit_code);
-    addKV(dl, "Result", status.result);
-    addKV(dl, "Log", status.log_path);
-    addKV(dl, "Error", status.error);
-    box.appendChild(dl);
-    if (manifest) {
-      const h = document.createElement("div");
-      h.className = "hint";
-      h.textContent = "Manifest";
-      const md = document.createElement("dl");
-      md.className = "kv";
-      addKV(md, "Complete", manifest.complete ? "yes" : "no");
-      addKV(md, "Result", manifest.result_path);
-      addKV(md, "Manifest", manifest.manifest_path);
-      addKV(md, "Bytes", manifest.result_bytes);
-      box.append(h, md);
+    const res = await api("/api/preflight", {method: "POST", body: input});
+    if (seq !== state.preflightSeq) return;
+    state.preflight = res;
+    state.dirty = !res.ok;
+    renderPreflight(res);
+    const parts = splitTargets(input.targets);
+    $("scope-count").textContent = (res.targets != null ? res.targets : 0) + " targets";
+    $("parsed").innerHTML = parts.slice(0, 8).map((p) => '<span class="chip">' + esc(p) + "</span>").join("") +
+      (parts.length > 8 ? '<span class="chip">+' + (parts.length - 8) + " more</span>" : "");
+    $("preflight-badge").className = "badge " + (res.ok ? "mint" : "red");
+    $("preflight-badge").innerHTML = '<span class="dot"></span><span>' + (res.ok ? "preflight ready" : "blocked") + "</span>";
+    $("btn-start").disabled = !(res.ok && $("auth").checked);
+    $("start-hint").textContent = res.ok
+      ? ($("auth").checked ? "Ready to start." : "Confirm authorization to enable Start.")
+      : "Fix the preflight errors above.";
+  } catch (err) {
+    if (seq !== state.preflightSeq) return;
+    state.preflight = null;
+    $("pf-state").className = "pf-state bad";
+    $("pf-state").innerHTML = '<span class="dot"></span><span>PREFLIGHT · ERROR</span>';
+    $("pf-summary").textContent = err.message;
+    $("btn-start").disabled = true;
+    $("start-hint").textContent = "Preflight request failed.";
+  }
+}
+function renderPreflight(res) {
+  const route = (res.routes && res.routes[0]) || res.interface || {};
+  $("pf-state").className = "pf-state " + (res.ok ? "ok" : "bad");
+  $("pf-state").innerHTML = '<span class="dot"></span><span>' + (res.ok ? "PREFLIGHT · PASSED" : "PREFLIGHT · BLOCKED") + "</span>";
+  $("pf-attempts").textContent = res.attempts != null ? Number(res.attempts).toLocaleString() : "—";
+  const targets = Number(res.targets || 0);
+  $("pf-summary").textContent = res.ok
+    ? (Number(res.ports) > 0
+        ? targets.toLocaleString() + " addresses will be probed on " + res.ports + " port" + (Number(res.ports) === 1 ? "" : "s") + "."
+        : targets.toLocaleString() + " addresses will be scanned without ports.")
+    : (res.errors && res.errors[0]) || "Request blocked.";
+  $("pf-targets").textContent = res.targets != null ? Number(res.targets).toLocaleString() : "—";
+  $("pf-ports").textContent = Number(res.ports) > 0 ? res.ports : "—";
+  $("pf-iface").textContent = shortIface(route.interface || "—");
+  $("pf-source").textContent = route.source || "—";
+  $("pf-gateway").textContent = route.gateway || "—";
+  $("pf-link").textContent = route.link_type_name ? (route.link_type_name + " (" + route.link_type + ")") : "—";
+  $("iface-name").textContent = shortIface(route.interface || "Auto");
+  $("iface-meta").textContent = route.interface
+    ? (route.source + " · " + (route.link_type_name || "unknown") + " · " + (route.gateway || "no gateway"))
+    : "route lookup will choose the capture device";
+  const checks = [];
+  if (res.ok) checks.push(["ok", "Target syntax and count verified"]);
+  if (res.ok) checks.push(["ok", "Route and link type resolved"]);
+  if (res.ok && route.raw_capable) checks.push(["ok", "Link type can carry raw IP"]);
+  if (route.link_type_name === "RAW") checks.push(["warn", "RAW link: no Ethernet header or MAC/ARP"]);
+  (res.warnings || []).forEach((w) => checks.push(["warn", w]));
+  (res.errors || []).forEach((e) => checks.push(["bad", e]));
+  $("pf-checks").innerHTML = checks.map(([c, m]) =>
+    '<div class="pf-check ' + c + '"><span class="mark">' + (c === "ok" ? "✓" : c === "warn" ? "!" : "×") + "</span><span>" + esc(m) + "</span></div>").join("");
+}
+function shortIface(v) {
+  if (!v) return "—";
+  const m = String(v).match(/NPF_\{([^}]+)\}/);
+  return m ? ("NPF " + m[1].slice(0, 8)) : String(v);
+}
+
+async function loadSystem() {
+  try {
+    const info = await api("/api/info");
+    state.system = await api("/api/system");
+    setConn(true, "control plane · local");
+    $("version-chip").textContent = state.system.version || "3.0";
+    $("footer-endpoint").textContent = info.endpoint || "local";
+    const rt = $("settings-runtime");
+    rt.innerHTML = [
+      ["Version", info.version || state.system.version || "—"],
+      ["Platform", state.system.platform || "—"],
+      ["Control endpoint", info.endpoint || "—"],
+      ["Scan modules", (state.system.modules || {}).scan || 0],
+      ["Probe modules", (state.system.modules || {}).probe || 0],
+      ["Output modules", (state.system.modules || {}).output || 0],
+      ["Generate modules", (state.system.modules || {}).generate || 0],
+      ["HTTP/3", (state.system.capabilities || {}).http3 ? "compiled" : "unavailable"],
+      ["QUIC transport", (state.system.capabilities || {}).quic_transport ? "compiled" : "unavailable"],
+    ].map(([k, v]) => '<div><span class="k">' + k + '</span><span class="v">' + esc(v) + "</span></div>").join("");
+  } catch (err) {
+    setConn(false, "offline");
+    toast("Control plane unavailable: " + err.message, true);
+  }
+}
+
+async function loadInterfaces() {
+  try {
+    const data = await api("/api/interfaces");
+    state.interfaces = data.interfaces || [];
+    $("iface-count").textContent = state.interfaces.length + " interfaces";
+    $("interface").innerHTML = '<option value="">Auto (from route)</option>' + state.interfaces.map((it) =>
+      '<option value="' + esc(it.name) + '">' + esc(it.description || it.name) + "</option>").join("");
+    $("iface-grid").innerHTML = state.interfaces.map((it) => {
+      const v4 = (it.ipv4 || []).join(", ") || "—";
+      const v6 = (it.ipv6 || []).join(", ") || "—";
+      return '<article class="iface-card ' + (it.default ? "default" : "") + '">' +
+        '<div class="kind">' + esc(it.state) + (it.default ? " · default" : "") + '</div>' +
+        "<h3>" + esc(it.description || it.name) + "</h3>" +
+        '<div class="desc mono">' + esc(it.name) + "</div>" +
+        '<div class="kv-list">' + [
+          ["IPv4", v4], ["IPv6", v6], ["MAC", it.mac || "—"],
+          ["Gateway", it.gateway || "—"],
+          ["Link", it.link_type_name ? (it.link_type_name + " (" + it.link_type + ")") : "—"],
+          ["Raw", it.raw_capable ? "capable" : "not usable"],
+        ].map(([k, v]) => '<div><span class="k">' + k + '</span><span class="v">' + esc(v) + "</span></div>").join("") +
+        "</div></article>";
+    }).join("");
+  } catch (err) { toast("Cannot list interfaces: " + err.message, true); }
+}
+
+async function loadModules() {
+  try {
+    const data = await api("/api/modules");
+    state.modules = data.modules || [];
+    const scans = state.modules.filter((m) => m.kind === "scan");
+    const probes = state.modules.filter((m) => m.kind === "probe");
+    const others = state.modules.filter((m) => m.kind !== "scan" && m.kind !== "probe");
+    $("method-grid").innerHTML = scans.map((m) =>
+      '<button type="button" class="method ' + (m.name === state.scan ? "active" : "") + '" data-scan="' + esc(m.name) + '">' +
+      '<span class="m-check"></span><div class="m-name">' + esc(m.name) + "</div>" +
+      '<div class="m-desc">' + esc(m.short_description || m.description || "") + "</div></button>").join("");
+    state.probes = probes;
+    const html = (list, kind) => list.map((m) => {
+      const params = (m.parameters || []).map((p) => p.name).join(", ");
+      return '<article class="module-card"><div class="kind">' + kind + '</div><h3>' + esc(m.name) + "</h3>" +
+        '<p>' + esc(m.short_description || m.description || "") + "</p>" +
+        (params ? '<div class="desc mono">args: ' + esc(params) + "</div>" : "") + "</article>";
+    }).join("");
+    $("module-grid").innerHTML = html(scans, "scan engine") + html(probes, "probe") + html(others, "output / generate");
+    for (const button of document.querySelectorAll("[data-scan]")) {
+      button.addEventListener("click", () => {
+        state.scan = button.dataset.scan;
+        for (const b of document.querySelectorAll("[data-scan]")) b.classList.toggle("active", b === button);
+        updateProbeVisibility();
+        schedulePreflight();
+      });
     }
-    if (status.stderr_tail) {
-      const pre = document.createElement("pre");
-      pre.className = "tail";
-      pre.textContent = cleanText(status.stderr_tail);
-      box.appendChild(pre);
+    updateProbeVisibility();
+  } catch (err) { toast("Cannot list modules: " + err.message, true); }
+}
+function scanInfo(name) {
+  if (name === "zbanner") return {ports: true, probe: "tcp"};
+  if (name === "tcp-state") return {ports: true, probe: "state"};
+  if (name === "udp") return {ports: true, probe: "udp"};
+  if (name === "quic-state") return {ports: true, probe: "state"};
+  if (name === "tcp-syn" || name === "yarrp-udp" || name === "sctp-init")
+    return {ports: true, probe: null};
+  return {ports: false, probe: null};
+}
+function updateProbeVisibility() {
+  const info = scanInfo(state.scan);
+  $("ports-field").classList.toggle("hidden", !info.ports);
+  $("probe-field").classList.toggle("hidden", !info.probe);
+  if (!info.probe) { $("probe").value = ""; return; }
+  const probes = (state.probes || []).filter((m) => m.probe_type === info.probe);
+  const current = $("probe").value;
+  $("probe").innerHTML = '<option value="">— choose probe —</option>' + probes.map((m) =>
+    '<option value="' + esc(m.name) + '">' + esc(m.name + (m.short_description ? " — " + m.short_description : "")) + "</option>").join("");
+  const preferred = {tcp: "http", udp: "dns", state: "http-state"}[info.probe];
+  if (probes.some((m) => m.name === current)) $("probe").value = current;
+  else if (probes.some((m) => m.name === preferred)) $("probe").value = preferred;
+}
+
+async function startScan() {
+  if (!state.preflight || !state.preflight.ok || !$("auth").checked || state.dirty) return;
+  const info = scanInfo(state.scan);
+  const params = {
+    scan: state.scan,
+    targets: splitTargets($("scope").value),
+    rate: +$("rate").value,
+    timeout_sec: +$("timeout").value,
+    authorized: true,
+  };
+  if (info.ports) {
+    const ports = expandPorts($("ports").value);
+    if (!ports.length) { toast("Enter at least one port.", true); return; }
+    params.ports = ports.slice(0, 4096);
+  }
+  if (info.probe && $("probe").value) params.probe = $("probe").value;
+  const payload = {id: Date.now(), method: "job.start", params, compression: "none", index: false};
+  if ($("interface").value) payload.interface = $("interface").value;
+  $("btn-start").disabled = true;
+  $("start-hint").textContent = "Starting scan…";
+  try {
+    const res = await api("/api/rpc", {method: "POST", body: payload});
+    if (!res || !res.result || !res.result.job_id) throw new Error("control plane did not return a scan id");
+    state.jobId = res.result.job_id;
+    state.job = null;
+    toast("Scan started.");
+    showPage("live");
+    pollJob();
+  } catch (err) {
+    toast("Start failed: " + err.message, true);
+    $("btn-start").disabled = !(state.preflight && state.preflight.ok && $("auth").checked);
+    $("start-hint").textContent = "Start failed. Check the preflight and try again.";
+  }
+}
+
+function fmtDuration(ms) {
+  if (ms == null) return "—";
+  const s = Math.floor(ms / 1000);
+  return s < 60 ? s + "s" : Math.floor(s / 60) + "m " + (s % 60) + "s";
+}
+async function pollJob() {
+  if (!state.jobId) {
+    $("live-title").textContent = "No active scan.";
+    $("live-sub").textContent = "Start a scan from New scan. Every packet is accounted for here.";
+    $("live-state-badge").textContent = "idle";
+    $("live-state-badge").className = "badge";
+    $("live-sent").textContent = "—"; $("live-targets").textContent = "—";
+    $("live-phase").textContent = "—"; $("live-heartbeat").textContent = "—";
+    $("live-elapsed").textContent = "—"; $("live-exit").textContent = "—";
+    $("live-progress").style.width = "0%"; $("live-pps").textContent = "—";
+    $("live-manifest").innerHTML = ""; $("live-log").textContent = "No output yet.";
+    $("btn-cancel").disabled = true;
+    return;
+  }
+  try {
+    const res = await api("/api/rpc", {method: "POST", body: {id: Date.now(), method: "job.status", job_id: state.jobId}});
+    const job = (res && res.result) || {};
+    state.job = job;
+    const stateName = job.state || "unknown";
+    const terminal = ["completed", "failed", "cancelled", "timed_out", "stalled"].includes(stateName);
+    $("live-title").textContent = "Scan " + state.jobId;
+    $("live-sub").textContent = stateName === "running" ? "The daemon is sending packets. You can leave this page; the scan continues." : "Scan state and counters from the control plane.";
+    $("live-state-badge").textContent = stateName;
+    $("live-state-badge").className = "badge " + (stateName === "completed" ? "mint" : terminal ? "red" : "amber");
+    $("live-sent").textContent = job.sent != null ? Number(job.sent).toLocaleString() : "—";
+    $("live-targets").textContent = job.targets != null ? Number(job.targets).toLocaleString() : "—";
+    $("live-phase").textContent = job.phase || "—";
+    $("live-heartbeat").textContent = job.heartbeat_age_ms != null ? fmtDuration(job.heartbeat_age_ms) + " ago" : "—";
+    $("live-elapsed").textContent = fmtDuration(job.elapsed_ms);
+    $("live-exit").textContent = job.exit_code != null ? job.exit_code : "—";
+    $("live-result").textContent = job.result || "—";
+    $("live-logpath").textContent = job.log_path || "—";
+    $("live-error").textContent = job.error || "—";
+    const pct = job.targets ? Math.min(100, Math.round((job.sent || 0) * 100 / job.targets)) : 0;
+    $("live-progress").style.width = pct + "%";
+    $("live-pps").textContent = job.elapsed_ms && job.sent ? Math.round(job.sent * 1000 / job.elapsed_ms).toLocaleString() : "—";
+    $("btn-cancel").disabled = terminal;
+    if (job.stderr_tail) $("live-log").textContent = job.stderr_tail;
+    if (terminal || state.jobId) {
+      const man = await api("/api/rpc", {method: "POST", body: {id: Date.now(), method: "job.result_manifest", job_id: state.jobId}});
+      const m = (man && man.result) || {};
+      $("live-manifest-state").textContent = m.complete ? "complete" : "pending";
+      $("live-manifest").innerHTML = [
+        ["Result", m.result_path || job.result || "—"],
+        ["Manifest", m.manifest_path || "—"],
+        ["Bytes", m.result_bytes != null ? Number(m.result_bytes).toLocaleString() : "—"],
+        ["Complete", m.complete ? "yes" : "no"],
+      ].map(([k, v]) => '<div><span class="k">' + k + '</span><span class="v">' + esc(v) + "</span></div>").join("");
     }
-    updateSelectionUI();
-  } catch (e) {
-    const div = document.createElement("div");
-    div.className = "error";
-    div.textContent = String(e.message || e);
-    box.textContent = "";
-    box.appendChild(div);
+    if (state.page === "live" && !state.pollTimer) state.pollTimer = setInterval(pollJob, 1500);
+    if (terminal && state.pollTimer) { clearInterval(state.pollTimer); state.pollTimer = null; }
+  } catch (err) {
+    toast("Cannot read scan status: " + err.message, true);
   }
 }
 
-async function loadJobs(showError) {
-  if (loading) return;
-  loading = true;
+async function cancelScan() {
+  if (!state.jobId) return;
   try {
-    const result = await api("job.list", { limit: 200, offset: 0 });
-    jobs = (result.jobs || []).filter(j => j && j.job_id);
-    if (selected && !jobs.some(j => j.job_id === selected)) {
-      selected = null;
-      selectedStatus = null;
+    const res = await api("/api/rpc", {method: "POST", body: {id: Date.now(), method: "job.cancel", job_id: state.jobId}});
+    toast(res.result && res.result.cancelled ? "Cancel requested." : "Scan is no longer running.");
+    pollJob();
+  } catch (err) { toast("Cancel failed: " + err.message, true); }
+}
+
+async function loadResults() {
+  try {
+    const res = await api("/api/rpc", {method: "POST", body: {id: Date.now(), method: "job.list", limit: 100, offset: 0}});
+    const jobs = (res.result && res.result.jobs) || [];
+    $("results-count").textContent = jobs.length + " shown";
+    if (!jobs.length) {
+      $("results-body").innerHTML = '<tr><td colspan="4"><div class="empty"><b>No scans yet.</b>Start one from New scan; it will appear here.</div></td></tr>';
+      return;
     }
-    if (!selected && jobs.length) selected = jobs[0].job_id;
-    renderJobs(result.total);
-    if (selected) await loadDetails();
-    setConnected(true);
-    if (showError) toast("Jobs refreshed");
-  } catch (e) {
-    setConnected(false);
-    if (showError) toast(String(e.message || e), true);
-  } finally {
-    loading = false;
-  }
+    $("results-body").innerHTML = jobs.map((j) =>
+      '<tr data-job="' + esc(j.job_id) + '"><td class="id">' + esc(j.job_id) + '</td><td><span class="state ' + esc(j.state) + '">' + esc(j.state) + '</span></td><td class="mono">' + esc(j.result || "—") + '</td><td class="muted">view →</td></tr>').join("");
+    for (const row of document.querySelectorAll("[data-job]")) {
+      row.addEventListener("click", () => { state.jobId = row.dataset.job; showPage("live"); pollJob(); });
+    }
+  } catch (err) { toast("Cannot list scans: " + err.message, true); }
 }
 
-function defaultResultPath() {
-  const now = new Date();
-  const pad = (n) => String(n).padStart(2, "0");
-  const stamp = now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) + "-" + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
-  return "gui-scan-" + stamp + ".ndjson";
+function init() {
+  for (const b of document.querySelectorAll("[data-page]")) b.addEventListener("click", () => showPage(b.dataset.page));
+  $("scope").value = "198.18.0.0/24";
+  $("btn-sample").addEventListener("click", () => { $("scope").value = "198.18.0.0/24, 203.0.113.10-40"; schedulePreflight(); });
+  $("scope").addEventListener("input", schedulePreflight);
+  $("ports").addEventListener("input", schedulePreflight);
+  $("rate").addEventListener("input", schedulePreflight);
+  $("timeout").addEventListener("input", schedulePreflight);
+  $("probe").addEventListener("change", schedulePreflight);
+  $("interface").addEventListener("change", schedulePreflight);
+  $("auth").addEventListener("change", () => {
+    $("btn-start").disabled = !(state.preflight && state.preflight.ok && $("auth").checked && !state.dirty);
+    $("start-hint").textContent = state.preflight && state.preflight.ok
+      ? ($("auth").checked ? "Ready to start." : "Confirm authorization to enable Start.")
+      : "Waiting for a valid preflight.";
+  });
+  $("btn-start").addEventListener("click", startScan);
+  $("btn-cancel").addEventListener("click", cancelScan);
+  $("btn-refresh-live").addEventListener("click", pollJob);
+  $("btn-refresh-results").addEventListener("click", loadResults);
+  $("module-search").addEventListener("input", () => {
+    const q = $("module-search").value.toLowerCase();
+    for (const card of document.querySelectorAll(".module-card")) card.classList.toggle("hidden", !card.textContent.toLowerCase().includes(q));
+  });
+  loadSystem().then(loadInterfaces).then(loadModules).then(schedulePreflight);
 }
-
-function openStart() {
-  $("formError").textContent = "";
-  $("auth").checked = false;
-  $("result").value = defaultResultPath();
-  $("startDialog").showModal();
-  $("scan").focus();
-}
-
-async function submitStart(ev) {
-  ev.preventDefault();
-  const error = $("formError");
-  error.textContent = "";
-  const scan = $("scan").value.trim();
-  const targets = $("targets").value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
-  const ports = $("ports").value.split(/[\s,]+/).map(s => s.trim()).filter(Boolean).map(Number);
-  const rate = Number($("rate").value);
-  const timeout = Number($("timeout").value);
-  const result = $("result").value.trim();
-  const iface = $("iface").value.trim();
-  if (!scan) return (error.textContent = "Scan module is required.");
-  if (!targets.length) return (error.textContent = "At least one target is required.");
-  if (ports.some(n => !Number.isInteger(n) || n < 0 || n > 65535)) return (error.textContent = "Ports must be integers 0-65535.");
-  if (!Number.isInteger(rate) || rate < 0 || rate > 10000) return (error.textContent = "Rate must be an integer 0-10000.");
-  if (!Number.isInteger(timeout) || timeout < 1 || timeout > 86400) return (error.textContent = "Timeout must be an integer 1-86400 seconds.");
-  if (!result) return (error.textContent = "Result path is required.");
-  if (!$("auth").checked) return (error.textContent = "Confirm authorization before starting a scan.");
-
-  const params = { scan, targets, rate, timeout_sec: timeout, authorized: true };
-  if (ports.length) params.ports = ports;
-  const args = { params, result_path: result, timeout_sec: timeout, compression: "none", index: false };
-  if (iface) args.interface = iface;
-
-  const btn = $("submitStart");
-  btn.disabled = true;
-  btn.textContent = "Starting…";
-  try {
-    const res = await api("job.start", args);
-    toast("Started " + (res.job_id || "job"));
-    $("startDialog").close();
-    await loadJobs(false);
-    if (res.job_id) await selectJob(res.job_id);
-  } catch (e) {
-    error.textContent = String(e.message || e);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Start scan";
-  }
-}
-
-async function cancelSelected() {
-  if (!selected) return;
-  const id = selected;
-  if (!confirm("Cancel job " + id + "?")) return;
-  try {
-    await api("job.cancel", { job_id: id });
-    toast("Cancel requested");
-    await loadJobs(false);
-  } catch (e) {
-    toast(String(e.message || e), true);
-  }
-}
-
-$("refreshBtn").addEventListener("click", () => loadJobs(true));
-$("startBtn").addEventListener("click", openStart);
-$("closeStart").addEventListener("click", () => $("startDialog").close());
-$("cancelStart").addEventListener("click", () => $("startDialog").close());
-$("startForm").addEventListener("submit", submitStart);
-$("cancelBtn").addEventListener("click", cancelSelected);
-$("startDialog").addEventListener("click", (ev) => {
-  if (ev.target === $("startDialog")) $("startDialog").close();
-});
-
-loadInfo();
-loadJobs(false);
-setInterval(() => loadJobs(false), 3000);
+init();
 </script>
 </body>
 </html>

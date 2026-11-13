@@ -299,6 +299,7 @@ typedef struct XtateConf {
     unsigned tui_mode : 1;
     unsigned gui_mode : 1;
     unsigned gui_no_open : 1;
+    unsigned list_capabilities : 1;
     char    *gui_listen;
     char    *control_connect;
     char    *control_request;

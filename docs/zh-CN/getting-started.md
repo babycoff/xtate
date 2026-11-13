@@ -6,7 +6,7 @@ Xtate 是一款面向大规模主动测量的模块化全栈网络扫描器。�
 
 本页带你在 Linux 或 Windows 上从源码检出走到第一次扫描。阅读前你应当熟悉 shell、`sudo` 和 TCP/IP 基础；本页不是扫描方法本身的教程。
 
-> 本文档针对 Xtate v2.44.2 编写。若你的构建行为与此不同，以 `--help` 和模块帮助为准。
+> 本文档针对 Xtate v3.0.0-rc.1 编写。若你的构建行为与此不同，以 `--help` 和模块帮助为准。
 
 ## 环境要求
 
@@ -309,7 +309,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http \
 | 了解 Xtate 不做什么 | [已知限制](./known-limitations.md) |
 | 查看特性列表与论文 | [README](../../README.zh-CN.md) |
 
-CLI 本身也能说明用法：`--usage`、`--help`、`--intro`、`--list-scan`、`--list-probe`、`--list-out`、`--list-gen`，以及按模块查看参数的 `--help-scan <module>` / `--help-probe <module>`。
+CLI 本身也能说明用法：`--usage`、`--help`、`--intro`、`--list-capabilities`（能力与模块数量的 JSON 摘要）、`--list-scan`、`--list-probe`、`--list-out`、`--list-gen`，以及按模块查看参数的 `--help-scan <module>` / `--help-probe <module>`。
 
 人类可读帮助可以用 `--lang zh`（或 `XTATE_LANG=zh`）切换中文：`xtate --lang zh --help`。参数名、模块名和结果值保持英文；catalog 与回退规则见 [帮助 i18n](./help-i18n.md)。
 

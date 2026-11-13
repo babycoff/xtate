@@ -1,7 +1,15 @@
 # Xtate MCP tool contracts
 
-The MCP server is a stdio server. Start a local control plane first, then the
-MCP server, with the same `XTATE_CONTROL_TOKEN` in both environments:
+The MCP server is a stdio server. In 3.0 the normal local form starts a private
+control plane automatically:
+
+```bash
+xtate --mcp
+```
+
+Use an explicit daemon when several clients should share jobs. Start the
+control plane first, then attach with the same `XTATE_CONTROL_TOKEN` in both
+environments:
 
 ```bash
 export XTATE_CONTROL_TOKEN="$(openssl rand -hex 16)"
@@ -25,10 +33,12 @@ Every successful tool result has this shape:
 
 | Tool | Arguments | Returns |
 |---|---|---|
+| `capabilities` | none | version, platform, module counts, HTTP/3/QUIC and raw-socket availability |
 | `list_modules` | none | scan, probe, output and generate module metadata |
 | `describe_probe` | `{"name":"tls"}` | module parameters, probe type, description |
 | `explain_target` | `{"target":"203.0.113.10"}` | targets, route groups, interface, source, gateway, samples |
 | `check` | `{"target":"203.0.113.0/24"}` | same route report plus Linux firewall state |
+| `preflight` | `{"config":{...scan request...}}` | packet-free target/port count, routes, link type, module pairing, errors/warnings |
 | `validate_config` | `{"config":{...scan request...}}` | pass/fail and validation error |
 
 `target` is one string: a single address, CIDR, range, or comma-separated set.

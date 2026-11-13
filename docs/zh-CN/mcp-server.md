@@ -6,7 +6,14 @@ Xtate 通过 stdio 提供 Model Context Protocol（MCP）服务。它是控制�
 
 ## 启动
 
-控制面和 MCP 客户端使用同一个 token（未设置时以无认证的本地模式运行）：
+本机 MCP 客户端只需一条命令：`xtate --mcp` 会在子进程中启动私有控制面，在其上
+提供 stdio MCP，并在会话结束时停止该控制面：
+
+```bash
+xtate --mcp
+```
+
+若要连接已有控制面，两个进程需使用同一个 token：
 
 ```bash
 export XTATE_CONTROL_TOKEN="$(openssl rand -hex 16)"
@@ -25,10 +32,12 @@ Windows 的 endpoint 形如 `\\.\pipe\xtate-control`。`--control-connect` 只�
 
 | 工具 | 用途 |
 |---|---|
+| `capabilities` | 版本、平台、raw socket/HTTP3/QUIC 能力与模块数量 |
 | `list_modules` | 全部模块元数据：扫描、探测、输出、生成模块 |
 | `describe_probe` | 查询单个扫描/探测模块的元数据 |
 | `explain_target` | 目标集的路由分组、接口/源地址/网关和 Linux 防火墙状态 |
 | `check` | 与 `explain_target` 相同的路由/防火墙检查 |
+| `preflight` | 服务端、无发包的目标/路由/链路/模块预检；返回数量、错误与警告 |
 | `validate_config` | 校验封闭的扫描请求对象，不启动 job |
 | `start_scan` | 启动托管扫描 job，返回 `job_id` |
 | `job_list` | 分页列出 job |

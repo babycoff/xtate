@@ -1,6 +1,6 @@
 ---
 name: xtate
-description: Use when planning, running, or troubleshooting an authorized Xtate network scan through the Xtate MCP server, especially when choosing scan/probe modules, splitting a multi-route target set, preparing validate_config or check, using include_file for large target sets, or reading job manifests and chunked results.
+description: Use when planning, running, or troubleshooting an authorized Xtate network scan through the Xtate MCP server, especially when checking build capabilities, choosing scan/probe modules, running server preflight, splitting a multi-route target set, using include_file for large target sets, or reading job manifests and chunked results.
 ---
 
 # Xtate scanning
@@ -25,13 +25,16 @@ result paths.
 
 ## Workflow
 
-### 1. Discover the modules
+### 1. Discover the build and modules
 
+- `capabilities` first: platform, module counts, raw-socket support, and
+  whether HTTP/3 and QUIC transport are available. On Windows they are normally
+  unavailable; do not promise them.
 - `list_modules` to see scan, probe, output and generate modules.
 - `describe_probe` with the chosen scan or probe name; read its parameters
   before inventing `scan_args` / `probe_args`.
 - `explain_target` takes a single `target` string (comma-separated set, CIDR or
-  range). `check` is the same preflight for a target set.
+  range). `check` is the same route report for a target set.
 
 ### 2. Preflight the route
 
@@ -47,13 +50,16 @@ Split the set if `route_groups > 1`; `start_scan` rejects mixed routes. A
 For stateful scans on Linux, confirm the firewall prerequisite reported by
 `check`; do not disable the firewall to make a scan work.
 
-### 3. Validate the request
+### 3. Preflight and validate the request
 
-Use `validate_config` with the exact object you intend to start. Fix every
-error before calling `start_scan`.
+Run `preflight` with the exact configuration you intend to start. It checks the
+target/port counts, scan/probe pairing, route, and link type without sending a
+packet. Then run `validate_config` on the same object. Fix every error and read
+the warnings before calling `start_scan`.
 
-`start_scan` requires `authorized: true`. It accepts either `targets` or
-`include_file`, never both.
+`preflight` and `validate_config` take `{"config": {...}}`; `start_scan` takes
+`{"arguments": {...}}` with the same configuration. `start_scan` requires
+`authorized: true` and accepts either `targets` or `include_file`, never both.
 
 ### 4. Start a managed job
 
@@ -131,7 +137,7 @@ you have verified it.
 
 | Mistake | Correct action |
 |---|---|
-| Calling `start_scan` without preflight | `explain_target`/`check`, then `validate_config` |
+| Calling `start_scan` without preflight | `explain_target`/`check`, then `preflight` and `validate_config` |
 | `targets` and `include_file` together | choose exactly one |
 | `explain_target` with `targets` array | it takes `target` as a string |
 | Inventing `timeout` or `port` fields | use `timeout_sec`, `ports` |

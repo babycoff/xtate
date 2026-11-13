@@ -125,6 +125,108 @@ def main():
             print("GUI job.list failed:", status, body[:200], file=sys.stderr)
             return 1
 
+        # Structured backend data for the 3.0 scan console.
+        status, body = http_json(port, "/api/system", token)
+        system = json.loads(body.decode()) if status == 200 else {}
+        if (status != 200 or not isinstance(system.get("modules"), dict)
+                or not system["modules"].get("scan")
+                or not isinstance(system.get("capabilities"), dict)):
+            print("GUI system failed:", status, body[:300], file=sys.stderr)
+            return 1
+        status, body = http_json(port, "/api/interfaces", token)
+        interfaces = json.loads(body.decode()) if status == 200 else {}
+        if status != 200 or not interfaces.get("interfaces"):
+            print("GUI interfaces failed:", status, body[:300], file=sys.stderr)
+            return 1
+        first_if = interfaces["interfaces"][0]
+        for key in ("name", "description", "state", "raw_capable"):
+            if key not in first_if:
+                print("GUI interface field missing:", key, file=sys.stderr)
+                return 1
+        status, body = http_json(port, "/api/modules", token)
+        catalog = json.loads(body.decode()) if status == 200 else {}
+        if status != 200 or not any(m.get("name") == "tcp-syn"
+                                    for m in catalog.get("modules", [])):
+            print("GUI modules failed:", status, body[:300], file=sys.stderr)
+            return 1
+        status, body = http_json(port, "/api/system")
+        if status != 403:
+            print("system endpoint without token was not rejected:",
+                  status, body[:200], file=sys.stderr)
+            return 1
+
+        # The scan console must get authoritative counts and route data from
+        # the server before it allows Start.
+        status, body = http_json(
+            port, "/api/preflight", token,
+            {"targets": "127.0.0.1", "ports": "80,443",
+             "scan": "tcp-syn", "rate": 1000, "timeout_sec": 300})
+        preflight = json.loads(body.decode()) if status == 200 else {}
+        if (status != 200 or not preflight.get("ok")
+                or preflight.get("targets") != 1
+                or preflight.get("ports") != 2
+                or preflight.get("attempts") != 2):
+            print("GUI preflight failed:", status, body[:300], file=sys.stderr)
+            return 1
+        status, body = http_json(
+            port, "/api/preflight", token,
+            {"targets": "not-a-target", "ports": "80",
+             "scan": "tcp-syn", "probe": "http"})
+        bad = json.loads(body.decode()) if status == 200 else {}
+        if status != 200 or bad.get("ok") or not bad.get("errors"):
+            print("GUI invalid preflight was accepted:", status, body[:300],
+                  file=sys.stderr)
+            return 1
+        # A TCP scan must not look ready with only UDP ports: the scan engine
+        # filters by ip_proto and would otherwise send zero packets.
+        status, body = http_json(
+            port, "/api/preflight", token,
+            {"targets": "127.0.0.1", "ports": "U:53",
+             "scan": "tcp-syn", "rate": 1000, "timeout_sec": 300})
+        udp_ports = json.loads(body.decode()) if status == 200 else {}
+        if status != 200 or udp_ports.get("ok"):
+            print("TCP preflight accepted UDP-only ports:", status, body[:300],
+                  file=sys.stderr)
+            return 1
+        # ICMP-style scans have no ports; preflight must still count the
+        # addresses and stay ready without a ports field.
+        status, body = http_json(
+            port, "/api/preflight", token,
+            {"targets": "127.0.0.1", "scan": "icmp-echo",
+             "rate": 1000, "timeout_sec": 300})
+        icmp = json.loads(body.decode()) if status == 200 else {}
+        if (status != 200 or not icmp.get("ok")
+                or icmp.get("targets") != 1
+                or icmp.get("ports") != 0
+                or icmp.get("attempts") != 1):
+            print("no-port preflight failed:", status, body[:300],
+                  file=sys.stderr)
+            return 1
+        # Unknown modules and probe-type mismatches must be rejected by the
+        # same catalog used by the scanner.
+        for case in (
+            {"targets": "127.0.0.1", "ports": "80", "scan": "bogus",
+             "rate": 1000, "timeout_sec": 300},
+            {"targets": "127.0.0.1", "ports": "80", "scan": "zbanner",
+             "rate": 1000, "timeout_sec": 300},
+            {"targets": "127.0.0.1", "ports": "80", "scan": "tcp-syn",
+             "probe": "http", "rate": 1000, "timeout_sec": 300},
+        ):
+            status, body = http_json(port, "/api/preflight", token, case)
+            rejected = json.loads(body.decode()) if status == 200 else {}
+            if status != 200 or rejected.get("ok"):
+                print("invalid preflight was accepted:", case, status,
+                      body[:300], file=sys.stderr)
+                return 1
+        status, body = http_json(
+            port, "/api/preflight", None,
+            {"targets": "127.0.0.1", "ports": "80",
+             "scan": "tcp-syn"})
+        if status != 403:
+            print("preflight without token was not rejected:", status,
+                  body[:200], file=sys.stderr)
+            return 1
+
         # Missing token and a non-loopback Host must be rejected.
         status, body = http_json(
             port, "/api/rpc", None,

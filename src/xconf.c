@@ -969,6 +969,13 @@ static ConfRes SET_gui_no_open(void *conf, const char *name, const char *value) 
     xconf->gui_no_open = (unsigned)conf_parse_bool(value);
     return Conf_OK;
 }
+static ConfRes SET_list_capabilities(void *conf, const char *name,
+                                     const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    xconf->list_capabilities = (unsigned)conf_parse_bool(value);
+    return Conf_OK;
+}
 static ConfRes SET_control_ping(void *conf, const char *name,
                                const char *value) {
     XConf *xconf = (XConf *)conf;
@@ -3463,13 +3470,13 @@ ConfParam config_parameters[] = {
      SET_tui_mode,
      Type_FLAG,
      {0},
-     "Run the control-plane TUI dashboard; requires --control-connect.",
+     "Run the TUI dashboard; starts a private control plane unless --control-connect is given.",
      "Run TUI dashboard."},
     {"gui",
      SET_gui_mode,
      Type_FLAG,
      {0},
-     "Run the loopback-only browser GUI; requires --control-connect.",
+     "Run the loopback-only browser GUI; starts a private control plane unless --control-connect is given.",
      "Run browser GUI."},
     {"gui-listen",
      SET_gui_listen,
@@ -3483,11 +3490,17 @@ ConfParam config_parameters[] = {
      {0},
      "Do not open a browser when starting the GUI.",
      "Do not open browser."},
+    {"list-capabilities",
+     SET_list_capabilities,
+     Type_FLAG,
+     {0},
+     "Print build and module capabilities as JSON and exit.",
+     "Print capabilities JSON."},
     {"mcp",
      SET_mcp_mode,
      Type_FLAG,
      {0},
-     "Run the MCP stdio server (use --control-connect for the control endpoint).",
+     "Run the MCP stdio server (starts a private control plane unless --control-connect is set).",
      "Run MCP server."},
     {"control-connect",
      SET_control_connect,

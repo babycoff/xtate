@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.13)
 project(
     xtate
     LANGUAGES               C
-    VERSION                 2.44.2
+    VERSION                 3.0.0
     DESCRIPTION             "A modular all-stack network scanner for next-generation internet surveys."
     HOMEPAGE_URL            "https://github.com/babycoff/xtate"
     )
@@ -407,6 +407,10 @@ endif ()
 
 
 
+# Version suffix is kept out of project(VERSION ...) so CMake still sees a
+# numeric version, while the public string can carry an RC suffix.
+set(XTATE_VERSION_SUFFIX "-rc.1" CACHE STRING "Public version suffix")
+set(XTATE_VERSION_FULL "${PROJECT_VERSION}${XTATE_VERSION_SUFFIX}")
 configure_file(${CMAKE_SOURCE_DIR}/src/version.h.in ${CMAKE_SOURCE_DIR}/src/version.h @ONLY)
 
 if (WITH_ZSTD)

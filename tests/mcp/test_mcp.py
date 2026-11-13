@@ -23,7 +23,18 @@ try:
     mp.stdin.write(json.dumps({"jsonrpc":"2.0","method":"notifications/initialized"})+"\n"); mp.stdin.flush()
     tools = rpc({"jsonrpc":"2.0","id":2,"method":"tools/list"})["result"]["tools"]
     names = {t["name"] for t in tools}
-    for n in ["list_modules","describe_probe","explain_target","check","validate_config","start_scan","job_list","job_status","job_result_manifest","job_cancel"]: assert n in names, n
+    for n in ["capabilities","list_modules","describe_probe","explain_target","check","preflight","validate_config","start_scan","job_list","job_status","job_result_manifest","job_cancel"]: assert n in names, n
+    caps = rpc({"jsonrpc":"2.0","id":16,"method":"tools/call","params":{"name":"capabilities","arguments":{}}})
+    assert not caps["result"]["isError"]
+    ctext = caps["result"]["content"][0]["text"]
+    assert '"modules"' in ctext and '"version"' in ctext, ctext[:200]
+    pf = rpc({"jsonrpc":"2.0","id":17,"method":"tools/call","params":{"name":"preflight","arguments":{"config":{"scan":"tcp-syn","targets":SCAN_TARGET,"ports":"1"}}}})
+    assert not pf["result"]["isError"], pf
+    pfj = json.loads(pf["result"]["content"][0]["text"])
+    assert pfj["ok"] is True and pfj["targets"] == 1 and pfj["ports"] == 1, pfj
+    pfbad = rpc({"jsonrpc":"2.0","id":18,"method":"tools/call","params":{"name":"preflight","arguments":{"config":{"scan":"tcp-syn","targets":SCAN_TARGET,"ports":"U:53"}}}})
+    assert not pfbad["result"]["isError"]
+    assert json.loads(pfbad["result"]["content"][0]["text"])["ok"] is False
     for t in tools:
         assert t.get("description"); assert "inputSchema" in t
     unk = rpc({"jsonrpc":"2.0","id":30,"method":"no/such/method"})

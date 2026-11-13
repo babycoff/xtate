@@ -2,17 +2,18 @@
 
 [English](../README.md) · **中文**
 
-本目录是 **Xtate v2.44.2** 的用户手册——一款面向互联网级测量的模块化全栈网络扫描器。
+本目录是 **Xtate v3.0.0-rc.1** 的用户手册——一款面向互联网级测量的模块化全栈网络扫描器。
 
 项目 [README](../../README.zh-CN.md) 是落地页。如果你想上手使用 Xtate，而不是只扫一眼功能列表，就从这里开始。
 
-**发布说明：** [2.44.2](./release-notes/2.44.2.md)——修正 TUN/VPN 网卡的 RAW 链路类型，`--explain-target` 与扫描启动增加链路类型预检，并包含 2.44.1 的 TUI/GUI 一条命令启动。
+**发布说明：** [3.0.0-rc.1](./release-notes/3.0.0-rc.1.md)——以扫描为中心的浏览器控制台、服务端预检、一条命令启动 MCP/GUI、能力报告，以及仅 Linux 的 HTTP/3 + QUIC 契约。这是供实际试用的发布候选版本，不是最终 3.0.0。
 
 ## 从哪里开始
 
 | 你的情况 | 建议阅读 |
 |---|---|
 | 刚接触 Xtate | [快速上手](./getting-started.md) |
+| 第一次使用 Xtate | [3.0 手册](./manual/README.md) |
 | 正在规划一次扫描 | [目标与端口](./targets-and-ports.md) → [扫描模式](./scanning-modes.md) |
 | 要把结果接入流水线 | [输出](./output.md) → [聚合](./aggregation.md) |
 | 在挑选模块 | [模块](./modules.md) |
@@ -69,9 +70,10 @@
 
 ### 自动化与集成
 
+- [3.0 手册](./manual/README.md)——按任务组织的安装、GUI、CLI、模块、结果、协议与故障排查
 - [MCP server](./mcp-server.md)——stdio 工具、resource、prompt、路由规划与限制
-- [GUI 面板](./gui.md)——环回浏览器客户端，查看任务、启动、取消、详情与 manifest
-- [TUI 任务面板](./tui.md)——全屏控制平面客户端，查看任务、启动、取消与详情
+- [GUI 控制台](./gui.md)——扫描优先的环回控制台，含预检、实时视图、网卡与模块
+- [TUI 任务面板](./tui.md)——旧版全屏控制平面客户端；3.0 中已弃用
 - [控制面](./control-plane.md)——MCP/TUI/GUI 共用的本地 JSON-lines API
 - [Job 模型](./job-model.md)——托管 job、超时、心跳、取消与结果
 - [输入模块](./input-modules.md)——静态目标与 generate 流、错误策略
@@ -103,7 +105,7 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-本文档基于 v2.44.2 的代码树编写。如果你在更新的 commit 上发现内容有出入，请以二进制为准，也欢迎提 issue。
+本文档基于 v3.0.0-rc.1 的代码树编写。如果你在更新的 commit 上发现内容有出入，请以二进制为准，也欢迎提 issue。
 
 ## 计划中
 

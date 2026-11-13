@@ -1,5 +1,7 @@
 #include "mcp-server.h"
 #include "control-client.h"
+#include "capabilities.h"
+#include "gui-data.h"
 #include "../version.h"
 #include "../util-out/module-json.h"
 #include "../crypto/crypto-json.h"
@@ -76,7 +78,7 @@ static void rpc_error(const char *id, int code, const char *msg) {
 static const char *instructions =
 "Xtate is a modular Internet-scale network scanner. It supports stateless TCP "
 "banner scanning, hybrid-state TCP/TLS, HTTP/1.1, HTTP/2 (HPACK/Huffman), "
-"HTTP/3 over QUIC, DNS over UDP, DNSSEC evidence, DoT and DoH over HTTP/1.1 "
+"HTTP/3 over QUIC where ngtcp2/GnuTLS is available, DNS over UDP, DNSSEC evidence, DoT and DoH over HTTP/1.1 "
 "and HTTP/2. Scans run as jobs managed by the Xtate control plane.\n\n"
 "Safety rules:\n"
 "- Only scan targets the user has explicitly authorized.\n"
@@ -85,11 +87,14 @@ static const char *instructions =
 "- On Linux, stateful scans (tcp-state, tls-state, state sub-probes) need the "
 "firewall RST/ICMP rules; tcp-syn and UDP do not.\n"
 "- Use timeouts or stall timeouts for long jobs; never start unbounded scans.\n"
+"- Call preflight before start_scan; it validates scan/probe pairing, target "
+"and port counts, routes and link type without sending packets.\n"
 "- start_scan is enabled only when the caller passes authorized=true for "
 "targets it is permitted to scan; every other tool is read-only.\n";
 
 static const char *tools_json =
 "{\"tools\":["
+"{\"name\":\"capabilities\",\"description\":\"Return build capabilities and module counts: platform, HTTP/3/QUIC availability, raw sockets, scan/probe/output/generate counts. Use before choosing protocol probes.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{}},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"list_modules\",\"description\":\"List Xtate scan, probe, output and generate modules with their parameters. Use this before choosing a scanner/probe.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{}},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"job_list\",\"description\":\"List managed scan jobs with pagination. Returns job id, state and result path only; use job_result_manifest for result metadata.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"offset\":{\"type\":\"integer\",\"minimum\":0},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":1000}}},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"job_status\",\"description\":\"Return a job's state, phase, sent/targets progress, success/failed counts, heartbeat age and elapsed time. Does not return result records.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"job_id\":{\"type\":\"string\",\"description\":\"Job id returned by job.start\"}},\"required\":[\"job_id\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
@@ -98,6 +103,7 @@ static const char *tools_json =
 "{\"name\":\"describe_probe\",\"description\":\"Return module metadata (parameters, probe type, description) for a scan or probe. Use before choosing options.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"Module name, e.g. doh-h2\"}},\"required\":[\"name\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"explain_target\",\"description\":\"Describe the interface, source address and route Xtate would use for a target. No packets are sent.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"target\":{\"type\":\"string\"}},\"required\":[\"target\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"check\",\"description\":\"Read-only preflight for a target set: interfaces, sources, gateways and Linux firewall prerequisites.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"IP, CIDR, range, or comma-separated set\"}}},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
+"{\"name\":\"preflight\",\"description\":\"Run a read-only, server-side scan preflight: parse targets and ports, resolve routes and link type, validate scan/probe pairing, and return target/port/attempt counts plus errors and warnings. Sends no packets; call before start_scan.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"config\":{\"type\":\"object\",\"description\":\"Scan request with scan, targets, optional probe/ports/rate/timeout_sec/interface\"}},\"required\":[\"config\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"validate_config\",\"description\":\"Validate a scan-request object (scan, targets, probe, ports, args) before starting a job.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"config\":{\"type\":\"object\",\"description\":\"Scan-request object\"}},\"required\":[\"config\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"start_scan\",\"description\":\"Start a scan job from a closed scan-request object. Returns a job id; results are read via job_result_manifest. Only use with authorized targets.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"arguments\":{\"type\":\"object\",\"description\":\"Scan-request object with scan, targets, optional probe/ports/result_path, timeout_sec, rate and authorized=true\"}},\"required\":[\"arguments\"]},\"annotations\":{\"readOnlyHint\":false,\"destructiveHint\":false,\"openWorldHint\":true}}"
 "]}";
@@ -713,6 +719,13 @@ static bool result_path_writable(const char *path) {
 
 static void tool_call(const char *id, const char *name, const char *args,
                       const char *endpoint) {
+    if (strcmp(name, "capabilities") == 0) {
+        char *c = capabilities_json();
+        if (!c) { text_result(id, "cannot read capabilities", true); return; }
+        text_result(id, c, false);
+        free(c);
+        return;
+    }
     if (strcmp(name, "list_modules") == 0) {
         char *m = module_json_string();
         if (!m) { text_result(id, "cannot read module metadata", true); return; }
@@ -727,6 +740,21 @@ static void tool_call(const char *id, const char *name, const char *args,
         if (!m) { text_result(id, "probe/scan not found", true); return; }
         text_result(id, m, false);
         free(m);
+        return;
+    }
+    if (strcmp(name, "preflight") == 0) {
+        char cfg[8192];
+        if (!extract_object(args ? args : "", "config", cfg, sizeof(cfg))) {
+            text_result(id, "{\"ok\":false,\"errors\":[\"config object required\"]}", true);
+            return;
+        }
+        char *pf = gui_preflight_json(cfg);
+        if (!pf) {
+            text_result(id, "preflight failed", true);
+            return;
+        }
+        text_result(id, pf, false);
+        free(pf);
         return;
     }
     if (strcmp(name, "validate_config") == 0) {

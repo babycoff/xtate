@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Xtate 3.0 — Paper console</title>
+<style>
+  :root {
+    --bg: #eef1ef;
+    --paper: #fbfcfb;
+    --ink: #16211c;
+    --muted: #66746d;
+    --faint: #97a39c;
+    --line: #dce3de;
+    --line-2: #cbd5ce;
+    --green: #1d7a5c;
+    --green-soft: #e0f2ea;
+    --green-ink: #0d3b2d;
+    --blue: #2f6f8f;
+    --blue-soft: #e5f1f6;
+    --amber: #a56a18;
+    --mono: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    --sans: "Segoe UI Variable", "Segoe UI", Inter, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 14px/1.5 var(--sans); -webkit-font-smoothing: antialiased; overflow: hidden;
+  }
+  .app { height: 100vh; display: flex; flex-direction: column; }
+  .topbar {
+    height: 66px; flex: 0 0 66px; background: rgba(251,252,251,.86);
+    border-bottom: 1px solid var(--line); backdrop-filter: blur(12px);
+    display: flex; align-items: center; padding: 0 30px; gap: 30px;
+  }
+  .brand { display: flex; align-items: center; gap: 9px; min-width: 160px; }
+  .mark {
+    width: 29px; height: 29px; border-radius: 9px; background: var(--ink); color: #d9f6e9;
+    display: grid; place-items: center; font-size: 16px; font-weight: 800;
+    box-shadow: 0 4px 14px rgba(22,33,28,.18);
+  }
+  .brand b { font-size: 16px; letter-spacing: -.01em; font-weight: 650; }
+  .brand span { font: 10px var(--mono); color: var(--green); border: 1px solid #bfded2; background: #e9f5ef; border-radius: 999px; padding: 3px 6px; margin-left: 2px; }
+  .tabs { display: flex; align-items: center; gap: 3px; }
+  .tab { padding: 8px 12px; color: var(--muted); font-size: 12.5px; border-radius: 8px; text-decoration: none; }
+  .tab.active { color: var(--ink); background: #e7eee9; font-weight: 600; }
+  .tab:hover { color: var(--ink); }
+  .top-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .conn { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11.5px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: #3ba979; box-shadow: 0 0 0 4px rgba(59,169,121,.11); }
+  .avatar { width: 30px; height: 30px; border-radius: 50%; background: #e3eae5; border: 1px solid var(--line-2); display: grid; place-items: center; color: var(--muted); font: 10px var(--mono); }
+  .page { flex: 1; min-height: 0; overflow: auto; padding: 30px 34px 40px; }
+  .page-inner { max-width: 1280px; margin: 0 auto; }
+  .crumb { color: var(--faint); font-size: 11.5px; margin-bottom: 11px; letter-spacing: .01em; }
+  .hero { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 22px; }
+  h1 { margin: 0; font-size: 31px; line-height: 1.1; letter-spacing: -.035em; font-weight: 620; }
+  .hero p { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+  .steps { display: flex; align-items: center; gap: 8px; color: var(--faint); font-size: 11px; }
+  .steps b { color: var(--ink); font-weight: 600; }
+  .steps .sep { width: 24px; height: 1px; background: var(--line-2); }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 388px; gap: 18px; align-items: start; }
+  .paper { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 1px 2px rgba(22,33,28,.03), 0 10px 30px rgba(22,33,28,.035); }
+  .form { overflow: hidden; }
+  .section { padding: 20px 24px 21px; border-bottom: 1px solid var(--line); }
+  .section:last-child { border-bottom: 0; }
+  .sec-head { display: flex; align-items: baseline; gap: 9px; margin-bottom: 12px; }
+  .num { color: var(--green); font: 10.5px var(--mono); letter-spacing: .08em; }
+  .sec-head h2 { margin: 0; font-size: 12px; letter-spacing: .07em; text-transform: uppercase; font-weight: 650; }
+  .sec-head span:last-child { margin-left: auto; color: var(--faint); font-size: 10.5px; }
+  .scope {
+    display: flex; align-items: center; gap: 8px; min-height: 48px; border: 1px solid var(--line-2);
+    border-radius: 10px; padding: 8px 9px 8px 12px; background: #fff; box-shadow: 0 1px 0 rgba(22,33,28,.02);
+  }
+  .scope .val { flex: 1; font: 12.5px var(--mono); color: var(--ink); letter-spacing: -.01em; }
+  .count { font: 10.5px var(--mono); color: var(--green); background: var(--green-soft); border-radius: 6px; padding: 5px 7px; white-space: nowrap; }
+  .mini { height: 28px; border: 1px solid var(--line-2); border-radius: 7px; background: #fff; color: var(--muted); font-size: 10.5px; padding: 0 8px; }
+  .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
+  .tag { font: 10px var(--mono); color: var(--muted); border: 1px solid var(--line); background: #f7f9f8; border-radius: 999px; padding: 4px 8px; }
+  .tag i { font-style: normal; color: var(--faint); margin-left: 4px; }
+  .methods { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .method { border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; background: #fff; }
+  .method.on { border-color: #8ccab4; background: #f2faf6; box-shadow: 0 0 0 2px rgba(29,122,92,.07); position: relative; }
+  .method.on::after { content: ""; position: absolute; top: 11px; right: 11px; width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px rgba(29,122,92,.10); }
+  .method b { display: block; font-size: 12px; font-weight: 650; }
+  .method small { display: block; color: var(--faint); font-size: 10.5px; line-height: 1.35; margin-top: 2px; }
+  .row { display: grid; grid-template-columns: 1.5fr .7fr .7fr; gap: 10px; margin-top: 10px; }
+  label { display: block; color: var(--muted); font-size: 10.5px; margin-bottom: 5px; }
+  label span { color: var(--faint); }
+  .input, .select {
+    width: 100%; height: 38px; border: 1px solid var(--line-2); border-radius: 8px;
+    background: #fff; color: var(--ink); padding: 0 10px; font: 12px var(--sans); outline: none;
+  }
+  .input.mono { font-family: var(--mono); font-size: 11.5px; }
+  .iface { display: flex; align-items: center; gap: 11px; border: 1px solid var(--line-2); background: #fff; border-radius: 10px; padding: 10px 11px; }
+  .wifi { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; background: var(--blue-soft); color: var(--blue); }
+  .wifi svg { width: 15px; height: 15px; }
+  .iface b { display: block; font-size: 12px; font-weight: 600; }
+  .iface small { display: block; color: var(--faint); font: 10px var(--mono); margin-top: 2px; }
+  .iface .end { margin-left: auto; display: flex; gap: 6px; }
+  .pill { font: 9.5px var(--mono); border: 1px solid var(--line-2); border-radius: 5px; padding: 3px 6px; color: var(--muted); }
+  .pill.g { color: var(--green); border-color: #b9dccd; background: var(--green-soft); }
+  .adv { display: flex; align-items: center; gap: 8px; margin-top: 11px; color: var(--faint); font-size: 11px; }
+  .adv span:last-child { margin-left: auto; }
+  .plan { position: sticky; top: 0; overflow: hidden; }
+  .plan-top { padding: 20px 22px 18px; background: linear-gradient(180deg, #eaf5ef, #f7fbf8); border-bottom: 1px solid #d5e7dd; }
+  .plan-kicker { display: flex; align-items: center; gap: 7px; color: var(--green); font: 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+  .plan-kicker .dot { background: var(--green); box-shadow: 0 0 0 3px rgba(29,122,92,.10); }
+  .plan h2 { margin: 9px 0 0; font-size: 17px; letter-spacing: -.02em; font-weight: 620; }
+  .plan-sub { margin: 4px 0 0; color: var(--muted); font-size: 11px; }
+  .plan-body { padding: 18px 22px 20px; }
+  .big { display: flex; align-items: baseline; gap: 7px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+  .big b { font: 27px/1 var(--mono); font-weight: 500; letter-spacing: -.04em; }
+  .big span { color: var(--faint); font-size: 10.5px; }
+  .route { display: grid; gap: 0; margin: 13px 0 14px; }
+  .rrow { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #eef2ef; font-size: 11px; }
+  .rrow:last-child { border-bottom: 0; }
+  .rrow span { color: var(--muted); }
+  .rrow b { font: 10.5px var(--mono); font-weight: 500; color: var(--ink); }
+  .rrow b.ok { color: var(--green); }
+  .note { background: var(--blue-soft); border: 1px solid #cfe3ed; color: #315f76; border-radius: 8px; padding: 9px 10px; font-size: 10px; line-height: 1.5; }
+  .oklist { display: grid; gap: 7px; margin: 13px 0 0; }
+  .okrow { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10.5px; }
+  .okrow .t { width: 14px; height: 14px; border-radius: 50%; background: var(--green-soft); color: var(--green); display: grid; place-items: center; font-size: 8px; }
+  .auth { display: flex; gap: 9px; border: 1px solid #c9ddd4; background: #f4faf7; border-radius: 9px; padding: 10px; margin: 14px 0 11px; }
+  .auth .box { width: 15px; height: 15px; border-radius: 4px; background: var(--green); color: #fff; display: grid; place-items: center; font-size: 9px; flex: 0 0 auto; }
+  .auth p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+  .auth p b { color: var(--ink); font-weight: 600; }
+  .start { width: 100%; height: 43px; border: 0; border-radius: 9px; background: var(--ink); color: #e9f7f0; font: 600 12.5px var(--sans); display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 8px 20px rgba(22,33,28,.16); }
+  .start svg { width: 14px; height: 14px; }
+  .plan-foot { padding: 0 22px 18px; color: var(--faint); font-size: 10px; line-height: 1.5; }
+  .plan-foot b { color: var(--muted); font-weight: 500; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><div class="mark">x</div><b>xtate</b><span>3.0</span></div>
+    <nav class="tabs">
+      <a class="tab active" href="#">New scan</a>
+      <a class="tab" href="#">Live</a>
+      <a class="tab" href="#">Results</a>
+      <a class="tab" href="#">Interfaces</a>
+      <a class="tab" href="#">Modules</a>
+    </nav>
+    <div class="top-right">
+      <div class="conn"><span class="dot"></span> Control plane · local</div>
+      <div class="avatar">SC</div>
+    </div>
+  </header>
+
+  <div class="page">
+    <div class="page-inner">
+      <div class="crumb">Console / New scan</div>
+      <div class="hero">
+        <div>
+          <h1>Plan a scan.</h1>
+          <p>Resolve the route, check the parameters, then send. Preflight is local and silent.</p>
+        </div>
+        <div class="steps"><b>1 Scope</b><span class="sep"></span><b>2 Method</b><span class="sep"></span><b>3 Launch</b></div>
+      </div>
+
+      <div class="layout">
+        <form class="paper form">
+          <section class="section">
+            <div class="sec-head"><span class="num">01</span><h2>Scope</h2><span>IPv4 · IPv6 · CIDR · ranges</span></div>
+            <div class="scope">
+              <div class="val">198.18.0.0/24, 203.0.113.10-203.0.113.40</div>
+              <span class="count">287 targets</span>
+              <button class="mini" type="button">Choose file…</button>
+            </div>
+            <div class="tags">
+              <span class="tag">198.18.0.0/24 <i>256</i></span>
+              <span class="tag">203.0.113.10–40 <i>31</i></span>
+              <span class="tag">no exclusions</span>
+            </div>
+          </section>
+
+          <section class="section">
+            <div class="sec-head"><span class="num">02</span><h2>Method</h2><span>engine + probe + ports</span></div>
+            <div class="methods">
+              <div class="method on"><b>TCP SYN</b><small>Fast, stateless reachability.</small></div>
+              <div class="method"><b>TCP state</b><small>Handshake and banner capture.</small></div>
+              <div class="method"><b>zbanner</b><small>Protocol-aware banners.</small></div>
+            </div>
+            <div class="row">
+              <div>
+                <label>Probe <span>· dependency ok</span></label>
+                <select class="select">
+                  <option>http — HTTP/1.1 headers</option>
+                  <option>tls — certificate and handshake</option>
+                  <option>ssh — identification banner</option>
+                </select>
+              </div>
+              <div><label>Ports</label><input class="input mono" value="80, 443, 8080"></div>
+              <div><label>Rate <span>pps</span></label><input class="input mono" value="1000"></div>
+            </div>
+          </section>
+
+          <section class="section">
+            <div class="sec-head"><span class="num">03</span><h2>Interface</h2><span>auto-selected from route</span></div>
+            <div class="iface">
+              <div class="wifi">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 9a12 12 0 0118 0M6.5 12.5a7.5 7.5 0 0111 0M10 16a3 3 0 014 0"/><circle cx="12" cy="19" r=".8" fill="currentColor"/></svg>
+              </div>
+              <div><b>Wi-Fi · Intel Wi-Fi 6E AX211</b><small>\Device\NPF_{DBDB…01D1} · 192.168.1.24</small></div>
+              <div class="end"><span class="pill g">DEFAULT</span><span class="pill">EN10MB</span></div>
+            </div>
+            <div class="adv"><span>Advanced module parameters</span><span>none required · expand ⌄</span></div>
+          </section>
+
+          <section class="section" style="padding-top:16px;padding-bottom:17px">
+            <div class="sec-head" style="margin-bottom:8px"><span class="num">04</span><h2>Output</h2><span>NDJSON + manifest</span></div>
+            <div class="row" style="grid-template-columns:1.6fr .8fr;margin-top:0">
+              <div><label>Result file</label><input class="input mono" value="./results/198.18.0.0-24.ndjson"></div>
+              <div><label>Timeout <span>sec</span></label><input class="input mono" value="300"></div>
+            </div>
+          </section>
+        </form>
+
+        <aside class="paper plan">
+          <div class="plan-top">
+            <div class="plan-kicker"><span class="dot"></span> Preflight passed</div>
+            <h2>Ready to scan</h2>
+            <p class="plan-sub">296 addresses will be probed on 3 ports.</p>
+          </div>
+          <div class="plan-body">
+            <div class="big"><b>861</b><span>attempts · ~0.9 s at 1,000 pps</span></div>
+            <div class="route">
+              <div class="rrow"><span>Interface</span><b>Wi-Fi</b></div>
+              <div class="rrow"><span>Source</span><b>192.168.1.24</b></div>
+              <div class="rrow"><span>Gateway</span><b>192.168.1.1</b></div>
+              <div class="rrow"><span>Link type</span><b class="ok">EN10MB (1)</b></div>
+            </div>
+            <div class="note">On-link route. Ethernet header and ARP are available; no RAW fallback needed.</div>
+            <div class="oklist">
+              <div class="okrow"><span class="t">✓</span>Target syntax and count verified</div>
+              <div class="okrow"><span class="t">✓</span>Result path is writable</div>
+              <div class="okrow"><span class="t">✓</span>Probe dependency present</div>
+            </div>
+            <label class="auth">
+              <span class="box">✓</span>
+              <p><b>Authorization confirmed.</b> I own or have written permission for this scope and rate.</p>
+            </label>
+            <button class="start" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 5l11 7-11 7z"/></svg>
+              Start scan
+            </button>
+          </div>
+          <div class="plan-foot"><b>No packets are sent by preflight.</b> Changing scope or method invalidates this result and re-runs it.</div>
+        </aside>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

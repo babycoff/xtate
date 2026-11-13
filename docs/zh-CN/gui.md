@@ -61,19 +61,26 @@ $env:XTATE_CONTROL_TOKEN = 'change-me'
 浏览器 URL 形如 `http://127.0.0.1:<port>/`。会话 token 只打印一次，同时注入页面；
 没有匹配 `X-Xtate-GUI-Token` 请求头的调用会被拒绝。
 
-## 面板功能
+## 控制台功能
 
-- 通过 `job.list` 列出任务，每三秒刷新状态。
-- 展示选中任务的阶段、sent/targets 计数、心跳、耗时、退出码、结果与日志路径、
-  错误和有界 stderr 尾部。
-- 展示结果清单（`complete`、结果路径、清单路径与字节数）。
-- 通过向导启动扫描：scan 模块、目标、可选端口、速率、超时、结果路径和可选接口。
-  只有勾选明确授权复选框后才会启动；桥接层还会拒绝 `params.authorized` 不为
-  字面 `true` 的 `job.start`。
-- 选中 queued/running 任务后，经确认可取消。
+GUI 以扫描为中心：默认页是 **New scan**，不是任务表格。
 
-向导刻意小于完整扫描请求 schema。probe 参数、scan 参数、include_file、分块和配额等
-高级字段请直接使用 MCP server 或 JSON 控制 API。
+- **New scan** 接受逗号、范围或 CIDR 形式的 IPv4/IPv6 目标，选择 11 个扫描引擎之一；
+  只有引擎需要时才显示 probe，ICMP/ARP/NDP 扫描会隐藏端口。速率、超时和可选接口
+  也在此设置。
+- 服务端**预检**（`POST /api/preflight`）解析与 `job.start` 相同的请求，检查目标语法
+  与数量、路由、源地址、网关、链路类型和 raw-IP 能力，并拒绝未知 scan/probe、TCP
+  引擎只给 UDP 端口以及非法数值。预检不发包。
+- **Start scan** 只有在预检通过、勾选授权、且预检后表单未改动时才可用。桥接层仍会
+  拒绝 `params.authorized` 不为字面 `true` 的 `job.start`。
+- **Live** 每 1.5 秒轮询 `job.status`，显示阶段、sent/targets、心跳、耗时、退出码、
+  结果/日志路径和有界 stderr 尾部；queued/running 任务经确认可取消。
+- **Results** 通过 `job.list` 列出任务，打开后显示清单状态、结果字节数与路径。
+- **Interfaces** 显示采集网卡的 IPv4/IPv6、MAC、网关、默认标记、链路类型和 raw-IP
+  能力；**Modules** 搜索模块目录；**Settings** 显示运行时、能力和安全状态。
+
+输出路径由服务端管理。probe 参数、scan 参数、include_file、分块和配额等高级字段
+请直接使用 MCP server 或 JSON 控制 API。
 
 ## 安全模型
 
@@ -82,9 +89,9 @@ $env:XTATE_CONTROL_TOKEN = 'change-me'
 - **会话 token。** 启动时生成 128 位随机 token。页面通过 `X-Xtate-GUI-Token`
   发送，服务端使用常数时间比较。
 - **Host 校验。** 非环回 `Host` 请求会被拒绝，防止 DNS rebinding 页面访问 API。
-- **方法白名单。** 仅转发 `job.list`、`job.status`、`job.cancel`、
-  `job.result_manifest` 和 `job.start`；GUI 不能调用 `ping`、`job.results`
-  或任意控制方法。
+- **方法白名单。** `/api/rpc` 仅转发 `job.list`、`job.status`、`job.cancel`、
+  `job.result_manifest` 和 `job.start`；`/api/system`、`/api/interfaces`、
+  `/api/modules` 和 `/api/preflight` 是服务端只读处理器，不能调用任意控制方法。
 - **不经过 shell。** GUI 是进程内 C 代码；自动打开浏览器在 Windows 使用
   `ShellExecuteW`，在 Unix 使用 `xdg-open`。
 - **token 处理。** 控制平面 token 只从环境读取并由服务端添加；页面 JavaScript
@@ -111,12 +118,14 @@ GUI 不是扫描的安全边界。授权、目标数量、速率、路由预检�
 python tests/gui/test_gui.py
 ```
 
-测试会启动真实控制平面和 GUI 桥接，检查页面与 token，拒绝非环回 Host 和缺失
-token，启动一次 dry-run 任务并轮询到终态。无需浏览器。
+测试会启动真实控制平面和 GUI 桥接，检查页面、token、system/interfaces/modules/
+preflight 端点，拒绝非环回 Host 和缺失 token，并启动一次 dry-run 任务轮询到终态。
+无需浏览器。
 
 ## 相关文档
 
+- [3.0 手册](manual/README.md)
 - [控制平面](control-plane.md)
 - [任务模型](job-model.md)
-- [TUI 面板](tui.md)
+- [TUI 面板](tui.md)（3.0 中已弃用）
 - [MCP server](mcp-server.md)

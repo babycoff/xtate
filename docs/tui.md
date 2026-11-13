@@ -1,5 +1,10 @@
 # TUI dashboard
 
+> **Deprecated in 3.0.** The TUI remains available for compatibility, but it is
+> no longer the primary interactive interface and receives no new features.
+> Use the [browser GUI](gui.md) for scan setup, preflight, live observation and
+> results. TUI code may be removed once GUI coverage is complete.
+
 The TUI is a full-screen **control-plane client**. It does not scan in-process
 and it does not replace the scanner CLI. Every action becomes a JSON-lines
 request to a running control plane, the same API used by MCP and the planned

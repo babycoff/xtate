@@ -48,8 +48,15 @@ Delivered for 2.44.2:
 - scan startup and meta output include the effective `Rate:` (default or
   `--rate`).
 
+Delivered for 3.0.0-rc.1 (candidate):
+
+- one-command `xtate --mcp` with a private control plane;
+- `capabilities` MCP tool and `--list-capabilities` JSON for agent hosts;
+- scan-first GUI preflight and live job view as a reference front end.
+
 Still pending:
 
+- final 3.0.0 after RC trial feedback;
 - an agent evaluation suite and packaging;
 - exposing generate/stream input through MCP (MCP is static `targets` or
   `include_file` only).
