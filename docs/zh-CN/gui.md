@@ -16,7 +16,21 @@ GUI 面向本机分析工作站，不是公网 Web 服务，也不会通过 TCP 
 
 ## 启动
 
-Linux/macOS：
+本机日常使用只需一条命令。省略 `--control-connect` 时，GUI 会在子进程中启动一个
+私有控制面，等待其就绪，并在 GUI 退出时停止它：
+
+```bash
+xtate --gui
+```
+
+Windows PowerShell：
+
+```powershell
+.\bin\xtate.exe --gui
+```
+
+这种私有模式下启动的任务会随 GUI 退出而停止。若要连接已有控制面（用于长任务或其他
+客户端），显式传入端点：
 
 ```bash
 export XTATE_CONTROL_TOKEN='change-me'
@@ -42,7 +56,7 @@ $env:XTATE_CONTROL_TOKEN = 'change-me'
 |---|---|
 | `--gui-listen=127.0.0.1:PORT` | 监听端口；只接受环回地址，`:0` 表示自动选择空闲端口。 |
 | `--gui-no-open` | 只打印 URL 与 token，不自动打开浏览器。 |
-| `--control-connect=...` | 必填，控制平面端点。 |
+| `--control-connect=...` | 可选端点。指定时连接已有控制面；省略时自动启动私有控制面。 |
 
 浏览器 URL 形如 `http://127.0.0.1:<port>/`。会话 token 只打印一次，同时注入页面；
 没有匹配 `X-Xtate-GUI-Token` 请求头的调用会被拒绝。
@@ -84,9 +98,9 @@ GUI 不是扫描的安全边界。授权、目标数量、速率、路由预检�
 
 | 现象 | 处理 |
 |---|---|
-| `--gui requires --control-connect` | 传入与 `--control-plane` 相同的 socket/pipe 路径。 |
+| `cannot start a private control plane for --gui` | 子进程启动或绑定失败。确认二进制可运行、临时目录可写，或显式传入 `--control-connect`。 |
 | `cannot bind GUI listener` | 端口被占用；使用 `--gui-listen=127.0.0.1:0` 或换端口。 |
-| 页面显示 “control plane unavailable” | 先启动守护进程，并确认两个进程的 `XTATE_CONTROL_TOKEN` 一致。 |
+| 页面显示 “control plane unavailable” | 所连接的控制面已停止；启动它，或省略 `--control-connect` 使用私有模式，并确认两个进程的 `XTATE_CONTROL_TOKEN` 一致。 |
 | `GUI_TOKEN_REQUIRED` | 从当前打印的 URL 重新加载页面；token 必须匹配当前服务进程。 |
 | `AUTHORIZATION_REQUIRED` | 在向导中勾选授权；API 也要求 `params.authorized=true`。 |
 | `multiple default interfaces detected` | 运行 `xtate --explain-target=<target>`，把 `-if` 值填入接口字段。 |

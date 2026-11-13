@@ -76,7 +76,8 @@ def main():
             print("missing table header:\n" + proc.stdout, file=sys.stderr)
             return 1
 
-        # --tui must not silently run without an endpoint.
+        # Without --control-connect, --tui starts a private control plane and
+        # still prints a snapshot; the child must be gone after the snapshot.
         proc = subprocess.run(
             [exe, "--tui"],
             capture_output=True,
@@ -84,14 +85,24 @@ def main():
             encoding="utf-8",
             errors="replace",
             env=env,
-            timeout=15,
+            timeout=20,
         )
-        if proc.returncode == 0:
-            print("--tui without --control-connect unexpectedly succeeded",
+        if proc.returncode != 0:
+            print("--tui private-control snapshot failed:\n" + proc.stdout +
+                  proc.stderr, file=sys.stderr)
+            return 1
+        prefix = "Xtate TUI control endpoint: "
+        private = None
+        for line in proc.stdout.splitlines():
+            if line.startswith(prefix):
+                private = line[len(prefix):].strip()
+                break
+        if not private or "xtate-ui-" not in private:
+            print("missing private control endpoint:\n" + proc.stdout,
                   file=sys.stderr)
             return 1
-        if "requires --control-connect" not in (proc.stderr + proc.stdout):
-            print("unexpected missing-endpoint message:\n" + proc.stderr,
+        if os.name != "nt" and os.path.exists(private):
+            print("private control socket was not cleaned up:", private,
                   file=sys.stderr)
             return 1
 

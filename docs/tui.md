@@ -22,6 +22,24 @@ small authorized scan without composing JSON by hand.
 
 ## Start
 
+The usual local case is one command. If `--control-connect` is omitted, the TUI
+starts a private control plane in a child process, waits for it, and stops it
+when the TUI exits:
+
+```bash
+xtate --tui
+```
+
+Windows PowerShell:
+
+```powershell
+.\bin\xtate.exe --tui
+```
+
+Jobs started in this private mode stop when the TUI exits. To attach to an
+already-running control plane instead (for long-lived jobs or another client),
+pass its endpoint explicitly:
+
 ```bash
 export XTATE_CONTROL_TOKEN="$(openssl rand -hex 16)"
 xtate --control-plane=/tmp/xtate-ctl.sock
@@ -38,8 +56,8 @@ xtate --control-plane=\\.\pipe\xtate-ctl
 xtate --tui --control-connect=\\.\pipe\xtate-ctl
 ```
 
-If `--control-connect` is missing, `--tui` exits with an error. The TUI never
-starts a control plane for you.
+The private child inherits `XTATE_CONTROL_TOKEN` from the TUI process, so a
+token is still enforced when one is set.
 
 ## Keys
 

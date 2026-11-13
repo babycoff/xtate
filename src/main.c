@@ -37,6 +37,7 @@
 #include "util-scan/mcp-server.h"
 #include "util-scan/tui.h"
 #include "util-scan/gui.h"
+#include "util-scan/ui-control.h"
 #include "util-scan/explain-target.h"
 #include <sys/stat.h>
 
@@ -997,6 +998,36 @@ static int run_job_cli(XConf *xconf, const char *exe) {
     return rc;
 }
 
+/* Run a local UI with either an existing control plane (--control-connect)
+ * or a private one started for the lifetime of this process. */
+static int run_ui_with_control(XConf *xconf, const char *exe_path, int is_gui) {
+    char endpoint[256];
+    const char *ep = xconf->control_connect;
+    int started = 0;
+    int rc;
+
+    if (!ep) {
+        if (ui_control_start(exe_path, endpoint, sizeof(endpoint)) != 0) {
+            fprintf(stderr,
+                    "xtate: cannot start a private control plane for --%s\n",
+                    is_gui ? "gui" : "tui");
+            return 1;
+        }
+        ep = endpoint;
+        started = 1;
+    }
+
+    if (is_gui)
+        rc = gui_run(ep,
+                     xconf->gui_listen ? xconf->gui_listen : "127.0.0.1:8787",
+                     xconf->gui_no_open ? 0 : 1);
+    else
+        rc = tui_run(ep);
+
+    if (started) ui_control_stop();
+    return rc;
+}
+
 /***************************************************************************
  ***************************************************************************/
 static int xtate_main(int argc, char *argv[]) {
@@ -1122,23 +1153,11 @@ static int xtate_main(int argc, char *argv[]) {
         return 0;
     }
 
-    if (xconf->tui_mode) {
-        if (!xconf->control_connect) {
-            fprintf(stderr, "xtate: --tui requires --control-connect\n");
-            return 1;
-        }
-        return tui_run(xconf->control_connect);
-    }
+    if (xconf->tui_mode)
+        return run_ui_with_control(xconf, argv[0], 0);
 
-    if (xconf->gui_mode) {
-        if (!xconf->control_connect) {
-            fprintf(stderr, "xtate: --gui requires --control-connect\n");
-            return 1;
-        }
-        return gui_run(xconf->control_connect,
-                       xconf->gui_listen ? xconf->gui_listen : "127.0.0.1:8787",
-                       xconf->gui_no_open ? 0 : 1);
-    }
+    if (xconf->gui_mode)
+        return run_ui_with_control(xconf, argv[0], 1);
 
     if (xconf->control_endpoint)
         return control_plane_serve(xconf->control_endpoint);

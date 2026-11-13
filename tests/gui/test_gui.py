@@ -178,14 +178,46 @@ def main():
             print("GUI job did not settle:", state, file=sys.stderr)
             return 1
 
-        # --gui must not silently run without an endpoint.
-        proc = subprocess.run(
-            [exe, "--gui", "--gui-no-open"],
-            capture_output=True, text=True, encoding="utf-8",
-            errors="replace", env=env, timeout=15)
-        if proc.returncode == 0 or "requires --control-connect" not in (proc.stderr + proc.stdout):
-            print("missing --control-connect was not rejected", file=sys.stderr)
-            return 1
+        # Without --control-connect, --gui starts a private control plane.
+        auto = subprocess.Popen(
+            [exe, "--gui", "--gui-listen=127.0.0.1:0", "--gui-no-open"],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            env=env, text=True, encoding="utf-8", errors="replace",
+            bufsize=1)
+        try:
+            auto_output = "".join(auto.stdout.readline() for _ in range(3))
+            auto_match = re.search(r"http://127\.0\.0\.1:(\d+)/", auto_output)
+            auto_token = re.search(r"GUI session token: ([0-9a-f]+)", auto_output)
+            if not auto_match or not auto_token:
+                print("private GUI did not start:\n" + auto_output,
+                      file=sys.stderr)
+                return 1
+            auto_port = int(auto_match.group(1))
+            auto_tok = auto_token.group(1)
+            if not wait_port(auto_port):
+                print("private GUI port did not become ready", file=sys.stderr)
+                return 1
+            status, body = http_json(auto_port, "/api/info", auto_tok)
+            info = json.loads(body.decode()) if status == 200 else {}
+            private_endpoint = info.get("endpoint", "")
+            if "xtate-ui-" not in private_endpoint:
+                print("private GUI did not use a private control plane:",
+                      status, body[:200], file=sys.stderr)
+                return 1
+            status, body = http_json(
+                auto_port, "/api/rpc", auto_tok,
+                {"id": 6, "method": "job.list", "limit": 10, "offset": 0})
+            if status != 200 or "jobs" not in json.loads(body.decode()).get("result", {}):
+                print("private GUI job.list failed:", status, body[:200],
+                      file=sys.stderr)
+                return 1
+        finally:
+            auto.terminate()
+            try:
+                auto.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                auto.kill()
+                auto.wait()
 
         print("GUI tests: PASS")
         return 0

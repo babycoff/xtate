@@ -267,6 +267,11 @@ Delivered in 2.44.0:
   dashboard, start wizard, cancel, status and result manifest, with a per-run
   session token, Host validation and a job-method allowlist.
 
+Delivered in 2.44.1:
+
+- one-command local TUI/GUI startup with a private control plane for the UI
+  lifetime; `--control-connect` still attaches to an existing daemon.
+
 Remaining:
 
 - agent evaluation suite and packaging;
@@ -280,7 +285,8 @@ Phases:
 2.42.0  JSON contracts + jobs + control plane + MCP server (done)
 2.42.1  Agent Skill + full-tree audit hardening (done)
 2.43.0  TUI control-plane dashboard (done, released)
-2.44.0  browser GUI for the control plane (done)
+2.44.0  browser GUI for the control plane (done, released)
+2.44.1  one-command local TUI/GUI startup (done)
 next    evaluation suite and packaging
 later   MCP generate/stream input
 ```

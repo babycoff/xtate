@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.44.0-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.44.1-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -395,6 +395,13 @@ Xtate includes a loopback-only browser dashboard for managed jobs. It is another
 control-plane client and never scans in-process:
 
 ```bash
+xtate --gui
+```
+
+Without `--control-connect`, the GUI starts a private control plane for its own
+lifetime and stops it on exit. To attach to an existing daemon instead:
+
+```bash
 xtate --control-plane=/tmp/xtate-ctl.sock
 # in another terminal, with the same XTATE_CONTROL_TOKEN if one is set:
 xtate --gui --control-connect=/tmp/xtate-ctl.sock
@@ -410,6 +417,13 @@ change the port, `--gui-no-open` to skip opening a browser, and read
 
 Xtate includes a full-screen terminal client for managed jobs. It talks to the
 same local control plane as MCP and never scans in-process:
+
+```bash
+xtate --tui
+```
+
+Without `--control-connect`, the TUI starts a private control plane for its own
+lifetime and stops it on exit. To attach to an existing daemon instead:
 
 ```bash
 xtate --control-plane=/tmp/xtate-ctl.sock

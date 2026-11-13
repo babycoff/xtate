@@ -20,6 +20,22 @@ TUI 是一个全屏的**控制平面客户端**。它不在进程内扫描，也
 
 ## 启动
 
+本机日常使用只需一条命令。省略 `--control-connect` 时，TUI 会在子进程中启动一个
+私有控制面，等待其就绪，并在 TUI 退出时停止它：
+
+```bash
+xtate --tui
+```
+
+Windows PowerShell：
+
+```powershell
+.\bin\xtate.exe --tui
+```
+
+这种私有模式下启动的任务会随 TUI 退出而停止。若要连接已有控制面（用于长任务或其他
+客户端），显式传入端点：
+
 ```bash
 export XTATE_CONTROL_TOKEN="$(openssl rand -hex 16)"
 xtate --control-plane=/tmp/xtate-ctl.sock
@@ -36,7 +52,7 @@ xtate --control-plane=\\.\pipe\xtate-ctl
 xtate --tui --control-connect=\\.\pipe\xtate-ctl
 ```
 
-缺少 `--control-connect` 时 `--tui` 会直接报错退出。TUI 不会替你启动控制平面。
+私有子进程会继承 TUI 进程的 `XTATE_CONTROL_TOKEN`，因此设置令牌时仍然会校验。
 
 ## 按键
 

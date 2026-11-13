@@ -34,6 +34,12 @@ Delivered for 2.44.0:
   loopback, uses a per-run session token and a Host check, and forwards only an
   allowlist of job methods.
 
+Delivered for 2.44.1:
+
+- one-command local TUI/GUI startup: when `--control-connect` is omitted, the UI
+  starts a private control plane in a child process, waits for readiness, and
+  stops it on exit. `--control-connect` still attaches to an existing daemon.
+
 Still pending:
 
 - an agent evaluation suite and packaging;
@@ -159,7 +165,8 @@ See [MCP server](./mcp-server.md), [control plane](./control-plane.md) and
 2.42.0  jobs + control plane + MCP server (done)
 2.42.1  Agent Skill (done, released)
 2.43.0  TUI control-plane dashboard (done, released)
-2.44.0  browser GUI for the control plane (done)
+2.44.0  browser GUI for the control plane (done, released)
+2.44.1  one-command local TUI/GUI control-plane startup (done)
 next    evaluation suite and packaging
 later   MCP generate/stream input
 ```

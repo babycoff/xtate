@@ -18,7 +18,23 @@ See [control-plane.md](control-plane.md) for starting the daemon.
 
 ## Start
 
-Linux/macOS:
+The usual local case is one command. If `--control-connect` is omitted, the GUI
+starts a private control plane in a child process, waits for it, and stops it
+when the GUI exits:
+
+```bash
+xtate --gui
+```
+
+Windows PowerShell:
+
+```powershell
+.\bin\xtate.exe --gui
+```
+
+Jobs started in this private mode stop when the GUI exits. To attach to an
+already-running control plane instead (for long-lived jobs or another client),
+pass its endpoint explicitly:
 
 ```bash
 export XTATE_CONTROL_TOKEN='change-me'
@@ -45,7 +61,7 @@ and opens the page in the default browser. Options:
 |---|---|
 | `--gui-listen=127.0.0.1:PORT` | Listen port; only loopback hosts are accepted. `:0` picks a free port. |
 | `--gui-no-open` | Print the URL and token but do not open a browser. |
-| `--control-connect=...` | Required control-plane endpoint. |
+| `--control-connect=...` | Optional endpoint. Use it to attach to an existing control plane; omitted starts a private one. |
 
 The browser URL is printed as `http://127.0.0.1:<port>/`. The session token is
 printed once and is also injected into the page; requests without the matching
@@ -93,9 +109,9 @@ and MCP server.
 
 | Symptom | Action |
 |---|---|
-| `--gui requires --control-connect` | Pass the socket/pipe path used by `--control-plane`. |
+| `cannot start a private control plane for --gui` | The child process failed to start or bind. Check that the binary is runnable and the temp directory is writable, or pass `--control-connect` explicitly. |
 | `cannot bind GUI listener` | Another process owns the port; use `--gui-listen=127.0.0.1:0` or another port. |
-| Page says "control plane unavailable" | Start the daemon first and verify `XTATE_CONTROL_TOKEN` matches in both processes. |
+| Page says "control plane unavailable" | The attached daemon is down; start it or omit `--control-connect` to use private mode, and verify `XTATE_CONTROL_TOKEN` matches in both processes. |
 | `GUI_TOKEN_REQUIRED` | Reload the page from the printed URL; the token must match the current server process. |
 | `AUTHORIZATION_REQUIRED` | Tick the authorization checkbox in the wizard; the API also requires `params.authorized=true`. |
 | `multiple default interfaces detected` | Run `xtate --explain-target=<target>`, then paste the `-if` value into the interface field. |

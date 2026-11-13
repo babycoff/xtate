@@ -137,7 +137,7 @@ static JsonNode *tui_rpc(JsonNode *root, char *err, size_t errcap) {
     if (control_client_request(g_endpoint, request, response, sizeof(response)) <
         0) {
         free(request);
-        snprintf(err, errcap, "control request failed (%s)", g_endpoint);
+        snprintf(err, errcap, "control request failed (%.200s)", g_endpoint);
         return NULL;
     }
     free(request);

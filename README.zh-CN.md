@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.44.0-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.44.1-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -374,6 +374,13 @@ Xtate 提供一个仅监听环回的浏览器任务面板。它是又一个控�
 扫描：
 
 ```bash
+xtate --gui
+```
+
+不指定 `--control-connect` 时，GUI 会为自身生命周期启动一个私有控制面，并在退出时
+停止它。要连接到已有控制面，则显式指定：
+
+```bash
 xtate --control-plane=/tmp/xtate-ctl.sock
 # 另一个终端；如果设置了 XTATE_CONTROL_TOKEN，需要相同值：
 xtate --gui --control-connect=/tmp/xtate-ctl.sock
@@ -388,6 +395,13 @@ xtate --gui --control-connect=/tmp/xtate-ctl.sock
 
 Xtate 提供一个全屏终端客户端来管理 job。它和 MCP 使用同一个本地控制平面，不会在
 TUI 进程内扫描：
+
+```bash
+xtate --tui
+```
+
+不指定 `--control-connect` 时，TUI 会为自身生命周期启动一个私有控制面，并在退出时
+停止它。要连接到已有控制面，则显式指定：
 
 ```bash
 xtate --control-plane=/tmp/xtate-ctl.sock
