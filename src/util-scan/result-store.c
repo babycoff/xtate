@@ -1,10 +1,21 @@
 #include "result-store.h"
 #include "../util-data/file-open.h"
+#include "../util-data/json-escape.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include "../util-out/logger.h"
+
+static void json_file_sink(void *ctx, const char *data, size_t len) {
+    fwrite(data, 1, len, (FILE *)ctx);
+}
+
+static void fput_json_path(FILE *f, const char *path) {
+    fputc('"', f);
+    json_escape_to(json_file_sink, f, (const unsigned char *)path, strlen(path));
+    fputc('"', f);
+}
 #ifndef NOT_FOUND_ZSTD
 #include <zstd.h>
 #endif
@@ -78,16 +89,20 @@ int result_store_build(const char *result_path, uint64_t chunk_bytes,
                 if (use_zstd)
                     compress_file(cpath, &cbytes);
 #endif
-                fprintf(mf, "%s{\"id\":%llu,\"path\":\"%s\","
-                            "\"bytes\":%llu,\"records\":%llu}",
-                        first ? "" : ",", (unsigned long long)cid, cpath,
+                fprintf(mf, "%s{\"id\":%llu,\"path\":",
+                        first ? "" : ",", (unsigned long long)cid);
+                fput_json_path(mf, cpath);
+                fprintf(mf, ",\"bytes\":%llu,\"records\":%llu}",
                         (unsigned long long)cbytes,
                         (unsigned long long)crecords);
-                if (ix) fprintf(ix, "%s{\"id\":%llu,\"path\":\"%s\","
-                                    "\"bytes\":%llu,\"records\":%llu}",
-                                first ? "" : ",", (unsigned long long)cid, cpath,
-                                (unsigned long long)cbytes,
-                                (unsigned long long)crecords);
+                if (ix) {
+                    fprintf(ix, "%s{\"id\":%llu,\"path\":",
+                            first ? "" : ",", (unsigned long long)cid);
+                    fput_json_path(ix, cpath);
+                    fprintf(ix, ",\"bytes\":%llu,\"records\":%llu}",
+                            (unsigned long long)cbytes,
+                            (unsigned long long)crecords);
+                }
                 first = 0;
             }
             cid++; cbytes = 0; crecords = 0;
@@ -105,13 +120,17 @@ int result_store_build(const char *result_path, uint64_t chunk_bytes,
             if (use_zstd)
                 compress_file(cpath, &cbytes);
 #endif
-            if (ix) fprintf(ix, "%s{\"id\":%llu,\"path\":\"%s\","
-                            "\"bytes\":%llu,\"records\":%llu}",
-                        first ? "" : ",", (unsigned long long)cid, cpath,
+            if (ix) {
+                fprintf(ix, "%s{\"id\":%llu,\"path\":",
+                        first ? "" : ",", (unsigned long long)cid);
+                fput_json_path(ix, cpath);
+                fprintf(ix, ",\"bytes\":%llu,\"records\":%llu}",
                         (unsigned long long)cbytes, (unsigned long long)crecords);
-        fprintf(mf, "%s{\"id\":%llu,\"path\":\"%s\",\"bytes\":%llu,"
-                    "\"records\":%llu}",
-                first ? "" : ",", (unsigned long long)cid, cpath,
+            }
+        fprintf(mf, "%s{\"id\":%llu,\"path\":",
+                first ? "" : ",", (unsigned long long)cid);
+        fput_json_path(mf, cpath);
+        fprintf(mf, ",\"bytes\":%llu,\"records\":%llu}",
                 (unsigned long long)cbytes, (unsigned long long)crecords);
     }
     fclose(in);
