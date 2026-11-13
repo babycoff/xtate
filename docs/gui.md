@@ -73,15 +73,16 @@ The browser URL is printed as `http://127.0.0.1:<port>/`. The session token is
 printed once and is also injected into the page; requests without the matching
 `X-Xtate-GUI-Token` header are rejected.
 
-Result and log files are not written beside the binary. The control plane uses a
-managed state directory: `%LOCALAPPDATA%\xtate\results` on Windows, or
-`$XDG_STATE_HOME/xtate/results` (falling back to
+On Windows, results and logs are written to the visible `xtate-state` folder
+beside `xtate.exe`, so they are easy to find and delete. On Linux the managed
+state directory is `$XDG_STATE_HOME/xtate/results` (falling back to
 `$HOME/.local/state/xtate/results`) on Linux. Set `XTATE_STATE_DIR` to override
 it. Request files live under the same state directory and are removed when the
-job reaches a terminal state. If the preferred location cannot be created
-(for example a restricted launch environment), the control plane falls back to
-`<exe-dir>\.xtate-state`, then `%TEMP%\xtate-state`, then `.xtate-state` in the
-current directory; the selected root still contains `requests` and `results`.
+job reaches a terminal state. If the portable location cannot be created
+(for example the executable is in a read-only install directory), the Windows
+build falls back to `%LOCALAPPDATA%\xtate`, then `%TEMP%\xtate-state`, then
+`xtate-state` in the current directory; the selected root still contains
+`requests` and `results`.
 
 ## What the console does
 

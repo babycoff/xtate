@@ -293,11 +293,10 @@ static int try_state_candidate(const wchar_t *wdir, char *out, size_t cap) {
     return ensure_dir(out);
 }
 
-/* Return a writable parent for the per-user state directory. The normal
- * location is %LOCALAPPDATA%\xtate. Restricted launch environments (for
- * example sandboxed shells or policy-managed desktops) can deny writes
- * there even when the user owns the directory; in that case fall back to
- * a hidden directory next to the executable, then TEMP, then CWD. */
+/* Return the directory used for managed request/result files. A portable
+ * Windows build keeps it beside the executable so users can find and
+ * delete it; installed/read-only locations fall back to %LOCALAPPDATA%,
+ * then TEMP, then the current directory. */
 static int state_dir(char *out, size_t cap) {
     wchar_t wdir[2048];
     wchar_t *slash;
@@ -310,14 +309,6 @@ static int state_dir(char *out, size_t cap) {
             return 1;
         }
     }
-    n = GetEnvironmentVariableW(L"LOCALAPPDATA", wdir,
-                                (DWORD)(sizeof(wdir) / sizeof(wdir[0])));
-    if (n > 0 && n < sizeof(wdir) / sizeof(wdir[0])) {
-        if (swprintf(wdir + n, sizeof(wdir) / sizeof(wdir[0]) - n,
-                     L"\\xtate") > 0 &&
-            try_state_candidate(wdir, out, cap))
-            return 1;
-    }
     n = GetModuleFileNameW(NULL, wdir, (DWORD)(sizeof(wdir) / sizeof(wdir[0])));
     if (n > 0 && n < sizeof(wdir) / sizeof(wdir[0])) {
         slash = wcsrchr(wdir, L'\\');
@@ -325,10 +316,18 @@ static int state_dir(char *out, size_t cap) {
             *slash = 0;
             if (swprintf(wdir + wcslen(wdir),
                          sizeof(wdir) / sizeof(wdir[0]) - wcslen(wdir),
-                         L"\\.xtate-state") > 0 &&
+                         L"\\xtate-state") > 0 &&
                 try_state_candidate(wdir, out, cap))
                 return 1;
         }
+    }
+    n = GetEnvironmentVariableW(L"LOCALAPPDATA", wdir,
+                                (DWORD)(sizeof(wdir) / sizeof(wdir[0])));
+    if (n > 0 && n < sizeof(wdir) / sizeof(wdir[0])) {
+        if (swprintf(wdir + n, sizeof(wdir) / sizeof(wdir[0]) - n,
+                     L"\\xtate") > 0 &&
+            try_state_candidate(wdir, out, cap))
+            return 1;
     }
     n = GetEnvironmentVariableW(L"TEMP", wdir,
                                 (DWORD)(sizeof(wdir) / sizeof(wdir[0])));
@@ -342,7 +341,7 @@ static int state_dir(char *out, size_t cap) {
     if (n > 0 && n < sizeof(wdir) / sizeof(wdir[0]) &&
         swprintf(wdir + wcslen(wdir),
                  sizeof(wdir) / sizeof(wdir[0]) - wcslen(wdir),
-                 L"\\.xtate-state") > 0 &&
+                 L"\\xtate-state") > 0 &&
         try_state_candidate(wdir, out, cap))
         return 1;
     return 0;

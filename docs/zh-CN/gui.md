@@ -65,12 +65,14 @@ $env:XTATE_CONTROL_TOKEN = 'change-me'
 浏览器 URL 形如 `http://127.0.0.1:<port>/`。会话 token 只打印一次，同时注入页面；
 没有匹配 `X-Xtate-GUI-Token` 请求头的调用会被拒绝。
 
-结果与日志文件不会写在二进制旁边。控制平面使用托管状态目录：Windows 上是
-`%LOCALAPPDATA%\xtate\results`，Linux 上是 `$XDG_STATE_HOME/xtate/results`（回退到
-`$HOME/.local/state/xtate/results`）。设置 `XTATE_STATE_DIR` 可以覆盖它。请求文件位于
-同一状态目录下，job 进入终态时会被删除。如果首选位置无法创建（例如受限的启动环境），
-控制平面会依次回退到 `<exe 所在目录>\.xtate-state`、`%TEMP%\xtate-state`、当前目录下的
-`.xtate-state`；选中的根目录下仍然包含 `requests` 和 `results`。
+在 Windows 上，结果与日志写入 `xtate.exe` 同级、可见的 `xtate-state` 目录，
+方便直接找到和删除。控制平面使用托管状态目录：Windows 上是
+`xtate.exe` 同级的 `xtate-state`，Linux 上是 `$XDG_STATE_HOME/xtate/results`
+（回退到 `$HOME/.local/state/xtate/results`）。设置 `XTATE_STATE_DIR` 可以覆盖它。
+请求文件位于同一状态目录下，job 进入终态时会被删除。如果便携目录无法创建
+（例如二进制位于只读安装目录），Windows 构建会依次回退到
+`%LOCALAPPDATA%\xtate`、`%TEMP%\xtate-state`、当前目录下的 `xtate-state`；
+选中的根目录下仍然包含 `requests` 和 `results`。
 
 ## 控制台功能
 

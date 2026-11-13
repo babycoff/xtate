@@ -648,7 +648,7 @@ textarea { font-size: 13.5px; line-height: 1.5; }
         <div class="card-body stack">
           <p class="sys-note">The server binds to <b>127.0.0.1</b> only, validates the <b>Host</b> header, requires a per-session token, and exposes only allowlisted control methods. The scan child is owned by the control plane.</p>
           <p class="sys-note">The GUI page never receives the control-plane token; the server adds it to control requests. Authorization is checked before Start and again by the server.</p>
-          <p class="sys-note" style="margin:0">Result and log files stay under the managed Xtate results directory, not beside the binary.</p>
+          <p class="sys-note" style="margin:0">Result and log files stay in the visible <code>xtate-state</code> folder beside <code>xtate.exe</code> on Windows (or the per-user state directory on Linux). Requests are removed when a scan finishes.</p>
         </div>
       </section>
     </div>

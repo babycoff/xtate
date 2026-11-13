@@ -166,13 +166,13 @@ Fields and panels:
 is disabled in terminal states. Leaving the page does not stop the scan; the
 daemon continues and the job stays visible on Results.
 
-Result files are written to the managed state directory, not beside the binary:
-`%LOCALAPPDATA%\xtate\results` on Windows, or
+Result files are written to the visible `xtate-state` folder beside `xtate.exe`
+on Windows (easy to find and delete), or to the managed state directory:
 `$XDG_STATE_HOME/xtate/results`/`$HOME/.local/state/xtate/results` on Linux.
 Set `XTATE_STATE_DIR` to override it. Request files are removed when the job
-ends. If the preferred directory cannot be created, the control plane falls
-back to `<exe-dir>\.xtate-state`, then `%TEMP%\xtate-state`, then
-`.xtate-state` in the current directory.
+ends. If the portable directory cannot be created, the Windows build falls
+back to `%LOCALAPPDATA%\xtate`, then `%TEMP%\xtate-state`, then
+`xtate-state` in the current directory.
 
 ### Results
 
