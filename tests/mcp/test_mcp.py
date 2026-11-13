@@ -4,7 +4,8 @@ BIN = os.environ["XTATE_BIN"]; TOKEN = "mcp-test-token"
 # Linux loopback has no MAC address; TEST-NET-3 routes through the normal interface.
 SCAN_TARGET = "127.0.0.1" if os.name == "nt" else "203.0.113.1"
 ep = ("\\\\.\\pipe\\xtate-mcp-test-" + str(os.getpid())) if sys.platform == "win32" else os.path.join(tempfile.mkdtemp(), "ctl.sock")
-env = dict(os.environ, XTATE_CONTROL_TOKEN=TOKEN)
+audit_path = os.path.join(os.getcwd(), "mcp-audit-test.log")
+env = dict(os.environ, XTATE_CONTROL_TOKEN=TOKEN, XTATE_MCP_AUDIT_LOG=audit_path)
 ctlp = subprocess.Popen([BIN, "--control-plane=" + ep], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1)
 mp = subprocess.Popen([BIN, "--mcp", "--control-connect=" + ep], env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, encoding="utf-8", text=True)
@@ -73,6 +74,9 @@ try:
     started = rpc({"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"start_scan","arguments":{"scan":"tcp-syn","targets":[SCAN_TARGET],"ports":[1],"rate":1500,"result_path":out,"authorized":True}}})
     assert not started["result"]["isError"], started
     job = json.loads(started["result"]["content"][0]["text"])["result"]["job_id"]
+    assert os.path.exists(audit_path), "XTATE_MCP_AUDIT_LOG was not written"
+    with open(audit_path, encoding="utf-8", errors="replace") as af:
+        assert "start_scan rate=" in af.read()
     time.sleep(4)
     st = rpc({"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"job_status","arguments":{"job_id":job}}}); assert not st["result"]["isError"]
     stj = json.loads(st["result"]["content"][0]["text"])["result"]
@@ -218,6 +222,10 @@ try:
     assert "result" in pl
     print("MCP server tests: PASS")
 finally:
+    try:
+        os.remove(audit_path)
+    except OSError:
+        pass
     mp.terminate(); ctlp.terminate()
 
 

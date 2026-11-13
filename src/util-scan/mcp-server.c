@@ -49,6 +49,30 @@ static const char *json_id(const char *line) {
     return id;
 }
 
+static void mcp_audit(const char *fmt, ...) {
+    char path_utf8[4096] = {0};
+    const char *path = NULL;
+#ifdef _WIN32
+    wchar_t wpath[2048];
+    DWORD n = GetEnvironmentVariableW(L"XTATE_MCP_AUDIT_LOG", wpath,
+        (DWORD)(sizeof(wpath) / sizeof(wpath[0])));
+    if (n == 0 || n >= sizeof(wpath) / sizeof(wpath[0])) return;
+    if (WideCharToMultiByte(CP_UTF8, 0, wpath, -1, path_utf8,
+            (int)sizeof(path_utf8), NULL, NULL) <= 0) return;
+    path = path_utf8;
+#else
+    path = getenv("XTATE_MCP_AUDIT_LOG");
+#endif
+    if (!path || !*path) return;
+    FILE *f = file_open_utf8_mode(path, "a");
+    if (!f) return;
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(f, fmt, ap);
+    va_end(ap);
+    fclose(f);
+}
+
 static bool json_str(const char *line, const char *key, char *out, size_t cap) {
     char pat[64]; snprintf(pat, sizeof(pat), "\"%s\":", key);
     const char *p = strstr(line, pat);
@@ -860,11 +884,7 @@ static void tool_call(const char *id, const char *name, const char *args,
         }
         if (rg < 0) { text_result(id, "cannot determine route groups", true); return; }
         if (rg > 1) { text_result(id, "targets span multiple routes; split into separate jobs", true); return; }
-        FILE *audit = fopen("xtate-mcp-audit.log", "a");
-        if (audit) {
-            fprintf(audit, "start_scan rate=%u cfg=%.*s\n", rate, 500, cfg);
-            fclose(audit);
-        }
+        mcp_audit("start_scan rate=%u cfg=%.*s\n", rate, 500, cfg);
     }
     char iface[256] = {0};
     if (strcmp(name, "start_scan") == 0) {

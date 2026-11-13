@@ -114,8 +114,9 @@ include 文件发现路由尚未实现，服务不会声称已经校验。
 - 启动前会探测 `result_path` 是否可写。
 - `dry_run` 默认为 `false`（真实扫描）。设为 `true` 时只列出计划目标，不发送报文。
 - 超过 MCP 参数缓冲区的超大请求会被干净拒绝。
-- `start_scan` 会向 MCP 进程工作目录下的 `xtate-mcp-audit.log` 追加审计记录，
-  包含 rate 和截断后的配置。
+- `start_scan` 可追加审计记录，包含 rate 和截断后的配置。默认不写审计日志；
+  只有 `XTATE_MCP_AUDIT_LOG` 指向可写文件时才写入，MCP 进程不会默认在当前目录
+  创建 `xtate-mcp-audit.log`。
 
 ## 测试
 

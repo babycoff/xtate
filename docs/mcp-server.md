@@ -132,9 +132,10 @@ to verify it.
 - `dry_run` defaults to `false` (a real scan). Set `dry_run: true` to list the
   planned targets and send no packets.
 - Large inline arguments above the MCP buffer are rejected cleanly.
-- `start_scan` appends an audit record to `xtate-mcp-audit.log` in the MCP
-  process working directory; the record contains rate and the truncation-bounded
-  config.
+- `start_scan` can append an audit record containing the rate and the
+  truncation-bounded config. Auditing is disabled unless
+  `XTATE_MCP_AUDIT_LOG` names a writable file; the MCP server never writes an
+  audit log into the current directory by default.
 
 ## Tests
 
