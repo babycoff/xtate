@@ -48,6 +48,7 @@ connection; it does not listen on TCP.
 | `job_list` | Paginated job list |
 | `job_status` | State, counters, exit code, error, log path and stderr tail |
 | `job_result_manifest` | Result/chunk paths, sizes and completeness |
+| `job.records` | Bounded page of valid NDJSON records for a completed job |
 | `job_cancel` | Cancel a running job |
 
 Every result has the MCP text-content shape:
@@ -57,8 +58,8 @@ Every result has the MCP text-content shape:
 ```
 
 The `text` field is JSON. `isError` is true when the tool rejected the request
-or the control plane returned an error object. Scan result data is never
-returned inline: clients read the manifest and then the chunk files.
+or the control plane returned an error object. Raw result data is not inlined wholesale: use `job.records` for a bounded
+page of valid NDJSON, and the manifest plus chunk files for complete data.
 
 `start_scan` requires `authorized: true`, which records the caller's assertion
 that the targets are authorized. It accepts either `targets` (a JSON array) or

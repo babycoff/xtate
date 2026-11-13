@@ -1,6 +1,7 @@
 #include "mcp-server.h"
 #include "control-client.h"
 #include "capabilities.h"
+#include "result-read.h"
 #include "gui-data.h"
 #include "../version.h"
 #include "../util-out/module-json.h"
@@ -82,8 +83,9 @@ static const char *instructions =
 "and HTTP/2. Scans run as jobs managed by the Xtate control plane.\n\n"
 "Safety rules:\n"
 "- Only scan targets the user has explicitly authorized.\n"
-"- Use job_status/job_list to observe jobs; results are NOT in tool responses. "
-"Read job_result_manifest and fetch result chunks from the returned path.\n"
+"- Use job_status/job_list to observe jobs; results are NOT inlined wholesale. "
+"Use job.records for bounded pages of valid NDJSON records, and job_result_manifest "
+"for paths, sizes and chunk metadata.\n"
 "- On Linux, stateful scans (tcp-state, tls-state, state sub-probes) need the "
 "firewall RST/ICMP rules; tcp-syn and UDP do not.\n"
 "- Use timeouts or stall timeouts for long jobs; never start unbounded scans.\n"
@@ -97,6 +99,7 @@ static const char *tools_json =
 "{\"name\":\"capabilities\",\"description\":\"Return build capabilities and module counts: platform, HTTP/3/QUIC availability, raw sockets, scan/probe/output/generate counts. Use before choosing protocol probes.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{}},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"iface.list\",\"description\":\"List capture interfaces with IPv4/IPv6 addresses, MAC, gateway, default flag, link type and raw-IP capability. Use before choosing an interface or explaining a route.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{}},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"list_modules\",\"description\":\"List Xtate scan, probe, output and generate modules with their parameters. Use this before choosing a scanner/probe.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{}},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
+"{\"name\":\"job.records\",\"description\":\"Read a bounded page of valid NDJSON result records for a completed job. Resolves the file from the job manifest; malformed lines are skipped. Prefer this over reading result files directly when the MCP client cannot access the worker filesystem.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"job_id\":{\"type\":\"string\"},\"offset\":{\"type\":\"integer\",\"minimum\":0},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":200}},\"required\":[\"job_id\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"job_list\",\"description\":\"List managed scan jobs with pagination. Returns job id, state and result path only; use job_result_manifest for result metadata.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"offset\":{\"type\":\"integer\",\"minimum\":0},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":1000}}},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"job_status\",\"description\":\"Return a job's state, phase, sent/targets progress, success/failed counts, heartbeat age and elapsed time. Does not return result records.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"job_id\":{\"type\":\"string\",\"description\":\"Job id returned by job.start\"}},\"required\":[\"job_id\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"job_result_manifest\",\"description\":\"Return result_path, manifest_path, size and completion for a job. Does not carry result data; read chunks from the manifest path.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"job_id\":{\"type\":\"string\"}},\"required\":[\"job_id\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
@@ -791,8 +794,35 @@ static void tool_call(const char *id, const char *name, const char *args,
         text_result(id, "control endpoint not configured", true);
         return;
     }
+    if (strcmp(name, "job.records") == 0) {
+        char jid[128] = {0};
+        int offset = 0, limit = 50, status = 0;
+        char *text;
+        char argobj[2048];
+        json_str(args ? args : "", "job_id", jid, sizeof(jid));
+        if (extract_object(args ? args : "", "arguments", argobj, sizeof(argobj))) {
+            JsonNode *ar = json_decode(argobj);
+            if (ar) {
+                JsonNode *vo = json_find_member(ar, "offset");
+                JsonNode *vl = json_find_member(ar, "limit");
+                if (vo && vo->tag == JSON_NUMBER) offset = (int)vo->number_;
+                if (vl && vl->tag == JSON_NUMBER) limit = (int)vl->number_;
+                json_delete(ar);
+            }
+        }
+        text = result_records_json(endpoint, jid, offset, limit, &status);
+        if (!text) {
+            if (status == 400) text_result(id, "job_id must be job-<number>", true);
+            else if (status == 404) text_result(id, "job result is not available", true);
+            else text_result(id, "cannot read result records", true);
+            return;
+        }
+        text_result(id, text, false);
+        free(text);
+        return;
+    }
     if (strcmp(name, "job_list") != 0 && strcmp(name, "job_status") != 0 &&
-        strcmp(name, "job_result_manifest") != 0 &&
+        strcmp(name, "job_result_manifest") != 0 && strcmp(name, "job.records") != 0 &&
         strcmp(name, "job_cancel") != 0 && strcmp(name, "start_scan") != 0) {
         text_result(id, "unknown or unsupported tool", true);
         return;

@@ -120,6 +120,7 @@ start_scan
 job_list
 job_status
 job_result_manifest
+job.records
 job_cancel
 ```
 

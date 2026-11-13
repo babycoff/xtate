@@ -134,7 +134,7 @@ GUI 是由同一进程提供的本地扫描控制台。浏览器页面、其资�
 
 MCP server 是一个 stdio 进程（用 `--mcp` 启动），对本地 agent 讲 Model Context Protocol，并作为控制面的有类型客户端加只读发现工具。它从不内嵌扫描结果、从不派生 shell、从不接受命令字符串；发现功能用固定 argv 运行同一可执行文件。
 
-它的工具面刻意小而结构化：`capabilities`、`iface.list`、`list_modules`、`describe_probe`、`explain_target`、`check`、`preflight`、`validate_config`、`start_scan`、`job_list`、`job_status`、`job_result_manifest` 和 `job_cancel` —— 构建/网卡/模块发现、路由与防火墙解释、无发包预检、配置校验、job 启动/列出/状态/取消以及结果 manifest 读取。扫描数据以文件系统元数据返回，不内联：客户端先读 manifest，再读分片。
+它的工具面刻意小而结构化：`capabilities`、`iface.list`、`list_modules`、`describe_probe`、`explain_target`、`check`、`preflight`、`validate_config`、`start_scan`、`job_list`、`job_status`、`job_result_manifest`、`job.records` 和 `job_cancel` —— 构建/网卡/模块发现、路由与防火墙解释、无发包预检、配置校验、job 启动/列出/状态/取消以及结果 manifest 读取。扫描数据以文件系统元数据返回，不内联：客户端先读 manifest，再读分片。
 
 MCP 加了自己的边界：
 

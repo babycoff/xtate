@@ -254,7 +254,7 @@ executable with a fixed argv.
 Its tool surface is intentionally small and structured: `capabilities`,
 `iface.list`, `list_modules`, `describe_probe`, `explain_target`, `check`,
 `preflight`, `validate_config`, `start_scan`, `job_list`, `job_status`,
-`job_result_manifest` and `job_cancel` — build/interface/module discovery,
+`job_result_manifest`, `job.records` and `job_cancel` — build/interface/module discovery,
 route/firewall explanation, packet-free preflight, config validation, job
 start/list/status/cancel and result-manifest reads. Scan data is returned as
 filesystem metadata, not inline: the client reads the manifest, then chunks.

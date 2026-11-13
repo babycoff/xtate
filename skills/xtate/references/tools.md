@@ -53,6 +53,7 @@ Do not pass a JSON array. `route_groups > 1` means split the job.
 | `job_list` | optional `offset`, `limit` | jobs, total, next_offset, truncated |
 | `job_status` | `{"job_id":"..."}` | state, progress, heartbeat, result/log paths, errors |
 | `job_result_manifest` | `{"job_id":"..."}` | result path, manifest path, size, completeness |
+| `job.records` | `{"job_id":"...","offset":0,"limit":50}` | bounded page of valid NDJSON records |
 | `job_cancel` | `{"job_id":"..."}` | cancellation result; partial results preserved |
 
 `job_status` is the only progress source. There are no events or push channels.

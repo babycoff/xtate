@@ -23,7 +23,7 @@ try:
     mp.stdin.write(json.dumps({"jsonrpc":"2.0","method":"notifications/initialized"})+"\n"); mp.stdin.flush()
     tools = rpc({"jsonrpc":"2.0","id":2,"method":"tools/list"})["result"]["tools"]
     names = {t["name"] for t in tools}
-    for n in ["capabilities","iface.list","list_modules","describe_probe","explain_target","check","preflight","validate_config","start_scan","job_list","job_status","job_result_manifest","job_cancel"]: assert n in names, n
+    for n in ["capabilities","iface.list","list_modules","describe_probe","explain_target","check","preflight","validate_config","start_scan","job_list","job_status","job_result_manifest","job.records","job_cancel"]: assert n in names, n
     caps = rpc({"jsonrpc":"2.0","id":16,"method":"tools/call","params":{"name":"capabilities","arguments":{}}})
     assert not caps["result"]["isError"]
     ctext = caps["result"]["content"][0]["text"]
@@ -84,6 +84,19 @@ try:
         log_text = lf.read()
     assert "Rate:       1500 packets/sec" in log_text, log_text[:400]
     man = rpc({"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"job_result_manifest","arguments":{"job_id":job}}}); assert not man["result"]["isError"]
+    with open(out, "a", encoding="utf-8") as rf:
+        rf.write('{"marker":"job-records","port":80}\n')
+        rf.write('{malformed}\n')
+        rf.write('{"marker":"job-records","port":443}\n')
+    rec = rpc({"jsonrpc":"2.0","id":20,"method":"tools/call","params":{"name":"job.records","arguments":{"job_id":job,"offset":0,"limit":200}}})
+    assert not rec["result"]["isError"], rec
+    recj = json.loads(rec["result"]["content"][0]["text"])
+    assert recj.get("count") == len(recj.get("records", [])), recj
+    marked = [r for r in recj["records"] if r.get("marker") == "job-records"]
+    assert [r.get("port") for r in marked] == [80, 443], recj
+    rec2 = rpc({"jsonrpc":"2.0","id":21,"method":"tools/call","params":{"name":"job.records","arguments":{"job_id":job,"offset":9999,"limit":5}}})
+    rec2j = json.loads(rec2["result"]["content"][0]["text"])
+    assert rec2j.get("count") == 0 and rec2j.get("next_offset") == 9999, rec2j
     lst = rpc({"jsonrpc":"2.0","id":10,"method":"tools/call","params":{"name":"job_list","arguments":{}}}); assert not lst["result"]["isError"]
     mex = rpc({"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"explain_target","arguments":{"target":"8.8.8.8,2001:4860:4860::8888"}}})
     rg = json.loads(mex["result"]["content"][0]["text"])["route_groups"]
