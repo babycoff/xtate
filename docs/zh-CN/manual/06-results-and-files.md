@@ -203,11 +203,11 @@ xtate --job-run=request.json --job-result=out.ndjson \
  "complete":true}
 ```
 
-`complete` 表示 job 到达了终态，而不是每个计划目标都被成功扫描。记录可以通过 MCP 的 `job.records` 分页读取，或由你从 `result_path`（`job.records` 只读单文件；压缩/分片结果请读 manifest 中的分片）读取；控制面本身不是完整结果服务器。
+`complete` 表示 job 到达了终态，而不是每个计划目标都被成功扫描。记录可以通过 MCP 的 `job.records` 分页读取；它会跟随 manifest 分片，并在服务端带 zstd 构建时透明解压 zstd 分片。你也可以自己从 `result_path` 或 manifest 分片读取；控制面本身不是完整结果服务器。
 
 ## 控制台
 
-GUI 的 **Live scan** 页面轮询 `job.status`，显示状态、已发送、目标数、阶段、心跳年龄、已用时间、退出码和结果 manifest 卡片。**Results** 页面按最新在前列出控制面管理的扫描（id、状态、结果路径）；选中一个扫描会回到它的 Live 视图。Live 视图还有 **Result records** 卡片，通过 `/api/results` 每次分页读取 50 条合法 NDJSON 记录。压缩或分片结果请解压并读取 manifest 中的分片。这也是结果路径必须是守护进程所在机器上真实文件的原因。
+GUI 的 **Live scan** 页面轮询 `job.status`，显示状态、已发送、目标数、阶段、心跳年龄、已用时间、退出码和结果 manifest 卡片。**Results** 页面按最新在前列出控制面管理的扫描（id、状态、结果路径）；选中一个扫描会回到它的 Live 视图。Live 视图还有 **Result records** 卡片，通过 `/api/results` 每次分页读取 50 条合法 NDJSON 记录；它会跟随 manifest 分片，并在服务端带 zstd 构建时透明解压 zstd 分片。需要原始分片字节时请使用自己的工具。这也是结果路径必须是守护进程所在机器上真实文件的原因。
 
 逐页说明和 token/回环安全模型见 [02 · GUI 控制台](./02-gui-console.md)。
 

@@ -271,9 +271,10 @@ targets, phase, heartbeat age, elapsed time, exit code and a result-manifest
 card. The **Results** page lists scans managed by the control plane (id, state,
 result path) newest first; selecting a scan returns to its Live view. The Live
 view also has a **Result records** card that pages the job's result through
-`/api/results` (50 valid NDJSON records at a time). For compressed or chunked
-results, decompress and open the manifest chunks with your own tooling. This is
-also why result paths must be real files on the machine running the daemon.
+`/api/results` (50 valid NDJSON records at a time). It follows manifest chunks
+and transparently decompresses zstd chunks when the server was built with zstd;
+use your own tooling when you need the raw chunk bytes. This is also why result
+paths must be real files on the machine running the daemon.
 
 See [02 · GUI console](./02-gui-console.md) for the page-by-page description
 and the token/loopback security model.

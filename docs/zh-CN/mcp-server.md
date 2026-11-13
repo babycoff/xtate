@@ -45,7 +45,7 @@ Windows 的 endpoint 形如 `\\.\pipe\xtate-control`。`--control-connect` 只�
 | `job_list` | 分页列出 job |
 | `job_status` | 状态、计数器、退出码、错误、日志路径和 stderr 尾部 |
 | `job_result_manifest` | 结果/分片路径、大小和完整性 |
-| `job.records` | 分页读取已完成 job 的合法 NDJSON 记录 |
+| `job.records` | 分页读取合法 NDJSON 记录；自动跟随分片，带 zstd 构建时解压 zstd 分片 |
 | `job_cancel` | 取消运行中的 job |
 
 所有结果使用 MCP 的文本内容格式：

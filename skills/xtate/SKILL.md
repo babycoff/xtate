@@ -114,10 +114,10 @@ raw output, use `job_result_manifest`:
 3. Parse NDJSON: one JSON object per line. Do not JSON-parse a partially written
    file unless the user explicitly wants partial results.
 
-Compression and chunking are opt-in. `job.records` reads the job's plain result
-file; if `job_result_manifest` reports chunks or `"compression":"zstd"`, read
-and decompress the manifest chunks instead. `quota_bytes` is a post-completion
-warning, not a live limit.
+Compression and chunking are opt-in. `job.records` pages across the plain
+result file, or across manifest chunks when chunking was used, and decompresses
+zstd chunks when the server was built with zstd. `quota_bytes` is a
+post-completion warning, not a live limit.
 
 ## Large target sets
 

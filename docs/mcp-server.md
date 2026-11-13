@@ -49,7 +49,7 @@ connection; it does not listen on TCP.
 | `job_list` | Paginated job list |
 | `job_status` | State, counters, exit code, error, log path and stderr tail |
 | `job_result_manifest` | Result/chunk paths, sizes and completeness |
-| `job.records` | Bounded page of valid NDJSON records for a completed job |
+| `job.records` | Bounded page of valid NDJSON records; follows chunks and decompresses zstd when built |
 | `job_cancel` | Cancel a running job |
 
 Every result has the MCP text-content shape:

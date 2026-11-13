@@ -97,6 +97,24 @@ try:
     rec2 = rpc({"jsonrpc":"2.0","id":21,"method":"tools/call","params":{"name":"job.records","arguments":{"job_id":job,"offset":9999,"limit":5}}})
     rec2j = json.loads(rec2["result"]["content"][0]["text"])
     assert rec2j.get("count") == 0 and rec2j.get("next_offset") == 9999, rec2j
+    # Chunked results remove the plain file; job.records must fall back to the
+    # manifest chunks and page across them.
+    chunk_path = out + ".00001.ndjson"
+    with open(chunk_path, "w", encoding="utf-8") as cf:
+        cf.write('{"marker":"chunk-records","n":1}\n')
+        cf.write('{"marker":"chunk-records","n":2}\n')
+    manifest = {"format":"ndjson", "compression":"none",
+                "chunks":[{"id":1, "path":chunk_path, "bytes":os.path.getsize(chunk_path),
+                           "records":2}],
+                "total_bytes":os.path.getsize(chunk_path), "total_records":2}
+    with open(out + ".manifest.json", "w", encoding="utf-8") as mf:
+        json.dump(manifest, mf)
+    os.remove(out)
+    chunk_rec = rpc({"jsonrpc":"2.0","id":22,"method":"tools/call","params":{"name":"job.records","arguments":{"job_id":job,"offset":1,"limit":1}}})
+    assert not chunk_rec["result"]["isError"], chunk_rec
+    chunkj = json.loads(chunk_rec["result"]["content"][0]["text"])
+    assert [r.get("n") for r in chunkj["records"]] == [2], chunkj
+    assert chunkj.get("next_offset") == 2, chunkj
     lst = rpc({"jsonrpc":"2.0","id":10,"method":"tools/call","params":{"name":"job_list","arguments":{}}}); assert not lst["result"]["isError"]
     mex = rpc({"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"explain_target","arguments":{"target":"8.8.8.8,2001:4860:4860::8888"}}})
     rg = json.loads(mex["result"]["content"][0]["text"])["route_groups"]
