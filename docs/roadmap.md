@@ -281,7 +281,7 @@ Delivered in 2.44.2:
   multiple-default-interface error points at `--explain-target`/`--list-if`.
 - scan startup and the meta file show the effective `Rate:` (default or `--rate`).
 
-Delivered in 3.0.0-rc.5 (release candidate):
+Delivered in 3.0.0-rc.6 (release candidate):
 
 - redesigned scan-first browser console: readable Paper/Graphite themes,
   English/Chinese switch, Xtate module taxonomy with expandable descriptions and
@@ -298,8 +298,12 @@ Delivered in 3.0.0-rc.5 (release candidate):
   reporting the feature as unavailable;
 - the GUI prints its URL instead of launching a browser; Open log/result starts
   Notepad directly on Windows; module details show the full help and probe
-  transport type; README and the Ubuntu 24.04 build-environment plan were
-  refreshed;
+  transport type; README refreshed;
+- hardened MCP/Agent Skill contract: flat `start_scan`, unknown-field rejection,
+  array/string preflight, clear 8 KiB limit, token JSON escaping, and independent
+  contract suites;
+- the Ubuntu 24.04 full-feature Docker image is implemented: all optional
+  dependencies, mainland APT mirrors, host GUI access and tested capabilities;
 - bilingual 10-chapter manual under `docs/manual/` and
   `docs/zh-CN/manual/`.
 
@@ -320,7 +324,7 @@ Phases:
 2.44.0  browser GUI for the control plane (done, released)
 2.44.1  one-command local TUI/GUI startup (done, released)
 2.44.2  RAW/TUN link preflight + startup rate display (done)
-3.0.0-rc.5  redesigned GUI + AI/MCP tools + capability reporting (candidate)
+3.0.0-rc.6  redesigned GUI + AI/MCP tools + capability reporting (candidate)
 next    RC trial fixes, evaluation suite and packaging
 later   MCP generate/stream input
 ```

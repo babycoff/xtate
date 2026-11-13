@@ -41,8 +41,8 @@ connection; it does not listen on TCP.
 | `iface.list` | Capture interfaces with addresses, MAC, gateway, default flag, link type and raw-IP capability |
 | `list_modules` | Full module metadata: scan, probe, output and generate modules |
 | `describe_probe` | Metadata for one named scan/probe module |
-| `explain_target` | Route groups, interface/source/gateway and Linux firewall state for a target set |
-| `check` | Same route/firewall report as `explain_target` |
+| `explain_target` | Route groups, interface/source/gateway and link type for a target set |
+| `check` | Same route/link report as `explain_target`; Linux firewall rules are a separate resource |
 | `preflight` | Server-side, packet-free target/route/link/module preflight; returns counts, errors and warnings |
 | `validate_config` | Validate a closed scan-request object without starting a job |
 | `start_scan` | Start a managed scan job and return its `job_id` |

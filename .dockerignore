@@ -1,0 +1,15 @@
+.git
+.github
+bin
+build
+reports
+results
+screenshots
+bench-results
+P1 测试
+*.ndjson
+*.ndjson.log
+*.ndjson.heartbeat
+*.manifest.json
+*.index.json
+xtate-state

@@ -37,8 +37,8 @@ Windows 的 endpoint 形如 `\\.\pipe\xtate-control`。`--control-connect` 只�
 | `iface.list` | 采集网卡的地址、MAC、网关、默认标志、链路类型与 raw-IP 能力 |
 | `list_modules` | 全部模块元数据：扫描、探测、输出、生成模块 |
 | `describe_probe` | 查询单个扫描/探测模块的元数据 |
-| `explain_target` | 目标集的路由分组、接口/源地址/网关和 Linux 防火墙状态 |
-| `check` | 与 `explain_target` 相同的路由/防火墙检查 |
+| `explain_target` | 目标集的路由分组、接口/源地址/网关和链路类型 |
+| `check` | 与 `explain_target` 相同的路由/链路检查；Linux 防火墙规则是单独的资源 |
 | `preflight` | 服务端、无发包的目标/路由/链路/模块预检；返回数量、错误与警告 |
 | `validate_config` | 校验封闭的扫描请求对象，不启动 job |
 | `start_scan` | 启动托管扫描 job，返回 `job_id` |
@@ -103,7 +103,7 @@ URI、工具参数或 MCP 字段都不能选择任意路径。绝对路径、带
 
 `explain_target` 和 `check` 接受目标集字符串（例如
 `203.0.113.0/24,2001:db8::1`），返回结构化的 `targets`、`route_groups` 和
-`groups`，包含接口、源地址、网关和样例。Linux 上还会报告防火墙前提是否满足。
+`groups`，包含接口、源地址、网关、样例和链路类型。Linux 防火墙规则需另行检查 [防火墙文档](./firewall.md)。
 
 `start_scan` 对内联 `targets` 执行同样的分组，并拒绝跨越多个路由的目标集；请拆分
 为多个 job。使用 `include_file` 时，Windows 多网卡主机必须显式传 `interface`。从

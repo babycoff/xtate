@@ -131,7 +131,7 @@ static const char *tools_json =
 "{\"name\":\"job_cancel\",\"description\":\"Request cancellation of a running job. The result file is preserved.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"job_id\":{\"type\":\"string\"}},\"required\":[\"job_id\"]},\"annotations\":{\"readOnlyHint\":false,\"destructiveHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"describe_probe\",\"description\":\"Return module metadata (parameters, probe type, description) for a scan or probe. Use before choosing options.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"Module name, e.g. doh-h2\"}},\"required\":[\"name\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"explain_target\",\"description\":\"Describe the interface, source address and route Xtate would use for a target. No packets are sent.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"target\":{\"type\":\"string\"}},\"required\":[\"target\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
-"{\"name\":\"check\",\"description\":\"Read-only preflight for a target set: interfaces, sources, gateways and Linux firewall prerequisites.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"IP, CIDR, range, or comma-separated set\"}}},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
+"{\"name\":\"check\",\"description\":\"Read-only route preflight for a target set: interfaces, sources, gateways, link type and link capability. Does not inspect Linux firewall rules; read the firewall resource before stateful scans.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"IP, CIDR, range, or comma-separated set\"}},\"required\":[\"target\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"preflight\",\"description\":\"Run a read-only, server-side scan preflight: parse targets and ports, resolve routes and link type, validate scan/probe pairing, and return target/port/attempt counts plus errors and warnings. Sends no packets; call before start_scan.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"config\":{\"type\":\"object\",\"description\":\"Scan request with scan, targets, optional probe/ports/rate/timeout_sec/interface\"}},\"required\":[\"config\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"validate_config\",\"description\":\"Validate a scan-request object (scan, targets, probe, ports, args) before starting a job.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"config\":{\"type\":\"object\",\"description\":\"Scan-request object\"}},\"required\":[\"config\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"start_scan\",\"description\":\"Start a scan job. Pass scan-request fields directly as this tool's arguments (do not wrap them in an arguments object). Returns a job id; results are read via job_result_manifest and job.records. Only use with authorized targets.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"scan\":{\"type\":\"string\",\"description\":\"Scan module name, e.g. tcp-syn\"},\"targets\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"IPs, CIDRs, ranges, or comma-separated target strings\"},\"include_file\":{\"type\":\"string\",\"description\":\"Target file or - for stdin; mutually exclusive with targets\"},\"ports\":{\"type\":\"array\",\"items\":{\"type\":\"integer\"},\"description\":\"Ports for port-based scans\"},\"probe\":{\"type\":\"string\",\"description\":\"Probe module for zbanner/udp/tcp-state\"},\"rate\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":10000},\"timeout_sec\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":86400},\"result_path\":{\"type\":\"string\",\"description\":\"Optional result path; omit to use the managed run folder\"},\"interface\":{\"type\":\"string\",\"description\":\"Capture interface from explain_target/preflight\"},\"scan_args\":{\"type\":\"object\"},\"probe_args\":{\"type\":\"object\"},\"global_args\":{\"type\":\"object\"},\"chunk_size\":{\"type\":\"integer\",\"minimum\":1},\"quota_bytes\":{\"type\":\"integer\",\"minimum\":0},\"compression\":{\"type\":\"string\",\"enum\":[\"none\",\"zstd\"]},\"index\":{\"type\":\"boolean\"},\"dry_run\":{\"type\":\"boolean\"},\"authorized\":{\"type\":\"boolean\",\"description\":\"Must be true after confirming target authorization\"}},\"required\":[\"scan\",\"authorized\"]},\"annotations\":{\"readOnlyHint\":false,\"destructiveHint\":false,\"openWorldHint\":true}}"
@@ -175,9 +175,14 @@ static bool extract_object(const char *line, const char *key, char *out,
 static int control_call(const char *endpoint, const char *method,
                         const char *args, const char *iface,
                         char *resp, size_t cap) {
-    char req[65536], token[256] = "";
+    char req[65536], token[8192] = "";
     const char *tok = getenv("XTATE_CONTROL_TOKEN");
-    if (tok && tok[0]) snprintf(token, sizeof(token), ",\"token\":\"%s\"", tok);
+    if (tok && tok[0]) {
+        char *et = json_encode_string(tok);
+        if (!et || strlen(et) + 32 >= sizeof(token)) { free(et); return -1; }
+        snprintf(token, sizeof(token), ",\"token\":%s", et);
+        free(et);
+    }
     char jid[128] = {0};
     json_str(args ? args : "", "job_id", jid, sizeof(jid));
     if (strcmp(method, "job.list") == 0) {
@@ -662,14 +667,15 @@ static bool run_self(const char *args, char *out, size_t cap) {
 
 static void structured_explain(const char *id, const char *text);
 
-static void net_info(const char *id, const char *target) {
+static void net_info(const char *id, const char *target, bool check) {
     char out[16384], args[256];
-    if (strcmp(target, "") == 0) {
-        snprintf(args, sizeof(args), "--check --explain-target=8.8.8.8");
-    } else {
-        if (!safe_target(target)) { text_result(id, "invalid target", true); return; }
-        snprintf(args, sizeof(args), "--explain-target=%s", target);
+    if (!target || !target[0]) {
+        text_result(id, "target is required", true);
+        return;
     }
+    if (!safe_target(target)) { text_result(id, "invalid target", true); return; }
+    snprintf(args, sizeof(args), "--explain-target=%s%s", target,
+             check ? " --check" : "");
     if (!run_self(args, out, sizeof(out))) { text_result(id, "preflight failed", true); return; }
     structured_explain(id, out);
 }
@@ -867,7 +873,7 @@ static void tool_call(const char *id, const char *name, const char *args,
     if (strcmp(name, "explain_target") == 0 || strcmp(name, "check") == 0) {
         char target[256] = {0};
         json_str(args ? args : "", "target", target, sizeof(target));
-        net_info(id, target);
+        net_info(id, target, strcmp(name, "check") == 0);
         return;
     }
     if (!endpoint || !endpoint[0]) {

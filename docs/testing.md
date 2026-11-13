@@ -44,6 +44,32 @@ XTATE_BIN=./bin/xtate bash tests/interactive/test.sh
 If the other platform is unavailable, write `not available` in the pull
 request. The maintainers/CI will cover it; do not claim it passed.
 
+### Ubuntu 24.04 full-feature Docker check
+
+For changes to the Docker build, optional Linux dependencies or the GUI host
+bridge:
+
+```bash
+docker/ubuntu24-build/build.sh
+docker run --rm xtate:ubuntu24-full --list-capabilities
+docker run --rm --cap-add=NET_RAW --cap-add=NET_ADMIN \
+  xtate:ubuntu24-full --selftest
+```
+
+`--list-capabilities` must report `http3`, `quic_transport`, `zstd` and
+`raw_sockets` as true and 12 scan modules. Then start the GUI with a host
+loopback port (see [Ubuntu 24.04 Docker build](./docker-build.md)) and verify:
+
+- the page loads from the host;
+- `/api/info` and `/api/system` accept the printed GUI token;
+- `/api/preflight` returns the container interface;
+- a `tcp-syn` job completes and writes under `/data/runs/`;
+- `docker run --rm -i ... --mcp` answers `initialize` and accepts `start_scan`
+  without a control endpoint.
+
+Report the image ID and Docker version. Container raw scans also require
+`--cap-add=NET_RAW --cap-add=NET_ADMIN`.
+
 ## Tier 1 — affected dimension (when available)
 
 Add these only for the dimensions you touched and can actually run. Missing
@@ -148,6 +174,8 @@ and RSS are noisy on shared runners. See `tests/bench/README.md`.
 | interactive | `tests/interactive/test.sh` | non-TTY commands/help/state |
 | TUI control client | `python tests/tui/test_tui.py` | one-command private control plane, non-TTY snapshot, Windows Named Pipe / Unix socket |
 | GUI control client | `python tests/gui/test_gui.py` | one-command private control plane, embedded page + token, English/Chinese module/option payloads, global-parameter preflight, per-run folders, Host/token rejection, preflight/authorization gates, managed state, result paging, open-file rejection, dry-run job, manifest |
+| MCP contract | `python tests/mcp/test_mcp_contract.py` | JSON-RPC framing, exact tool schemas/annotations, flat `start_scan`, array/string preflight, `check` target, unknown fields, 8 KiB error, token JSON escaping |
+| Agent Skill contract | `python tests/skill/test_skill_contract.py` | frontmatter/links, all MCP tool names, flat start_scan examples, no stale tools, no nested `arguments` |
 | JARM aggregation | `tests/jarm/test.sh` | output-side parts, stats, retry list |
 | module templates | `tests/module-examples/test.sh` | compile all four module interface examples |
 | parameter parser | `tests/config/test.sh` | unknown/missing/help/CLI parser basics |

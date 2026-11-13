@@ -27,6 +27,8 @@ static const char *g_token = NULL;
 static unsigned long g_name_seq = 0;
 static volatile int g_stop;
 
+static void json_unescape_inplace(char *s);
+
 static unsigned long next_name_seq(void) { return ++g_name_seq; }
 
 static bool token_ok(const char *line) {
@@ -40,8 +42,22 @@ static bool token_ok(const char *line) {
     while (*p == ' ' || *p == '\t') p++;
     if (*p != '"') return false;
     p++;
-    size_t n = strlen(g_token);
-    return strncmp(p, g_token, n) == 0 && p[n] == '"';
+    const char *start = p;
+    bool esc = false;
+    while (*p) {
+        if (esc) { esc = false; p++; continue; }
+        if (*p == '\\') { esc = true; p++; continue; }
+        if (*p == '"') break;
+        p++;
+    }
+    if (*p != '"') return false;
+    size_t raw = (size_t)(p - start);
+    if (raw >= 4096) return false;
+    char tok[4096];
+    memcpy(tok, start, raw);
+    tok[raw] = 0;
+    json_unescape_inplace(tok);
+    return strcmp(tok, g_token) == 0;
 }
 
 static const char *field_str(const char *s, const char *key, char *out,

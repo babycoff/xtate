@@ -11,7 +11,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-rc.5-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-rc.6-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -305,7 +305,7 @@ README 是落地页，手册在 [`docs/`](docs/zh-CN/README.md) 目录下：
 ```bash
 sudo apt install build-essential cmake pkg-config libpcap-dev \
   libssl-dev libpcre2-dev libxml2-dev libbson-dev libmongoc-dev \
-  libngtcp2-dev libngtcp2-crypto-gnutls-dev libgnutls28-dev
+  libngtcp2-dev libngtcp2-crypto-gnutls-dev libgnutls28-dev libzstd-dev
 ./build.sh                                  # 交互：选择编译器和配置
 ./build.sh --compiler gcc --config release  # 显式指定
 ./build.sh --compiler clang --config debug  # 显式 Debug
@@ -319,7 +319,20 @@ sudo apt install build-essential cmake pkg-config libpcap-dev \
 `build-<compiler>-<config>-<generator>`；`./clean.sh` 清理它们和 `bin/xtate*`，保留
 `bin/.gitignore`。
 
-Ubuntu 22.04/24.04 是参考环境。在 Fedora/Arch 上，请安装对应的开发包（`libpcap`、`openssl`、`pcre2`、`libxml2`、`libbson`、`mongo-c-driver`）。
+Ubuntu 22.04/24.04 是参考环境。在 Fedora/Arch 上，请安装对应的开发包（`libpcap`、`openssl`、`pcre2`、`libxml2`、`libbson`、`mongo-c-driver`、`zstd`）。
+
+### Ubuntu 24.04 全功能 Docker 镜像
+
+参考 Linux 构建可以完全在容器中复现，宿主机无需安装依赖：
+
+```bash
+docker/ubuntu24-build/build.sh
+docker run --rm xtate:ubuntu24-full --list-capabilities
+```
+
+镜像自带 HTTP/3、QUIC 传输、zstd 和全部 12 个扫描模块，也是从 Docker 宿主机
+运行 GUI 的支持方式。中国大陆镜像源、宿主机 GUI 端口发布和能力检查见
+[Ubuntu 24.04 Docker 构建](docs/zh-CN/docker-build.md)。
 
 PCRE2 的发现优先使用 CMake 包配置；在 Debian/Ubuntu 上会回退到 `pkg-config`，因此需要同时安装 `libpcre2-dev` 和 `pkg-config`。
 

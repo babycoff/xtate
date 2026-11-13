@@ -386,7 +386,9 @@ int pcap_init(void) {
                     possible_names[i]);
                 break;
             } else {
-                LOG(LEVEL_WARN, "(pcap) failed to load: %s\n",
+                /* A distro normally ships only one soname; probing the others
+                 * is expected and should not look like a runtime warning. */
+                LOG(LEVEL_INFO, "(pcap) not present: %s\n",
                     possible_names[i]);
             }
         }

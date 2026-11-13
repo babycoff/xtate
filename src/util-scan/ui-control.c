@@ -213,6 +213,7 @@ void ui_control_stop(void) {
 int ui_control_start(const char *exe_path, char *endpoint, size_t endpoint_size) {
     char *request = NULL;
     pid_t pid;
+    pid_t parent_pid;
     int i;
 
     if (!exe_path || !exe_path[0] || !endpoint || endpoint_size < 64) return -1;
@@ -224,6 +225,10 @@ int ui_control_start(const char *exe_path, char *endpoint, size_t endpoint_size)
     snprintf(g_endpoint, sizeof(g_endpoint), "%s", endpoint);
     unlink(endpoint);
 
+    /* In a container the UI can legitimately be PID 1, so the child's parent
+     * PID is 1 too. Compare against the actual parent instead of assuming 1
+     * means the parent died. */
+    parent_pid = getpid();
     pid = fork();
     if (pid < 0) {
         clear_private_token();
@@ -235,7 +240,7 @@ int ui_control_start(const char *exe_path, char *endpoint, size_t endpoint_size)
         char *args[3];
 #ifdef __linux__
         prctl(PR_SET_PDEATHSIG, SIGKILL);
-        if (getppid() == 1) _exit(127);
+        if (getppid() != parent_pid) _exit(127);
 #endif
         if (fd >= 0) {
             dup2(fd, STDIN_FILENO);

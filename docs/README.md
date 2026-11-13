@@ -2,11 +2,11 @@
 
 **English** · [中文](zh-CN/README.md)
 
-This directory is the user manual for **Xtate v3.0.0-rc.5** — a modular all-stack network scanner for Internet-scale surveys.
+This directory is the user manual for **Xtate v3.0.0-rc.6** — a modular all-stack network scanner for Internet-scale surveys.
 
 The [README](../README.md) is the landing page. Start here if you want to use Xtate rather than skim its feature list.
 
-**Release notes:** [3.0.0-rc.5](./release-notes/3.0.0-rc.5.md) — console opens no browser automatically, direct fast Open log/result, complete module help with probe transport badges, refreshed README, and an Ubuntu 24.04 full-build environment plan. This is a release candidate for hands-on trial, not the final 3.0.0.
+**Release notes:** [3.0.0-rc.6](./release-notes/3.0.0-rc.6.md) — hardened MCP/Agent Skill contract, an Ubuntu 24.04 full-feature Docker image with host GUI access, direct fast log/result opening, complete module help with probe transport badges, and the refreshed README. This is a release candidate for hands-on trial, not the final 3.0.0.
 
 ## Where to start
 
@@ -63,6 +63,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 - [Windows quick start](./windows-quickstart.md) — beginner install, Npcap, build, first scan and troubleshooting
 - [Windows optional dependencies](./windows-dependencies.md) — vcpkg/MSYS2 setup for PCRE2, LibXml2, bson/mongoc and MinGW caveats
 - [Build artifacts](./build-artifacts.md) — aliases vs per-toolchain binaries, Debug names and DLLs
+- [Ubuntu 24.04 Docker build](./docker-build.md) — full-feature image, mainland mirrors and host GUI access
 - [Interactive mode](./interactive-mode.md) — commands, TTY/script mode, history and completion
 - [Platform support](./platform-support.md) — old CMake/distro baseline, Ninja and musl builds
 - [Testing policy](./testing.md) — Tier 0/1/2 checks, matrix and evidence rules
@@ -105,7 +106,7 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-The docs are written against the v3.0.0-rc.5 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
+The docs are written against the v3.0.0-rc.6 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
 
 ## Planned
 

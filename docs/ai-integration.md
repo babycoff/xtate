@@ -48,7 +48,7 @@ Delivered for 2.44.2:
 - scan startup and meta output include the effective `Rate:` (default or
   `--rate`).
 
-Delivered for 3.0.0-rc.5 (candidate):
+Delivered for 3.0.0-rc.6 (candidate):
 
 - one-command `xtate --mcp` with a token-protected private control plane;
 - `capabilities` and `iface.list` MCP tools, plus `--list-capabilities` JSON;
@@ -59,8 +59,12 @@ Delivered for 3.0.0-rc.5 (candidate):
   per-run timestamped result folders, preflight and live view as a reference
   front end;
 - no automatic browser launch, direct Notepad open on Windows, complete module
-  help with probe transport badges, and a refreshed README/build-environment
-  plan.
+  help with probe transport badges, and a refreshed README;
+- hardened MCP/Agent Skill contract: flat `start_scan`, unknown-field rejection,
+  array/string preflight, explicit 8 KiB limit, token JSON escaping, and
+  independent contract suites;
+- the Ubuntu 24.04 full-feature Docker image is implemented and tested, with all
+  optional dependencies, mainland APT mirrors and host GUI access.
 
 Still pending:
 

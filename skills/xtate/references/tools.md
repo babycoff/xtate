@@ -39,7 +39,7 @@ pages, never as the whole result set.
 | `list_modules` | none | scan, probe, output and generate module metadata |
 | `describe_probe` | `{"name":"tls-hello"}` | module parameters, probe type, description |
 | `explain_target` | `{"target":"203.0.113.10"}` | targets, route groups, interface, source, gateway, samples |
-| `check` | `{"target":"203.0.113.0/24"}` | same route report plus Linux firewall state |
+| `check` | `{"target":"203.0.113.0/24"}` | same route report plus link capability; firewall rules are a separate resource |
 | `preflight` | `{"config":{...scan request...}}` | packet-free target/port count, routes, link type, module pairing, errors/warnings |
 | `validate_config` | `{"config":{...scan request...}}` | pass/fail and validation error |
 

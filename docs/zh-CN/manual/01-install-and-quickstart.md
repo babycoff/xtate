@@ -117,7 +117,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 ./bin/xtate --check --explain-target 192.168.1.0/24
 ```
 
-`--list-if` 列出网卡及其 IPv4、MAC、网关和状态。`--explain-target` 对目标集合做只读的路由摘要。`--check` 额外做网卡、源地址、网关和 Linux 防火墙规则的预检；检查失败时以非零码退出。
+`--list-if` 列出网卡及其 IPv4、MAC、网关和状态。`--explain-target` 对目标集合做只读的路由摘要。`--check` 额外检查网卡、链路类型和原始 IP 能力；链路不支持原始 IP 时以非零码退出。Linux 防火墙规则是单独的步骤，见[防火墙](../firewall.md)。
 
 如果有多个默认接口而省略了 `-if`，Xtate 会以歧义错误失败关闭，而不是猜测。用 `-if 3` 或唯一的描述子串固定一个接口，例如 `-if "Intel(R) Wi-Fi"`。
 

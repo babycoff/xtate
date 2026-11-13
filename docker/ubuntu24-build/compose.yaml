@@ -1,0 +1,17 @@
+services:
+  xtate:
+    build:
+      context: ../..
+      dockerfile: docker/ubuntu24-build/Dockerfile
+    image: xtate:ubuntu24-full
+    command: ["--gui", "--gui-listen=0.0.0.0:8787"]
+    environment:
+      XTATE_GUI_ALLOW_REMOTE: "1"
+      XTATE_GUI_PUBLIC_URL: "http://127.0.0.1:8787/"
+    ports:
+      - "127.0.0.1:8787:8787"
+    volumes:
+      - ./data:/data
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN

@@ -37,6 +37,32 @@ XTATE_BIN=./bin/xtate bash tests/interactive/test.sh
 - 改报文解析/内存所有权：跑 sanitizer selftest（见 CONTRIBUTING）；
 - 改大批量/输出：运行对应 `tests/large-batch/` 用例，并报告规模和磁盘占用。
 
+### Ubuntu 24.04 全功能 Docker 检查
+
+改动 Docker 构建、Linux 可选依赖或 GUI 宿主桥接时：
+
+```bash
+docker/ubuntu24-build/build.sh
+docker run --rm xtate:ubuntu24-full --list-capabilities
+docker run --rm --cap-add=NET_RAW --cap-add=NET_ADMIN \
+  xtate:ubuntu24-full --selftest
+```
+
+`--list-capabilities` 必须显示 `http3`、`quic_transport`、`zstd`、
+`raw_sockets` 均为 true，扫描模块为 12 个。然后按
+[Ubuntu 24.04 Docker 构建](./docker-build.md) 用宿主 loopback 端口启动 GUI，
+并确认：
+
+- 宿主浏览器能打开页面；
+- `/api/info`、`/api/system` 接受日志中的 GUI token；
+- `/api/preflight` 能返回容器内网卡；
+- `tcp-syn` 任务完成，结果写入 `/data/runs/`；
+- `docker run --rm -i ... --mcp` 能响应 `initialize`，且不传
+  `--control-connect` 也能接受 `start_scan`。
+
+报告镜像 ID 和 Docker 版本。容器内原始扫描还需要
+`--cap-add=NET_RAW --cap-add=NET_ADMIN`。
+
 ## Tier 1：受影响的维度（有环境时）
 
 只对你实际改动、并且确实能运行的环境追加检查。缺少环境要报告，不能静默跳过
@@ -138,6 +164,8 @@ Windows 构建在 `.github/workflows/windows.yml` 中运行，覆盖 MSVC、Clan
 | interactive | `tests/interactive/test.sh` | 非 TTY 命令/帮助/状态 |
 | TUI 控制客户端 | `python tests/tui/test_tui.py` | 一条命令自动启动私有控制面、非 TTY 快照、Windows 命名管道 / Unix socket |
 | GUI 控制客户端 | `python tests/gui/test_gui.py` | 一条命令自动启动私有控制面、内嵌页面与 token、英文/中文模块/选项内容、全局参数预检、每次扫描独立目录、Host/token 拒绝、预检/授权门禁、受管状态、结果分页、打开文件拒绝、dry-run 任务、manifest |
+| MCP 契约 | `python tests/mcp/test_mcp_contract.py` | JSON-RPC 分帧、工具 schema/注解、扁平 `start_scan`、数组/字符串 preflight、`check` 目标、未知字段、8 KiB 错误、token JSON 转义 |
+| Agent Skill 契约 | `python tests/skill/test_skill_contract.py` | frontmatter/链接、全部 MCP 工具名、扁平 start_scan 示例、无过期工具、无嵌套 `arguments` |
 | JARM 聚合 | `tests/jarm/test.sh` | 输出侧 parts、统计、重试列表 |
 | 模块模板 | `tests/module-examples/test.sh` | 编译检查四类模块接口示例 |
 | 参数解析器 | `tests/config/test.sh` | 未知/缺失/help/CLI 解析基础 |

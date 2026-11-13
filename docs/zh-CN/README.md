@@ -2,11 +2,11 @@
 
 [English](../README.md) · **中文**
 
-本目录是 **Xtate v3.0.0-rc.5** 的用户手册——一款面向互联网级测量的模块化全栈网络扫描器。
+本目录是 **Xtate v3.0.0-rc.6** 的用户手册——一款面向互联网级测量的模块化全栈网络扫描器。
 
 项目 [README](../../README.zh-CN.md) 是落地页。如果你想上手使用 Xtate，而不是只扫一眼功能列表，就从这里开始。
 
-**发布说明：** [3.0.0-rc.5](./release-notes/3.0.0-rc.5.md)——控制台不再自动打开浏览器、更快的 Open log/Open result、完整模块帮助与探针传输类型徽标、README 重构，以及 Ubuntu 24.04 满血构建环境计划。这是供实际试用的发布候选版本，不是最终 3.0.0。
+**发布说明：** [3.0.0-rc.6](./release-notes/3.0.0-rc.6.md)——加固 MCP/Agent Skill 契约、提供可复现的 Ubuntu 24.04 全功能 Docker 镜像与宿主机 GUI 访问、更快的 Open log/Open result、完整模块帮助与探针传输类型徽标，以及重构后的 README。这是供实际试用的发布候选版本，不是最终 3.0.0。
 
 ## 从哪里开始
 
@@ -63,6 +63,7 @@
 - [Windows 快速上手](./windows-quickstart.md)——新手安装、Npcap、构建、首次扫描与排查
 - [Windows 可选依赖](./windows-dependencies.md)——PCRE2/LibXml2/bson/mongoc 与 MinGW 注意事项
 - [构建产物](./build-artifacts.md)——别名与按工具链命名、Debug 名称与 DLL
+- [Ubuntu 24.04 Docker 构建](./docker-build.md)——全功能镜像、中国大陆镜像源与宿主机 GUI 访问
 - [交互式模式](./interactive-mode.md)——命令、TTY/脚本模式、历史与补全
 - [平台支持](./platform-support.md)——旧 CMake/发行版基线、Ninja 与 musl 构建
 - [测试规范](./testing.md)——Tier 0/1/2 检查、矩阵与证据规则
@@ -105,7 +106,7 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-本文档基于 v3.0.0-rc.5 的代码树编写。如果你在更新的 commit 上发现内容有出入，请以二进制为准，也欢迎提 issue。
+本文档基于 v3.0.0-rc.6 的代码树编写。如果你在更新的 commit 上发现内容有出入，请以二进制为准，也欢迎提 issue。
 
 ## 计划中
 

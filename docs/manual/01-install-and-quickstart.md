@@ -137,9 +137,10 @@ fake `o:0` endpoint, which sends nothing.
 ```
 
 `--list-if` lists adapters with IPv4, MAC, gateway and state. `--explain-target`
-is a read-only route summary for a target set. `--check` adds a preflight check
-of interface, source address, gateway and Linux firewall rules; it exits
-non-zero if the check fails.
+is a read-only route summary for a target set. `--check` adds a read-only check
+of the interface, link type and raw-IP capability; it exits non-zero if the link
+cannot carry raw IP. Linux firewall rules are a separate step, covered in
+[Linux firewall](../firewall.md).
 
 If several default interfaces exist and `-if` is omitted, Xtate fails closed
 with an ambiguity error instead of guessing. Pin one with `-if 3` or a unique

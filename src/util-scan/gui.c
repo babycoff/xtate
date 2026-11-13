@@ -1,10 +1,11 @@
 /*
-    Xtate GUI: loopback-only HTTP presentation for the control plane.
+    Xtate GUI: HTTP presentation for the control plane.
 
     The page is embedded at build time from web/gui.html by
     tools/build_gui_page.py.  The server is deliberately tiny: one HTML page,
-    one JSON RPC endpoint and one info endpoint.  It is not a general web
-    server and never binds anything except loopback.
+    one JSON RPC endpoint and one info endpoint.  It binds loopback by default.
+    A non-loopback bind is allowed only with XTATE_GUI_ALLOW_REMOTE=1 for
+    container-to-host port mapping, and still validates the Host header.
 */
 
 #include "gui.h"
@@ -249,21 +250,30 @@ static int gui_make_token(char out[GUI_TOKEN_SIZE]) {
     return 0;
 }
 
-static int gui_parse_listen(const char *listen, int *port) {
+static bool gui_remote_allowed(void) {
+    const char *v = getenv("XTATE_GUI_ALLOW_REMOTE");
+    return v && (!strcmp(v, "1") || !strcmp(v, "true") || !strcmp(v, "yes"));
+}
+
+static int gui_parse_listen(const char *listen, int *port, bool *any) {
     const char *host = "127.0.0.1";
     const char *colon;
     const char *p;
     int value = 8787;
 
+    *any = false;
     if (listen && listen[0]) {
         colon = strrchr(listen, ':');
         if (!colon) return -1;
         if (colon != listen) {
             host = listen;
         }
-        if (!(strncmp(host, "127.0.0.1", 9) == 0 && host[9] == ':')) {
-            if (!(strncmp(host, "localhost", 9) == 0 && host[9] == ':'))
-                return -1;
+        if (strncmp(host, "0.0.0.0", 7) == 0 && host[7] == ':') {
+            if (!gui_remote_allowed()) return -2;
+            *any = true;
+        } else if (!(strncmp(host, "127.0.0.1", 9) == 0 && host[9] == ':') &&
+                   !(strncmp(host, "localhost", 9) == 0 && host[9] == ':')) {
+            return -1;
         }
         if (!colon[1]) return -1;
         if (strlen(colon + 1) > 5) return -1;
@@ -697,16 +707,24 @@ static void gui_handle_results(gui_sock s, const char *endpoint,
 
 static int gui_host_allowed(const char *request, size_t header_len, int port) {
     char host[128];
-    char want[64];
-    char want_local[64];
+    const char *p;
+    (void)port;
     if (!gui_header_value(request, header_len, "Host", host, sizeof(host)))
         return 0;
-    snprintf(want, sizeof(want), "127.0.0.1:%d", port);
-    snprintf(want_local, sizeof(want_local), "localhost:%d", port);
-    if (strcmp(host, want) == 0 || strcmp(host, want_local) == 0) return 1;
-    if (strcmp(host, "127.0.0.1") == 0 || strcmp(host, "localhost") == 0)
-        return 1;
-    return 0;
+    /* Docker and other reverse proxies publish the GUI on a different host
+     * port, so accept any explicit port as long as the host is loopback. */
+    if (strncmp(host, "127.0.0.1", 9) == 0) p = host + 9;
+    else if (strncmp(host, "localhost", 9) == 0) p = host + 9;
+    else return 0;
+    if (*p == 0) return 1;
+    if (*p != ':') return 0;
+    p++;
+    if (!*p) return 0;
+    while (*p) {
+        if (*p < '0' || *p > '9') return 0;
+        p++;
+    }
+    return 1;
 }
 
 static void gui_handle(gui_sock s, const char *endpoint, const char *token,
@@ -806,16 +824,24 @@ int gui_run(const char *endpoint, const char *listen_addr) {
     socklen_t addr_len;
     char token[GUI_TOKEN_SIZE];
     char url[128];
+    const char *public_url;
     int port = 0;
     int actual_port = 0;
+    bool bind_any = false;
 
     if (!endpoint || !endpoint[0]) {
         fprintf(stderr, "xtate: --gui requires --control-connect\n");
         return 1;
     }
-    if (gui_parse_listen(listen_addr, &port) != 0) {
-        fprintf(stderr,
-                "xtate: invalid --gui-listen value; use 127.0.0.1:PORT\n");
+    int parsed = gui_parse_listen(listen_addr, &port, &bind_any);
+    if (parsed != 0) {
+        if (parsed == -2)
+            fprintf(stderr,
+                    "xtate: refusing a remote GUI bind without "
+                    "XTATE_GUI_ALLOW_REMOTE=1; use 127.0.0.1:PORT\n");
+        else
+            fprintf(stderr,
+                    "xtate: invalid --gui-listen value; use 127.0.0.1:PORT\n");
         return 1;
     }
     if (gui_make_token(token) != 0) {
@@ -844,11 +870,11 @@ int gui_run(const char *endpoint, const char *listen_addr) {
     }
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_addr.s_addr = htonl(bind_any ? INADDR_ANY : INADDR_LOOPBACK);
     addr.sin_port = htons((unsigned short)port);
     if (bind(server, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
-        fprintf(stderr, "xtate: cannot bind GUI listener to 127.0.0.1:%d\n",
-                port);
+        fprintf(stderr, "xtate: cannot bind GUI listener to %s:%d\n",
+                bind_any ? "0.0.0.0" : "127.0.0.1", port);
 #if defined(_WIN32)
         closesocket(server);
 #else
@@ -870,10 +896,21 @@ int gui_run(const char *endpoint, const char *listen_addr) {
         actual_port = ntohs(addr.sin_port);
     snprintf(url, sizeof(url), "http://127.0.0.1:%d/", actual_port);
 
+    public_url = getenv("XTATE_GUI_PUBLIC_URL");
     printf("Xtate GUI listening on %s\n", url);
+    if (bind_any)
+        printf("WARNING: GUI is bound to all interfaces. Publish it only on "
+               "host loopback (for example -p 127.0.0.1:8787:8787) or behind "
+               "a firewall.\n");
     printf("Control endpoint: %s\n", endpoint);
     printf("GUI session token: %s\n", token);
-    printf("Open this address in your browser. The server is loopback-only.\n");
+    if (public_url && public_url[0])
+        printf("Open %s in your browser.\n", public_url);
+    else if (bind_any)
+        printf("Open http://127.0.0.1:%d/ on the host after publishing this "
+               "port (or set XTATE_GUI_PUBLIC_URL).\n", actual_port);
+    else
+        printf("Open this address in your browser. The server is loopback-only.\n");
     printf("Press Ctrl-C to stop.\n");
     fflush(stdout);
 

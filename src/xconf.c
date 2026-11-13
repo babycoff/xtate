@@ -3428,7 +3428,7 @@ ConfParam config_parameters[] = {
      SET_check_network,
      Type_FLAG,
      {"net-check", "preflight", 0},
-     "Read-only: check interface, source IP, gateway and Linux firewall rules.",
+     "Read-only: check interface, source IP, gateway and link type. Linux firewall rules are documented separately.",
      "Check network prerequisites."},
     {"job-run",
      SET_job_run,

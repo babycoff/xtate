@@ -47,8 +47,9 @@ Call `explain_target` or `check` before starting:
 Split the set if `route_groups > 1`; `start_scan` rejects mixed routes. A
 `(no route)` group is a stop condition, not a reason to force an interface.
 
-For stateful scans on Linux, confirm the firewall prerequisite reported by
-`check`; do not disable the firewall to make a scan work.
+For stateful scans on Linux, read the `xtate://docs/firewall` resource and
+confirm the RST/ICMP suppression rules separately; `check` reports route and
+link capability only. Do not disable the firewall to make a scan work.
 
 ### 3. Preflight and validate the request
 

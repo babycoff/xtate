@@ -11,7 +11,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-rc.5-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-rc.6-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -321,7 +321,7 @@ See [Testing policy](docs/testing.md) for the required build/test matrix after a
 ```bash
 sudo apt install build-essential cmake pkg-config libpcap-dev \
   libssl-dev libpcre2-dev libxml2-dev libbson-dev libmongoc-dev \
-  libngtcp2-dev libngtcp2-crypto-gnutls-dev libgnutls28-dev
+  libngtcp2-dev libngtcp2-crypto-gnutls-dev libgnutls28-dev libzstd-dev
 ./build.sh                                  # interactive: compiler + config
 ./build.sh --compiler gcc --config release  # explicit
 ./build.sh --compiler clang --config debug  # explicit debug
@@ -336,7 +336,22 @@ selects the CMake generator; see [Platform support](docs/platform-support.md). S
 `build-<compiler>-<config>-<generator>`; `./clean.sh` removes them and `bin/xtate*` while
 preserving `bin/.gitignore`.
 
-Ubuntu 22.04/24.04 are the reference environments. On Fedora/Arch, install the equivalent development packages (`libpcap`, `openssl`, `pcre2`, `libxml2`, `libbson`, `mongo-c-driver`).
+Ubuntu 22.04/24.04 are the reference environments. On Fedora/Arch, install the equivalent development packages (`libpcap`, `openssl`, `pcre2`, `libxml2`, `libbson`, `mongo-c-driver`, `zstd`).
+
+### Ubuntu 24.04 full-feature Docker image
+
+The reference Linux build is reproducible without installing dependencies on
+the host:
+
+```bash
+docker/ubuntu24-build/build.sh
+docker run --rm xtate:ubuntu24-full --list-capabilities
+```
+
+This image builds with HTTP/3, QUIC transport, zstd and all 12 scan modules, and
+it is the supported way to run the GUI from a Docker host. Mainland-China mirror
+options, host GUI publishing and capability checks are in
+[Ubuntu 24.04 Docker build](docs/docker-build.md).
 
 PCRE2 discovery uses CMake's package config when available and falls back to `pkg-config` on Debian/Ubuntu, so `pkg-config` is required alongside `libpcre2-dev` there.
 
