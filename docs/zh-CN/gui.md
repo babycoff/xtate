@@ -54,12 +54,12 @@ $env:XTATE_CONTROL_TOKEN = 'change-me'
 .\bin\xtate.exe --gui --control-connect=\\.\pipe\xtate-ctl
 ```
 
-默认监听 `127.0.0.1:8787`，打印随机会话 token，并在默认浏览器中打开页面。选项：
+默认监听 `127.0.0.1:8787`，打印随机会话 token 与 URL，**不会**自动启动浏览器。
+请自行打开打印出的地址。选项：
 
 | 选项 | 含义 |
 |---|---|
 | `--gui-listen=127.0.0.1:PORT` | 监听端口；只接受环回地址，`:0` 表示自动选择空闲端口。 |
-| `--gui-no-open` | 只打印 URL 与 token，不自动打开浏览器。 |
 | `--control-connect=...` | 可选端点。指定时连接已有控制面；省略时自动启动私有控制面。 |
 
 浏览器 URL 形如 `http://127.0.0.1:<port>/`。会话 token 只打印一次，同时注入页面；
@@ -98,8 +98,7 @@ GUI 以扫描为中心：默认页是 **New scan**，不是 job 表格。
 - **Live** 以可配置的间隔轮询 `job.status`，页面顶部是一个大号状态标题（`Scanning`、
   `Scan complete`、`Scan failed` 等），下面显示 sent/targets、吞吐、已用时间、退出码、
   结果/日志路径和清理过的 worker 日志尾部。没有进度条。**Open log** 与 **Open result**
-  会把服务端解析出的 job 文件交给操作系统的默认应用（Windows 上 `.log`/`.ndjson`
-  没有文件关联时回退到文本编辑器）。取消前会要求确认。
+  在 Windows 直接启动 Notepad 打开解析出的路径，在 Unix 使用 `xdg-open`。取消前会要求确认。
 - **Results** 用 `job.list` 列出 job；打开一个会切到 Live 并选中该 job。**Load records**
   通过 `GET /api/results?job_id=...&offset=...&limit=...`（每页 50 条）读取已完成的
   结果文件，**Load more** 继续翻页。只返回合法的 NDJSON 记录；损坏或不完整的行会被跳过。
@@ -129,9 +128,9 @@ JSON 控制 API。scan/probe 参数可在 Method 面板中编辑。
   报告的结果路径，绝不接受客户端任意路径。`/api/open` 只接受 `job_id` 加 `kind`
   （`log`、`result` 或 `manifest`）；服务端从 job status/manifest 解析路径，绝不打开
   客户端提供的路径。
-- **不经过 shell。** GUI 是进程内 C 代码；自动打开浏览器在 Windows 使用
-  `ShellExecuteW`/Explorer，在 Unix 使用 `xdg-open`。当 Xtate 以管理员权限运行时，
-  Windows 通过已运行的 Explorer 打开 URL，避免把浏览器强制提升为管理员实例。
+- **不转交浏览器、不经过 shell。** GUI 从不启动或控制浏览器：只打印 URL，按 Ctrl-C
+  退出。打开日志/结果在 Windows 直接创建 Notepad 进程，在 Unix 使用 `xdg-open`；
+  不经过 shell、DDE 或 explorer.exe。
 - **token 处理。** 连接已有控制平面时，其 control-plane token 只从环境读取并由服务端
   添加；页面 JavaScript 不会拿到它。私有模式下若环境没有 token，GUI 会生成临时 token
   并在退出时清除。浏览器会话 token 会出现在页面源码中，因此应把浏览器配置视为
@@ -150,7 +149,7 @@ GUI 不是扫描的安全边界。授权、目标数量、速率、路由预检�
 | `GUI_TOKEN_REQUIRED` | 从当前打印的 URL 重新加载页面；token 必须匹配当前服务进程。 |
 | `AUTHORIZATION_REQUIRED` | 在向导中勾选授权；API 也要求 `params.authorized=true`。 |
 | `multiple default interfaces detected` | 运行 `xtate --explain-target=<target>`，把 `-if` 值填入接口字段。 |
-| Edge 提示现有实例以提升权限运行、是否重启 | 当前构建在 Xtate 以管理员权限运行时通过 Explorer 打开 URL，避免该提示。旧构建可加 `--gui-no-open`，把打印出的 URL 粘贴到普通权限启动的浏览器。 |
+| Windows 上打开日志/结果很慢 | 当前构建直接用解析后的路径启动 Notepad，不等待 DDE/Explorer。旧构建若仍延迟，关闭阻塞的对话框后重试；服务端从不启动浏览器。 |
 
 ## 测试
 

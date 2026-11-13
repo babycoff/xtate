@@ -5,12 +5,13 @@
   <h3>Xtate —— 面向互联网级测量的模块化全栈网络扫描器</h3>
 
   <p>
-    <b>无状态 TCP banner。</b> <b>混合状态 TCP/TLS。</b> <b>82 个已注册模块。</b><br>
+    <b>无状态 TCP banner。</b> <b>混合状态 TCP/TLS。</b>
+    <b>Linux 满血构建 84 个模块。</b> <b>内置 GUI 与 MCP。</b><br>
     <sub>C99 · Linux glibc/musl &amp; Windows · GCC/Clang/MSVC/MinGW · Make/Ninja · IPv4 &amp; IPv6</sub>
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-rc.4-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-rc.5-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -35,6 +36,20 @@ Xtate 是一款面向大规模主动测量的网络扫描器。它把扫描栈�
 
 它不是爬虫，也从不假装是。它是一台数据包引擎，只保留刚好够用的协议状态，从而拿到多数高速扫描器拿不到的答案。
 
+> **3.0 候选版本。** 3.0 带来扫描优先的浏览器控制台、一条命令启动的 MCP
+> server、双语手册和明确的协议能力报告。正式版发布前仍以 RC 形式提供；
+> 2.44.2 是当前最新稳定版。
+
+## 从这里开始
+
+| 我想…… | 从这里开始 |
+|:---|:---|
+| 用界面扫描，而不是堆参数 | [`xtate --gui`](#浏览器-gui) —— 新建扫描、预检、实时结果 |
+| 在终端跑一次扫描 | [快速开始](#快速开始) |
+| 让 AI 客户端驱动扫描 | [`xtate --mcp`](#ai-集成mcp--agent-skill) + [Agent Skill](skills/xtate/SKILL.md) |
+| 构建 Linux 满血扫描器 | [构建](#构建) |
+| 理解数据包路径 | [架构](#架构) |
+
 <p align="center">
   <a href="#为什么选择-xtate">为什么</a> ·
   <a href="#快速开始">快速开始</a> ·
@@ -57,9 +72,30 @@ Xtate 是一款面向大规模主动测量的网络扫描器。它把扫描栈�
 - 🌐 **HTTP 与 DNS 协议覆盖**——HTTP/1.0/1.1、HTTP/2（HPACK，含 Huffman）、构建支持时 QUIC 上的 HTTP/3、HTTPS/TLS；UDP DNS、DNSSEC 证据（`--dnssec`）、DoT（`dot`）、DoH HTTP/1.1（`doh`）与 DoH HTTP/2（`doh-h2`）。
 - 🔐 **TLS 证据**——完整握手后可输出结构化证书细节（subject、issuer、SAN、有效期、序列号、公钥、签名、ALPN），并支持 SMTP/IMAP/POP3/FTP STARTTLS 升级。
 - 🧪 **JARM**——十个标准 Salesforce 探针，可用 `--first-probe` 轮换首个标准探针；后续探针批量发送，输出与顺序无关。
-- 🧩 **模块**——11 个基础扫描 / 59 个探测 / 7 个输出 / 5 个生成模块；有 ngtcp2/GnuTLS 时另有 `quic-state` 与 `http3-state`。四套接口，一条流水线，没有运行时的插件魔法。
+- 🧩 **模块**——Windows 上 11 个扫描 / 59 个探测 / 7 个输出 / 5 个生成；Linux 满血构建（ngtcp2/GnuTLS）为 12/60/7/5。四套接口，一条流水线，没有运行时的插件魔法。
 - 🌐 **中文帮助**——`--lang zh` 或 `XTATE_LANG=zh` 可切换人类可读帮助；支持 UTF-8 宽度换行，未翻译内容安全回退英文。
 - 🎯 **稀疏目标模式**——支持 `132.80-88.90.15`、`2001:db8:1-5::1` 这类分量范围；单个 token 最多 4 个范围组成笛卡尔积（上限 1,048,576 个地址），大范围连续空间仍用 CIDR/区间。
+
+## 3.0 控制台
+
+<p align="center">
+  <img src="screenshots/gui-console.png" alt="Xtate GUI：新建扫描，包含目标范围、扫描方式、模块与全局参数、预检面板和授权" width="100%">
+</p>
+
+控制台是控制平面的客户端，不是第二个扫描器。一个二进制启动它，服务端在
+不发包的前提下预检路由与模块，任务在受管理的 worker 中运行。每个页面都围绕
+扫描本身：
+
+- **新建扫描**——范围、方式、端口、探针、速率、超时、抓包网卡、模块参数、
+  全局参数、服务端预检、授权；
+- **实时扫描**——状态、计数、清理后的 worker 日志、清单和有界结果记录；
+- **结果**——该控制平面中的每次扫描，各自拥有带时间戳的 `runs/<时间戳>/` 输出目录；
+- **网卡**——抓包设备、地址、MAC、网关、链路类型和原始 IP 能力；
+- **模块**——真实的 Xtate 分类、中英文说明、可展开的完整帮助和带类型的参数表；
+- **系统**——外观、刷新频率、运行时能力和本地安全模型。
+
+控制台不会启动浏览器。`xtate --gui` 打印 URL 与 token，请自行打开地址。
+详见 [GUI 控制台](docs/zh-CN/gui.md)。
 
 ## 工具链、平台与交互式模式
 
@@ -253,7 +289,7 @@ README 是落地页，手册在 [`docs/`](docs/zh-CN/README.md) 目录下：
 - [测试规范](docs/zh-CN/testing.md)——改动后的 Tier 0/1/2 检查
 - [Agent Skill](docs/zh-CN/agent-skill.md)——供外部 AI agent 通过 MCP 使用的可安装操作手册
 - [MCP server](docs/zh-CN/mcp-server.md)——stdio 工具、resource、路由规划与安全限制
-- [控制面](docs/zh-CN/control-plane.md)——MCP/TUI/GUI 共用的本地 JSON-lines API
+- [控制面](docs/zh-CN/control-plane.md)——GUI 与 MCP 共用的本地 JSON-lines API
 - [Job 模型](docs/zh-CN/job-model.md)——托管扫描 job、超时、心跳与结果
 - [输入模块](docs/zh-CN/input-modules.md)——静态目标集与 generate 流、错误策略
 - [故障排查](docs/zh-CN/troubleshooting.md) · [已知限制](docs/zh-CN/known-limitations.md)
@@ -390,11 +426,13 @@ xtate --control-plane=/tmp/xtate-ctl.sock
 xtate --gui --control-connect=/tmp/xtate-ctl.sock
 ```
 
-默认打开 `http://127.0.0.1:8787/`。入口是 New scan：设置目标、方法、端口、速率和
-接口，展开模块详情，从 23 个经校验的全局参数中选择，执行服务端预检，确认授权后
-观察实时任务并查看结果。控制台支持英文/中文切换，每次扫描在托管状态目录下拥有
-独立的时间戳文件夹。用 `--gui-listen=127.0.0.1:PORT` 改端口，`--gui-no-open`
-跳过打开浏览器；安全模型、限制与故障排查见 [GUI 控制台](docs/zh-CN/gui.md)。
+页面默认服务在 `http://127.0.0.1:8787/`。`xtate --gui` 打印 URL、每会话 token
+和控制端点，**不会**启动浏览器；请自行打开地址。入口是 New scan：设置目标、
+方法、端口、速率和接口，展开模块详情，从 23 个经校验的全局参数中选择，执行
+服务端预检，确认授权后观察实时任务并查看结果。控制台支持英文/中文切换，每次
+扫描在托管状态目录下拥有独立的时间戳文件夹。用
+`--gui-listen=127.0.0.1:PORT` 改端口；安全模型、限制与故障排查见
+[GUI 控制台](docs/zh-CN/gui.md)。
 
 ## AI 集成（MCP / Agent Skill）
 
@@ -414,9 +452,12 @@ xtate --control-plane=/tmp/xtate-ctl.sock
 xtate --mcp --control-connect=/tmp/xtate-ctl.sock
 ```
 
-工具可报告协议能力、列出模块与网卡、执行不发包预检、解释目标路由、校验封闭的
-扫描请求、启动托管 job，以及查询 job 状态和 manifest。`start_scan` 要求
-`authorized: true`；结果保留在分片文件中，不会内联返回。服务不会执行 shell 命令。从 [`skills/xtate/`](skills/xtate/SKILL.md)
+工具可报告协议能力（`capabilities`）、列出模块（`list_modules`、
+`describe_probe`）、枚举抓包网卡（`iface.list`）、执行不发包预检（`preflight`）、
+解释目标路由（`explain_target`）、校验封闭扫描请求（`validate_config`）、启动托管
+job（`start_scan`），以及查询状态和 manifest（`job_status`、
+`job_result_manifest`）。结果通过 `job.records` 有界分页；`start_scan` 要求
+`authorized: true`。服务不会执行 shell 命令。从 [`skills/xtate/`](skills/xtate/SKILL.md)
 安装 Agent Skill；契约与限制见 [Agent Skill](docs/zh-CN/agent-skill.md)、
 [MCP server](docs/zh-CN/mcp-server.md)、[控制面](docs/zh-CN/control-plane.md)、
 [job 模型](docs/zh-CN/job-model.md) 和 [输入模块](docs/zh-CN/input-modules.md)。

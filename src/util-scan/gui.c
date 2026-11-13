@@ -572,41 +572,39 @@ static int gui_job_path(const char *endpoint, const char *job_id, const char *ki
     return 1;
 }
 
-#if defined(_WIN32)
-/* ShellExecuteW can block while a DDE server initializes, which would stall
- * the single-threaded GUI server. Open the file on a detached thread and
- * return immediately; the browser only needs acknowledgement that the request
- * was dispatched. */
-static DWORD WINAPI gui_open_thread(LPVOID arg) {
-    wchar_t *path = (wchar_t *)arg;
-    if ((INT_PTR)ShellExecuteW(NULL, L"open", path, NULL, NULL,
-                               SW_SHOWNORMAL) <= 32)
-        ShellExecuteW(NULL, L"open", L"notepad.exe", path, NULL,
-                      SW_SHOWNORMAL);
-    free(path);
-    return 0;
-}
-#endif
-
 static int gui_open_path(const char *path) {
 #if defined(_WIN32)
     wchar_t wpath[2048];
-    wchar_t *copy;
-    HANDLE thread;
-    size_t len;
+    wchar_t sysdir[MAX_PATH];
+    wchar_t app[MAX_PATH + 32];
+    wchar_t cmd[4096];
+    STARTUPINFOW si;
+    PROCESS_INFORMATION pi;
+    UINT n;
+
     if (MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath,
                             (int)(sizeof(wpath) / sizeof(wpath[0]))) <= 0)
         return 0;
-    len = wcslen(wpath) + 1;
-    copy = (wchar_t *)malloc(len * sizeof(wchar_t));
-    if (!copy) return 0;
-    memcpy(copy, wpath, len * sizeof(wchar_t));
-    thread = CreateThread(NULL, 0, gui_open_thread, copy, 0, NULL);
-    if (!thread) {
-        free(copy);
+    n = GetSystemDirectoryW(sysdir, (UINT)(sizeof(sysdir) / sizeof(sysdir[0])));
+    if (n == 0 || n >= sizeof(sysdir) / sizeof(sysdir[0]))
         return 0;
-    }
-    CloseHandle(thread);
+    if (swprintf(app, sizeof(app) / sizeof(app[0]), L"%ls\\notepad.exe",
+                 sysdir) < 0)
+        return 0;
+    if (swprintf(cmd, sizeof(cmd) / sizeof(cmd[0]), L"\"%ls\" \"%ls\"",
+                 app, wpath) < 0)
+        return 0;
+
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    ZeroMemory(&pi, sizeof(pi));
+    /* Launch the text editor directly. ShellExecuteW may wait several seconds
+     * for a DDE/AppX association before the file appears, which made the GUI
+     * feel broken. */
+    if (!CreateProcessW(app, cmd, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
+        return 0;
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
     return 1;
 #else
     pid_t pid = fork();
@@ -802,63 +800,7 @@ static void gui_handle(gui_sock s, const char *endpoint, const char *token,
     }
 }
 
-#if defined(_WIN32)
-static int gui_is_elevated(void) {
-    HANDLE token = NULL;
-    TOKEN_ELEVATION elevation;
-    DWORD size = sizeof(elevation);
-    int elevated = 0;
-
-    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
-        if (GetTokenInformation(token, TokenElevation, &elevation,
-                                sizeof(elevation), &size)) {
-            elevated = elevation.TokenIsElevated != 0;
-        }
-        CloseHandle(token);
-    }
-    return elevated;
-}
-#endif
-
-static void gui_open_browser(const char *url) {
-#if defined(_WIN32)
-    wchar_t wurl[512];
-    if (MultiByteToWideChar(CP_UTF8, 0, url, -1, wurl,
-                            (int)(sizeof(wurl) / sizeof(wurl[0]))) <= 0)
-        return;
-
-    /* Edge and other Chromium browsers object when an elevated process asks
-     * an existing medium-integrity browser to open a URL, and show an
-     * "existing instance is running with elevated privileges" dialog. Ask
-     * the already-running Explorer shell to open it instead; Explorer runs
-     * at medium integrity and uses the normal user's browser instance. */
-    if (gui_is_elevated()) {
-        wchar_t params[600];
-        swprintf(params, sizeof(params) / sizeof(params[0]), L"\"%ls\"", wurl);
-        if ((INT_PTR)ShellExecuteW(NULL, L"open", L"explorer.exe", params,
-                                   NULL, SW_SHOWNORMAL) > 32)
-            return;
-        printf("Could not open the browser automatically; open %s manually.\n",
-               url);
-        return;
-    }
-
-    ShellExecuteW(NULL, L"open", wurl, NULL, NULL, SW_SHOWNORMAL);
-#else
-    pid_t pid = fork();
-    if (pid == 0) {
-        pid_t grandchild = fork();
-        if (grandchild == 0) {
-            execlp("xdg-open", "xdg-open", url, (char *)NULL);
-            _exit(127);
-        }
-        _exit(0);
-    }
-    if (pid > 0) waitpid(pid, NULL, 0);
-#endif
-}
-
-int gui_run(const char *endpoint, const char *listen_addr, int open_browser) {
+int gui_run(const char *endpoint, const char *listen_addr) {
     gui_sock server;
     struct sockaddr_in addr;
     socklen_t addr_len;
@@ -931,9 +873,9 @@ int gui_run(const char *endpoint, const char *listen_addr, int open_browser) {
     printf("Xtate GUI listening on %s\n", url);
     printf("Control endpoint: %s\n", endpoint);
     printf("GUI session token: %s\n", token);
-    printf("This server is loopback-only. Press Ctrl-C to stop.\n");
+    printf("Open this address in your browser. The server is loopback-only.\n");
+    printf("Press Ctrl-C to stop.\n");
     fflush(stdout);
-    if (open_browser) gui_open_browser(url);
 
     for (;;) {
         gui_sock client = accept(server, NULL, NULL);

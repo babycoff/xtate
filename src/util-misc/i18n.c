@@ -390,7 +390,7 @@ static const I18nParamEntry i18n_global_help[] = {
     {"tui", "运行控制平面全屏任务面板；未指定 --control-connect 时自动启动私有控制平面。"},
     {"gui", "启动本地浏览器控制平面面板；未指定 --control-connect 时自动启动私有控制平面。"},
     {"gui-listen", "GUI 监听地址，仅允许环回地址，默认 127.0.0.1:8787。"},
-    {"gui-no-open", "启动 GUI 时不要自动打开浏览器。"},
+    {"gui-no-open", "兼容旧脚本的弃用选项；GUI 不会自动打开浏览器。"},
     {"control-connect", "设置发送单次原始控制请求所用的控制端点。"},
     {"control-request", "设置要发送的原始 JSON 控制请求，配合 --control-connect 使用。"},
     {"control-ping", "向控制端点发送 ping 并打印响应，用于检查服务是否可用。"},

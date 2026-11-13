@@ -37,7 +37,7 @@ pages, never as the whole result set.
 | `capabilities` | none | version, platform, module counts, HTTP/3/QUIC and raw-socket availability |
 | `iface.list` | none | capture interfaces with addresses, MAC, gateway, default flag, link type and raw-IP capability |
 | `list_modules` | none | scan, probe, output and generate module metadata |
-| `describe_probe` | `{"name":"tls"}` | module parameters, probe type, description |
+| `describe_probe` | `{"name":"tls-hello"}` | module parameters, probe type, description |
 | `explain_target` | `{"target":"203.0.113.10"}` | targets, route groups, interface, source, gateway, samples |
 | `check` | `{"target":"203.0.113.0/24"}` | same route report plus Linux firewall state |
 | `preflight` | `{"config":{...scan request...}}` | packet-free target/port count, routes, link type, module pairing, errors/warnings |
@@ -50,7 +50,7 @@ Do not pass a JSON array. `route_groups > 1` means split the job.
 
 | Tool | Arguments | Returns |
 |---|---|---|
-| `start_scan` | `{"arguments":{...scan request...}}` | `result.job_id` |
+| `start_scan` | `{"scan":"tcp-syn","targets":["198.51.100.10"],"ports":[443],"authorized":true}` | `result.job_id` |
 | `job_list` | optional `offset`, `limit` | jobs, total, next_offset, truncated |
 | `job_status` | `{"job_id":"..."}` | state, progress, heartbeat, result/log paths, errors |
 | `job_result_manifest` | `{"job_id":"..."}` | result path, manifest path, size, completeness |
@@ -71,9 +71,10 @@ Poll at 2-5 second intervals.
 | `ports` | array of integers | 0-65535 |
 | `scan_args` | object | module-specific scan options |
 | `probe_args` | object | module-specific probe options |
+| `global_args` | object | the 23 GUI-safe global options only; use `validate_config`/`preflight` to reject the rest |
 | `rate` | integer | packets per second, 0-10000; use a bounded value |
 | `timeout_sec` | integer | 1-86400; total wall-clock limit |
-| `result_path` | string | writable base path; use a dedicated file |
+| `result_path` | string | optional writable base path; omit to let the server create a timestamped run folder under its managed state directory |
 | `chunk_size` | integer | >= 1; split completed results into chunks |
 | `compression` | string | `"none"` or `"zstd"` |
 | `index` | boolean | build `<result>.index.json` |

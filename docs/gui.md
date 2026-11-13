@@ -61,12 +61,12 @@ $env:XTATE_CONTROL_TOKEN = 'change-me'
 ```
 
 By default the GUI listens on `127.0.0.1:8787`, prints a random session token
-and opens the page in the default browser. Options:
+and the URL, and does **not** launch a browser. Open the printed address
+yourself. Options:
 
 | Option | Meaning |
 |---|---|
 | `--gui-listen=127.0.0.1:PORT` | Listen port; only loopback hosts are accepted. `:0` picks a free port. |
-| `--gui-no-open` | Print the URL and token but do not open a browser. |
 | `--control-connect=...` | Optional endpoint. Use it to attach to an existing control plane; omitted starts a private one. |
 
 The browser URL is printed as `http://127.0.0.1:<port>/`. The session token is
@@ -159,10 +159,10 @@ arguments are editable in the Method panel.
   client path. `/api/open` accepts only `job_id` plus `kind` (`log`, `result`
   or `manifest`); the server resolves the path from the job status/manifest and
   never opens a client-supplied path.
-- **No shell.** The GUI is in-process C; the optional browser launch uses
-  `ShellExecuteW`/Explorer on Windows and `xdg-open` on Unix. When Xtate is
-  elevated, Windows opens the URL through the running Explorer shell so the
-  browser is not forced into an elevated instance.
+- **No browser hand-off, no shell.** The GUI never launches or controls a
+  browser: it prints the URL and exits only when you press Ctrl-C. Open-log and
+  open-result use direct process creation on Windows (Notepad) and `xdg-open`
+  on Unix; no shell, DDE or explorer.exe hand-off is involved.
 - **Token handling.** An attached daemon's control-plane token is read from the
   environment and added by the server; page JavaScript never receives it. In
   private mode the GUI creates an ephemeral token when the environment has none
@@ -183,7 +183,7 @@ and MCP server.
 | `GUI_TOKEN_REQUIRED` | Reload the page from the printed URL; the token must match the current server process. |
 | `AUTHORIZATION_REQUIRED` | Tick the authorization checkbox in the wizard; the API also requires `params.authorized=true`. |
 | `multiple default interfaces detected` | Run `xtate --explain-target=<target>`, then paste the `-if` value into the interface field. |
-| Edge asks to restart because the existing instance is elevated | Current builds open the URL through Explorer when Xtate runs as Administrator, avoiding the prompt. On an older build, use `--gui-no-open` and paste the printed URL into a normally started browser. |
+| Open log/result feels slow on Windows | Current builds start Notepad directly with the resolved path and do not wait for DDE/Explorer. If an old build still shows delay, close any modal dialog and retry; the server never opens a browser. |
 
 ## Tests
 

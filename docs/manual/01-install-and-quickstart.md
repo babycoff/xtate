@@ -175,9 +175,9 @@ sudo ./bin/xtate --gui
 ```
 
 The process prints the listening URL, the control endpoint and a per-session
-token, then opens your browser unless `--gui-no-open` is given. The default
-address is `http://127.0.0.1:8787/`; `--gui-listen=127.0.0.1:0` picks a free
-port. Only loopback addresses are accepted.
+token. It does **not** launch a browser; open the printed address yourself. The
+default address is `http://127.0.0.1:8787/`; `--gui-listen=127.0.0.1:0` picks a
+free port. Only loopback addresses are accepted.
 
 In the browser:
 

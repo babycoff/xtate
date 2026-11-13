@@ -25,7 +25,7 @@ GUI session token: <32 hex characters>
 This server is loopback-only. Press Ctrl-C to stop.
 ```
 
-除非使用 `--gui-no-open`，否则会自动打开浏览器。
+控制台不会启动浏览器。请自行打开打印出的 URL；进程会持续服务，直到按 Ctrl-C。
 
 同一条命令在 Windows 上也能用（从提权的 shell 运行）：
 
@@ -50,7 +50,6 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 |:---|:---|
 | `--gui` | 提供控制台（除非给了 `--control-connect`，否则启动私有控制面） |
 | `--gui-listen=<addr>` | 绑定地址；只允许 `127.0.0.1` 或 `localhost`，可带端口。默认 `127.0.0.1:8787`；`:0` 让操作系统分配空闲端口 |
-| `--gui-no-open` | 不启动浏览器 |
 | `--control-connect=<endpoint>` | 接入已有守护进程，而不是启动私有的 |
 
 ## 页面导览
@@ -106,7 +105,7 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 - sent/targets、吞吐、已用时间、阶段、心跳年龄和退出码；
 - 结果 manifest：结果路径、manifest 路径、大小和完整性；
 - worker 日志清理后的尾部（终端转义片段会被移除，但 `[HIN]`、`[ERR]` 等日志前缀保留）；
-- **Open log** 与 **Open result** 按钮：请求服务端用操作系统的默认应用打开该 job 已解析的日志或结果文件（Windows 上扩展名没有关联时回退到文本编辑器）；
+- **Open log** 与 **Open result** 按钮：请求服务端打开该 job 已解析的日志或结果文件。Windows 直接用解析后的路径启动 Notepad（不经过 ShellExecute/DDE 等待）；Unix 使用 `xdg-open`；
 - 已完成 job 的有界结果记录浏览器（每页 50 条）；
 - 守护进程上报时的 result、log 和 error 字段。
 

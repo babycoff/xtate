@@ -58,7 +58,8 @@ packet. Then run `validate_config` on the same object. Fix every error and read
 the warnings before calling `start_scan`.
 
 `preflight` and `validate_config` take `{"config": {...}}`; `start_scan` takes
-`{"arguments": {...}}` with the same configuration. `start_scan` requires
+the scan-request fields directly (they are the tool's `arguments` object, not
+nested under another `arguments` key). `start_scan` requires
 `authorized: true` and accepts either `targets` or `include_file`, never both.
 
 ### 4. Start a managed job
@@ -78,9 +79,11 @@ the warnings before calling `start_scan`.
 }
 ```
 
-Pass this object as `start_scan`'s `arguments`. Always set `timeout_sec`; always
-choose a dedicated `result_path`. `dry_run: true` sends no packets and only
-lists the planned targets; omit it for a real scan.
+Pass these fields directly as `start_scan`'s tool arguments. Always set `timeout_sec`.
+`result_path` is optional: omit it to get a timestamped run folder under the
+server's managed state directory, or set it only when you need a known path.
+`dry_run: true` sends no packets and only lists the planned targets; omit it for
+a real scan.
 
 ### 5. Monitor
 

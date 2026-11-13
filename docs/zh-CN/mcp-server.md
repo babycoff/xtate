@@ -55,11 +55,14 @@ Windows 的 endpoint 形如 `\\.\pipe\xtate-control`。`--control-connect` 只�
 ```
 
 `text` 字段是 JSON。请求被拒绝或控制面返回错误对象时 `isError` 为 true。扫描
-结果数据从不内联返回：客户端先读 manifest，再读分片文件。
+结果不会整包内联：用 `job.records` 读取有界分页，或读 manifest 与分片文件。
 
-`start_scan` 要求 `authorized: true`，表示调用方确认目标已获授权。`targets`（JSON
-数组）和 `include_file` 二选一，不能同时使用。大目标集必须使用 `include_file`，
-因为 MCP 参数缓冲区只有 8 KiB。
+`start_scan` 要求 `authorized: true`，表示调用方确认目标已获授权。工具输入就是
+扫描请求对象本身：把 `scan`、`targets`、`ports` 等字段直接作为工具参数传入，不要
+再套一层 `arguments`。`targets`（JSON 数组）和 `include_file` 二选一，不能同时
+使用。大目标集必须使用 `include_file`，因为 MCP 参数缓冲区只有 8 KiB。`preflight`
+接受同样形状的输入（`targets`/`ports` 可以是数组，也可以是逗号分隔字符串），
+且不会发送数据包。
 
 ## 面向模型的元数据
 
@@ -113,7 +116,9 @@ include 文件发现路由尚未实现，服务不会声称已经校验。
 - `rate` 上限为 10000 包/秒。
 - 启动前会探测 `result_path` 是否可写。
 - `dry_run` 默认为 `false`（真实扫描）。设为 `true` 时只列出计划目标，不发送报文。
-- 超过 MCP 参数缓冲区的超大请求会被干净拒绝。
+- 超过 MCP 8 KiB 行缓冲区的请求会返回 `request too large; ... use include_file`，
+  不会再误报为授权失败。
+- `validate_config` 和 `start_scan` 会拒绝未知的扫描请求字段。
 - `start_scan` 可追加审计记录，包含 rate 和截断后的配置。默认不写审计日志；
   只有 `XTATE_MCP_AUDIT_LOG` 指向可写文件时才写入，MCP 进程不会默认在当前目录
   创建 `xtate-mcp-audit.log`。

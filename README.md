@@ -5,12 +5,13 @@
   <h3>Xtate — a modular all-stack network scanner for Internet-scale surveys</h3>
 
   <p>
-    <b>Stateless TCP banners.</b> <b>Hybrid-state TCP/TLS.</b> <b>84 registered modules (full build).</b><br>
+    <b>Stateless TCP banners.</b> <b>Hybrid-state TCP/TLS.</b>
+    <b>84 modules in a full Linux build.</b> <b>GUI and MCP built in.</b><br>
     <sub>C99 · Linux glibc/musl &amp; Windows · GCC/Clang/MSVC/MinGW · Make/Ninja · IPv4 &amp; IPv6</sub>
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-rc.4-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-rc.5-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -33,6 +34,21 @@ Xtate is a network scanner for large-scale active measurement. It splits the sca
 - **HLTCP** is a hybrid-state user-space TCP stack that completes TLS handshakes and fetches HTTPS responses when statelessness is not enough.
 
 It is not a crawler, and it does not pretend to be one. It is a packet engine with just enough protocol state to get answers that most fast scanners cannot.
+
+> **3.0 release candidate.** The 3.0 line adds a scan-first browser console, a
+> one-command MCP server, a bilingual manual, and explicit protocol capability
+> reporting. It is an RC until field trial is complete; 2.44.2 remains the latest
+> stable tag.
+
+## Start here
+
+| I want to… | Start with |
+|:---|:---|
+| scan from a UI, not a wall of flags | [`xtate --gui`](#browser-gui) — New scan, preflight, live results |
+| run one scan from a terminal | [Quick start](#quick-start) |
+| let an AI client drive scans | [`xtate --mcp`](#ai-integration-mcp--agent-skill) + the [Agent Skill](skills/xtate/SKILL.md) |
+| build a fully featured Linux scanner | [Build](#build) · [Optional dependencies](#build) |
+| understand the packet path | [Architecture](#architecture) |
 
 <p align="center">
   <a href="#why-xtate">Why</a> ·
@@ -60,9 +76,35 @@ Most fast scanners stop at "port open"; most service scanners give up at Interne
 - 🌐 **HTTP and DNS protocol breadth** — HTTP/1.0/1.1, HTTP/2 (HPACK including Huffman), HTTP/3 over QUIC when the build supports it, and HTTPS/TLS; DNS over UDP, DNSSEC evidence (`--dnssec`), DoT (`dot`), DoH over HTTP/1.1 (`doh`) and DoH over HTTP/2 (`doh-h2`).
 - 🔐 **TLS evidence** — a full handshake plus structured certificate details (subject, issuer, SAN, validity, serial, key, signature, ALPN), including SMTP/IMAP/POP3/FTP STARTTLS upgrades.
 - 🧪 **JARM** — the ten standard Salesforce probes, with `--first-probe` to rotate which standard probe is sent first and burst-ordered follow-ups; output stays order-independent.
-- 🧩 **Modules** — 12 scan / 60 probe / 7 output / 5 generate modules in a full build, with `quic-state` and `http3-state` present when ngtcp2/GnuTLS is available. Four interfaces, one pipeline, no runtime plugin magic.
+- 🧩 **Modules** — 11 scan / 59 probe / 7 output / 5 generate modules on Windows; 12/60/7/5 on a full Linux build with ngtcp2/GnuTLS. Four interfaces, one pipeline, no runtime plugin magic.
 - 🌐 **Chinese help** — `--lang zh` or `XTATE_LANG=zh` localizes human-facing help, with UTF-8-aware wrapping and safe English fallback for untranslated strings.
 - 🎯 **Sparse target patterns** — component ranges such as `132.80-88.90.15` or `2001:db8:1-5::1`; up to four ranges form a Cartesian product (1,048,576-address cap per token) while large continuous spaces still use CIDR/ranges.
+
+## The 3.0 console
+
+<p align="center">
+  <img src="screenshots/gui-console.png" alt="Xtate GUI: new scan with target scope, scan method cards, module and global parameters, preflight panel and authorization" width="100%">
+</p>
+
+The console is a control-plane client, not a second scanner. One binary starts
+it, the server preflights the route and modules without sending a packet, and
+the job runs in a managed worker. Every page is built around the scan:
+
+- **New scan** — scope, method, ports, probe, rate, timeout, capture interface,
+  module parameters, global parameters, server preflight, authorization.
+- **Live scan** — current state, counters, cleaned worker log, manifest, and
+  bounded result records.
+- **Results** — every run in this control plane, with its own timestamped
+  `runs/<timestamp>/` output folder.
+- **Interfaces** — capture devices with addresses, MAC, gateway, link type and
+  raw-IP capability.
+- **Modules** — the real Xtate taxonomy, English/Chinese descriptions,
+  expandable full help and typed parameter tables.
+- **System** — appearance, refresh rates, runtime capabilities and the local
+  security model.
+
+The console does not launch a browser. `xtate --gui` prints the URL and token;
+open the address yourself. See [GUI console](docs/gui.md).
 
 ## Toolchains, platforms and interactive mode
 
@@ -205,7 +247,7 @@ The first SYN is stateless. A TCB exists only after the SYN-ACK, and the optiona
 
 Counts below assume a full build with all optional dependencies enabled; modules whose libraries are missing simply disappear.
 
-### Scan modules (11)
+### Scan modules (11; 12 on Linux with ngtcp2/GnuTLS)
 
 | Module | Probe | What it does |
 |:---|:---:|:---|
@@ -220,8 +262,9 @@ Counts below assume a full build with all optional dependencies enabled; modules
 | `ndp-ns` | — | IPv6 NDP neighbor solicitation. |
 | `yarrp-echo` | — | Stateless topology probing with ICMP echo. |
 | `yarrp-udp` | — | Stateless topology probing with UDP + ICMP errors. |
+| `quic-state` | STATE | Linux-only QUIC v1 handshake and certificate probe; requires ngtcp2 + GnuTLS. |
 
-### Probe modules (60)
+### Probe modules (59 on Windows; 60 on Linux with `http3-state`)
 
 - **General (26, including optional `http3-state`):** `http` (+ `http-state`), `hello` (+ UDP/state), `tls-hello`, `tls-state`, `dns`, `snmp`, `echo`, `ssh`, `ssh-kex`, `jarm`, `h2c`, `h2`, `quic`, `redis`, `memcached`, `ntp`, `mqtt`, `socks5`, `telnet`, `doh`, `doh-h2`, `dot`, and `http3-state` over `quic-state`.
 - **Batch B protocols (16):** `mysql` (+ state), `postgres` (+ state), `mongodb` (+ state), `smtp` (+ state), `imap` (+ state), `pop3` (+ state), `ftp` (+ state), `managesieve` (+ state).
@@ -262,7 +305,7 @@ The README is the landing page. The manual lives in [`docs/`](docs/README.md):
 - [Testing policy](docs/testing.md) — required Tier 0/1/2 checks after a change
 - [Agent Skill](docs/agent-skill.md) — installable playbook for external AI agents using MCP
 - [MCP server](docs/mcp-server.md) — stdio tools, resources, route planning and safety limits
-- [Control plane](docs/control-plane.md) — local JSON-lines API shared by MCP/TUI/GUI
+- [Control plane](docs/control-plane.md) — local JSON-lines API shared by the GUI and MCP
 - [Job model](docs/job-model.md) — managed scan jobs, timeouts, heartbeats and results
 - [Input modules](docs/input-modules.md) — static target sets vs generate streams and error policy
 - [Troubleshooting](docs/troubleshooting.md) · [Known limitations](docs/known-limitations.md)
@@ -411,14 +454,16 @@ xtate --control-plane=/tmp/xtate-ctl.sock
 xtate --gui --control-connect=/tmp/xtate-ctl.sock
 ```
 
-The page opens at `http://127.0.0.1:8787/` by default. New scan is the entry
-point: set targets, method, ports, rate and interface, expand module details,
-choose from 23 validated global parameters, run the server-side preflight,
-confirm authorization, then watch the live job and inspect results. The console
-switches between English and Chinese, and each run gets its own timestamped
-folder under the managed state directory. Use `--gui-listen=127.0.0.1:PORT` to
-change the port, `--gui-no-open` to skip opening a browser, and read
-[GUI console](docs/gui.md) for the security model, limits and troubleshooting.
+The page is served at `http://127.0.0.1:8787/` by default. `xtate --gui` prints
+the URL, a per-session token and the control endpoint, and does **not** launch a
+browser; open the address yourself. New scan is the entry point: set targets,
+method, ports, rate and interface, expand module details, choose from 23
+validated global parameters, run the server-side preflight, confirm
+authorization, then watch the live job and inspect results. The console switches
+between English and Chinese, and each run gets its own timestamped folder under
+the managed state directory. Use `--gui-listen=127.0.0.1:PORT` to change the
+port, and read [GUI console](docs/gui.md) for the security model, limits and
+troubleshooting.
 
 ## AI integration (MCP / Agent Skill)
 
@@ -440,11 +485,14 @@ xtate --control-plane=/tmp/xtate-ctl.sock
 xtate --mcp --control-connect=/tmp/xtate-ctl.sock
 ```
 
-The tools report protocol capabilities, list modules and interfaces, run a
-packet-free preflight, explain target routes, validate a closed scan request,
-start a managed job, and query job status/manifests. `start_scan` requires
-`authorized: true`; results stay in chunked files and are never returned inline.
-The server never executes a shell command. Install the Agent Skill from
+The tools report protocol capabilities (`capabilities`), list modules
+(`list_modules`, `describe_probe`), enumerate capture interfaces (`iface.list`),
+run a packet-free preflight (`preflight`), explain target routes
+(`explain_target`), validate a closed scan request (`validate_config`), start a
+managed job (`start_scan`), and query status/manifests (`job_status`,
+`job_result_manifest`). Bounded result pages are available through
+`job.records`; `start_scan` requires `authorized: true`. The server never executes
+a shell command. Install the Agent Skill from
 [`skills/xtate/`](skills/xtate/SKILL.md); see [Agent Skill](docs/agent-skill.md),
 [MCP server](docs/mcp-server.md), [control plane](docs/control-plane.md),
 [job model](docs/job-model.md) and [input modules](docs/input-modules.md) for the

@@ -36,7 +36,7 @@ If any item is missing, do not call `start_scan`. Use read-only tools and ask.
 - Start with a small rate. Increase only with authorization; the protocol cap is
   10000 packets per second, not a target.
 - Set `timeout_sec` for every job. Never start an unbounded scan.
-- Use a dedicated `result_path`; do not point it at an existing important file.
+- Prefer a dedicated `result_path`; if omitted, the server creates a timestamped run folder. Never point an explicit path at an existing important file.
 - Use `include_file` only for a target list in the authorized scope. The file is
   read by the scanner process, so it must not contain secrets.
 - Use `dry_run: true` when the goal is only to confirm target expansion.

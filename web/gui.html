@@ -376,7 +376,11 @@ textarea { font-size: 13.5px; line-height: 1.5; }
 .module-card.expanded .module-arrow { transform: rotate(90deg); }
 .module-detail { display: none; margin-top: 12px; border-top: 1px solid var(--line-soft); padding-top: 12px; }
 .module-card.expanded .module-detail { display: block; }
-.module-detail .long { margin: 0 0 10px; color: var(--muted); font-size: 12.5px; line-height: 1.55; white-space: pre-wrap; }
+.module-detail .long { margin: 0 0 10px; color: var(--muted); font-size: 13px; line-height: 1.65; white-space: pre-wrap; }
+.module-head .kind { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.probe-type { padding: 2px 7px; border: 1px solid rgba(11,107,83,.28); border-radius: 999px; color: var(--mint); font-size: 10px; font-weight: 700; letter-spacing: .08em; }
+.module-meta { margin: 0 0 8px; color: var(--faint); font-size: 12px; }
+.module-meta b { color: var(--text); font-weight: 600; }
 .param-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
 .param-table th { text-align: left; color: var(--faint); font-weight: 600; padding: 5px 8px; border-bottom: 1px solid var(--line-soft); }
 .param-table td { padding: 6px 8px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
@@ -740,6 +744,10 @@ Object.assign(ZH, {
   "Global parameters": "全局参数",
   "Module parameters": "模块参数",
   "No modules match.": "没有匹配的模块。",
+  "Probe type": "探针类型",
+  "TCP · stateful": "TCP · 有状态",
+  "UDP · stateful": "UDP · 有状态",
+  "Unknown": "未知",
 });
 const state = {
   lang: "en",
@@ -1164,22 +1172,32 @@ const KIND_LABEL = {scan: "scan module", probe: "probe module", output: "output 
 
 function moduleKindLabel(kind) { return t(KIND_LABEL[kind] || (kind + " module")); }
 
+function probeTypeLabel(probeType) {
+  if (probeType === "tcp") return "TCP";
+  if (probeType === "udp") return "UDP";
+  if (probeType === "state") return t("TCP · stateful");
+  return "";
+}
+
 function moduleCard(m) {
   const params = m.parameters || [];
   const expanded = state.expandedModules && state.expandedModules.has(m.name);
   const search = (m.name + " " + (m.short_description || "") + " " + (m.description || "") + " " +
     params.map((p) => p.name + " " + (p.description || "") + " " + (p.aliases || []).join(" ")).join(" ")).toLowerCase();
+  const probeLabel = probeTypeLabel(m.probe_type);
+  const probeBadge = probeLabel ? '<span class="probe-type">' + esc(probeLabel) + "</span>" : "";
+  const meta = probeLabel ? '<div class="module-meta">' + t("Probe type") + ": <b>" + esc(probeLabel) + "</b></div>" : "";
   const rows = params.map((p) => '<tr><td class="name">' + esc(p.name) + '</td><td class="mono">' + esc(p.type || "arg") +
     '</td><td class="desc">' + esc(p.description || t("No parameter description.")) +
     ((p.aliases || []).length ? '<div class="mono" style="font-size:10px;margin-top:2px">' + t("Aliases") + ': ' + esc(p.aliases.join(", ")) + '</div>' : "") +
     "</td></tr>").join("");
   return '<article class="module-card ' + (expanded ? "expanded" : "") + '" data-module-text="' + esc(search) + '">' +
     '<div class="module-head" data-expand="' + esc(m.name) + '" role="button" tabindex="0" aria-expanded="' + (expanded ? "true" : "false") + '">' +
-      '<div><div class="kind">' + esc(moduleKindLabel(m.kind)) + '</div><h3>' + esc(m.name) + "</h3></div>" +
+      '<div><div class="kind"><span>' + esc(moduleKindLabel(m.kind)) + "</span>" + probeBadge + '</div><h3>' + esc(m.name) + "</h3></div>" +
       '<span class="module-arrow">›</span></div>' +
     '<p>' + esc(m.short_description || m.description || "") + "</p>" +
     (params.length ? '<div class="desc mono">' + params.length + " " + t("Parameters").toLowerCase() + " · " + esc(params.slice(0, 6).map((p) => p.name).join(", ")) + (params.length > 6 ? " +" + (params.length - 6) : "") + "</div>" : '<div class="desc mono">' + t("No parameter description.") + "</div>") +
-    '<div class="module-detail"><div class="long">' + esc(m.description || m.short_description || "") + "</div>" +
+    '<div class="module-detail">' + meta + '<div class="long">' + esc(m.description || m.short_description || "") + "</div>" +
       (params.length ? '<table class="param-table"><thead><tr><th>' + t("Name") + '</th><th>' + t("Type") + '</th><th>' + t("Description") + '</th></tr></thead><tbody>' + rows + "</tbody></table>" : "") +
     "</div></article>";
 }

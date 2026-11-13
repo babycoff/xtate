@@ -166,6 +166,43 @@ Module reference is generated from the module registry. GUI help, `--help`, and
 the manual use the same metadata. English and Chinese must have matching
 chapters and zero broken links.
 
+## Workstream E — Ubuntu 24.04 full-feature build environment
+
+Ship a standard Docker build environment so users can reproduce the fully
+featured Linux build without assembling dependencies by hand. Linux is the
+reference platform for HTTP/3 and QUIC, so this image is also the supported way
+to exercise those features.
+
+Deliverables:
+
+- `docker/ubuntu24-build/Dockerfile` based on `ubuntu:24.04`, installing the
+  complete optional dependency set: OpenSSL, PCRE2, libxml2, libbson/mongoc,
+  ngtcp2/GnuTLS, zstd and Lua. Pin package versions where the Ubuntu archive is
+  known to drift; document any source-built dependency and its checksum.
+- `scripts/build-docker-full.sh` and a PowerShell wrapper. Both accept
+  `--mirror=official|tuna|ustc|aliyun` (or `APT_MIRROR`), default to the
+  official archive, and can produce a binary into a mounted output directory.
+- Mainland mirror presets rewrites both `archive.ubuntu.com` and
+  `security.ubuntu.com` (and `ports.ubuntu.com` on arm64); the Docker build must
+  not hard-code a single mirror.
+- The build verifies `cmake`, Release build, `--selftest`, `--list-capabilities`
+  and the core test suites. The capability JSON must report `http3:true`,
+  `quic_transport:true` and `zstd:true` on Linux.
+- GUI access from the Docker host is part of the acceptance test. The documented
+  paths are host networking (`--network=host`, GUI bound to `127.0.0.1`) and an
+  explicit opt-in bind for port publishing (`--gui-listen=0.0.0.0:8787` with
+  `-p 127.0.0.1:8787:8787`). Port publishing must keep the per-session token,
+  Host validation and loopback-only host exposure; the GUI must never be
+  reachable from a non-loopback host address by default.
+- `docs/docker-build.md` + Chinese translation, linked from install/quickstart
+  and the manual. Include build, mirror, GUI-access, troubleshooting and
+  cleanup examples.
+- CI uses the same image for Linux builds so local and CI results cannot drift.
+
+Acceptance: a clean Ubuntu host can build and run the full Linux binary with the
+documented command, all optional capabilities are present, and GUI port
+publishing works without weakening the security defaults.
+
 ## Phases
 
 | Phase | Output | Exit gate |
@@ -176,7 +213,7 @@ chapters and zero broken links.
 | P3 GUI console | new scan, live, results, interfaces, modules/help | core flows pass Windows/Linux |
 | P4 protocols | HTTP/1/2 audit, Linux HTTP/3/QUIC build and interop, Windows capability reporting | protocol matrix green |
 | P5 manual/help | bilingual manual, in-app help, example checks | zero broken links, parity gate |
-| P6 hardening/release | CI, ASan/fuzz, performance, security, RC | release gate below |
+| P6 hardening/release | Ubuntu 24.04 full-feature Docker environment, CI, ASan/fuzz, performance, security, RC | release gate below |
 
 P1 and P2 can run in parallel; P5 starts early and finishes alongside P4/P6.
 
@@ -190,6 +227,8 @@ P1 and P2 can run in parallel; P5 starts early and finishes alongside P4/P6.
 - HTTP/1.1 and HTTP/2 interop tests pass on Windows and Linux;
 - HTTP/3 and QUIC transport interop tests pass on Linux, and Windows reports the unsupported state explicitly;
 - ASan/UBSan, fuzz, and config fuzzing show no new findings;
+- the Ubuntu 24.04 Docker image builds the full feature set and its GUI
+  publishing path is verified from the host;
 - the manual has zero broken links and bilingual chapter parity;
 - every module is visible and explained in CLI/GUI/MCP;
 - version, tag, release notes, checksums, and source archives are complete;
@@ -201,4 +240,6 @@ P1 and P2 can run in parallel; P5 starts early and finishes alongside P4/P6.
 2. Review the static GUI prototypes and pick a visual direction.
 3. Record the API gap list and protocol build gap list as implementation tasks.
 4. Implement the scan-first GUI shell and backend slice.
-5. Run a first usability review with screenshots before expanding scope.
+5. Build the Ubuntu 24.04 full-feature Docker environment with mainland mirror
+   presets and host GUI access.
+6. Run a first usability review with screenshots before expanding scope.

@@ -30,7 +30,8 @@ GUI session token: <32 hex characters>
 This server is loopback-only. Press Ctrl-C to stop.
 ```
 
-The browser is opened automatically unless `--gui-no-open` is used.
+The console does not launch a browser. Open the printed URL yourself; the
+process keeps serving until Ctrl-C.
 
 The same command works on Windows from an elevated shell:
 
@@ -58,7 +59,6 @@ endpoint. On Windows the endpoint is a named pipe such as
 |:---|:---|
 | `--gui` | Serve the console (starts a private control plane unless `--control-connect` is given) |
 | `--gui-listen=<addr>` | Bind address; only `127.0.0.1` or `localhost`, optionally with a port. Default `127.0.0.1:8787`; `:0` asks the OS for a free port |
-| `--gui-no-open` | Do not launch a browser |
 | `--control-connect=<endpoint>` | Attach to an existing daemon instead of starting a private one |
 
 ## Page tour
@@ -171,9 +171,8 @@ Fields and panels:
 - a cleaned tail of the worker log (terminal escape fragments are removed but
   `[HIN]`, `[ERR]` and similar log prefixes are preserved);
 - **Open log** and **Open result** buttons that ask the server to open the
-  job's resolved log or result file with the operating system's default
-  application (Windows falls back to the text editor when the extension has no
-  association);
+  job's resolved log or result file. Windows starts Notepad directly with the
+  resolved path (no ShellExecute/DDE wait); Unix uses `xdg-open`;
 - a bounded result-record browser for the completed job (50 records per page);
 - result, log and error fields when the daemon reports them.
 

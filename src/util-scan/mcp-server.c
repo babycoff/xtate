@@ -3,6 +3,7 @@
 #include "capabilities.h"
 #include "result-read.h"
 #include "gui-data.h"
+#include "scan-request.h"
 #include "../version.h"
 #include "../util-out/module-json.h"
 #include "../crypto/crypto-json.h"
@@ -133,7 +134,7 @@ static const char *tools_json =
 "{\"name\":\"check\",\"description\":\"Read-only preflight for a target set: interfaces, sources, gateways and Linux firewall prerequisites.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"IP, CIDR, range, or comma-separated set\"}}},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"preflight\",\"description\":\"Run a read-only, server-side scan preflight: parse targets and ports, resolve routes and link type, validate scan/probe pairing, and return target/port/attempt counts plus errors and warnings. Sends no packets; call before start_scan.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"config\":{\"type\":\"object\",\"description\":\"Scan request with scan, targets, optional probe/ports/rate/timeout_sec/interface\"}},\"required\":[\"config\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"validate_config\",\"description\":\"Validate a scan-request object (scan, targets, probe, ports, args) before starting a job.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"config\":{\"type\":\"object\",\"description\":\"Scan-request object\"}},\"required\":[\"config\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
-"{\"name\":\"start_scan\",\"description\":\"Start a scan job from a closed scan-request object. Returns a job id; results are read via job_result_manifest. Only use with authorized targets.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"arguments\":{\"type\":\"object\",\"description\":\"Scan-request object with scan, targets, optional probe/ports/result_path, timeout_sec, rate and authorized=true\"}},\"required\":[\"arguments\"]},\"annotations\":{\"readOnlyHint\":false,\"destructiveHint\":false,\"openWorldHint\":true}}"
+"{\"name\":\"start_scan\",\"description\":\"Start a scan job. Pass scan-request fields directly as this tool's arguments (do not wrap them in an arguments object). Returns a job id; results are read via job_result_manifest and job.records. Only use with authorized targets.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"scan\":{\"type\":\"string\",\"description\":\"Scan module name, e.g. tcp-syn\"},\"targets\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"IPs, CIDRs, ranges, or comma-separated target strings\"},\"include_file\":{\"type\":\"string\",\"description\":\"Target file or - for stdin; mutually exclusive with targets\"},\"ports\":{\"type\":\"array\",\"items\":{\"type\":\"integer\"},\"description\":\"Ports for port-based scans\"},\"probe\":{\"type\":\"string\",\"description\":\"Probe module for zbanner/udp/tcp-state\"},\"rate\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":10000},\"timeout_sec\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":86400},\"result_path\":{\"type\":\"string\",\"description\":\"Optional result path; omit to use the managed run folder\"},\"interface\":{\"type\":\"string\",\"description\":\"Capture interface from explain_target/preflight\"},\"scan_args\":{\"type\":\"object\"},\"probe_args\":{\"type\":\"object\"},\"global_args\":{\"type\":\"object\"},\"chunk_size\":{\"type\":\"integer\",\"minimum\":1},\"quota_bytes\":{\"type\":\"integer\",\"minimum\":0},\"compression\":{\"type\":\"string\",\"enum\":[\"none\",\"zstd\"]},\"index\":{\"type\":\"boolean\"},\"dry_run\":{\"type\":\"boolean\"},\"authorized\":{\"type\":\"boolean\",\"description\":\"Must be true after confirming target authorization\"}},\"required\":[\"scan\",\"authorized\"]},\"annotations\":{\"readOnlyHint\":false,\"destructiveHint\":false,\"openWorldHint\":true}}"
 "]}";
 
 static const char *resources_json =
@@ -174,7 +175,7 @@ static bool extract_object(const char *line, const char *key, char *out,
 static int control_call(const char *endpoint, const char *method,
                         const char *args, const char *iface,
                         char *resp, size_t cap) {
-    char req[8192], token[256] = "";
+    char req[65536], token[256] = "";
     const char *tok = getenv("XTATE_CONTROL_TOKEN");
     if (tok && tok[0]) snprintf(token, sizeof(token), ",\"token\":\"%s\"", tok);
     char jid[128] = {0};
@@ -189,7 +190,7 @@ static int control_call(const char *endpoint, const char *method,
                  "{\"id\":1,\"method\":\"job.list\",\"offset\":%d,"
                  "\"limit\":%d%s}\n", off, lim, token);
     } else if (strcmp(method, "job.start") == 0) {
-        char params[7168];
+        char params[64512];
         if (!extract_object(args ? args : "", "arguments", params, sizeof(params)))
             return -1;
         if (iface && iface[0]) {
@@ -230,6 +231,23 @@ static bool validate_cfg(const char *cfg, char *err, size_t errcap,
     JsonNode *root = json_decode(cfg);
     if (!root || root->tag != JSON_OBJECT) {
         snprintf(err, errcap, "config must be a JSON object"); if (root) json_delete(root); return false;
+    }
+    static const char *known_fields[] = {
+        "scan", "probe", "targets", "include_file", "ports", "rate",
+        "timeout_sec", "result_path", "interface", "scan_args", "probe_args",
+        "global_args", "chunk_size", "quota_bytes", "compression", "index",
+        "dry_run", "authorized"
+    };
+    for (JsonNode *f = root->children.head; f; f = f->next) {
+        size_t i; bool known = false;
+        for (i = 0; i < sizeof(known_fields) / sizeof(known_fields[0]); i++) {
+            if (f->key && strcmp(f->key, known_fields[i]) == 0) { known = true; break; }
+        }
+        if (!known) {
+            snprintf(err, errcap, "unknown field: %s", f->key ? f->key : "");
+            json_delete(root);
+            return false;
+        }
     }
     JsonNode *scan = json_find_member(root, "scan");
     if (!scan || scan->tag != JSON_STRING || !get_scan_module_by_name(scan->string_)) {
@@ -331,6 +349,44 @@ static bool validate_cfg(const char *cfg, char *err, size_t errcap,
               n->number_ != (double)(long long)n->number_)) {
         snprintf(err, errcap, "quota_bytes must be a non-negative integer");
         json_delete(root); return false;
+    }
+    n = json_find_member(root, "global_args");
+    if (n) {
+        int gcount = 0;
+        if (n->tag != JSON_OBJECT) {
+            snprintf(err, errcap, "global_args must be an object");
+            json_delete(root); return false;
+        }
+        for (JsonNode *g = n->children.head; g; g = g->next) {
+            char num[64];
+            const char *val = NULL;
+            if (++gcount > 24) {
+                snprintf(err, errcap, "too many global parameters (maximum 24)");
+                json_delete(root); return false;
+            }
+            if (!scan_request_global_arg_allowed(g->key ? g->key : "")) {
+                snprintf(err, errcap, "global_args contains an option the GUI cannot set");
+                json_delete(root); return false;
+            }
+            if (scan_request_global_arg_is_flag(g->key ? g->key : "")) {
+                if (g->tag != JSON_BOOL) {
+                    snprintf(err, errcap, "global flag parameters must be true or false");
+                    json_delete(root); return false;
+                }
+                continue;
+            }
+            if (g->tag == JSON_STRING) val = g->string_;
+            else if (g->tag == JSON_NUMBER) {
+                snprintf(num, sizeof(num), "%.17g", g->number_);
+                val = num;
+            }
+            if (!val || strlen(val) > 512 ||
+                !scan_request_global_arg_value_valid(g->key ? g->key : "", val)) {
+                snprintf(err, errcap, "invalid value for global argument %s",
+                         g->key ? g->key : "");
+                json_delete(root); return false;
+            }
+        }
     }
     n = json_find_member(root, "compression");
     if (n && (n->tag != JSON_STRING ||
@@ -856,16 +912,16 @@ static void tool_call(const char *id, const char *name, const char *args,
         if (!extract_object(args ? args : "", "arguments", cfg, sizeof(cfg))) {
             text_result(id, "arguments object required", true); return;
         }
+        char verr[256] = {0}; unsigned targets = 0, rate = 0;
+        if (!validate_cfg(cfg, verr, sizeof(verr), &targets, &rate)) {
+            text_result(id, verr, true); return;
+        }
         JsonNode *aroot = json_decode(cfg);
         JsonNode *auth = aroot ? json_find_member(aroot, "authorized") : NULL;
         bool authorized = auth && auth->tag == JSON_BOOL && auth->bool_;
         if (aroot) json_delete(aroot);
         if (!authorized) {
             text_result(id, "target authorization required: set authorized=true", true); return;
-        }
-        char verr[256] = {0}; unsigned targets = 0, rate = 0;
-        if (!validate_cfg(cfg, verr, sizeof(verr), &targets, &rate)) {
-            text_result(id, verr, true); return;
         }
         JsonNode *ar2 = json_decode(cfg);
         JsonNode *rp = ar2 ? json_find_member(ar2, "result_path") : NULL;
@@ -956,6 +1012,15 @@ int mcp_server_run(const char *control_endpoint) {
             fflush(stdout);
         } else if (strcmp(method, "tools/call") == 0) {
             char name[64] = {0};
+            if (strlen(line) > 8192) {
+                int c;
+                if (!strchr(line, '\n'))
+                    while ((c = getchar()) != EOF && c != '\n') { }
+                text_result(id, "request too large; keep tool arguments under "
+                                "8 KiB or use include_file", true);
+                fflush(stdout);
+                continue;
+            }
             json_str(line, "name", name, sizeof(name));
             const char *args = strstr(line, "\"arguments\":");
             tool_call(id, name, args, control_endpoint);

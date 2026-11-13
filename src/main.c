@@ -1024,8 +1024,7 @@ static int run_ui_with_control(XConf *xconf, const char *exe_path, int is_gui) {
 
     if (is_gui)
         rc = gui_run(ep,
-                     xconf->gui_listen ? xconf->gui_listen : "127.0.0.1:8787",
-                     xconf->gui_no_open ? 0 : 1);
+                     xconf->gui_listen ? xconf->gui_listen : "127.0.0.1:8787");
     else
         rc = tui_run(ep);
 

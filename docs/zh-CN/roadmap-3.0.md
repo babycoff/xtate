@@ -145,6 +145,36 @@ TUI 不属于 3.0。现有 `--tui` 是 2.44.x 的功能，在 3.0 文档中标�
 模块参考从注册表生成；GUI 帮助、`--help`、手册共用元数据；中英文章节一致，
 0 断链。
 
+## 工作流 E — Ubuntu 24.04 满血构建环境
+
+提供标准 Docker 构建环境，让用户无需手工拼装依赖即可复现 Linux 满血构建。
+Linux 是 HTTP/3 与 QUIC 的参考平台，因此该镜像也是体验这些特性的受支持方式。
+
+交付物：
+
+- `docker/ubuntu24-build/Dockerfile`，基于 `ubuntu:24.04`，安装全部可选依赖：
+  OpenSSL、PCRE2、libxml2、libbson/mongoc、ngtcp2/GnuTLS、zstd 与 Lua。
+  Ubuntu 仓库中版本易漂移的包要固定版本；源码构建的依赖要记录来源与校验和。
+- `scripts/build-docker-full.sh` 与 PowerShell 包装脚本。二者都接受
+  `--mirror=official|tuna|ustc|aliyun`（或 `APT_MIRROR`），默认官方源，并能把
+  Linux 二进制输出到挂载目录。
+- 大陆镜像预设要同时替换 `archive.ubuntu.com`、`security.ubuntu.com`（arm64
+  还要替换 `ports.ubuntu.com`）；Dockerfile 不得写死单一镜像源。
+- 构建流程校验 CMake、Release 构建、`--selftest`、`--list-capabilities` 与核心
+  测试套件。Linux 能力 JSON 必须报告 `http3:true`、`quic_transport:true`、
+  `zstd:true`。
+- 从 Docker 宿主机访问 GUI 是验收项。文档支持两种方式：host 网络
+  （`--network=host`，GUI 绑定 `127.0.0.1`）与显式端口发布
+  （`--gui-listen=0.0.0.0:8787` 配合 `-p 127.0.0.1:8787:8787`）。端口发布必须
+  保留每会话令牌、Host 校验和仅回环的主机暴露；默认不得从非回环主机地址访问
+  GUI。
+- `docs/docker-build.md` 与中文翻译，并从安装/快速开始和手册链接。包含构建、
+  镜像源、GUI 访问、故障排查与清理示例。
+- CI 使用同一镜像构建 Linux，避免本地与 CI 结果漂移。
+
+验收：全新 Ubuntu 主机可用文档命令构建并运行 Linux 满血二进制，所有可选能力
+存在，GUI 端口发布可用且不削弱默认安全边界。
+
 ## 阶段
 
 | 阶段 | 产出 | 退出条件 |
@@ -155,7 +185,7 @@ TUI 不属于 3.0。现有 `--tui` 是 2.44.x 的功能，在 3.0 文档中标�
 | P3 GUI 控制台 | 新建扫描、运行中、结果、网卡、模块/帮助 | Windows/Linux 核心流程通过 |
 | P4 协议 | HTTP/1/2 审计、Linux HTTP/3/QUIC 构建与互操作、Windows 能力报告 | 协议矩阵全绿 |
 | P5 手册/帮助 | 双语手册、内置帮助、示例校验 | 0 断链、双语一致 |
-| P6 加固/发布 | CI、ASan/fuzz、性能、安全、RC | 发布门禁全过 |
+| P6 加固/发布 | Ubuntu 24.04 满血 Docker 环境、CI、ASan/fuzz、性能、安全、RC | 发布门禁全过 |
 
 P1 与 P2 可并行；P5 尽早开始，与 P4/P6 一起收尾。
 
@@ -169,6 +199,7 @@ P1 与 P2 可并行；P5 尽早开始，与 P4/P6 一起收尾。
 - HTTP/1.1、HTTP/2 在 Windows 和 Linux 互操作测试通过；
 - HTTP/3、QUIC 传输在 Linux 互操作测试通过，Windows 明确报告不支持；
 - ASan/UBSan、fuzz、配置模糊测试无新增问题；
+- Ubuntu 24.04 Docker 镜像可构建满血特性，且从宿主机访问 GUI 的路径已验证；
 - 手册 0 断链，中英文章节一致；
 - 所有模块在 CLI/GUI/MCP 中可见且有说明；
 - 版本、tag、release notes、校验和、源码包齐全；
@@ -180,4 +211,5 @@ P1 与 P2 可并行；P5 尽早开始，与 P4/P6 一起收尾。
 2. 评审静态 GUI 原型，确定视觉方向。
 3. 记录 API 差距和协议构建差距为实施任务。
 4. 实现扫描优先的 GUI 外壳和后端切片。
-5. 先用截图做一次可用性评审，再扩展范围。
+5. 建立 Ubuntu 24.04 满血 Docker 构建环境，支持大陆镜像源与宿主机访问 GUI。
+6. 先用截图做一次可用性评审，再扩展范围。

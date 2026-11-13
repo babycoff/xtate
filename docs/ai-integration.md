@@ -48,7 +48,7 @@ Delivered for 2.44.2:
 - scan startup and meta output include the effective `Rate:` (default or
   `--rate`).
 
-Delivered for 3.0.0-rc.4 (candidate):
+Delivered for 3.0.0-rc.5 (candidate):
 
 - one-command `xtate --mcp` with a token-protected private control plane;
 - `capabilities` and `iface.list` MCP tools, plus `--list-capabilities` JSON;
@@ -57,7 +57,10 @@ Delivered for 3.0.0-rc.4 (candidate):
 - redesigned scan-first GUI: English/Chinese switch, Xtate module taxonomy with
   expandable descriptions/parameter tables, 23 validated global parameters,
   per-run timestamped result folders, preflight and live view as a reference
-  front end.
+  front end;
+- no automatic browser launch, direct Notepad open on Windows, complete module
+  help with probe transport badges, and a refreshed README/build-environment
+  plan.
 
 Still pending:
 

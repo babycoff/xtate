@@ -63,9 +63,13 @@ or the control plane returned an error object. Raw result data is not inlined wh
 page of valid NDJSON, and the manifest plus chunk files for complete data.
 
 `start_scan` requires `authorized: true`, which records the caller's assertion
-that the targets are authorized. It accepts either `targets` (a JSON array) or
+that the targets are authorized. Its tool input is the scan-request object
+itself: pass `scan`, `targets`, `ports`, ... as the tool arguments, not nested
+under another `arguments` key. It accepts either `targets` (a JSON array) or
 `include_file`, never both. `include_file` is the path for large target sets;
-the MCP argument buffer is 8 KiB.
+the MCP argument buffer is 8 KiB. `preflight` accepts the same shapes
+(`targets`/`ports` as arrays or as comma-separated strings) and sends no
+packets.
 
 ## Model-facing metadata
 
@@ -131,7 +135,10 @@ to verify it.
 - `result_path` is probed for writability before the job starts.
 - `dry_run` defaults to `false` (a real scan). Set `dry_run: true` to list the
   planned targets and send no packets.
-- Large inline arguments above the MCP buffer are rejected cleanly.
+- Requests above the 8 KiB MCP line buffer are rejected with `request too
+  large; ... use include_file`, never with a misleading authorization error.
+- Unknown scan-request fields are rejected by `validate_config` and
+  `start_scan`.
 - `start_scan` can append an audit record containing the rate and the
   truncation-bounded config. Auditing is disabled unless
   `XTATE_MCP_AUDIT_LOG` names a writable file; the MCP server never writes an

@@ -29,6 +29,9 @@ try:
     tools = rpc({"jsonrpc":"2.0","id":2,"method":"tools/list"})["result"]["tools"]
     names = {t["name"] for t in tools}
     for n in ["capabilities","iface.list","list_modules","describe_probe","explain_target","check","preflight","validate_config","start_scan","job_list","job_status","job_result_manifest","job.records","job_cancel"]: assert n in names, n
+    start_tool = next(t for t in tools if t["name"] == "start_scan")
+    assert "arguments" not in start_tool["inputSchema"]["properties"], start_tool["inputSchema"]
+    assert "scan" in start_tool["inputSchema"]["properties"]
     caps = rpc({"jsonrpc":"2.0","id":16,"method":"tools/call","params":{"name":"capabilities","arguments":{}}})
     assert not caps["result"]["isError"]
     ctext = caps["result"]["content"][0]["text"]
@@ -44,9 +47,17 @@ try:
     first = ifj["interfaces"][0]
     for k in ("index","name","link_type","raw_capable"):
         assert k in first, (k, first)
+    pfa = rpc({"jsonrpc":"2.0","id":171,"method":"tools/call","params":{"name":"preflight","arguments":{"config":{"scan":"tcp-syn","targets":[SCAN_TARGET],"ports":[1]}}}})
+    assert not pfa["result"]["isError"], pfa
+    pfaj = json.loads(pfa["result"]["content"][0]["text"])
+    assert pfaj["ok"] is True and pfaj["targets"] == 1 and pfaj["ports"] == 1, pfaj
     pfbad = rpc({"jsonrpc":"2.0","id":18,"method":"tools/call","params":{"name":"preflight","arguments":{"config":{"scan":"tcp-syn","targets":SCAN_TARGET,"ports":"U:53"}}}})
     assert not pfbad["result"]["isError"]
     assert json.loads(pfbad["result"]["content"][0]["text"])["ok"] is False
+    big_targets = [f"10.0.{i // 256}.{i % 256}" for i in range(1200)]
+    big = rpc({"jsonrpc":"2.0","id":172,"method":"tools/call","params":{"name":"start_scan","arguments":{"scan":"tcp-syn","targets":big_targets,"ports":[1],"authorized":True}}})
+    assert big["result"]["isError"], big
+    assert "too large" in big["result"]["content"][0]["text"].lower(), big
     for t in tools:
         assert t.get("description"); assert "inputSchema" in t
     unk = rpc({"jsonrpc":"2.0","id":30,"method":"no/such/method"})
@@ -55,6 +66,12 @@ try:
     nt = json.loads(mp.stdout.readline()); assert nt["result"]["isError"]
     badargs = rpc({"jsonrpc":"2.0","id":32,"method":"tools/call","params":{"name":"validate_config","arguments":{}}})
     assert badargs["result"]["isError"]
+    badfield = rpc({"jsonrpc":"2.0","id":321,"method":"tools/call","params":{"name":"validate_config","arguments":{"config":{"scan":"tcp-syn","targets":[SCAN_TARGET],"bogus_field":True}}}})
+    assert badfield["result"]["isError"], badfield
+    assert "unknown field" in badfield["result"]["content"][0]["text"].lower(), badfield
+    badg = rpc({"jsonrpc":"2.0","id":322,"method":"tools/call","params":{"name":"validate_config","arguments":{"config":{"scan":"tcp-syn","targets":[SCAN_TARGET],"global_args":{"seed":"abc"}}}}})
+    assert badg["result"]["isError"], badg
+    assert "global argument" in badg["result"]["content"][0]["text"].lower(), badg
     badjob = rpc({"jsonrpc":"2.0","id":33,"method":"tools/call","params":{"name":"job_status","arguments":{"job_id":"job-nope"}}})
     assert badjob["result"]["isError"]
     badres = rpc({"jsonrpc":"2.0","id":34,"method":"resources/read","params":{"uri":"xtate://nope"}})

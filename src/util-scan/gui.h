@@ -8,6 +8,6 @@
  * to the control plane over its local JSON-lines protocol; the GUI never
  * starts a scanner in-process and never reads result records directly.
  */
-int gui_run(const char *endpoint, const char *listen, int open_browser);
+int gui_run(const char *endpoint, const char *listen);
 
 #endif

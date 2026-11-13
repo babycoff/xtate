@@ -2,11 +2,11 @@
 
 **English** · [中文](zh-CN/README.md)
 
-This directory is the user manual for **Xtate v3.0.0-rc.4** — a modular all-stack network scanner for Internet-scale surveys.
+This directory is the user manual for **Xtate v3.0.0-rc.5** — a modular all-stack network scanner for Internet-scale surveys.
 
 The [README](../README.md) is the landing page. Start here if you want to use Xtate rather than skim its feature list.
 
-**Release notes:** [3.0.0-rc.4](./release-notes/3.0.0-rc.4.md) — English/Chinese console, Xtate module taxonomy with expandable descriptions and parameter tables, 23 validated global parameters, per-run timestamped result folders, readable Paper/Graphite theme, real System preferences, live status and result paging, managed state directories, and a Linux-only HTTP/3 + QUIC contract. This is a release candidate for hands-on trial, not the final 3.0.0.
+**Release notes:** [3.0.0-rc.5](./release-notes/3.0.0-rc.5.md) — console opens no browser automatically, direct fast Open log/result, complete module help with probe transport badges, refreshed README, and an Ubuntu 24.04 full-build environment plan. This is a release candidate for hands-on trial, not the final 3.0.0.
 
 ## Where to start
 
@@ -105,7 +105,7 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-The docs are written against the v3.0.0-rc.4 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
+The docs are written against the v3.0.0-rc.5 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
 
 ## Planned
 

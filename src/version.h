@@ -7,12 +7,12 @@
 #define XTATE_NAME             "xtate"
 #define XTATE_NAME_ALL_CAPS    "XTATE"
 #define XTATE_NAME_TITLE_CASE  "Xtate"
-#define XTATE_VERSION          "3.0.0-rc.4"
+#define XTATE_VERSION          "3.0.0-rc.5"
 #define XTATE_VERSION_MAJOR    3
 #define XTATE_VERSION_MINOR    0
 #define XTATE_VERSION_PATCH    0
-#define XTATE_VERSION_SUFFIX   "-rc.4"
-#define XTATE_WITH_VERSION     "xtate/3.0.0-rc.4"
+#define XTATE_VERSION_SUFFIX   "-rc.5"
+#define XTATE_WITH_VERSION     "xtate/3.0.0-rc.5"
 #define XTATE_DESCRIPTION      "A modular all-stack network scanner for next-generation internet surveys."
 #define XTATE_AUTHOR           "Alvin Chen"
 #define XTATE_CONTACT          "shineccy@aliyun.com"
