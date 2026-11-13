@@ -261,6 +261,12 @@ Delivered in 2.43.0:
 - a full-screen TUI control-plane client (`xtate --tui`) for job listing, start,
   cancellation and manifest details, plus docs EN/ZH.
 
+Delivered in 2.44.0:
+
+- a loopback-only browser GUI (`xtate --gui`) as another control-plane client:
+  dashboard, start wizard, cancel, status and result manifest, with a per-run
+  session token, Host validation and a job-method allowlist.
+
 Remaining:
 
 - agent evaluation suite and packaging;
@@ -273,7 +279,8 @@ Phases:
 ```text
 2.42.0  JSON contracts + jobs + control plane + MCP server (done)
 2.42.1  Agent Skill + full-tree audit hardening (done)
-2.43.0  TUI control-plane dashboard (done)
+2.43.0  TUI control-plane dashboard (done, released)
+2.44.0  browser GUI for the control plane (done)
 next    evaluation suite and packaging
 later   MCP generate/stream input
 ```

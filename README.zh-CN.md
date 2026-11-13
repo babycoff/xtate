@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.43.0-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.44.0-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -367,6 +367,22 @@ xtate --help-scan zbanner     # 模块专有参数
 xtate --lang zh --help        # 中文人类帮助（未翻译内容回退英文）
 xtate --interact              # 交互式 shell（TTY：补全/历史；管道：脚本）
 ```
+
+## 浏览器 GUI
+
+Xtate 提供一个仅监听环回的浏览器任务面板。它是又一个控制平面客户端，不会在进程内
+扫描：
+
+```bash
+xtate --control-plane=/tmp/xtate-ctl.sock
+# 另一个终端；如果设置了 XTATE_CONTROL_TOKEN，需要相同值：
+xtate --gui --control-connect=/tmp/xtate-ctl.sock
+```
+
+默认打开 `http://127.0.0.1:8787/`。面板列出任务，显示状态、计数、stderr 尾部和
+结果 manifest，确认后可取消任务，并通过向导启动已授权扫描。用
+`--gui-listen=127.0.0.1:PORT` 改端口，`--gui-no-open` 跳过打开浏览器；安全模型、
+限制与故障排查见 [GUI 面板](docs/zh-CN/gui.md)。
 
 ## TUI 任务面板
 

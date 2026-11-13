@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Xtate control plane</title>
+<style>
+:root {
+  --bg: #0b1017;
+  --panel: #121a24;
+  --panel-2: #172231;
+  --line: #253244;
+  --text: #dbe7f3;
+  --muted: #8fa3b8;
+  --accent: #4fd1c5;
+  --accent-2: #7aa2ff;
+  --danger: #ff6b7a;
+  --warn: #ffc857;
+  --ok: #58d68d;
+  --radius: 10px;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: radial-gradient(1200px 600px at 15% -10%, #142438 0%, var(--bg) 60%);
+  color: var(--text);
+  font: 14px/1.45 "Segoe UI", "Noto Sans", system-ui, sans-serif;
+}
+button, input, select, textarea { font: inherit; }
+button {
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  border-radius: 7px;
+  padding: 7px 12px;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--accent-2); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #06211d; font-weight: 600; }
+button.danger { color: var(--danger); border-color: #4a2631; }
+button.ghost { background: transparent; }
+.topbar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 20px; border-bottom: 1px solid var(--line);
+  background: rgba(11, 16, 23, .75); backdrop-filter: blur(8px);
+  position: sticky; top: 0; z-index: 5;
+}
+.brand { font-size: 18px; font-weight: 700; letter-spacing: .4px; }
+.brand span { color: var(--accent); }
+.sub { color: var(--muted); font-size: 12px; }
+.endpoint { margin-left: auto; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.endpoint code {
+  max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: #b9cce0; background: #0a121c; border: 1px solid var(--line);
+  padding: 4px 8px; border-radius: 6px; font-size: 12px;
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; }
+.dot.on { background: var(--ok); box-shadow: 0 0 8px rgba(88, 214, 141, .6); }
+.dot.off { background: var(--danger); }
+main { padding: 18px 20px 28px; max-width: 1600px; margin: 0 auto; }
+.toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.toolbar .spacer { flex: 1; }
+.notice { color: var(--muted); font-size: 12px; }
+.layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr); gap: 16px; align-items: start; }
+.panel {
+  background: linear-gradient(180deg, rgba(23, 34, 49, .92), rgba(18, 26, 36, .92));
+  border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden;
+}
+.panel-head { display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+.panel-head h2 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); }
+.panel-body { padding: 12px 14px; }
+.table-wrap { overflow: auto; max-height: 62vh; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th {
+  text-align: left; color: var(--muted); font-weight: 600; font-size: 11px;
+  text-transform: uppercase; letter-spacing: .6px; padding: 9px 12px;
+  border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel-2);
+}
+td { padding: 9px 12px; border-bottom: 1px solid rgba(37, 50, 68, .65); vertical-align: top; }
+tr.job { cursor: pointer; }
+tr.job:hover td { background: rgba(122, 162, 255, .06); }
+tr.job.sel td { background: rgba(79, 209, 197, .08); }
+.mono { font-family: "Cascadia Mono", Consolas, "SFMono-Regular", monospace; font-size: 12px; }
+.path { max-width: 34vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.badge {
+  display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 11px;
+  border: 1px solid var(--line); color: var(--muted); background: #0c141e;
+}
+.badge.completed { color: var(--ok); border-color: #22523b; background: #0d1f18; }
+.badge.running { color: var(--accent); border-color: #1c4d49; background: #0b1e1d; }
+.badge.queued { color: var(--warn); border-color: #4e3e1c; background: #1d180c; }
+.badge.failed, .badge.timed_out, .badge.stalled { color: var(--danger); border-color: #512732; background: #1f0d12; }
+.badge.cancelled { color: var(--muted); }
+.empty { padding: 28px 14px; color: var(--muted); text-align: center; }
+.kv { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 7px 10px; font-size: 12px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; overflow-wrap: anywhere; }
+pre.tail {
+  margin: 10px 0 0; padding: 10px; max-height: 180px; overflow: auto;
+  background: #080e15; border: 1px solid var(--line); border-radius: 7px;
+  color: #c4d4e4; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.hint { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+.toast {
+  position: fixed; right: 18px; bottom: 18px; max-width: min(520px, 90vw);
+  padding: 10px 14px; border-radius: 8px; border: 1px solid var(--line);
+  background: #111d2b; color: var(--text); box-shadow: 0 12px 28px rgba(0,0,0,.4);
+  opacity: 0; transform: translateY(8px); transition: opacity .18s, transform .18s;
+  pointer-events: none; z-index: 30;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.err { border-color: #5a2430; }
+dialog {
+  border: 1px solid var(--line); border-radius: 12px; padding: 0;
+  background: var(--panel); color: var(--text); width: min(620px, 92vw);
+  box-shadow: 0 24px 70px rgba(0,0,0,.55);
+}
+dialog::backdrop { background: rgba(2, 6, 10, .72); }
+.dialog-head { padding: 14px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; }
+.dialog-head h2 { margin: 0; font-size: 15px; }
+.dialog-head button { margin-left: auto; }
+form { padding: 14px 16px 16px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { color: var(--muted); font-size: 12px; }
+.field input, .field select, .field textarea {
+  width: 100%; border: 1px solid var(--line); border-radius: 7px;
+  background: #0b141e; color: var(--text); padding: 8px 9px;
+}
+.field textarea { min-height: 72px; resize: vertical; }
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none; border-color: var(--accent-2); box-shadow: 0 0 0 2px rgba(122,162,255,.15);
+}
+.wide { grid-column: 1 / -1; }
+.authbox { display: flex; gap: 9px; align-items: flex-start; padding: 10px; border: 1px solid #3d3220; background: #19160d; border-radius: 8px; }
+.authbox input { margin-top: 3px; }
+.dialog-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+.error { color: var(--danger); min-height: 18px; font-size: 12px; }
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+  .endpoint code { max-width: 38vw; }
+  .grid2 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <div class="brand">X<span>tate</span> <span class="sub">control plane</span></div>
+    <div class="sub">A local dashboard for jobs, results and safe starts.</div>
+  </div>
+  <div class="endpoint">
+    <span id="connDot" class="dot"></span>
+    <code id="endpoint" title="control endpoint">connecting…</code>
+  </div>
+</header>
+<main>
+  <div class="toolbar">
+    <button id="refreshBtn" class="ghost">Refresh</button>
+    <button id="startBtn" class="primary">Start scan</button>
+    <button id="cancelBtn" class="danger" disabled>Cancel selected</button>
+    <span class="spacer"></span>
+    <span id="summary" class="notice"></span>
+  </div>
+  <div class="layout">
+    <section class="panel">
+      <div class="panel-head"><h2>Jobs</h2><span id="count" class="notice"></span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Job</th><th>State</th><th>Result</th></tr></thead>
+          <tbody id="jobs"></tbody>
+        </table>
+        <div id="empty" class="empty">No jobs yet. Start a scan or wait for another client.</div>
+      </div>
+    </section>
+    <aside class="panel">
+      <div class="panel-head"><h2>Details</h2><span id="selectedId" class="sub"></span></div>
+      <div class="panel-body" id="details">
+        <div class="hint">Select a job to inspect its state, counters and result manifest.</div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<dialog id="startDialog">
+  <div class="dialog-head">
+    <h2>Start an authorized scan</h2>
+    <button id="closeStart" class="ghost" type="button">Close</button>
+  </div>
+  <form id="startForm">
+    <div class="grid2">
+      <div class="field">
+        <label for="scan">Scan module</label>
+        <input id="scan" value="tcp-syn" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="ports">Ports (comma separated, empty = module default)</label>
+        <input id="ports" placeholder="80,443" autocomplete="off">
+      </div>
+      <div class="field wide">
+        <label for="targets">Targets (one per line or comma separated)</label>
+        <textarea id="targets" placeholder="192.0.2.10&#10;192.0.2.0/24" required></textarea>
+      </div>
+      <div class="field">
+        <label for="rate">Rate (packets per second)</label>
+        <input id="rate" type="number" min="0" max="10000" value="1000">
+      </div>
+      <div class="field">
+        <label for="timeout">Timeout (seconds)</label>
+        <input id="timeout" type="number" min="1" max="86400" value="300">
+      </div>
+      <div class="field wide">
+        <label for="result">Result path</label>
+        <input id="result" autocomplete="off">
+      </div>
+      <div class="field wide">
+        <label for="iface">Interface (optional; paste the -if value from explain_target)</label>
+        <input id="iface" placeholder="leave empty to let the control plane choose" autocomplete="off">
+      </div>
+      <div class="wide authbox">
+        <input id="auth" type="checkbox">
+        <label for="auth">I have explicit authorization for the exact targets, ports and time window above. I understand that submitting this form starts real packets.</label>
+      </div>
+    </div>
+    <div id="formError" class="error"></div>
+    <div class="dialog-actions">
+      <button id="cancelStart" class="ghost" type="button">Cancel</button>
+      <button id="submitStart" class="primary" type="submit">Start scan</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast"></div>
+
+<script>
+"use strict";
+const TOKEN = "__XTATE_GUI_TOKEN__";
+let seq = 1;
+let jobs = [];
+let selected = null;
+let selectedStatus = null;
+let loading = false;
+let toastTimer = null;
+
+const $ = (id) => document.getElementById(id);
+
+function toast(message, isError) {
+  const el = $("toast");
+  el.textContent = message;
+  el.className = "toast show" + (isError ? " err" : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = "toast"; }, 4200);
+}
+
+async function api(method, extra) {
+  const body = Object.assign({ id: seq++, method }, extra || {});
+  const res = await fetch("/api/rpc", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Xtate-GUI-Token": TOKEN
+    },
+    body: JSON.stringify(body)
+  });
+  let data;
+  try { data = await res.json(); } catch (e) { throw new Error("invalid response from GUI server"); }
+  if (!res.ok) {
+    const msg = data && data.error ? (data.error.message || data.error.code) : ("HTTP " + res.status);
+    throw new Error(msg);
+  }
+  if (data && data.error) {
+    throw new Error(String(data.error.code || "ERROR") + ": " + String(data.error.message || ""));
+  }
+  return data.result;
+}
+
+function setConnected(on) {
+  $("connDot").className = "dot " + (on ? "on" : "off");
+  $("summary").textContent = on ? "connected" : "control plane unavailable";
+}
+
+async function loadInfo() {
+  try {
+    const res = await fetch("/api/info", { headers: { "X-Xtate-GUI-Token": TOKEN } });
+    if (!res.ok) throw new Error("info unavailable");
+    const info = await res.json();
+    $("endpoint").textContent = info.endpoint || "control endpoint";
+    $("endpoint").title = info.endpoint || "";
+    setConnected(true);
+  } catch (e) {
+    $("endpoint").textContent = "control endpoint unavailable";
+    setConnected(false);
+  }
+}
+
+function badge(state) {
+  const s = String(state || "unknown");
+  const allowed = ["completed","running","queued","failed","timed_out","stalled","cancelled"];
+  const cls = allowed.includes(s) ? s : "";
+  const span = document.createElement("span");
+  span.className = "badge " + cls;
+  span.textContent = s;
+  return span;
+}
+
+function renderJobs(total) {
+  const body = $("jobs");
+  body.textContent = "";
+  $("empty").style.display = jobs.length ? "none" : "block";
+  $("count").textContent = jobs.length ? (jobs.length + " / " + (total || jobs.length) + " shown") : "";
+  for (const job of jobs) {
+    const tr = document.createElement("tr");
+    tr.className = "job" + (job.job_id === selected ? " sel" : "");
+    tr.dataset.id = job.job_id;
+    const id = document.createElement("td");
+    id.className = "mono";
+    id.textContent = job.job_id || "(no id)";
+    const st = document.createElement("td");
+    st.appendChild(badge(job.state));
+    const result = document.createElement("td");
+    result.className = "path mono";
+    result.title = job.result || "";
+    result.textContent = job.result || "";
+    tr.append(id, st, result);
+    tr.addEventListener("click", () => selectJob(job.job_id));
+    body.appendChild(tr);
+  }
+  updateSelectionUI();
+}
+
+function updateSelectionUI() {
+  const active = selectedStatus && ("queued" === selectedStatus.state || "running" === selectedStatus.state);
+  $("cancelBtn").disabled = !selected || !active;
+  $("selectedId").textContent = selected || "";
+  $("cancelBtn").dataset.id = selected || "";
+}
+
+async function selectJob(id) {
+  if (!id) return;
+  selected = id;
+  for (const tr of document.querySelectorAll("tr.job")) {
+    tr.classList.toggle("sel", tr.dataset.id === id);
+  }
+  await loadDetails();
+}
+
+function cleanText(value) {
+  return String(value === undefined || value === null ? "" : value)
+    .replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "")
+    .replace(/\[K/g, "");
+}
+
+function addKV(dl, key, value) {
+  const dt = document.createElement("dt");
+  dt.textContent = key;
+  const dd = document.createElement("dd");
+  const text = cleanText(value);
+  dd.textContent = text === "" ? "—" : text;
+  dl.append(dt, dd);
+}
+
+async function loadDetails() {
+  const box = $("details");
+  if (!selected) {
+    box.textContent = "";
+    const hint = document.createElement("div");
+    hint.className = "hint";
+    hint.textContent = "Select a job to inspect its state, counters and result manifest.";
+    box.appendChild(hint);
+    selectedStatus = null;
+    updateSelectionUI();
+    return;
+  }
+  const id = selected;
+  try {
+    const [status, manifest] = await Promise.all([
+      api("job.status", { job_id: id }),
+      api("job.result_manifest", { job_id: id }).catch(() => null)
+    ]);
+    if (selected !== id) return;
+    selectedStatus = status;
+    box.textContent = "";
+    const dl = document.createElement("dl");
+    dl.className = "kv";
+    addKV(dl, "State", status.state);
+    addKV(dl, "Phase", status.phase);
+    addKV(dl, "Sent", status.sent);
+    addKV(dl, "Targets", status.targets);
+    addKV(dl, "Heartbeat", status.heartbeat_age_ms === undefined ? "—" : (status.heartbeat_age_ms + " ms"));
+    addKV(dl, "Elapsed", status.elapsed_ms === undefined ? "—" : (status.elapsed_ms + " ms"));
+    addKV(dl, "Exit code", status.exit_code);
+    addKV(dl, "Result", status.result);
+    addKV(dl, "Log", status.log_path);
+    addKV(dl, "Error", status.error);
+    box.appendChild(dl);
+    if (manifest) {
+      const h = document.createElement("div");
+      h.className = "hint";
+      h.textContent = "Manifest";
+      const md = document.createElement("dl");
+      md.className = "kv";
+      addKV(md, "Complete", manifest.complete ? "yes" : "no");
+      addKV(md, "Result", manifest.result_path);
+      addKV(md, "Manifest", manifest.manifest_path);
+      addKV(md, "Bytes", manifest.result_bytes);
+      box.append(h, md);
+    }
+    if (status.stderr_tail) {
+      const pre = document.createElement("pre");
+      pre.className = "tail";
+      pre.textContent = cleanText(status.stderr_tail);
+      box.appendChild(pre);
+    }
+    updateSelectionUI();
+  } catch (e) {
+    const div = document.createElement("div");
+    div.className = "error";
+    div.textContent = String(e.message || e);
+    box.textContent = "";
+    box.appendChild(div);
+  }
+}
+
+async function loadJobs(showError) {
+  if (loading) return;
+  loading = true;
+  try {
+    const result = await api("job.list", { limit: 200, offset: 0 });
+    jobs = (result.jobs || []).filter(j => j && j.job_id);
+    if (selected && !jobs.some(j => j.job_id === selected)) {
+      selected = null;
+      selectedStatus = null;
+    }
+    if (!selected && jobs.length) selected = jobs[0].job_id;
+    renderJobs(result.total);
+    if (selected) await loadDetails();
+    setConnected(true);
+    if (showError) toast("Jobs refreshed");
+  } catch (e) {
+    setConnected(false);
+    if (showError) toast(String(e.message || e), true);
+  } finally {
+    loading = false;
+  }
+}
+
+function defaultResultPath() {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const stamp = now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) + "-" + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
+  return "gui-scan-" + stamp + ".ndjson";
+}
+
+function openStart() {
+  $("formError").textContent = "";
+  $("auth").checked = false;
+  $("result").value = defaultResultPath();
+  $("startDialog").showModal();
+  $("scan").focus();
+}
+
+async function submitStart(ev) {
+  ev.preventDefault();
+  const error = $("formError");
+  error.textContent = "";
+  const scan = $("scan").value.trim();
+  const targets = $("targets").value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+  const ports = $("ports").value.split(/[\s,]+/).map(s => s.trim()).filter(Boolean).map(Number);
+  const rate = Number($("rate").value);
+  const timeout = Number($("timeout").value);
+  const result = $("result").value.trim();
+  const iface = $("iface").value.trim();
+  if (!scan) return (error.textContent = "Scan module is required.");
+  if (!targets.length) return (error.textContent = "At least one target is required.");
+  if (ports.some(n => !Number.isInteger(n) || n < 0 || n > 65535)) return (error.textContent = "Ports must be integers 0-65535.");
+  if (!Number.isInteger(rate) || rate < 0 || rate > 10000) return (error.textContent = "Rate must be an integer 0-10000.");
+  if (!Number.isInteger(timeout) || timeout < 1 || timeout > 86400) return (error.textContent = "Timeout must be an integer 1-86400 seconds.");
+  if (!result) return (error.textContent = "Result path is required.");
+  if (!$("auth").checked) return (error.textContent = "Confirm authorization before starting a scan.");
+
+  const params = { scan, targets, rate, timeout_sec: timeout, authorized: true };
+  if (ports.length) params.ports = ports;
+  const args = { params, result_path: result, timeout_sec: timeout, compression: "none", index: false };
+  if (iface) args.interface = iface;
+
+  const btn = $("submitStart");
+  btn.disabled = true;
+  btn.textContent = "Starting…";
+  try {
+    const res = await api("job.start", args);
+    toast("Started " + (res.job_id || "job"));
+    $("startDialog").close();
+    await loadJobs(false);
+    if (res.job_id) await selectJob(res.job_id);
+  } catch (e) {
+    error.textContent = String(e.message || e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Start scan";
+  }
+}
+
+async function cancelSelected() {
+  if (!selected) return;
+  const id = selected;
+  if (!confirm("Cancel job " + id + "?")) return;
+  try {
+    await api("job.cancel", { job_id: id });
+    toast("Cancel requested");
+    await loadJobs(false);
+  } catch (e) {
+    toast(String(e.message || e), true);
+  }
+}
+
+$("refreshBtn").addEventListener("click", () => loadJobs(true));
+$("startBtn").addEventListener("click", openStart);
+$("closeStart").addEventListener("click", () => $("startDialog").close());
+$("cancelStart").addEventListener("click", () => $("startDialog").close());
+$("startForm").addEventListener("submit", submitStart);
+$("cancelBtn").addEventListener("click", cancelSelected);
+$("startDialog").addEventListener("click", (ev) => {
+  if (ev.target === $("startDialog")) $("startDialog").close();
+});
+
+loadInfo();
+loadJobs(false);
+setInterval(() => loadJobs(false), 3000);
+</script>
+</body>
+</html>

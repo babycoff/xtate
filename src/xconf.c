@@ -950,6 +950,25 @@ static ConfRes SET_tui_mode(void *conf, const char *name, const char *value) {
     xconf->tui_mode = (unsigned)conf_parse_bool(value);
     return Conf_OK;
 }
+static ConfRes SET_gui_mode(void *conf, const char *name, const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    xconf->gui_mode = (unsigned)conf_parse_bool(value);
+    return Conf_OK;
+}
+static ConfRes SET_gui_listen(void *conf, const char *name, const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    if (!value) return Conf_ERR;
+    xconf->gui_listen = STRDUP(value);
+    return Conf_OK;
+}
+static ConfRes SET_gui_no_open(void *conf, const char *name, const char *value) {
+    XConf *xconf = (XConf *)conf;
+    UNUSEDPARM(name);
+    xconf->gui_no_open = (unsigned)conf_parse_bool(value);
+    return Conf_OK;
+}
 static ConfRes SET_control_ping(void *conf, const char *name,
                                const char *value) {
     XConf *xconf = (XConf *)conf;
@@ -3446,6 +3465,24 @@ ConfParam config_parameters[] = {
      {0},
      "Run the control-plane TUI dashboard; requires --control-connect.",
      "Run TUI dashboard."},
+    {"gui",
+     SET_gui_mode,
+     Type_FLAG,
+     {0},
+     "Run the loopback-only browser GUI; requires --control-connect.",
+     "Run browser GUI."},
+    {"gui-listen",
+     SET_gui_listen,
+     Type_ARG,
+     {0},
+     "GUI listen address (loopback only), default 127.0.0.1:8787.",
+     "GUI listen address."},
+    {"gui-no-open",
+     SET_gui_no_open,
+     Type_FLAG,
+     {0},
+     "Do not open a browser when starting the GUI.",
+     "Do not open browser."},
     {"mcp",
      SET_mcp_mode,
      Type_FLAG,

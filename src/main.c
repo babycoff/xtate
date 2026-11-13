@@ -36,6 +36,7 @@
 #include "util-scan/result-store.h"
 #include "util-scan/mcp-server.h"
 #include "util-scan/tui.h"
+#include "util-scan/gui.h"
 #include "util-scan/explain-target.h"
 #include <sys/stat.h>
 
@@ -1127,6 +1128,16 @@ static int xtate_main(int argc, char *argv[]) {
             return 1;
         }
         return tui_run(xconf->control_connect);
+    }
+
+    if (xconf->gui_mode) {
+        if (!xconf->control_connect) {
+            fprintf(stderr, "xtate: --gui requires --control-connect\n");
+            return 1;
+        }
+        return gui_run(xconf->control_connect,
+                       xconf->gui_listen ? xconf->gui_listen : "127.0.0.1:8787",
+                       xconf->gui_no_open ? 0 : 1);
     }
 
     if (xconf->control_endpoint)

@@ -10,7 +10,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.43.0-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-2.44.0-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -388,6 +388,23 @@ xtate --help-scan zbanner     # module-specific parameters
 xtate --lang zh --help        # Chinese human help (English fallback for untranslated strings)
 xtate --interact              # interactive shell (TTY: completion/history; pipe: scripts)
 ```
+
+## Browser GUI
+
+Xtate includes a loopback-only browser dashboard for managed jobs. It is another
+control-plane client and never scans in-process:
+
+```bash
+xtate --control-plane=/tmp/xtate-ctl.sock
+# in another terminal, with the same XTATE_CONTROL_TOKEN if one is set:
+xtate --gui --control-connect=/tmp/xtate-ctl.sock
+```
+
+The page opens at `http://127.0.0.1:8787/` by default. It lists jobs, shows state,
+counters, stderr tail and the result manifest, cancels jobs with confirmation, and
+starts an authorized scan through a wizard. Use `--gui-listen=127.0.0.1:PORT` to
+change the port, `--gui-no-open` to skip opening a browser, and read
+[GUI dashboard](docs/gui.md) for the security model, limits and troubleshooting.
 
 ## TUI dashboard
 

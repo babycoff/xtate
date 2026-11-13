@@ -27,6 +27,13 @@ Delivered for 2.43.0:
 - a full-screen TUI control-plane client (`xtate --tui`) that shares the same
   job/control API; it does not add another scanning path.
 
+Delivered for 2.44.0:
+
+- a loopback-only browser GUI (`xtate --gui`) that is another control-plane
+  client: dashboard, start wizard, cancel, status and result manifest. It binds
+  loopback, uses a per-run session token and a Host check, and forwards only an
+  allowlist of job methods.
+
 Still pending:
 
 - an agent evaluation suite and packaging;
@@ -151,7 +158,8 @@ See [MCP server](./mcp-server.md), [control plane](./control-plane.md) and
 ```text
 2.42.0  jobs + control plane + MCP server (done)
 2.42.1  Agent Skill (done, released)
-2.43.0  TUI control-plane dashboard (done)
+2.43.0  TUI control-plane dashboard (done, released)
+2.44.0  browser GUI for the control plane (done)
 next    evaluation suite and packaging
 later   MCP generate/stream input
 ```

@@ -2,11 +2,11 @@
 
 **English** · [中文](zh-CN/README.md)
 
-This directory is the user manual for **Xtate v2.43.0** — a modular all-stack network scanner for Internet-scale surveys.
+This directory is the user manual for **Xtate v2.44.0** — a modular all-stack network scanner for Internet-scale surveys.
 
 The [README](../README.md) is the landing page. Start here if you want to use Xtate rather than skim its feature list.
 
-**Release notes:** [2.43.0](./release-notes/2.43.0.md) — TUI control-plane dashboard, Agent Skill, audit hardening and Windows UTF-8 paths.
+**Release notes:** [2.44.0](./release-notes/2.44.0.md) — browser GUI for the control plane, TUI dashboard, Agent Skill, audit hardening and Windows UTF-8 paths.
 
 ## Where to start
 
@@ -70,6 +70,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 ### Automation and integration
 
 - [MCP server](./mcp-server.md) — stdio tools, resources, prompts, route planning and limits
+- [GUI dashboard](./gui.md) — loopback browser client for jobs, start, cancel, details and manifest
 - [TUI dashboard](./tui.md) — full-screen control-plane client for jobs, start, cancel and details
 - [Control plane](./control-plane.md) — local JSON-lines API shared by MCP/TUI/GUI
 - [Job model](./job-model.md) — managed jobs, timeout, heartbeat, cancellation and results
@@ -102,7 +103,7 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-The docs are written against the v2.43.0 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
+The docs are written against the v2.44.0 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
 
 ## Planned
 
