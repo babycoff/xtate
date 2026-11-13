@@ -17,9 +17,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <openssl/rand.h>
-
 #include "../crypto/crypto-json.h"
+#include "../util-misc/secure-random.h"
 #include "../util-data/file-open.h"
 #include "../util-misc/i18n.h"
 #include "../util-out/module-json.h"
@@ -308,7 +307,7 @@ static int gui_make_token(char out[GUI_TOKEN_SIZE]) {
     unsigned char raw[16];
     static const char hex[] = "0123456789abcdef";
     size_t i;
-    if (RAND_bytes(raw, sizeof(raw)) != 1) return -1;
+    if (secure_random_bytes(raw, sizeof(raw)) != 1) return -1;
     for (i = 0; i < sizeof(raw); i++) {
         out[i * 2] = hex[raw[i] >> 4];
         out[i * 2 + 1] = hex[raw[i] & 0x0f];

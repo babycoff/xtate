@@ -99,7 +99,10 @@ def check_docs(expected):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--binary", default=os.path.join(ROOT, "bin", "xtate"))
+    ap.add_argument(
+        "--binary",
+        default=os.environ.get("XTATE_BIN", os.path.join(ROOT, "bin", "xtate")),
+    )
     ap.add_argument("--skip-docs", action="store_true", help="skip README/docs banner checks")
     ap.add_argument("--skip-mcp", action="store_true", help="skip MCP serverInfo.version check")
     args = ap.parse_args()

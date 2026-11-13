@@ -1,8 +1,8 @@
 #include "ui-control.h"
 #include "control-client.h"
 #include "../crypto/crypto-json.h"
+#include "../util-misc/secure-random.h"
 
-#include <openssl/rand.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,7 +42,7 @@ static int ensure_private_token(void) {
     int i;
 
     if (existing && existing[0]) return 0;
-    if (RAND_bytes(raw, sizeof(raw)) != 1) return -1;
+    if (secure_random_bytes(raw, sizeof(raw)) != 1) return -1;
     for (i = 0; i < (int)sizeof(raw); i++)
         snprintf(token + i * 2, sizeof(token) - (size_t)i * 2, "%02x", raw[i]);
 #ifdef _WIN32

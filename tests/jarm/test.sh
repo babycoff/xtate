@@ -118,7 +118,8 @@ if [[ -n "${XTATE_BIN:-}" ]]; then
     grep -q -- "--first-probe" <<<"$help"
     ! grep -q 'lzr' <<<"$("$XTATE_BIN" --list-probe)"
     count="$("$XTATE_BIN" --list-probe | grep -cE '^[[:space:]]*[0-9]+\.[A-Za-z]')"
-    [[ "$count" -eq 27 ]]
-    echo "PASS: JARM slot plan help and 27-probe inventory"
+    # 59 probes on Windows, 60 on Linux builds with ngtcp2/GnuTLS.
+    [[ "$count" -eq 59 || "$count" -eq 60 ]]
+    echo "PASS: JARM slot plan help and $count-probe inventory"
 fi
 

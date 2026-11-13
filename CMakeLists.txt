@@ -234,7 +234,6 @@ endif ()
 add_executable(${exe_name})
 
 file(GLOB_RECURSE sources CONFIGURE_DEPENDS src/*.c src/*.h)
-target_sources(${exe_name} PUBLIC ${sources})
 
 # Unix--------------------math(libm) libdl pthread
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -248,7 +247,7 @@ endif ()
 
 # Windows--------------------WSock iphlpAPI
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    target_link_libraries(${exe_name} wsock32 ws2_32 iphlpapi)
+    target_link_libraries(${exe_name} wsock32 ws2_32 iphlpapi bcrypt)
     target_link_libraries(${exe_name} IPHLPAPI.lib)
 endif ()
 
@@ -280,7 +279,14 @@ if (OPENSSL_FOUND)
     target_link_libraries(${exe_name} OpenSSL::Crypto OpenSSL::SSL)
 else ()
     add_compile_definitions(NOT_FOUND_OPENSSL)
+    # These probes include OpenSSL headers unconditionally. Their registry
+    # entries are already compiled out under NOT_FOUND_OPENSSL.
+    list(REMOVE_ITEM sources
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/probe-modules/ssh-kex-probe.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/probe-modules/tls-state-probe.c")
 endif ()
+
+target_sources(${exe_name} PUBLIC ${sources})
 
 
 # --------------------pcre2

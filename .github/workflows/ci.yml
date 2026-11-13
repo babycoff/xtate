@@ -176,11 +176,12 @@ jobs:
             --cap-add=NET_RAW --cap-add=NET_ADMIN \
             xtate:ci --gui --gui-listen=0.0.0.0:8787
           for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:8787/ -o /tmp/page.html; then break; fi
+            TOKEN=$(docker logs xtate-ci-gui 2>&1 | sed -n 's/.*GUI session token: //p' | tail -1)
+            if [ -n "$TOKEN" ] && curl -fsS -H "X-Xtate-GUI-Token: $TOKEN" \
+              http://127.0.0.1:8787/ -o /tmp/page.html; then break; fi
             sleep 1
           done
           test -s /tmp/page.html
-          TOKEN=$(docker logs xtate-ci-gui 2>&1 | sed -n 's/.*GUI session token: //p' | tail -1)
           test -n "$TOKEN"
           curl -fsS -H "X-Xtate-GUI-Token: $TOKEN" http://127.0.0.1:8787/api/system \
             | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["capabilities"]["http3"] is True'
