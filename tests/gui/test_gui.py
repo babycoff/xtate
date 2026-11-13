@@ -136,7 +136,8 @@ def main():
         system = json.loads(body.decode()) if status == 200 else {}
         if (status != 200 or not isinstance(system.get("modules"), dict)
                 or not system["modules"].get("scan")
-                or not isinstance(system.get("capabilities"), dict)):
+                or not isinstance(system.get("capabilities"), dict)
+                or "zstd" not in system["capabilities"]):
             print("GUI system failed:", status, body[:300], file=sys.stderr)
             return 1
         status, body = http_json(port, "/api/interfaces", token)

@@ -700,6 +700,7 @@ async function loadSystem() {
       ["Generate modules", (state.system.modules || {}).generate || 0],
       ["HTTP/3", (state.system.capabilities || {}).http3 ? "compiled" : "unavailable"],
       ["QUIC transport", (state.system.capabilities || {}).quic_transport ? "compiled" : "unavailable"],
+      ["zstd results", (state.system.capabilities || {}).zstd ? "compiled" : "unavailable"],
     ].map(([k, v]) => '<div><span class="k">' + k + '</span><span class="v">' + esc(v) + "</span></div>").join("");
   } catch (err) {
     setConn(false, "offline");

@@ -83,6 +83,11 @@ char *gui_system_json(const char *endpoint) {
     if (caps) {
         json_append_member(caps, "http3", json_mkbool(http3));
         json_append_member(caps, "quic_transport", json_mkbool(quic));
+#ifndef NOT_FOUND_ZSTD
+        json_append_member(caps, "zstd", json_mkbool(1));
+#else
+        json_append_member(caps, "zstd", json_mkbool(0));
+#endif
         json_append_member(caps, "raw_sockets", json_mkbool(1));
         json_append_member(caps, "live_results", json_mkbool(0));
         json_append_member(root, "capabilities", caps);
