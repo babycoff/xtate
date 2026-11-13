@@ -13,7 +13,7 @@ test reference, not copy its code or promise output compatibility.
 |:---|:---|:---|
 | HTTP | `http`, `http-state` | HTTP/1 work is frozen at the structured response parser pass. |
 | JARM | `jarm` | Salesforce 1.0 hash, official-reference comparison, `--first-probe`. |
-| SSH | `ssh` | Banner/software and KEXINIT lists; real KEX exchange is future work. |
+| SSH | `ssh`, `ssh-kex` | Banner/software and KEXINIT lists; `ssh-kex` performs an unauthenticated curve25519 KEX and reports the host-key type and SHA256 fingerprint. |
 | TLS | `tls-state`, `tls-hello` | Certificates/details, ALPN, SNI and JARM; STARTTLS adapters exist. |
 | Redis | `redis` | Read-only INFO server identification. |
 | Memcached | `memcached` | Version-line identification. |
@@ -21,14 +21,10 @@ test reference, not copy its code or promise output compatibility.
 | MQTT | `mqtt` | CONNECT/CONNACK. |
 | SOCKS5 | `socks5` | Greeting/method selection. |
 | Telnet | `telnet` | Banner and initial IAC options. |
-| SMTP | STARTTLS only | `tls-state --starttls smtp`; no full SMTP command probe yet. |
-| IMAP | STARTTLS only | `tls-state --starttls imap`; no full IMAP probe yet. |
-| POP3 | STARTTLS only | `tls-state --starttls pop3`; no full POP3 probe yet. |
-| FTP | STARTTLS only | `tls-state --starttls ftp`; no full FTP probe yet. |
+| SMTP | `smtp`, `smtp-state` | Banner / EHLO capabilities. |
 | MongoDB | `mongodb` | OP_MSG hello/BSON identification. |
 | MySQL | `mysql`, `mysql-state` | Greeting identification; no auth. |
 | PostgreSQL | `postgres`, `postgres-state` | SSLRequest and auth-boundary probe. |
-| SMTP | `smtp`, `smtp-state` | Banner / EHLO capabilities. |
 | IMAP | `imap`, `imap-state` | Banner / CAPABILITY. |
 | POP3 | `pop3`, `pop3-state` | Banner / CAPA. |
 | FTP | `ftp`, `ftp-state` | Banner / FEAT. |

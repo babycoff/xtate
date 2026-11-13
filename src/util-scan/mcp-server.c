@@ -15,14 +15,19 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <poll.h>
+#include <signal.h>
 #include <sys/wait.h>
 #endif
+#include "../util-data/file-open.h"
 #include "../crypto/crypto-json.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <stdarg.h>
 #include <stdbool.h>
+#include <sys/stat.h>
 #ifdef _WIN32
 #define strtok_r strtok_s
 #endif
@@ -83,8 +88,8 @@ static const char *instructions =
 "- On Linux, stateful scans (tcp-state, tls-state, state sub-probes) need the "
 "firewall RST/ICMP rules; tcp-syn and UDP do not.\n"
 "- Use timeouts or stall timeouts for long jobs; never start unbounded scans.\n"
-"- This server exposes read-only and job-lifecycle tools; start_scan is not "
-"enabled yet.\n";
+"- start_scan is enabled only when the caller passes authorized=true for "
+"targets it is permitted to scan; every other tool is read-only.\n";
 
 static const char *tools_json =
 "{\"tools\":["
@@ -175,6 +180,20 @@ static int control_call(const char *endpoint, const char *method,
     return control_client_request(endpoint, req, resp, cap);
 }
 
+static bool regular_file_utf8(const char *path) {
+#ifdef _WIN32
+    wchar_t wpath[2048];
+    struct _stat64 st;
+    if (MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath,
+                            (int)(sizeof(wpath) / sizeof(wpath[0]))) <= 0)
+        return false;
+    return _wstat64(wpath, &st) == 0 && (st.st_mode & _S_IFREG) != 0;
+#else
+    struct stat st;
+    return stat(path, &st) == 0 && S_ISREG(st.st_mode);
+#endif
+}
+
 static bool validate_cfg(const char *cfg, char *err, size_t errcap,
                          unsigned *ntargets, unsigned *rate) {
     JsonNode *root = json_decode(cfg);
@@ -191,13 +210,30 @@ static bool validate_cfg(const char *cfg, char *err, size_t errcap,
     }
     JsonNode *targets = json_find_member(root, "targets");
     JsonNode *inc = json_find_member(root, "include_file");
-    bool has_file = inc && inc->tag == JSON_STRING && inc->string_[0];
+    if (inc && (inc->tag != JSON_STRING || !inc->string_[0])) {
+        snprintf(err, errcap, "include_file must be a non-empty string"); json_delete(root); return false;
+    }
+    bool has_file = inc != NULL;
     bool has_targets = targets && targets->tag == JSON_ARRAY && targets->children.head;
     if (has_targets && has_file) {
         snprintf(err, errcap, "targets and include_file are mutually exclusive"); json_delete(root); return false;
     }
     if (!has_targets && !has_file) {
         snprintf(err, errcap, "targets or include_file required"); json_delete(root); return false;
+    }
+    if (has_file) {
+        if (strcmp(inc->string_, "-") == 0) {
+            snprintf(err, errcap, "include_file '-' is not allowed over MCP"); json_delete(root); return false;
+        }
+        if (!regular_file_utf8(inc->string_)) {
+            snprintf(err, errcap, "include_file must be a regular file");
+            json_delete(root); return false;
+        }
+        FILE *f = file_open_utf8(inc->string_);
+        if (!f) {
+            snprintf(err, errcap, "include_file cannot be opened"); json_delete(root); return false;
+        }
+        fclose(f);
     }
     if (!targets || targets->tag != JSON_ARRAY) targets = NULL;
     unsigned count = 0;
@@ -223,8 +259,62 @@ static bool validate_cfg(const char *cfg, char *err, size_t errcap,
     }
     unsigned r = 0;
     JsonNode *rn = json_find_member(root, "rate");
-    if (rn && rn->tag == JSON_NUMBER) r = (unsigned)rn->number_;
-    if (r > 10000) { snprintf(err, errcap, "rate exceeds 10000 pps"); json_delete(root); return false; }
+    if (rn) {
+        if (rn->tag != JSON_NUMBER || rn->number_ < 0 || rn->number_ > 10000 ||
+            rn->number_ != (double)(long long)rn->number_) {
+            snprintf(err, errcap, "rate must be an integer in 0..10000");
+            json_delete(root); return false;
+        }
+        r = (unsigned)rn->number_;
+    }
+    JsonNode *n = json_find_member(root, "timeout_sec");
+    if (n && (n->tag != JSON_NUMBER || n->number_ < 1 || n->number_ > 86400 ||
+              n->number_ != (double)(long long)n->number_)) {
+        snprintf(err, errcap, "timeout_sec must be an integer in 1..86400");
+        json_delete(root); return false;
+    }
+    const char *obj_fields[] = {"probe_args", "scan_args"};
+    for (size_t i = 0; i < sizeof(obj_fields) / sizeof(obj_fields[0]); i++) {
+        n = json_find_member(root, obj_fields[i]);
+        if (n && n->tag != JSON_OBJECT) {
+            snprintf(err, errcap, "%s must be an object", obj_fields[i]);
+            json_delete(root); return false;
+        }
+    }
+    const char *str_fields[] = {"result_path", "interface"};
+    for (size_t i = 0; i < sizeof(str_fields) / sizeof(str_fields[0]); i++) {
+        n = json_find_member(root, str_fields[i]);
+        if (n && (n->tag != JSON_STRING || !n->string_[0])) {
+            snprintf(err, errcap, "%s must be a non-empty string", str_fields[i]);
+            json_delete(root); return false;
+        }
+    }
+    n = json_find_member(root, "chunk_size");
+    if (n && (n->tag != JSON_NUMBER || n->number_ < 1 ||
+              n->number_ != (double)(long long)n->number_)) {
+        snprintf(err, errcap, "chunk_size must be a positive integer");
+        json_delete(root); return false;
+    }
+    n = json_find_member(root, "quota_bytes");
+    if (n && (n->tag != JSON_NUMBER || n->number_ < 0 ||
+              n->number_ != (double)(long long)n->number_)) {
+        snprintf(err, errcap, "quota_bytes must be a non-negative integer");
+        json_delete(root); return false;
+    }
+    n = json_find_member(root, "compression");
+    if (n && (n->tag != JSON_STRING ||
+              (strcmp(n->string_, "none") != 0 && strcmp(n->string_, "zstd") != 0))) {
+        snprintf(err, errcap, "compression must be \"none\" or \"zstd\"");
+        json_delete(root); return false;
+    }
+    const char *bool_fields[] = {"index", "dry_run", "authorized"};
+    for (size_t i = 0; i < sizeof(bool_fields) / sizeof(bool_fields[0]); i++) {
+        n = json_find_member(root, bool_fields[i]);
+        if (n && n->tag != JSON_BOOL) {
+            snprintf(err, errcap, "%s must be a boolean", bool_fields[i]);
+            json_delete(root); return false;
+        }
+    }
     if (ntargets) *ntargets = count;
     if (rate) *rate = r;
     json_delete(root);
@@ -279,9 +369,10 @@ static char *read_file_alloc(const char *path) {
     return text;
 }
 
-/* Resources may be read from any working directory. Look next to the
- * executable and up to four parent directories, which covers both an
- * installed layout and the repository build directory. */
+/* Resources may be read from any working directory. Prefer the operator
+ * override and locations next to the executable (plus up to four parents),
+ * which covers an installed layout and the repository build directory. The
+ * current directory is tried last because it can be attacker-controlled. */
 /* Resource names are a fixed, compiled-in allowlist. Reject anything that is
  * absolute, drive-qualified or contains a parent traversal component, so the
  * lookup can never be turned into an arbitrary file read. */
@@ -296,10 +387,9 @@ static char *read_resource_file(const char *rel) {
         char *text = read_file_alloc(cand);
         if (text) return text;
     }
-    char *text = read_file_alloc(rel);
-    if (text) return text;
+    char *text = NULL;
     char exe[1024];
-    if (!self_path(exe, sizeof(exe))) return NULL;
+    if (!self_path(exe, sizeof(exe))) return read_file_alloc(rel);
     char dir[1200];
     snprintf(dir, sizeof(dir), "%s", exe);
     char *slash = strrchr(dir, '/');
@@ -316,7 +406,10 @@ static char *read_resource_file(const char *rel) {
         if (len + 3 >= sizeof(dir)) break;
         memcpy(dir + len, "/..", 4);
     }
-    return NULL;
+    /* The current directory is the least trusted location: an MCP client may
+     * start the server inside an untrusted project, so only use it when the
+     * operator override and every install-relative location failed. */
+    return read_file_alloc(rel);
 }
 
 static void normalize_text(char *s) {
@@ -358,13 +451,29 @@ static bool run_self(const char *args, char *out, size_t cap) {
     if (cmdn < 0 || (size_t)cmdn >= sizeof(cmd)) return false;
 
     SECURITY_ATTRIBUTES sa = {sizeof(sa), NULL, TRUE};
-    HANDLE rd = NULL, wr = NULL;
-    if (!CreatePipe(&rd, &wr, &sa, 0)) return false;
-    SetHandleInformation(rd, HANDLE_FLAG_INHERIT, 0);
-
     HANDLE nul = CreateFileW(L"NUL", GENERIC_READ,
                              FILE_SHARE_READ | FILE_SHARE_WRITE, &sa,
                              OPEN_EXISTING, 0, NULL);
+
+    wchar_t tmpdir[1024], tmpfile[MAX_PATH + 1];
+    DWORD td = GetTempPathW((DWORD)(sizeof(tmpdir) / sizeof(tmpdir[0])), tmpdir);
+    if (td == 0 || td >= sizeof(tmpdir) / sizeof(tmpdir[0]) ||
+        !GetTempFileNameW(tmpdir, L"xtm", 0, tmpfile)) {
+        td = GetCurrentDirectoryW((DWORD)(sizeof(tmpdir) / sizeof(tmpdir[0])), tmpdir);
+        if (td == 0 || td >= sizeof(tmpdir) / sizeof(tmpdir[0]) ||
+            !GetTempFileNameW(tmpdir, L"xtm", 0, tmpfile)) {
+            if (nul != INVALID_HANDLE_VALUE) CloseHandle(nul);
+            return false;
+        }
+    }
+    HANDLE fh = CreateFileW(tmpfile, GENERIC_READ | GENERIC_WRITE | DELETE, 0, &sa,
+                            CREATE_ALWAYS,
+                            FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE,
+                            NULL);
+    if (fh == INVALID_HANDLE_VALUE) {
+        if (nul != INVALID_HANDLE_VALUE) CloseHandle(nul);
+        return false;
+    }
 
     STARTUPINFOW si;
     PROCESS_INFORMATION pi;
@@ -372,36 +481,42 @@ static bool run_self(const char *args, char *out, size_t cap) {
     memset(&pi, 0, sizeof(pi));
     si.cb = sizeof(si);
     si.dwFlags = STARTF_USESTDHANDLES;
-    si.hStdOutput = wr;
-    si.hStdError = wr;
+    si.hStdOutput = fh;
+    si.hStdError = fh;
     si.hStdInput = (nul != INVALID_HANDLE_VALUE) ? nul
                                                  : GetStdHandle(STD_INPUT_HANDLE);
 
-    wchar_t wexe[1024], wcmd[1600];
+    wchar_t wexe[1024], wcmd[10000];
     bool ok = MultiByteToWideChar(CP_UTF8, 0, exe, -1, wexe,
                                   (int)(sizeof(wexe) / sizeof(wexe[0]))) > 0 &&
               MultiByteToWideChar(CP_UTF8, 0, cmd, -1, wcmd,
                                   (int)(sizeof(wcmd) / sizeof(wcmd[0]))) > 0 &&
               CreateProcessW(wexe, wcmd, NULL, NULL, TRUE, CREATE_NO_WINDOW,
                              NULL, NULL, &si, &pi);
-    CloseHandle(wr);
-    if (nul != INVALID_HANDLE_VALUE) CloseHandle(nul);
     if (!ok) {
-        CloseHandle(rd);
+        CloseHandle(fh);
+        if (nul != INVALID_HANDLE_VALUE) CloseHandle(nul);
         return false;
     }
+    if (nul != INVALID_HANDLE_VALUE) CloseHandle(nul);
+    DWORD wait = WaitForSingleObject(pi.hProcess, 30000);
+    bool timed_out = wait != WAIT_OBJECT_0;
+    if (timed_out) TerminateProcess(pi.hProcess, 1);
+    DWORD exit_code = 1;
+    bool child_ok = !timed_out && GetExitCodeProcess(pi.hProcess, &exit_code) &&
+                    exit_code == 0;
     size_t n = 0;
+    SetFilePointer(fh, 0, NULL, FILE_BEGIN);
     DWORD got = 0;
-    while (n + 1 < cap &&
-           ReadFile(rd, out + n, (DWORD)(cap - 1 - n), &got, NULL) && got > 0)
+    while (n + 1 < cap && ReadFile(fh, out + n, (DWORD)(cap - 1 - n), &got, NULL) &&
+           got > 0)
         n += got;
     out[n] = 0;
     normalize_text(out);
-    CloseHandle(rd);
-    WaitForSingleObject(pi.hProcess, 30000);
+    CloseHandle(fh);
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
-    return true;
+    return child_ok;
 #else
     int fds[2];
     if (pipe(fds) != 0) return false;
@@ -426,17 +541,35 @@ static bool run_self(const char *args, char *out, size_t cap) {
     }
     close(fds[1]);
     size_t n = 0;
-    ssize_t got;
-    while (n + 1 < cap &&
-           (got = read(fds[0], out + n, cap - 1 - n)) > 0)
+    bool timed_out = false;
+    for (;;) {
+        struct pollfd pfd = {fds[0], POLLIN, 0};
+        int pr = poll(&pfd, 1, 30000);
+        if (pr < 0) {
+            if (errno == EINTR) continue;
+            break;
+        }
+        if (pr == 0) {
+            kill(pid, SIGKILL);
+            timed_out = true;
+            break;
+        }
+        ssize_t got = read(fds[0], out + n, cap - 1 - n);
+        if (got < 0) {
+            if (errno == EINTR) continue;
+            break;
+        }
+        if (got == 0) break;
         n += (size_t)got;
+        if (n + 1 >= cap) break;
+    }
     out[n] = 0;
     normalize_text(out);
     close(fds[0]);
     int status = 0;
     while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {
     }
-    return true;
+    return !timed_out && WIFEXITED(status) && WEXITSTATUS(status) == 0;
 #endif
 }
 
@@ -455,6 +588,34 @@ static void net_info(const char *id, const char *target) {
 }
 
 
+static bool append_out(char *out, size_t cap, size_t *off,
+                       const char *fmt, ...) {
+    if (*off >= cap) return false;
+    va_list ap;
+    va_start(ap, fmt);
+    int n = vsnprintf(out + *off, cap - *off, fmt, ap);
+    va_end(ap);
+    if (n < 0 || (size_t)n >= cap - *off) return false;
+    *off += (size_t)n;
+    return true;
+}
+
+static bool emit_group(char *out, size_t cap, size_t *off, int *emitted,
+                       const char *ifname, const char *src,
+                       const char *gw, const char *samples) {
+    char *ei = json_encode_string(ifname ? ifname : "");
+    char *es = json_encode_string(src ? src : "");
+    char *eg = json_encode_string(gw ? gw : "");
+    char *ea = json_encode_string(samples ? samples : "");
+    bool ok = append_out(out, cap, off,
+        "%s{\"interface\":%s,\"source\":%s,\"gateway\":%s,\"samples\":%s}",
+        *emitted ? "," : "", ei ? ei : "\"\"", es ? es : "\"\"",
+        eg ? eg : "\"\"", ea ? ea : "\"\"");
+    free(ei); free(es); free(eg); free(ea);
+    if (ok) (*emitted)++;
+    return ok;
+}
+
 static void structured_explain(const char *id, const char *text) {
     char copy[16384]; snprintf(copy, sizeof(copy), "%s", text);
     unsigned long long targets = 0; int groups = 0;
@@ -463,22 +624,25 @@ static void structured_explain(const char *id, const char *text) {
     const char *pg = strstr(copy, "Route groups:");
     if (pg) groups = atoi(pg + 13);
     char out[16384]; size_t off = 0;
-    off += (size_t)snprintf(out + off, sizeof(out) - off,
-        "{\"targets\":%llu,\"route_groups\":%d,\"groups\":[",
-        targets, groups);
+    if (!append_out(out, sizeof(out), &off,
+            "{\"targets\":%llu,\"route_groups\":%d,\"groups\":[",
+            targets, groups)) {
+        text_result(id, "explain output too large", true);
+        return;
+    }
     int emitted = 0;
     char *save = NULL;
     char *line = strtok_r(copy, "\n", &save);
     char ifname[256] = {0}, src[64] = {0}, gw[64] = {0}, samples[1024] = {0};
+    bool overflow = false;
     while (line) {
         while (*line == ' ') line++;
         if (strncmp(line, "Route group", 11) == 0) {
-            if (emitted > 0 && ifname[0]) {
-                char *ei = json_encode_string(ifname);
-                off += (size_t)snprintf(out + off, sizeof(out) - off,
-                    "%s{\"interface\":%s,\"source\":\"%s\",\"gateway\":\"%s\",\"samples\":\"%s\"}",
-                    emitted == 1 ? "" : ",", ei ? ei : "\"\"", src, gw, samples);
-                free(ei); emitted++;
+            if (ifname[0] &&
+                !emit_group(out, sizeof(out), &off, &emitted,
+                            ifname, src, gw, samples)) {
+                overflow = true;
+                break;
             }
             ifname[0] = src[0] = gw[0] = samples[0] = 0;
         } else if (strncmp(line, "Interface:", 10) == 0) {
@@ -500,14 +664,14 @@ static void structured_explain(const char *id, const char *text) {
         }
         line = strtok_r(NULL, "\n", &save);
     }
-    if (ifname[0]) {
-        char *ei = json_encode_string(ifname);
-        off += (size_t)snprintf(out + off, sizeof(out) - off,
-            "%s{\"interface\":%s,\"source\":\"%s\",\"gateway\":\"%s\",\"samples\":\"%s\"}",
-            emitted == 0 ? "" : ",", ei ? ei : "\"\"", src, gw, samples);
-        free(ei);
+    if (!overflow && ifname[0] &&
+        !emit_group(out, sizeof(out), &off, &emitted,
+                    ifname, src, gw, samples))
+        overflow = true;
+    if (overflow || !append_out(out, sizeof(out), &off, "]}")) {
+        text_result(id, "explain output too large", true);
+        return;
     }
-    snprintf(out + off, sizeof(out) - off, "]}");
     text_result(id, out, false);
 }
 
@@ -612,6 +776,10 @@ static void tool_call(const char *id, const char *name, const char *args,
         if (!authorized) {
             text_result(id, "target authorization required: set authorized=true", true); return;
         }
+        char verr[256] = {0}; unsigned targets = 0, rate = 0;
+        if (!validate_cfg(cfg, verr, sizeof(verr), &targets, &rate)) {
+            text_result(id, verr, true); return;
+        }
         JsonNode *ar2 = json_decode(cfg);
         JsonNode *rp = ar2 ? json_find_member(ar2, "result_path") : NULL;
         if (rp && rp->tag == JSON_STRING && !result_path_writable(rp->string_)) {
@@ -619,10 +787,6 @@ static void tool_call(const char *id, const char *name, const char *args,
             json_delete(ar2); return;
         }
         if (ar2) json_delete(ar2);
-        char verr[256] = {0}; unsigned targets = 0, rate = 0;
-        if (!validate_cfg(cfg, verr, sizeof(verr), &targets, &rate)) {
-            text_result(id, verr, true); return;
-        }
         int rg = explain_group_count(endpoint, cfg);
         if (rg < 0) {
             JsonNode *fr = json_decode(cfg);
@@ -661,13 +825,16 @@ static void tool_call(const char *id, const char *name, const char *args,
         if (targets[0]) {
             char text[16384], ea[4300];
             snprintf(ea, sizeof(ea), "--explain-target=%s", targets);
-            if (run_self(ea, text, sizeof(text))) {
-                const char *pif = strstr(text, "Interface:");
-                if (pif) {
-                    pif += 10; while (*pif == ' ') pif++;
-                    size_t k = 0; while (pif[k] && pif[k] != '\n' && pif[k] != '\r' && k + 1 < sizeof(iface)) { iface[k]=pif[k]; k++; }
-                    iface[k] = 0;
-                }
+            if (!run_self(ea, text, sizeof(text))) {
+                text_result(id, "route preflight failed; targets were not accepted "
+                                 "by explain_target", true);
+                return;
+            }
+            const char *pif = strstr(text, "Interface:");
+            if (pif) {
+                pif += 10; while (*pif == ' ') pif++;
+                size_t k = 0; while (pif[k] && pif[k] != '\n' && pif[k] != '\r' && k + 1 < sizeof(iface)) { iface[k]=pif[k]; k++; }
+                iface[k] = 0;
             }
         }
     }

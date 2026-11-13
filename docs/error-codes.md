@@ -35,6 +35,7 @@ Stable codes used by JSON error envelopes. The machine-readable list is
 - A code is added only when a real path can emit it; lifecycle codes become
   active with the job/timeout model.
 - Runtime paths not yet specialized use `INTERNAL_ERROR`.
+
 ## Current behavior
 
 - `TARGET_INVALID`: invalid single IP and invalid CIDR/range syntax are
@@ -45,8 +46,6 @@ Stable codes used by JSON error envelopes. The machine-readable list is
   failures may still be `INTERNAL_ERROR`.
 - `OUTPUT_WRITE_FAILED`: file output modules use `out_fprintf`, `out_fputc`
   and `out_fwrite`; each call checks its return and reports immediately.
-
-
 
 End-to-end failure check (Linux):
 

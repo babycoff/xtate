@@ -1,6 +1,7 @@
 #ifndef NOT_FOUND_MONGOC
 
 #include "output-modules.h"
+#include "../util-data/file-open.h"
 #include "mongodb-output.h"
 
 #include <mongoc/mongoc.h>
@@ -437,22 +438,25 @@ static void _mongo_retry_sleep(unsigned delay_ms) {
         pixie_usleep(delay_ms * 1000U);
 }
 
+/*
+ * mongoc_bulk_operation_execute() may only be called once per bulk operation:
+ * the driver marks the operation as executed, so a second call on the same
+ * handle can never succeed. Retrying a *failed* bulk execute is therefore
+ * pointless -- re-running it would only hide the first error. Report the
+ * failure explicitly and mark the sink fatal so the scan stops and the exit
+ * status is non-zero. (Single-document inserts above are retried because the
+ * driver permits repeating them.)
+ */
 static bool _mongo_bulk_execute_with_retry(void) {
     bson_error_t error;
-    unsigned     attempts = mongodb_conf.retry_count + 1;
 
-    for (unsigned attempt = 0; attempt < attempts; attempt++) {
-        if (mongoc_bulk_operation_execute(mongodb_conf.bulk, NULL, &error))
-            return true;
+    if (mongoc_bulk_operation_execute(mongodb_conf.bulk, NULL, &error))
+        return true;
 
-        mongo_fail( "(MongodbOut execute) attempt %u/%u: %s\n",
-            attempt + 1, attempts, error.message);
-        if (attempt + 1 < attempts)
-            _mongo_retry_sleep(mongodb_conf.retry_delay_ms);
-    }
-
-    mongo_fail(
-        "(MongodbOut execute) retries exhausted; output is incomplete\n");
+    mongo_fail("(MongodbOut execute) %s; a failed bulk operation cannot be "
+               "retried because libmongoc marks the bulk operation as "
+               "executed. Queued results were not stored.\n",
+               error.message);
     output_mark_fatal();
     return false;
 }
@@ -728,7 +732,7 @@ void store_bson_file(const char *filename, const char *uri_name,
                      const char *db_name, const char *col_name,
                      const char *app_name) {
 
-    FILE *bsonfile = fopen(filename, "rb");
+    FILE *bsonfile = file_open_utf8_mode(filename, "rb");
     if (bsonfile == NULL) {
         mongo_fail( "(StoreBson) could not open BSON file %s.\n",
             filename);
@@ -835,7 +839,7 @@ void store_json_file(const char *filename, const char *uri_name,
                      const char *db_name, const char *col_name,
                      const char *app_name) {
 
-    FILE *jsonfile = fopen(filename, "rb");
+    FILE *jsonfile = file_open_utf8_mode(filename, "rb");
     if (jsonfile == NULL) {
         mongo_fail( "(StoreJson) could not open NDJSON file %s.\n",
             filename);

@@ -25,6 +25,7 @@
 #define _FILE_OFFSET_BITS 64
 
 #include "pcapfile.h"
+#include "../util-data/file-open.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -229,7 +230,8 @@ static bool smells_like_valid_packet(const unsigned char *px, unsigned length,
     if (original_length > 10000)
         return false;
 
-    if (captured_length + 16 < length) {
+    /* Need room for the next 16-byte record header before dereferencing it. */
+    if (length >= 32 && captured_length + 32 <= length) {
         unsigned             secs2, usecs2, original_length2, captured_length2;
         const unsigned char *px2 = px + captured_length + 16;
 
@@ -530,7 +532,7 @@ struct PcapFile *pcapfile_openread(const char *capfilename) {
     /*
      * Open the file
      */
-    fp = fopen(capfilename, "rb");
+    fp = file_open_utf8_mode(capfilename, "rb");
     if (fp == NULL) {
         LOG(LEVEL_ERROR, "%s: could not open capture file\n", capfilename);
         LOGPERROR(capfilename);
@@ -681,7 +683,7 @@ struct PcapFile *pcapfile_openwrite(const char *capfilename,
     buf[20] = (char)(linktype >> 0);
     buf[21] = (char)(linktype >> 8);
 
-    fp = fopen(capfilename, "wb");
+    fp = file_open_utf8_mode(capfilename, "wb");
     if (fp == NULL) {
         LOG(LEVEL_ERROR, "could not open capture file\n");
         LOGPERROR(capfilename);
@@ -730,14 +732,14 @@ struct PcapFile *pcapfile_openappend(const char *capfilename,
     FILE            *fp;
 
     /* open the file for appending and reading */
-    fp = fopen(capfilename, "ab+");
+    fp = file_open_utf8_mode(capfilename, "ab+");
     if (fp == NULL && errno == ENOENT) {
         return pcapfile_openwrite(capfilename, linktype);
     }
     if (fp == NULL) {
         LOG(LEVEL_ERROR, "could not open capture file to append frame\n");
         LOGPERROR(capfilename);
-        return pcapfile_openappend(capfilename, linktype);
+        return 0;
     }
 
     /* Read in the header to discover link type and byte order */
@@ -745,7 +747,7 @@ struct PcapFile *pcapfile_openappend(const char *capfilename,
         LOG(LEVEL_ERROR, "fail to read capture file header\n");
         LOGPERROR(capfilename);
         fclose(fp);
-        return pcapfile_openappend(capfilename, linktype);
+        return 0;
     }
 
     /* Seek to the end of the file, where we will start writing
@@ -771,7 +773,7 @@ struct PcapFile *pcapfile_openappend(const char *capfilename,
             LOG(LEVEL_ERROR, "%s: unknown byte-order in cap file\n",
                 capfilename);
             fclose(fp);
-            return pcapfile_openappend(capfilename, linktype);
+            return 0;
     }
 
     /* Version */
@@ -923,7 +925,11 @@ void pcapfile_writeframe(struct PcapFile *capfile, const void *buffer,
         LOGPERROR(capfile->filename);
         fclose(capfile->fp);
         capfile->fp = NULL;
+        return;
     }
+
+    if (capfile->fp == NULL)
+        return;
 
     if (fwrite(buffer, 1, buffer_size, capfile->fp) != buffer_size) {
         LOG(LEVEL_ERROR, "%s:%lld: could not write packet contents\n",

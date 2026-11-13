@@ -6,7 +6,7 @@ Xtate 是一款面向大规模主动测量的模块化全栈网络扫描器。�
 
 本页带你在 Linux 或 Windows 上从源码检出走到第一次扫描。阅读前你应当熟悉 shell、`sudo` 和 TCP/IP 基础；本页不是扫描方法本身的教程。
 
-> 本文档针对 Xtate v2.39.1 编写。若你的构建行为与此不同，以 `--help` 和模块帮助为准。
+> 本文档针对 Xtate v2.42.0 编写。若你的构建行为与此不同，以 `--help` 和模块帮助为准。
 
 ## 环境要求
 
@@ -24,13 +24,13 @@ Xtate 是一款面向大规模主动测量的模块化全栈网络扫描器。�
 
 | 平台 | 编译器 | 状态 | 可选依赖 |
 |:---|:---|:---|:---|
-| Ubuntu 24.04 | GCC 13.3 | 构建 + `--selftest` 通过，模块 12/28/7/5 | OpenSSL、PCRE2、LibXml2、BSON、mongoc、ngtcp2/GnuTLS |
-| Ubuntu 24.04 | Clang 18.1 | 构建 + `--selftest` 通过，模块 12/28/7/5 | OpenSSL、PCRE2、LibXml2、BSON、mongoc、ngtcp2/GnuTLS |
+| Ubuntu 24.04 | GCC 13.3 | 构建 + `--selftest` 通过，模块 12/59/7/5 | OpenSSL、PCRE2、LibXml2、BSON、mongoc、ngtcp2/GnuTLS |
+| Ubuntu 24.04 | Clang 18.1 | 构建 + `--selftest` 通过，模块 12/59/7/5 | OpenSSL、PCRE2、LibXml2、BSON、mongoc、ngtcp2/GnuTLS |
 | Windows 10/11 | MSVC 19.5x（Visual Studio 2022/2026） | 构建 + `--selftest` 通过；探测模块数量取决于可选库 | 通过 Scoop 装 OpenSSL；未装 PCRE2/BSON/mongoc |
 | Windows 10/11 | Clang 23（clang-cl） | 构建 + `--selftest` 通过；探测模块数量取决于可选库 | 通过 Scoop 装 OpenSSL；未装 PCRE2/BSON/mongoc |
 | Windows 10/11 | MinGW-w64 GCC 16 | 构建 + `--selftest` 通过；探测模块数量取决于可选库 | 无 OpenSSL（Scoop 包是 MSVC ABI） |
 
-模块数量是最快的自检方式：**27 probe + 7 output** 表示依赖齐全；数量变少说明至少有一个可选库没有被找到。
+模块数量是最快的自检方式：**59 个探测 + 7 个输出 + 12 个扫描（含 `quic-state`）** 表示依赖齐全；Windows 上未启用 ngtcp2/GnuTLS 时扫描模块为 11 个。数量变少说明至少有一个可选库没有被找到。
 
 ## 在 Linux 上构建
 
@@ -275,7 +275,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 
 ## banner 与 stateful 扫描：阻止内核代为应答
 
-**在 Linux 上，这对 `zbanner`、`tcp-state`、`tls-state`、`http-state` 以及所有 state 子探针（H2/HTTP3/Batch B/Batch C）都是必需的。** 这些引擎用原始报文完成真实 TCP 握手；Linux 内核不认识这些连接，会用 RST 回应 SYN-ACK/数据，在 banner、TLS 握手或探针响应到达前打断连接。
+**在 Linux 上，这对 `zbanner`、`tcp-state`、`tls-state`、`http-state` 以及所有 state 子探测（H2/HTTP3/Batch B/Batch C）都是必需的。** 这些引擎用原始报文完成真实 TCP 握手；Linux 内核不认识这些连接，会用 RST 回应 SYN-ACK/数据，在 banner、TLS 握手或探针响应到达前打断连接。
 
 缺少规则是常见且代价很高的错误：
 
@@ -293,6 +293,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http \
 ```
 
 - `add_rules.sh` 会追加 `OUTPUT` 链上的 DROP 规则，丢弃 TCP RST（IPv4 与 IPv6），以及 ICMP 端口不可达（ICMP 3/3、ICMPv6 1/4）。`rm_rules.sh` 负责删除；`check_rules.sh` 打印当前规则。
+- **有状态 TLS 同样适用。** Docker/GitHub Actions 的扫描器容器需要 `iptables` 加 `/src/firewall/add_rules.sh`；目标容器不需要。TLS lab 里缺规则会造成一模一样的"`open` 但没有 TLS 输出"症状。
 - 这些规则是**主机全局**的：生效期间，本机发出的每一个 RST 都会被丢弃，包括无关的 SSH/浏览器会话。扫描前添加，扫描后立即删除——绝不要长期保留。
 - 模块专属参数通过 `-scan-arg` 和 `-probe-arg` 以带引号的字符串传入；例如 `-scan-arg "-banner -ttl"` 会把 `-banner` 和 `-ttl` 传给扫描模块。
 - Windows 上没有随仓库提供的等价脚本。`tcp-syn` 需要加 `-scan-arg "--send-rst"`，在收到 SYN-ACK 后主动关闭半开连接。`zbanner` 默认在 banner 后自己发 RST（除非 `--no-rst`）；`tcp-state` 关闭时也会发 RST。Windows 仍需要 Npcap 和管理员权限。不要假设 Windows 协议栈的行为总是一样：在 Windows 11 的 loopback 目标上，主机协议栈会提前发自己的 RST，ZBanner 因此拿不到 banner；而在非 loopback 的 Kali VM 目标上，ZBanner 能正常完成握手并收到 banner。两种情况下 `--send-rst` 都会额外发一个 ack 正确的显式 RST。如果 Windows 上 banner 扫描只返回 `open`、没有 banner，请抓取 loopback/WLAN 流量，检查是否是主机协议栈提前发了 RST。

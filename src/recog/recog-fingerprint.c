@@ -63,7 +63,6 @@ struct Recog_FP *load_recog_fp(const char *filename, bool unprefix,
     match        = fp->match;
 
     int        pcre2_errcode;
-    size_t     flags_len;
     size_t     regex_len;
     bool       icase;
     bool       mline;
@@ -78,16 +77,12 @@ struct Recog_FP *load_recog_fp(const char *filename, bool unprefix,
         mline        = false;
         tmp_xml_char = xmlGetProp(cur_node, (const xmlChar *)"flags");
         if (tmp_xml_char) {
-            flags_len = strlen((char *)tmp_xml_char);
-            if (flags_len == (sizeof("REG_ICASE") - 1))
+            /* Match by content, not by string length: unrelated flags of the
+             * same length used to enable case-insensitive/multiline mode. */
+            if (strstr((char *)tmp_xml_char, "REG_ICASE"))
                 icase = true;
-            else if (flags_len == (sizeof("REG_MULTILINE") - 1))
+            if (strstr((char *)tmp_xml_char, "REG_MULTILINE"))
                 mline = true;
-            else if (flags_len == (sizeof("REG_ICASE,REG_MULTILINE") - 1)) {
-                icase = true;
-                mline = true;
-            }
-        } else {
             xmlFree(tmp_xml_char);
         }
 
@@ -105,13 +100,22 @@ struct Recog_FP *load_recog_fp(const char *filename, bool unprefix,
             safe_strcpy(tmp_char, regex_len + 1, (char *)tmp_xml_char);
         }
 
+        if (regex_len == 0) {
+            /* Empty pattern (e.g. "^" with --unprefix removed): nothing to
+             * compile, and tmp_char[regex_len-1] below would underflow. */
+            LOG(LEVEL_HINT, "empty regex pattern in %s.\n", tmp_xml_char);
+            FREE(tmp_char);
+            xmlFree(tmp_xml_char);
+            continue;
+        }
+
         if (unsuffix && tmp_char[regex_len - 1] == '$') {
             tmp_char[regex_len - 1] = '\0';
         }
 
         match->compiled_re = pcre2_compile(
             (PCRE2_SPTR)tmp_char, PCRE2_ZERO_TERMINATED,
-            (icase ? PCRE2_CASELESS : 0) | (mline ? PCRE2_DOTALL : 0),
+            (icase ? PCRE2_CASELESS : 0) | (mline ? PCRE2_MULTILINE : 0),
             &pcre2_errcode, &pcre2_erroffset, NULL);
 
         FREE(tmp_char);

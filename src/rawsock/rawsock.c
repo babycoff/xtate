@@ -90,8 +90,16 @@ int pcap_setdirection(pcap_t *pcap, pcap_direction_t direction) {
  ***************************************************************************/
 void rawsock_prepare(void) {
     /* load pcap as stub dynamically */
-    if (pcap_init() != 0)
+    if (pcap_init() != 0) {
         LOG(LEVEL_ERROR, "(libpcap) failed to load\n");
+        /*
+         * Every receive/send path below falls back to the pcap stub; running
+         * without libpcap cannot work, so fail early instead of crashing in
+         * a stub later.
+         */
+        xcmd_try_reboot();
+        exit(1);
+    }
 #ifndef _WIN32
     PFRING_init();
 #endif
@@ -570,7 +578,13 @@ int rawsock_send_packet(Adapter *adapter, AdapterCache *acache,
         int err = PCAP.sendqueue_queue(acache->sendq, &hdr, packet);
         if (err) {
             rawsock_flush(adapter, acache);
-            PCAP.sendqueue_queue(acache->sendq, &hdr, packet);
+            err = PCAP.sendqueue_queue(acache->sendq, &hdr, packet);
+            if (err) {
+                /* Do not silently pretend the packet was sent. */
+                LOG(LEVEL_WARN,
+                    "(sendqueue) packet dropped after queue flush (%u bytes)\n",
+                    length);
+            }
         }
 
         return 0;
@@ -1127,12 +1141,28 @@ pcap_error:
 
 void rawsock_set_filter(Adapter *adapter, const char *scan_filter,
                         const char *user_filter) {
+    char       *combined     = NULL;
+    const char *final_filter = NULL;
+
     if (!adapter->pcap)
         return;
 
-    const char *final_filter;
     if (user_filter && user_filter[0]) {
-        final_filter = user_filter;
+        if (scan_filter && scan_filter[0]) {
+            /*
+             * Combine instead of replacing: a user supplied --bpf-filter must
+             * not be able to hide the responses the scan module itself needs.
+             * (Replacing the scanner filter silently turned e.g. a tcp-syn
+             * scan into "no results".)
+             */
+            size_t len =
+                strlen(scan_filter) + strlen(user_filter) + 32;
+            combined = MALLOC(len);
+            snprintf(combined, len, "(%s) and (%s)", scan_filter, user_filter);
+            final_filter = combined;
+        } else {
+            final_filter = user_filter;
+        }
     } else if (scan_filter && scan_filter[0]) {
         final_filter = scan_filter;
     } else {
@@ -1157,11 +1187,14 @@ void rawsock_set_filter(Adapter *adapter, const char *scan_filter,
     err = PCAP.setfilter(adapter->pcap, &bpfp);
     if (err) {
         LOGPCAPERROR(adapter->pcap, "pcap_setfilter");
+        PCAP.freecode(&bpfp);
+        FREE(combined);
         xcmd_try_reboot();
         exit(1);
     }
 
     PCAP.freecode(&bpfp);
+    FREE(combined);
 }
 
 /**

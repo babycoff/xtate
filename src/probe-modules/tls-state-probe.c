@@ -1779,13 +1779,23 @@ static unsigned tlsstate_parse_response(DataPass *pass, ProbeState *state,
                 }
 
                 ERR_clear_error();
-                res = SSL_write(tls_state->ssl, subpass.data, subpass.len);
+                size_t written = 0;
+                size_t wtotal  = subpass.len;
+                res            = 0;
+                while (written < wtotal) {
+                    res = SSL_write(tls_state->ssl, subpass.data + written,
+                                    (int)(wtotal - written));
+                    if (res <= 0) {
+                        break;
+                    }
+                    written += (size_t)res;
+                }
                 if (subpass.is_dynamic) {
                     FREE(subpass.data);
                     subpass.len = 0;
                 }
 
-                if (res <= 0) {
+                if (written != wtotal) {
                     res_ex = SSL_get_error(tls_state->ssl, res);
                     LOG(LEVEL_WARN,
                         "(TSP Parse RESPONSE: %s) SSL_write error: %d %d\n",
@@ -1887,14 +1897,24 @@ static unsigned tlsstate_parse_response(DataPass *pass, ProbeState *state,
 
                     /*Subprobe has further data to send, encode it first*/
                     ERR_clear_error();
-                    int sub_res =
-                        SSL_write(tls_state->ssl, subpass.data, subpass.len);
+                    int    sub_res = 0;
+                    size_t written = 0;
+                    size_t wtotal  = subpass.len;
+                    while (written < wtotal) {
+                        sub_res = SSL_write(tls_state->ssl,
+                                            subpass.data + written,
+                                            (int)(wtotal - written));
+                        if (sub_res <= 0) {
+                            break;
+                        }
+                        written += (size_t)sub_res;
+                    }
                     if (subpass.is_dynamic) {
                         FREE(subpass.data);
                         subpass.len = 0;
                     }
 
-                    if (sub_res <= 0) {
+                    if (written != wtotal) {
                         res_ex = SSL_get_error(tls_state->ssl, sub_res);
                         LOG(LEVEL_WARN,
                             "(TSP Parse RESPONSE: %s) SSL_write error: %d %d\n",

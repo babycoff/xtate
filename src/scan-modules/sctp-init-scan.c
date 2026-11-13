@@ -88,8 +88,11 @@ static void sctpinit_validate(uint64_t entropy, Recved *recved,
         SCTP_VERI_TAG(recved->packet, recved->parsed.transport_offset);
     unsigned cookie = get_cookie(ip_them, port_them, ip_me, port_me, entropy);
 
-    if (cookie != veri_tag)
+    if (cookie != veri_tag) {
+        /* Not a reply to our INIT: do not report it. */
+        pre->go_record = 0;
         return;
+    }
 
     if (SCTP_IS_CHUNK_TYPE(recved->packet, recved->parsed.transport_offset,
                            SCTP_CHUNK_TYPE_INIT_ACK)) {
@@ -98,6 +101,9 @@ static void sctpinit_validate(uint64_t entropy, Recved *recved,
                                   recved->parsed.transport_offset,
                                   SCTP_CHUNK_TYPE_ABORT)) {
         pre->go_dedup = 1;
+    } else {
+        /* Only INIT-ACK/ABORT are meaningful for this scanner. */
+        pre->go_record = 0;
     }
 }
 
@@ -134,8 +140,10 @@ Scanner SctpInitScan = {
     .required_probe_type = ProbeType_NULL,
     .params              = sctpinit_parameters,
     /*sctp init or init ack in ipv4 & ipv6*/
-    .bpf_filter          = "(ip && sctp && (sctp[12]==2 || sctp[12]==6)) "
-                           "|| (ip6 && sctp && (ip6[40+12]==2 || ip6[40+12]==6))",
+    .bpf_filter = "(ip && sctp && (sctp[12]==2 || sctp[12]==6)) "
+                  "|| (ip6 && (sctp && (ip6[40+12]==2 || ip6[40+12]==6) || "
+                  "ip6 proto 44 || ip6 proto 43 || ip6 proto 60 || "
+                  "ip6 proto 51))",
     .short_desc          = "SCTP INIT scan to find open or closed SCTP port.",
     .desc = "SctpInitScan sends an SCTP INIT packet(chunk) to target port. "
             "Expect an INIT ACK response to believe the port is open or an "

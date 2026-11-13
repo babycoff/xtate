@@ -32,6 +32,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 443 -scan tcp-syn -rate 100 -show info -s
 
 按下面的顺序检查：
 
+0. **Linux 防火墙规则（`zbanner`/`tcp-state`/`tls-state` 先查这一项）。** 缺少 `./firewall/add_rules.sh` 是"端口开放但没有 banner/TLS 输出"的最常见原因：内核 RST 会杀掉半开流。先用 `./firewall/check_rules.sh` 确认，然后安装规则、扫描，并立刻移除规则。所有 state 探针都适用，不只是 ZBanner。
 1. **模块配对。** 配对错误时 Xtate 会拒绝启动并提示 `ScanModule <x> needs probe of <type> type.`；`tcp-syn` 不需要探测模块，`zbanner` 需要 TCP 类型的探测模块，`udp` 需要 UDP 类型，`tcp-state` 需要 STATE 类型。用 `--list-scan` / `--list-probe` 确认名称，用 `--help-scan <module>` 查看参数。
 2. **目标和端口非空。** 没有目标会报 `target IP address list empty.`；没有端口只会给出一条警告并塞入一个假的 `o:0` 端点，于是 TCP 扫描悄无声息地什么都不探测。务必传入 `-p`。
 3. **网卡与源地址。** `sudo ./bin/xtate --list-if` 列出网卡；自动选择会挑第一个带默认网关的接口。用 `-if eth0` 指定（Windows 上也可以直接用 `--list-if` 打印的数字编号，例如 `-if 3`）。`-src-ip`/`-src-port` 配错会让回包过不了 `is_my_ip`/`is_my_port` 检查而被静默丢弃；源地址/源端口区间的大小必须是 2 的幂。
@@ -41,7 +42,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 443 -scan tcp-syn -rate 100 -show info -s
 
 ## 端口开放但拿不到 banner，或连接立刻断开
 
-这是典型的内核 RST 症状。内核看到属于某条它并不认识的 TCP 连接的回包，就发出 RST；服务器在载荷/banner 交换完成之前就把连接拆掉了。
+这是典型的内核 RST 症状。它也能解释 `tls-state`/H2/HTTP3/state 探针只打印 `open` 却没有 TLS/探测输出的情况。内核看到属于某条它并不认识的 TCP 连接的回包，就发出 RST；服务器在载荷/banner 交换完成之前就把连接拆掉了。
 
 测试并修复：
 
@@ -105,7 +106,7 @@ IPv6 有自己的坑：链路本地源地址必须显式给出（`-src-ip fe80::
 - **`zbanner` 默认只取第一个 banner 报文段**，随后发 RST。长 banner、多段 TLS ServerHello 或很长的 HTTP 头需要 `-scan-arg "-all-banner"`（可在同一个字符串里用 `-all-banner-limit <n>` 限制段数）。
 - **TLS 探测看起来没有返回。** `tls-state` 把握手失败记为 `info` 等级；默认也不发送 SNI 或 ALPN，所以虚拟主机/CDN 可能用默认证书/默认站点应答。加上 `-show info`；当目标 IP 属于一个已知 vhost 时，用 `-probe-arg "-sni <hostname> -alpn h2,http/1.1"`；或用 `-probe-arg "-fail-handshake"` 把失败提升为 `failed`。没有显式 SNI 时，请把有状态 TLS 的结果当作默认虚拟主机的证据，而不是你所请求主机名的证据。
 
-这些是 v2.39.1 的设计取舍，不是 bug；完整清单与规避方式见[已知限制](./known-limitations.md)。
+这些是 v2.42.0 的设计取舍，不是 bug；完整清单与规避方式见[已知限制](./known-limitations.md)。
 
 ## 模块缺失或启动失败
 
@@ -138,5 +139,5 @@ setx POWERSHELL_UPDATECHECK Off
 如果是在 Windows Terminal 已经运行时修改环境变量，需要关闭整个终端应用（不是只关标签页）
 或注销/重新登录，让 Explorer 重新读取用户环境。
 
-Xtate 的 `--lang zh` 在退出时会恢复控制台代码页（v2.27.2+），不会把调用方的控制台留在
-被修改状态。
+Xtate 的 `--lang zh` 不会修改控制台代码页（v2.27.2+）；它用 `WriteConsoleW` 写出
+Unicode 帮助，因此即使进程被强制终止，也不会把调用方的控制台留在被修改状态。

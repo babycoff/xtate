@@ -1,4 +1,4 @@
-# Job 控制平面
+# Job 控制面
 
 [English](../control-plane.md) · **中文**
 
@@ -72,7 +72,7 @@ manifest 和分片。
 - 结果大小和游标使用 `uint64_t` 和 64 位 seek。
 - 完成结果可拆成 `<result>.<id>.ndjson` 分片和 `<result>.manifest.json`，并写
   可选 index。
-- 压缩是可选 zstd，默认不压缩。
+- 压缩是可选 zstd，默认 `none`（不压缩）。
 - `job.results` 当前返回 manifest 元数据，不返回字节区间；客户端不能依赖
   `offset`/`limit` 对结果内容分页。
 - `quota_bytes` 在完成后检查并告警，扫描期间不强制。
@@ -89,7 +89,7 @@ manifest 和分片。
 ### 可选 zstd
 
 `-DWITH_ZSTD=ON` 启用 zstd 检测。缺少 zstd 时定义 `NOT_FOUND_ZSTD`；
-`--result-compress=zstd` 会退化为未压缩分片。压缩默认关闭。
+`--result-compress=zstd` 会退化为未压缩分片。默认 `none`（关闭）。
 
 ## 每 job 结果配置
 

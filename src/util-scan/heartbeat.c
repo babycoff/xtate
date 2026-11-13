@@ -1,4 +1,5 @@
 #include "heartbeat.h"
+#include "../util-data/file-open.h"
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -14,7 +15,7 @@ void heartbeat_write(const char *path, uint64_t sent, uint64_t targets,
     if (!path || !path[0]) return;
     char tmp[1200];
     snprintf(tmp, sizeof(tmp), "%s.tmp", path);
-    FILE *fp = fopen(tmp, "w");
+    FILE *fp = file_open_utf8_mode(tmp, "w");
     if (!fp) return;
     fprintf(fp, "time=%lld\nsent=%llu\ntargets=%llu\nsuccess=%llu\n"
                 "failed=%llu\ninfo=%llu\nphase=%s\n",

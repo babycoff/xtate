@@ -9,9 +9,9 @@
 #define XTATE_NAME_TITLE_CASE  "Xtate"
 #define XTATE_VERSION          "2.42.0"
 #define XTATE_VERSION_MAJOR    2
-#define XTATE_VERSION_MINOR    41
-#define XTATE_VERSION_PATCH    2
-#define XTATE_WITH_VERSION     "xtate/2.39.1"
+#define XTATE_VERSION_MINOR    42
+#define XTATE_VERSION_PATCH    0
+#define XTATE_WITH_VERSION     "xtate/2.42.0"
 #define XTATE_DESCRIPTION      "A modular all-stack network scanner for next-generation internet surveys."
 #define XTATE_AUTHOR           "Alvin Chen"
 #define XTATE_CONTACT          "shineccy@aliyun.com"

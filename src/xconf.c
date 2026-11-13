@@ -1,4 +1,5 @@
 #include "xconf.h"
+#include "util-data/file-open.h"
 #include "as/as-query.h"
 #include "generate-modules/generate-modules.h"
 #include "output-modules/output-modules.h"
@@ -4171,7 +4172,7 @@ int xconf_read_conf(XConf *xconf, const char *filename) {
     char *line = MALLOC(65535 * sizeof(char));
     int   err  = 0;
 
-    fp = fopen(filename, "rt");
+    fp = file_open_utf8_mode(filename, "rt");
     if (fp == NULL) {
         char  dir[512];
         char *x;
@@ -4206,7 +4207,7 @@ int xconf_read_conf(XConf *xconf, const char *filename) {
 /***************************************************************************
  ***************************************************************************/
 int xconf_save_conf(XConf *xconf, const char *filename) {
-    FILE *fp = fopen(filename, "wt");
+    FILE *fp = file_open_utf8_mode(filename, "wt");
 
     if (fp == NULL) {
         LOGPERROR("saving configuration file");

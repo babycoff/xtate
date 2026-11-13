@@ -771,7 +771,7 @@ static int qs_flow_write(struct QuicFlow *flow) {
 
 static ProbeTarget qs_probe_target(struct QuicFlow *flow) {
     ProbeTarget pt = {0};
-    pt.target.ip_proto  = flow->ip_them.version;
+    pt.target.ip_proto  = IP_PROTO_UDP;
     pt.target.ip_them   = flow->ip_them;
     pt.target.ip_me     = flow->ip_me;
     pt.target.port_them = flow->port_them;

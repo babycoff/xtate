@@ -6,7 +6,7 @@ Xtate is a modular all-stack network scanner for large-scale active measurement.
 
 This page takes you from a source checkout to your first scan on Linux or Windows. It assumes you are comfortable with a shell, `sudo`, and basic TCP/IP; it is not a tutorial on scanning itself.
 
-> Documented against Xtate v2.39.1. If your build behaves differently, `--help` and the module help are authoritative.
+> Documented against Xtate v2.42.0. If your build behaves differently, `--help` and the module help are authoritative.
 
 ## Requirements
 
@@ -14,7 +14,7 @@ This page takes you from a source checkout to your first scan on Linux or Window
 |:---|:---|
 | OS | Linux (Ubuntu 22.04/24.04 are the reference environments) or Windows 10/11 |
 | CPU | 64-bit **little-endian** only; CMake stops early otherwise |
-| Build system | CMake ≥ 3.20 and a C99 compiler (GCC, Clang, MSVC, MinGW-w64) |
+| Build system | CMake ≥ 3.13 and a C99 compiler (GCC, Clang, MSVC, MinGW-w64) |
 | Packet I/O | libpcap (Linux) or Npcap (Windows, runtime) |
 | Privileges | root, or `CAP_NET_RAW`+`CAP_NET_ADMIN`; Administrator on Windows |
 
@@ -25,15 +25,17 @@ dependencies are present, so the complete module set is compiled in.
 
 | Platform | Compiler | Status | Optional dependencies |
 |:---|:---|:---|:---|
-| Ubuntu 24.04 | GCC 13.3 | build + `--selftest` pass, 12/28/7/5 modules | OpenSSL, PCRE2, LibXml2, BSON, mongoc, ngtcp2/GnuTLS |
-| Ubuntu 24.04 | Clang 18.1 | build + `--selftest` pass, 12/28/7/5 modules | OpenSSL, PCRE2, LibXml2, BSON, mongoc, ngtcp2/GnuTLS |
+| Ubuntu 24.04 | GCC 13.3 | build + `--selftest` pass, 12/60/7/5 modules | OpenSSL, PCRE2, LibXml2, BSON, mongoc, ngtcp2/GnuTLS |
+| Ubuntu 24.04 | Clang 18.1 | build + `--selftest` pass, 12/60/7/5 modules | OpenSSL, PCRE2, LibXml2, BSON, mongoc, ngtcp2/GnuTLS |
 | Windows 10/11 | MSVC 19.5x (Visual Studio 2022/2026) | build + `--selftest` pass; probe count depends on optional libs | OpenSSL via Scoop; PCRE2/BSON/mongoc not installed |
 | Windows 10/11 | Clang 23 (clang-cl) | build + `--selftest` pass; probe count depends on optional libs | OpenSSL via Scoop; PCRE2/BSON/mongoc not installed |
 | Windows 10/11 | MinGW-w64 GCC 16 | build + `--selftest` pass; probe count depends on optional libs | no OpenSSL (Scoop build is MSVC-only) |
 
-The module counts are a quick way to verify your dependencies: 28 probes, 7
-output modules and 12 scans (including `quic-state`) means everything was found;
-fewer means at least one optional library was not discovered.
+The module counts are a quick way to verify your dependencies: 60 probes, 7
+output modules, 12 scans and 5 generate modules means everything was found
+(`quic-state` is one of the scans and `http3-state` one of the probes). Without
+ngtcp2/GnuTLS expect 59 probes and 11 scans; fewer than that means at least one
+other optional library was not discovered.
 
 ## Build on Linux
 
@@ -113,7 +115,7 @@ compact build reference.
 
 1. **Visual Studio 2022 or 2026** with the *Desktop development with C++*
    workload, or **MinGW-w64** (`scoop install mingw`).
-2. **CMake ≥ 3.20** (`scoop install cmake`).
+2. **CMake ≥ 3.13** (`scoop install cmake`).
 3. **Npcap** in WinPcap-compatible mode for packet I/O. `wpcap.dll` is loaded at
    runtime; it is not needed to compile, but no scan will run without it.
 4. A 64-bit little-endian host. Run the commands below from a normal PowerShell
@@ -157,9 +159,9 @@ cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
   -DCMAKE_TOOLCHAIN_FILE="$env:USERPROFILE\scoop\apps\vcpkg\current\scripts\buildsystems\vcpkg.cmake"
 ```
 
-Without PCRE2, Windows builds have 15 probes instead of 21. Without
-libbson/mongoc, they have 5 output modules instead of 7. Those are expected
-results, not build failures.
+Without PCRE2, a full build has 54 probes instead of 60 (a Windows build without
+ngtcp2 has 53 instead of 59). Without libbson/mongoc, it has 5 output modules
+instead of 7. Those are expected results, not build failures.
 
 ### MSVC
 
@@ -278,7 +280,7 @@ shell with Npcap installed.
 | `CMake Error: Not a file: .../CMakeFiles/VerifyGlobs.cmake` | The source path contains non-ASCII characters and MinGW Makefiles mis-encodes it. Use an ASCII staging path or `scripts/build-windows.ps1`. |
 | `Could NOT find OpenSSL ... missing OPENSSL_CRYPTO_LIBRARY` with MinGW | The Scoop OpenSSL package is MSVC-only. Build with MSVC/clang-cl, or provide a MinGW-built OpenSSL. |
 | `PCRE2 (null)` in `--version` | PCRE2 headers/library were not found. On Debian/Ubuntu install `libpcre2-dev` and `pkg-config`; on Windows use vcpkg (Scoop has no PCRE2 dev package). |
-| `OpenSSL (null)`, 52 probes | OpenSSL was skipped. On Windows use MSVC/clang-cl with Scoop OpenSSL; on Linux install `libssl-dev`. |
+| `OpenSSL (null)`, four probes missing | OpenSSL was skipped, so `jarm`, `tls-state`, `quic` and `ssh-kex` are absent (a full build shows 56 probes instead of 60). On Windows use MSVC/clang-cl with Scoop OpenSSL; on Linux install `libssl-dev`. |
 | `bson`/`mongodb` output modules missing | libbson/libmongoc were not found; install them or accept the reduced output set. |
 | `--selftest` fails with `timing error` | Fixed in 2.27.2 on Windows; with older builds the 1% timing bound is too strict for the Windows scheduler. Update to the current tree. |
 | `--selftest` exits non-zero | Treat it as a real failure now; the summary prints `Regression test: failed` and the process exit code is non-zero. |

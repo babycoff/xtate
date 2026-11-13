@@ -287,7 +287,9 @@ int stack_ndpv6_incoming_request(NetStack *stack, PreInfo *parsed,
         return -1;
 
     /* Make sure there's at least a full header */
-    offset    = parsed->transport_offset;
+    offset = parsed->transport_offset;
+    if (offset > length)
+        return -1;
     remaining = length - offset;
     if (remaining < 24)
         return -1;
@@ -314,7 +316,7 @@ int stack_ndpv6_incoming_request(NetStack *stack, PreInfo *parsed,
     response = stack_get_pktbuf(stack);
 
     /* Use the request packet as a template for the response */
-    memcpy(response->px, px, length);
+    memcpy(response->px, px, length > max ? max : length);
     buf2 = response->px;
 
     /* Set the destination MAC address and destination IPv6 address*/
@@ -399,6 +401,12 @@ static int _extract_router_advertisement(const unsigned char *buf,
         size_t               len2 = buf[offset + 1] * 8;
         size_t               off2 = 2;
         const unsigned char *buf2 = buf + offset;
+
+        /* Reject zero-length options (would loop forever) and options that
+         * extend beyond the received frame (would read out of bounds). */
+        if (len2 < 8 || len2 > length - offset) {
+            break;
+        }
 
         switch (type) {
             case NDP_OPT_TYPE_PREFIX_INFO: {

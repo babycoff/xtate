@@ -15,7 +15,7 @@
 
 - QUIC 能力探测（`quic`）：合法 QUIC v1 Initial，识别 Version
   Negotiation/Retry/Initial/Handshake；本地 aioquic lab。
-- 模块数量：27 个探测。
+- 模块数量：59 个探测。
 - 本机目标上的 Salesforce JARM 1.0 对比；修复 `jarm` TLS 1.3 扩展解析偏移。
 - `jarm --first-probe N` 轮换；`jarm_slot` 保留标准编号，聚合与顺序无关。
 - `tls-state` 的 SMTP/IMAP/POP3/FTP STARTTLS；升级后输出证书并可运行子探测。
@@ -88,18 +88,19 @@ JARM fuzzy hash 已改为 Salesforce JARM 1.0 语义：
 
 ## P2 — 协议探针
 
-已实现：JARM 官方对比/first-probe、SSH banner/KEXINIT、cleartext `h2c`、
-TLS/ALPN h2 `h2`、TLS 证书细节、SMTP/IMAP/POP3/FTP STARTTLS。
+状态：JARM 哈希/参考向量的工作、SSH banner/KEX、cleartext `h2c` 与 `h2` 状态探针（通过 HLTCP 的 TLS/ALPN h2）均已实现。`h2` 只有最小的静态/字面量 HPACK 请求以及 frame/HEADERS/DATA 解析；Huffman/动态 HPACK、完整流管理、STARTTLS、HTTP/3/QUIC 与 TLS 变体指纹仍待做。TLS 证书/subject 细节已存在于 `tls-state`；HTTP 状态行为已存在于 `http-state`。
 
-仍待做：
+在不引入扫描器侧每目标状态的前提下增加协议专用细节探针。每个探针在合适处复用单 slot 或 `ProbeSlot_Always`。
 
-1. SSH 实际 KEX 包交换、host-key 指纹和协商结果。
-2. 完整 HTTP/2：HPACK Huffman/动态表、SETTINGS ACK、流/窗口和更强的 ALPN 校验。
-3. TLS 变体指纹：ClientHello 变体、扩展顺序、GREASE、ALPN 顺序。
-4. QUIC/HTTP3 独立传输研究，不把 UDP 数据报当 HTTP/3。
-5. JARM 失败模式：alert/非 TLS/缺失 slot 的 scanner-level lab。
+计划顺序：
 
-HTTP/1 探针按当前方向冻结，不再继续重写。
+1. TLS 证书/细节探针已在 `tls-state` 中通过 `--dump-cert-details` 实现（subject、issuer、SAN、有效期、密钥类型/位数、签名算法、ALPN、版本/密码套件）。
+2. SSH banner 探针已实现（`ssh`），包括合并的 KEX/host-key 算法列表。完整 KEX 包交换仍是后续工作。
+3. HTTP/1 工作在结构化响应解析器一轮之后冻结；不再计划进一步的 HTTP 重写。
+4. SMTP、IMAP、POP3 与 FTP 的 STARTTLS 适配器已在 `tls-state --starttls` 中实现，包括升级后的证书细节。
+5. HTTP/2 保持最小（`h2`）：静态/字面量 HPACK，无 Huffman/动态表，无完整流管理。HTTP/3/QUIC 仍是独立研究。
+6. TLS 变体指纹研究：ClientHello 变体、扩展顺序、GREASE、ALPN 顺序。
+7. QUIC 探针与 HTTP/3 探索：独立的 UDP/QUIC 传输路径、ALPN `h3`、QUIC Initial/Handshake 包与可选 QUIC 库评估。未完成 QUIC 握手时，不要把 UDP 数据报称为 HTTP/3 探针。
 
 约束：
 
@@ -114,7 +115,6 @@ P3/P4 可行性见[P3/P4 可行性](./feasibility.md)。
 
 第一轮结构化响应解析已实现。按当前方向 HTTP/1 工作到此为止；共享请求构造器
 抽取和跨段 chunked 状态暂缓。详见 [HTTP 探针审计](./http-probes-audit.md)。
-`h2c`/`h2` 保持独立。
 
 ## P3 — 扫描控制
 
@@ -236,4 +236,4 @@ MCP/TUI/GUI 使用的结果路径状态：
 - [x] 控制面/数据面分离，供 MCP/TUI/GUI 使用；
 - [ ] 扫描期间强制单 job 磁盘配额（目前完成后检查并告警）。
 
-见 [控制平面](./control-plane.md)。
+见 [控制面](./control-plane.md)。

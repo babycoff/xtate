@@ -125,6 +125,9 @@ static void icmptime_validate(uint64_t entropy, Recved *recved,
         pre->go_dedup        = 1;
         pre->dedup_port_them = 0;
         pre->dedup_port_me   = 0;
+    } else {
+        /* Wrong timestamp id/seq: this reply does not belong to our probe. */
+        pre->go_record = 0;
     }
 }
 

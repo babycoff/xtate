@@ -3,14 +3,19 @@
   "$id": "https://github.com/babycoff/xtate/schemas/scan-request.schema.json",
   "title": "Xtate scan request",
   "type": "object",
-  "required": ["scan", "targets"],
+  "required": ["scan"],
   "properties": {
     "scan": {"type": "string", "minLength": 1},
-    "probe": {"type": "string"},
+    "probe": {"type": "string", "minLength": 1},
     "targets": {
       "type": "array",
       "minItems": 1,
       "items": {"type": "string", "minLength": 1}
+    },
+    "include_file": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Read targets from this file (one address or range per line). Mutually exclusive with targets."
     },
     "ports": {
       "type": "array",
@@ -26,7 +31,21 @@
     },
     "rate": {"type": "integer", "minimum": 1},
     "timeout_sec": {"type": "integer", "minimum": 1, "maximum": 86400},
-    "dry_run": {"type": "boolean", "default": true}
+    "dry_run": {"type": "boolean", "default": true},
+    "result_path": {"type": "string", "minLength": 1},
+    "chunk_size": {"type": "integer", "minimum": 0},
+    "compression": {"type": "string", "minLength": 1},
+    "index": {"type": "boolean"},
+    "quota_bytes": {"type": "integer", "minimum": 0},
+    "authorized": {
+      "type": "boolean",
+      "description": "Required by MCP start_scan before a job may be started."
+    },
+    "interface": {"type": "string", "minLength": 1}
   },
+  "oneOf": [
+    {"required": ["targets"], "not": {"required": ["include_file"]}},
+    {"required": ["include_file"], "not": {"required": ["targets"]}}
+  ],
   "additionalProperties": false
 }

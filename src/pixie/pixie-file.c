@@ -27,6 +27,8 @@ int pixie_fopen_shareable(FILE **in_fp, const char *filename, bool is_append) {
     {
         HANDLE hFile;
         int    fd;
+        DWORD  disposition = is_append ? OPEN_ALWAYS : CREATE_ALWAYS;
+        wchar_t wpath[2048];
 
         /* The normal POSIX C functions lock the file */
         /* int fd = open(filename, O_RDWR | O_CREAT, _S_IREAD | _S_IWRITE); */ /* Fails
@@ -36,21 +38,42 @@ int pixie_fopen_shareable(FILE **in_fp, const char *filename, bool is_append) {
 
         /* We need to use WINAPI + _open_osfhandle to be able to use
            file descriptors (instead of WINAPI handles) */
-        hFile = CreateFileA(
-            filename, GENERIC_WRITE | (is_append ? FILE_APPEND_DATA : 0),
+        if (!filename ||
+            MultiByteToWideChar(CP_UTF8, 0, filename, -1, wpath,
+                (int)(sizeof(wpath) / sizeof(wpath[0]))) <= 0)
+            return -1;
+        hFile = CreateFileW(
+            wpath, GENERIC_WRITE | (is_append ? FILE_APPEND_DATA : 0),
             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
-            CREATE_ALWAYS, FILE_ATTRIBUTE_TEMPORARY, NULL);
+            disposition, FILE_ATTRIBUTE_TEMPORARY, NULL);
         if (hFile == INVALID_HANDLE_VALUE) {
             return -1;
         }
 
+        /* CREATE_ALWAYS truncates an existing file, which silently breaks
+         * append mode. In append mode position the handle at the end. */
+        if (is_append) {
+            LARGE_INTEGER zero;
+            zero.QuadPart = 0;
+            if (!SetFilePointerEx(hFile, zero, NULL, FILE_END)) {
+                CloseHandle(hFile);
+                return -1;
+            }
+        }
+
         fd = _open_osfhandle((intptr_t)hFile,
-                             _O_CREAT | _O_RDONLY | _O_TEMPORARY);
+                             _O_CREAT | _O_RDONLY | _O_TEMPORARY |
+                                 (is_append ? _O_APPEND : 0));
         if (fd == -1) {
+            CloseHandle(hFile);
             return -1;
         }
 
-        fp = _fdopen(fd, "w");
+        fp = _fdopen(fd, is_append ? "a" : "w");
+        if (fp == NULL) {
+            _close(fd);
+            return -1;
+        }
     }
 
 #else

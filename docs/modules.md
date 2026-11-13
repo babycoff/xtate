@@ -4,8 +4,9 @@
 
 Xtate is assembled from four kinds of module. Each is a C struct plus one line in a
 `NULL`-terminated registry; there is no runtime plugin loading. A full build registers
-**11 base Scan + 55 Probe + 7 Output + 5 Generate** modules, plus optional
-`quic-state` and `http3-state` when ngtcp2/GnuTLS is available. Modules whose optional library is missing simply disappear
+**12 Scan + 60 Probe + 7 Output + 5 Generate** modules (84 total); without ngtcp2/GnuTLS
+it registers 11/59/7/5 (82), because `quic-state` and `http3-state` disappear with that
+dependency. Modules whose optional library is missing simply disappear
 from the build (and from `--list-*`).
 
 | Kind | Responsibility | Parameter | Registry |
@@ -23,7 +24,7 @@ sub-parameters travel as one quoted string through `-scan-arg`, `-probe-arg`,
 
 ```bash
 xtate --list-scan      # 11, or 12 with quic-state
-xtate --list-probe     # 27 probe modules
+xtate --list-probe     # 59, or 60 with http3-state
 xtate --list-out       # 7 output modules
 xtate --list-gen       # 5 generate modules
 
@@ -42,7 +43,6 @@ xtate --help-gen blackrock
 | `tcp-state` | state | HLTCP user-space TCP; full conversations for TLS/HTTP state probes. |
 | `udp` | udp | Single-packet UDP scan with a probe payload; ICMP port-unreachable means closed. |
 | `quic-state` | state | Raw-UDP stateful QUIC handshake with ngtcp2/GnuTLS; reports version, TLS/ALPN and certificate fields, then runs a state sub-probe. Optional build. |
-| `http3-state` | state | HTTP/3 request over `quic-state`; methods/headers/body, Huffman QPACK strings, full static table, structured response headers. Optional build. |
 | `icmp-echo` | - | ICMP echo host discovery; can record TTL and IPID. |
 | `icmp-time` | - | ICMP timestamp discovery, IPv4 only. |
 | `sctp-init` | - | SCTP INIT scan; INIT-ACK is open, ABORT is closed. |
@@ -55,7 +55,7 @@ Every scan module exposes `--help-scan <name>` with its own options (record TTL/
 repeat/dedup switches, TTL overrides, ...). Which mode to pick, and which of them needs
 firewall rules, is covered in [Scanning modes](./scanning-modes.md).
 
-## Probe modules (27, plus optional `http3-state`)
+## Probe modules (59, plus optional `http3-state`)
 
 A probe declares a **type** that must match the scan module: `tcp` for `zbanner`, `udp` for
 `udp`, `state` for `tcp-state`. It may declare a `ProbeSlotPlan` (JARM and the `slot-test` examples); see
@@ -89,8 +89,9 @@ typedef struct ProbeSlotPlan {
   `tools/jarm_aggregate.py` joins them after the scan.
 - Same-connection multi-step work does not belong here; use HLTCP/state probes.
 
-JARM is the only probe shipped with a multi-slot plan today, but the plan is
-not JARM-specific: `Always` covers parallel variants, and
+JARM is the only probe that uses `ProbeSlot_AfterFirstReply`; the `slot-test` and
+`slot-test-udp` examples use `ProbeSlot_Always`. The plan is not JARM-specific:
+`Always` covers parallel variants, and
 `AfterFirstReply` covers conditional fan-out. A future protocol-version or
 challenge-response probe can reuse the same engine path without a new mode.
 
@@ -193,7 +194,7 @@ STARTTLS is emitted as `starttls error`. `--dump-cert-details` outputs
 `cert_serial`, `cert_signature_algorithm`, `cert_public_key`,
 `cert_public_key_bits`, `cert_san`, `tls_version`, `tls_cipher` and `tls_alpn`.
 
-### General (21)
+### General (25, plus optional `http3-state`)
 
 | Probe | Type | What it does |
 |:---|:---:|:---|
@@ -203,8 +204,9 @@ STARTTLS is emitted as `starttls error`. `--dump-cert-details` outputs
 | `hello-udp` | udp | The same for UDP. |
 | `hello-state` | state | The same over a stateful TCP connection. |
 | `tls-hello` | tcp | Fixed ClientHello; reads ServerHello version/record hints without completing a handshake. |
-| `tls-state` | state | OpenSSL-backed TLS handshake; `--starttls smtp|imap|pop3|ftp` upgrades first; certificate/cipher/version dump; `--dump-cert-details` adds structured X.509/SAN/public-key/validity/ALPN; sub-probe over TLS. |
+| `tls-state` | state | OpenSSL-backed TLS handshake; `--starttls smtp\|imap\|pop3\|ftp` upgrades first; certificate/cipher/version dump; `--dump-cert-details` adds structured X.509/SAN/public-key/validity/ALPN; sub-probe over TLS. |
 | `ssh` | tcp | Configurable SSH banner plus KEX/host-key and cipher/MAC/compression lists. |
+| `ssh-kex` | state | Unauthenticated SSH curve25519 KEX; reports the host-key type and its SHA256 fingerprint. |
 | `h2c` | tcp | Cleartext h2c preface, configurable SETTINGS/PING fingerprint, frame/settings parsing. Not HTTP/2 over TLS. |
 | `h2` | state | TLS/ALPN h2 HTTP/2 via HLTCP; preface, SETTINGS, minimal HPACK request, frames/HEADERS/DATA. |
 | `redis` | tcp | Read-only `INFO server` Redis identification and structured version/mode/os/role. |
@@ -214,6 +216,7 @@ STARTTLS is emitted as `starttls error`. `--dump-cert-details` outputs
 | `socks5` | state | SOCKS5 greeting and method selection. |
 | `telnet` | state | Initial Telnet banner and IAC option parse. |
 | `quic` | udp | QUIC v1 Initial capability probe; classifies Version Negotiation/Retry/Initial/Handshake; no QUIC handshake or HTTP/3 claim. |
+| `http3-state` | state | HTTP/3 request over `quic-state`; methods/headers/body, Huffman QPACK strings, full static table, structured response headers. Optional: present only in ngtcp2/GnuTLS builds. |
 | `jarm` | tcp | JARM via 10 ClientHello slots; emits `jarm_part`, aggregated by `tools/jarm_aggregate.py`. |
 | `doh-h2` | state | DoH over HTTP/2 POST inside `tls-state` (`-alpn h2`); HPACK literal/Huffman headers. |
 | `doh` | state | DNS over HTTPS, HTTP/1.1 POST inside `tls-state`. |
@@ -222,7 +225,7 @@ STARTTLS is emitted as `starttls error`. `--dump-cert-details` outputs
 | `snmp` | udp | SNMP (v1/v2c) request and MIB-guided host info extraction. |
 | `echo` | udp | Four cookie-derived bytes; accepts a reply containing them. |
 
-### Batch B protocols (15)
+### Batch B protocols (16)
 
 | Probe | Type | What it does |
 |:---|:---:|:---|
@@ -231,6 +234,7 @@ STARTTLS is emitted as `starttls error`. `--dump-cert-details` outputs
 | `postgres` | tcp | PostgreSQL SSLRequest capability check. |
 | `postgres-state` | state | SSLRequest + auth-boundary StartupMessage. |
 | `mongodb` | tcp | OP_MSG `hello` and BSON identification. |
+| `mongodb-state` | state | MongoDB `hello`/BSON probe for `tls-state` composition. |
 | `smtp` | tcp | Read SMTP 220 banner. |
 | `smtp-state` | state | SMTP greeting + EHLO capabilities/STARTTLS. |
 | `imap` | tcp | Read IMAP greeting. |
@@ -275,9 +279,16 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80 -scan zbanner -probe lua-tcp \
   -probe-arg "-script lua-probes/tcp-example.lua" -show info
 ```
 
-Lua is loaded at runtime; if no Lua shared library is available the probes are still listed but fail at startup with a load error (install Lua 5.3 or 5.4). Lua probes use separate tx/rx/handler Lua states; selecting `lua-tcp`/`lua-udp` currently forces `--tx-thread-count 1` and `--rx-handler-count 1`.
+Lua is loaded at runtime; if no Lua shared library is available the probes are still listed but fail at startup with a load error (install Lua 5.3 or 5.4). Lua probes use three separate Lua states (tx, rx and handler); selecting `lua-tcp`/`lua-udp` requires `--tx-thread-count 1` and `--rx-handler-count 1` — a larger value aborts startup with an error instead of being overridden.
 The example scripts in `lua-probes/` declare `ProbeName`, `ProbeType` and
 `ProbeDesc` in the script header.
+
+### Developer examples (2)
+
+| Probe | Type | What it does |
+|:---|:---:|:---|
+| `slot-test` | tcp | Three-slot `ProbeSlot_Always` example; safe to read as a template. |
+| `slot-test-udp` | udp | UDP variant of the three-slot `ProbeSlot_Always` example. |
 
 ### Plumbing (3)
 
@@ -327,8 +338,10 @@ from their own sub-parameters and use the global target options only where noted
 - `--list-scan`, `--list-probe`, `--list-out`, `--list-gen` print the registry in order with
   a one-line description; `--help-<kind> <name>` prints type, slot plan and
   the module's own parameter table.
-- Optional dependencies change the inventory. A build without OpenSSL has no `jarm` or
-  `tls-state`; without PCRE2 there is no `hello-udp`, `recog*` or `nmap*`; without libbson /
+- Optional dependencies change the inventory. A build without OpenSSL has no `jarm`,
+  `tls-state`, `quic` or `ssh-kex`; without ngtcp2/GnuTLS there is no `quic-state`
+  scan and no `http3-state` probe; without PCRE2 there is no `hello-udp`, `recog*` or
+  `nmap*`; without libbson /
   libmongoc there is no `bson` / `mongodb` output; a Lua-backed build still lists
   `lua-tcp` / `lua-udp`, but they fail at startup if the shared library is missing. Recog
   also needs libxml2 to load fingerprint files.

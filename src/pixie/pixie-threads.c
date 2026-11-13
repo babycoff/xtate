@@ -191,11 +191,45 @@ unsigned pixie_cpu_get_count(void) {
 
 /****************************************************************************
  ****************************************************************************/
+#if defined(_WIN32)
+typedef struct PixieThreadStart {
+    void (*fn)(void *);
+    void *arg;
+} PixieThreadStart;
+
+static unsigned __stdcall _pixie_thread_start(void *p) {
+    PixieThreadStart start = *(PixieThreadStart *)p;
+
+    free(p);
+    start.fn(start.arg);
+    return 0;
+}
+#endif
+
 size_t pixie_begin_thread(void (*worker_thread)(void *), unsigned flags,
                           void *worker_data) {
 #if defined(_WIN32)
+    size_t            handle;
+    PixieThreadStart *start;
+
     UNUSEDPARM(flags);
-    return _beginthread(worker_thread, 0, worker_data);
+    start = malloc(sizeof(*start));
+    if (start == NULL) {
+        return 0;
+    }
+    start->fn  = worker_thread;
+    start->arg = worker_data;
+
+    /* _beginthread() closes its handle when the thread exits, so a later
+     * join would wait on a stale/recycled handle. _beginthreadex() returns a
+     * handle that the joiner owns and closes. */
+    handle = (size_t)_beginthreadex(NULL, 0, _pixie_thread_start, start, 0,
+                                    NULL);
+    if (handle == 0) {
+        free(start);
+        return 0;
+    }
+    return handle;
 #else
     typedef void *(*PTHREADFUNC)(void *);
     pthread_t thread_id = 0;
@@ -207,8 +241,12 @@ size_t pixie_begin_thread(void (*worker_thread)(void *), unsigned flags,
 /****************************************************************************
  ****************************************************************************/
 void pixie_thread_join(size_t thread_handle) {
+    if (thread_handle == 0) {
+        return; /* thread creation failed, or the handle is already closed */
+    }
 #if defined(_WIN32)
     WaitForSingleObject((HANDLE)thread_handle, INFINITE);
+    CloseHandle((HANDLE)thread_handle);
 #else
     void *p;
 
@@ -314,6 +352,7 @@ void *pixie_create_barrier(unsigned total_threads) {
     is_succces = InitializeSynchronizationBarrier(p_barrier, total_threads, 0);
     if (is_succces == FALSE) {
         FREE(p_barrier);
+        return NULL;
     }
     return p_barrier;
 #else
@@ -326,6 +365,7 @@ void *pixie_create_barrier(unsigned total_threads) {
     res = pthread_barrier_init(p_barrier, NULL, total_threads);
     if (res != 0) {
         FREE(p_barrier);
+        return NULL;
     }
     return p_barrier;
 #endif
@@ -374,6 +414,7 @@ void *pixie_create_rwlock() {
     res = pthread_rwlock_init(p_rwlock, NULL);
     if (res != 0) {
         FREE(p_rwlock);
+        return NULL;
     }
     return p_rwlock;
 #endif
@@ -438,6 +479,7 @@ void *pixie_create_mutex() {
     res = pthread_mutex_init(p_mutex, NULL);
     if (res != 0) {
         FREE(p_mutex);
+        return NULL;
     }
     return p_mutex;
 #endif

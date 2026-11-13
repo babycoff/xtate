@@ -1,4 +1,5 @@
 #include "job-manager.h"
+#include "../util-data/file-open.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -222,7 +223,7 @@ uint64_t job_read_results(Job *job, uint64_t offset, char *buf, size_t cap,
     if (next_offset) *next_offset = offset;
     if (truncated) *truncated = false;
     if (!job || !job->result_path || !buf || cap == 0) return 0;
-    FILE *fp = fopen(job->result_path, "rb");
+    FILE *fp = file_open_utf8_mode(job->result_path, "rb");
     if (!fp) return 0;
 #ifdef _WIN32
     if (_fseeki64(fp, (__int64)offset, SEEK_SET) != 0) { fclose(fp); return 0; }
@@ -322,14 +323,17 @@ unsigned job_elapsed_ms(const Job *j) {
 }
 
 #ifdef _WIN32
+/* The security attributes matter: the worker inherits its stdout/stderr
+ * through STARTF_USESTDHANDLES, which only works for inheritable handles. */
 static HANDLE create_file_utf8(const char *path, DWORD access, DWORD share,
-                               DWORD creation, DWORD flags) {
+                               DWORD creation, DWORD flags,
+                               LPSECURITY_ATTRIBUTES sa) {
     if (!path || !path[0]) return INVALID_HANDLE_VALUE;
     wchar_t wpath[2048];
     int n = MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath,
                                 (int)(sizeof(wpath) / sizeof(wpath[0])));
     if (n <= 0) return INVALID_HANDLE_VALUE;
-    return CreateFileW(wpath, access, share, NULL, creation, flags, NULL);
+    return CreateFileW(wpath, access, share, sa, creation, flags, NULL);
 }
 #endif
 static Job *new_job(JobManager *m, const char *result_path,
@@ -386,11 +390,10 @@ Job *job_start(JobManager *m, char *const argv[], const char *result_path,
     SECURITY_ATTRIBUTES sa = {sizeof(sa), NULL, TRUE};
     HANDLE out = create_file_utf8(result_path, GENERIC_WRITE,
                                   FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                  CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL);
+                                  CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, &sa);
     HANDLE err = create_file_utf8(log_path, GENERIC_WRITE,
                                   FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                  CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL);
-    (void)sa;
+                                  CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, &sa);
     if (out == INVALID_HANDLE_VALUE) {
         out = CreateFileA("NUL", GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
                           &sa, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -483,6 +486,13 @@ Job *job_start(JobManager *m, char *const argv[], const char *result_path,
     }
     pid_t pid = fork();
     if (pid == 0) {
+        /* The worker must never read the control plane's stdin: an
+         * include_file of "-" would otherwise block or steal control input. */
+        int devnull = open("/dev/null", O_RDONLY);
+        if (devnull >= 0) {
+            dup2(devnull, STDIN_FILENO);
+            if (devnull != STDIN_FILENO) close(devnull);
+        }
         setsid();
         prctl(PR_SET_PDEATHSIG, SIGKILL);
         dup2(out, STDOUT_FILENO);
@@ -519,7 +529,7 @@ static void terminate_job(Job *j) {
 static bool read_heartbeat(Job *j, long long *sent, long long *targets,
                            long long *stamp, char *phase, size_t phase_len) {
     if (!j->heartbeat_path) return false;
-    FILE *fp = fopen(j->heartbeat_path, "r");
+    FILE *fp = file_open_utf8_mode(j->heartbeat_path, "r");
     if (!fp) return false;
     char line[256];
     *stamp = 0;

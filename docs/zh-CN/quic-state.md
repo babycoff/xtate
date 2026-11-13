@@ -8,7 +8,7 @@ IPv4/IPv6 UDP 报文；ngtcp2 负责 QUIC 包状态，GnuTLS 负责 TLS 1.3。Xt
 
 它不是浏览器 QUIC 客户端。传输层里程碑完成 QUIC/TLS 握手、输出版本/ALPN/证书
 证据，并运行 state 应用探测。已包含 HTTP/3 请求探针 `http3-state` 作为第一个
-实质子探针；DoQ 仍是后续应用探测。
+实质子探测；DoQ 仍是后续应用探测。
 
 ## 构建
 
@@ -121,7 +121,7 @@ xtate --list-scan | grep quic-state
 - 本里程碑明确不支持 Windows MSVC 的 `quic-state`/`http3-state`；见上方平台表和
   TODO。
 
-## HTTP/3 子探针
+## HTTP/3 子探测
 
 `http3-state` 打开 client control/QPACK 流，在一个 client bidirectional stream
 上发送一个请求，并解析响应 HEADERS/DATA。输出 classification 为 `http3`，包含

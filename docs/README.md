@@ -106,7 +106,9 @@ The docs are written against the v2.42.0 tree. If you are on a newer commit and 
 
 These are not written yet:
 
-- Recipes for common surveys (HTTP banners, TLS certificates, IPv6, LAN discovery)
 - Generated CLI and per-module reference
+
+Recipes for common surveys (HTTP banners, TLS certificates, IPv6, LAN discovery)
+live in [Scanning modes](./scanning-modes.md#recipes).
 
 A browsable documentation site is planned as a separate step; for now everything is plain Markdown in this directory.

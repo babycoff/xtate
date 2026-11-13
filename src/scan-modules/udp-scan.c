@@ -528,11 +528,15 @@ static void udp_handle(unsigned th_idx, uint64_t entropy,
          * NOTE: Do not replace the IPs of output item. IPs in ICMP payload can
          * not be our original target sometimes.
          */
-        parse_icmp_port_unreachable(
-            recved->packet + recved->parsed.transport_offset,
-            recved->parsed.transport_length, &icmp_ip_them,
-            &item->target.port_them, &icmp_ip_me, &item->target.port_me,
-            &icmp_proto);
+        if (!parse_icmp_port_unreachable(
+                recved->packet + recved->parsed.transport_offset,
+                recved->parsed.transport_length, &icmp_ip_them,
+                &item->target.port_them, &icmp_ip_me, &item->target.port_me,
+                &icmp_proto)) {
+            /* Malformed/truncated ICMP quote: cannot report a port state. */
+            item->no_output = 1;
+            return;
+        }
 
         if (udp_conf.is_port_failure)
             item->level = OUT_FAILURE;

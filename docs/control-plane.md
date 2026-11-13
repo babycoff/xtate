@@ -94,9 +94,9 @@ returns the manifest path; control messages never carry result bytes.
 
 ### Optional zstd
 
-`-DWITH_ZSTD=ON` enables zstd detection. If zstd is missing, the build defines
+The `WITH_ZSTD` CMake option (default `ON`) enables zstd detection. If zstd is missing, the build defines
 `NOT_FOUND_ZSTD`; `--result-compress=zstd` then falls back to uncompressed
-chunks. Compression is opt-in; the default is `none`.
+chunks. Compression is opt-in per job; the default is `none`.
 
 ## Per-job result config
 

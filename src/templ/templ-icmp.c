@@ -369,14 +369,39 @@ bool parse_icmp_port_unreachable(const unsigned char *transport_px,
                                  unsigned length, ipaddress *r_ip_them,
                                  unsigned *r_port_them, ipaddress *r_ip_me,
                                  unsigned *r_port_me, unsigned *r_icmp_proto) {
-    const unsigned char *icmp_ip_px = transport_px + 8;
-    unsigned       icmp_payload_len = length - (icmp_ip_px - transport_px);
-    unsigned char *trans_header;
-    unsigned       trans_len;
-    unsigned       ipv4_header_len;
+    const unsigned char *icmp_ip_px;
+    unsigned             icmp_payload_len;
+    unsigned char       *trans_header;
+    unsigned             trans_len;
+    unsigned             ipv4_header_len;
 
-    if (icmp_ip_px[0] >> 4 == 4) {
+    /*
+     * The fixed ICMP header is 8 bytes (type/code/checksum/rest). Do the
+     * length accounting *before* touching the quoted datagram: the old code
+     * subtracted 8 from an unchecked length and later relied on
+     * `trans_len < 4`, which an unsigned underflow defeats.  Every read
+     * below is now preceded by an explicit bound check.
+     */
+    if (length < 8)
+        return false;
+    icmp_ip_px       = transport_px + 8;
+    icmp_payload_len = length - 8;
+
+    /* Version nibble lives at offset 8; without it there is nothing to parse. */
+    if (icmp_payload_len < 1)
+        return false;
+
+    if ((icmp_ip_px[0] >> 4) == 4) {
         /*ipv4*/
+        if (icmp_payload_len < 20)
+            return false;
+
+        ipv4_header_len = (unsigned)((icmp_ip_px[0] & 0xF) << 2);
+        if (ipv4_header_len < 20 || ipv4_header_len > icmp_payload_len)
+            return false;
+        if (icmp_payload_len - ipv4_header_len < 4)
+            return false;
+
         r_ip_them->version = 4;
         r_ip_me->version   = 4;
 
@@ -387,12 +412,14 @@ bool parse_icmp_port_unreachable(const unsigned char *transport_px,
         if (*r_icmp_proto != IP_PROTO_TCP && *r_icmp_proto != IP_PROTO_UDP)
             return false;
 
-        ipv4_header_len = (icmp_ip_px[0] & 0xF) << 2;
-        trans_len       = icmp_payload_len - ipv4_header_len;
-        trans_header    = (unsigned char *)icmp_ip_px + ipv4_header_len;
+        trans_len    = icmp_payload_len - ipv4_header_len;
+        trans_header = (unsigned char *)icmp_ip_px + ipv4_header_len;
 
-    } else if (icmp_ip_px[0] >> 4 == 6) {
+    } else if ((icmp_ip_px[0] >> 4) == 6) {
         /*ipv6*/
+        if (icmp_payload_len < 40 + 4)
+            return false;
+
         r_ip_them->version = 6;
         r_ip_me->version   = 6;
 

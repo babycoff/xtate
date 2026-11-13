@@ -2,7 +2,7 @@
 
 [English](../dns-over-https.md) · **中文**
 
-`doh` 是 DNS over HTTPS（RFC 8484，HTTP/1.1）的 state 子探针。
+`doh` 是 DNS over HTTPS（RFC 8484，HTTP/1.1）的 state 子探测。
 TLS 由 `tls-state` 负责。
 
 ```text

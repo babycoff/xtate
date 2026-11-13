@@ -103,8 +103,8 @@ interactive + PTY: 通过
   不能悄悄提高 warning 数。
 - **可选依赖必须保持可选。** 缺少 PCRE2/LibXml2/bson/mongoc 不能导致基础构建失败。
 - **只有单平台是正常的。** 完成当前平台 Tier 0 即可；另一侧由维护者/CI 负责。
-- **不能假装跑过。** 没有 Windows 机器、Docker 或 `script` 时，在 PR 中写明；
-  不能标记为通过。
+- **不能假装跑过。** 没有 Windows 机器、Docker 或 `script` 时，在 PR 中写明
+  `not available`；不能标记为通过。
 - **证据使用精确产物名。** 别名 `xtate`/`xtate.exe` 只是方便复制，
   不作为可复现目标。
 - **记录命令、版本和结果。** 填 PR 模板里的验证区。
@@ -134,6 +134,7 @@ Windows 构建在 `.github/workflows/windows.yml` 中运行，覆盖 MSVC、Clan
 | 头文件自包含 | `tests/include/check_headers.sh` | 每个头文件可单独编译 |
 | selftest | `xtate --selftest` | 内置回归 |
 | i18n | `tests/i18n/test.sh` | 中文帮助覆盖率 |
+| 目标语法 | `tests/target/test.sh` | address/CIDR/explicit/component ranges |
 | interactive | `tests/interactive/test.sh` | 非 TTY 命令/帮助/状态 |
 | JARM 聚合 | `tests/jarm/test.sh` | 输出侧 parts、统计、重试列表 |
 | 模块模板 | `tests/module-examples/test.sh` | 编译检查四类模块接口示例 |

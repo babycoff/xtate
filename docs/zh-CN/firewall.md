@@ -3,7 +3,7 @@
 [English](../firewall.md) · **中文**
 
 Xtate 的 `zbanner`、`tcp-state`、`tls-state`、`http-state`、H2/H3 以及所有
-state 子探针都用 raw packet 完成 TCP 握手。Linux 内核不知道这些连接，会用
+state 子探测都用 raw packet 完成 TCP 握手。Linux 内核不知道这些连接，会用
 RST 终止连接，导致 banner/TLS/探针响应到达前就失败。
 
 ## 操作系统区分
@@ -31,7 +31,7 @@ Windows: tcp-syn can add -scan-arg "--send-rst" ...
 
 ```text
 zbanner
-tcp-state（以及所有 tls-state/state 子探针）
+tcp-state（以及所有 tls-state/state 子探测）
 ```
 
 不需要：
@@ -73,7 +73,7 @@ sudo ./firewall/rm_rules.sh
 open because syn-ack
 没有 banner
 没有 TLS 输出
-没有 state 子探针输出
+没有 state 子探测输出
 DoT/DoH 显示 open 但没有 dot/doh 结果
 ```
 

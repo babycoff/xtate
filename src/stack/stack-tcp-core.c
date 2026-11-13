@@ -971,14 +971,23 @@ SockRes tcpapi_recv(TCP_Stack *socket) {
  ***************************************************************************/
 SockRes tcpapi_send_data(TCP_Stack *socket, const void *buf, size_t length,
                          unsigned is_dynamic) {
+    /* When the caller transfers ownership (is_dynamic), make sure the buffer
+     * is released on every error path below; the success paths hand it to the
+     * TCB segment chain instead. */
+    void *dynamic_buf = is_dynamic ? (void *)buf : NULL;
+
     /*no data*/
-    if (!buf || !length)
+    if (!buf || !length) {
+        FREE(dynamic_buf);
         return 1;
+    }
 
     TCB *tcb;
 
-    if (socket == 0 || socket->tcb == 0)
+    if (socket == 0 || socket->tcb == 0) {
+        FREE(dynamic_buf);
         return SOCKERR_EBADF;
+    }
 
     tcb = socket->tcb;
     switch (tcb->tcpstate) {
@@ -992,6 +1001,7 @@ SockRes tcpapi_send_data(TCP_Stack *socket, const void *buf, size_t length,
             ipaddress_formatted_t fmt = ipaddress_fmt(tcb->ip_them);
             LOG(LEVEL_WARN, "tcp.app: (%s %u) attempted SEND in wrong state\n",
                 fmt.string, tcb->port_them);
+            FREE(dynamic_buf);
             return SOCKERR_EBADF;
         }
     }

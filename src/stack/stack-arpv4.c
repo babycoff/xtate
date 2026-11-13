@@ -200,6 +200,8 @@ int stack_arp_resolve(Adapter *adapter, AdapterCache *acache,
         if (err != 0)
             continue;
 
+        if (length < (size_t)(adapter->is_vlan ? 18 : 14))
+            continue;
         if (adapter->is_vlan && px[17] != 6)
             continue;
         if (!adapter->is_vlan && px[13] != 6)
@@ -271,17 +273,10 @@ int stack_arp_incoming_request(NetStack *stack, ipv4address_t my_ip,
     PktBuf                    *response = 0;
     struct ARP_IncomingRequest request  = {0};
 
-    /* Get a buffer for sending the response packet. This thread doesn't
-     * send the packet itself. Instead, it formats a packet, then hands
-     * that packet off to a transmit thread for later transmission. */
-    response = stack_get_pktbuf(stack);
-
-    /* ARP packets are too short, so increase the packet size to
-     * the Ethernet minimum */
-    response->length = 60;
-
-    /* Fill the padded area with zeroes to avoid leaking data */
-    memset(response->px, 0, response->length);
+    /* Need at least a full Ethernet+ARP header before touching px[12..13]. */
+    if (length < 14) {
+        return -1;
+    }
 
     /*
      * Parse the response as an ARP packet
@@ -307,6 +302,18 @@ int stack_arp_incoming_request(NetStack *stack, ipv4address_t my_ip,
             my_ip);
         return -1;
     }
+
+    /* Get a buffer for sending the response packet. This thread doesn't
+     * send the packet itself. Instead, it formats a packet, then hands
+     * that packet off to a transmit thread for later transmission. */
+    response = stack_get_pktbuf(stack);
+
+    /* ARP packets are too short, so increase the packet size to
+     * the Ethernet minimum */
+    response->length = 60;
+
+    /* Fill the padded area with zeroes to avoid leaking data */
+    memset(response->px, 0, response->length);
 
     /*
      * Create the response packet

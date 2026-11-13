@@ -1,6 +1,7 @@
 #ifndef NOT_FOUND_BSON
 
 #include "output-modules.h"
+#include "../util-data/file-open.h"
 #include "output-write.h"
 #include "bson-output.h"
 
@@ -313,7 +314,7 @@ bson_to_json_err1:
 
 int parse_bson_file(const char *filename) {
 
-    FILE *bsonfile = fopen(filename, "rb");
+    FILE *bsonfile = file_open_utf8_mode(filename, "rb");
     if (bsonfile == NULL) {
         LOG(LEVEL_ERROR, "(ParseBson) could not open BSON file %s.\n",
             filename);

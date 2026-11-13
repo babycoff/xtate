@@ -118,9 +118,12 @@ static void mongodb_parse_bson(const unsigned char *d, unsigned len,
         } else if (strcmp(key, "version") == 0 && type == 0x02 &&
                    off + 4 <= end) {
             unsigned slen = bson_i32(d + off);
-            if (slen > 4 && off + slen <= end)
+            /* The 4-byte length prefix precedes the string bytes; the length
+             * includes the trailing NUL, so slen-1 bytes are payload. */
+            if (slen > 1 && slen - 1 <= end - (off + 4)) {
                 dach_append_str(&item->probe_report, "mongodb_version",
                                 d + off + 4, slen - 1);
+            }
         } else if (strcmp(key, "isWritablePrimary") == 0 && type == 0x08 &&
                    off < end) {
             dach_set_bool(&item->probe_report, "mongodb_is_writable_primary",
@@ -157,6 +160,12 @@ static unsigned mongodb_handle(unsigned th_idx, ProbeTarget *target,
     unsigned off = 20;
     if (px[off] == 1)
         off++;
+    if (off >= sizeof_px) {
+        item->level = OUT_FAILURE;
+        safe_strcpy(item->classification, OUT_CLS_SIZE, "mongodb");
+        safe_strcpy(item->reason, OUT_RSN_SIZE, "truncated op_msg");
+        return 0;
+    }
     if (px[off] != 0) {
         item->level = OUT_FAILURE;
         safe_strcpy(item->classification, OUT_CLS_SIZE, "mongodb");

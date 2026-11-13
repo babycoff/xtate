@@ -92,14 +92,28 @@ static ConfRes SET_strict(void *conf, const char *name, const char *value) {
 static ConfRes SET_max_errors(void *conf, const char *name, const char *value) {
     UNUSEDPARM(conf); UNUSEDPARM(name);
     uint64_t n = 0;
-    if (!conf_parse_int_checked(value, &n)) return Conf_ERR;
+    if (!conf_parse_int_checked(value, &n)) {
+        LOG(LEVEL_ERROR, "max-errors: \"%s\" is not a non-negative integer. "
+                         "Use an integer count, or 0 to disable the limit.\n",
+            value ? value : "");
+        return Conf_ERR;
+    }
     iplist_conf.max_errors = n;
     return Conf_OK;
 }
 static ConfRes SET_max_rate(void *conf, const char *name, const char *value) {
     UNUSEDPARM(conf); UNUSEDPARM(name);
     uint64_t n = 0;
-    if (!conf_parse_int_checked(value, &n) || n > 100) return Conf_ERR;
+    if (!conf_parse_int_checked(value, &n)) {
+        LOG(LEVEL_ERROR, "max-error-rate: \"%s\" is not an integer percent "
+                         "(0..100).\n", value ? value : "");
+        return Conf_ERR;
+    }
+    if (n > 100) {
+        LOG(LEVEL_ERROR, "max-error-rate: %llu is out of range (0..100 "
+                         "percent).\n", (unsigned long long)n);
+        return Conf_ERR;
+    }
     iplist_conf.max_error_percent = (unsigned)n;
     return Conf_OK;
 }

@@ -5,7 +5,7 @@
 ZBanner 每个目标只问一个问题，只读第一个答案。有些问题需要一段对话：完成 TLS 握手、读取证书链、在隧道里发一个 HTTP 请求、读回响应。这要求我们这侧有真正的 TCP 状态机，而每目标一份状态机正是大规模扫描负担不起的。
 
 > [!WARNING]
-> **HLTCP 在 Linux 上必须配置主机防火墙规则。** `tcp-state`、`tls-state`、HTTP/2 和所有 state 子探针都使用原始 TCP；不执行 `./firewall/add_rules.sh` 时，内核会 RST 半开连接，表现为 `open` 但没有 banner/TLS/探针输出。这不是 ZBanner 独有的问题。参见 [快速开始](./getting-started.md#banner-与-stateful-扫描阻止内核代为应答)。
+> **HLTCP 在 Linux 上必须配置主机防火墙规则。** `tcp-state`、`tls-state`、HTTP/2 和所有 state 子探测都使用原始 TCP；不执行 `./firewall/add_rules.sh` 时，内核会 RST 半开连接，表现为 `open` 但没有 banner/TLS/探针输出。这不是 ZBanner 独有的问题。参见 [快速开始](./getting-started.md#banner-与-stateful-扫描阻止内核代为应答)。
 
 HLTCP 就是那个折中。它是一个用户态 TCP 栈——用源码自己的话说叫 “hybrid-state lightweight TCP”（混合状态轻量 TCP 栈）——**只在发 SYN 时完全不保留状态**，等目标证明自己会说话之后才分配连接控制块。你为真实存在的连接付内存，而不是为探测过的目标付内存。
 
@@ -220,7 +220,6 @@ HLTCP 是短生命周期、低状态的栈，不是通用 TCP。唯一的重传�
 - **默认没有优雅关闭。** FIN 得到 RST 应答，没有 `TIME_WAIT`，TLS 也不发 `close_notify`。目标会看到异常终止——对扫描可接受，对长期监测则很吵。`tls-state` 的研究开关 `-probe-arg "--graceful-tls-close"` 会在 RST 之前发送 TLS `close_notify`；它多花一个包/往返，不推荐用于普通扫描。
 - **关闭端口以 `info` 等级报告。** 匹配不到 TCB 的 RST 会输出 `"closed" because "rst"`；扫描器的去重表会抑制重复 RST。没有 `-show info` 时这些行默认隐藏。
 - **SNI/ALPN 是可选开启的。** 默认情况下虚拟主机和 CDN 目标返回默认证书；当目标 IP 属于一个已知主机名时，在 `tls-state` 上设置 `-sni`/`-alpn`。
-- **OpenSSL 内存。** 每条存活的 TLS 连接占几 KB 到几十 KB；决定内存上限的是它，而不是 TCP 栈。
 
 ## 有意不做的事
 
@@ -228,6 +227,7 @@ HLTCP 是短生命周期、低状态的栈，不是通用 TCP。唯一的重传�
 
 - **SYN 重传、RTT 自适应 RTO、乱序缓冲。** TCB 只在收到 SYN-ACK 后才存在，所以 SYN 重传需要在 scan 层维护 pending SYN 表；RTT 需要给每个未确认段记录发送时间；乱序缓冲需要 per-connection 内存。三者都会把 HLTCP 推离 hybrid-state、低内存模型。唯一有意的加固是有上限的数据重传；丢 SYN 的恢复手段是重跑（`--repeat`，或再跑一遍），而不是每目标重试状态机。
 - **通用 ACK 修复状态机。** 重复 SYN-ACK、重复/未来数据会在能避免 30 秒卡死的地方回 ACK，但 Xtate 不会为每一个丢失的 ACK 主动发纯 ACK。额外的 ACK 流量几乎不改变扫描结果，却浪费带宽，因此有意不做。
+- **OpenSSL 内存。** 每条存活的 TLS 连接占几 KB 到几十 KB；决定内存上限的是它，而不是 TCP 栈。
 - **去重被关闭。** `tcp-state` 把去重交给状态机自己处理，因此重复报文行为比 ZBanner 弱。
 
 这些问题的细节与规避办法，连同 ZBanner 与平台方面的注意事项，都收录在 [known-limitations.md](./known-limitations.md)。要在两个引擎之间选择，见 [scanning-modes.md](./scanning-modes.md)。

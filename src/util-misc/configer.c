@@ -500,9 +500,9 @@ int conf_set_params_from_args(void *conf, ConfParam *cp, int argc,
             char        name2[64];
             const char *value;
 
-            value = strchr(&argv[i][2], '=');
+            value = strchr(argname, '=');
             if (value == NULL)
-                value = strchr(&argv[i][2], ':');
+                value = strchr(argname, ':');
             if (value == NULL) {
                 /*Type_FLAG doesn't carry args*/
                 if (conf_is_parm_flag(cp, argname)) {

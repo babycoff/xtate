@@ -1,5 +1,6 @@
 #ifndef NOT_FOUND_PCRE2
 #include "../output-modules/output-modules.h"
+#include "../util-data/file-open.h"
 
 #include "probe-modules.h"
 
@@ -195,7 +196,7 @@ static ConfRes SET_hello_file(void *conf, const char *name, const char *value) {
 
     FREE(recogstate_conf.hello);
 
-    FILE *fp = fopen(value, "rb");
+    FILE *fp = file_open_utf8_mode(value, "rb");
     if (fp == NULL) {
         LOG(LEVEL_ERROR, "failed to open file %s.\n", value);
         return Conf_ERR;

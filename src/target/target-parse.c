@@ -17,6 +17,7 @@
 
 #include "../util-out/logger.h"
 #include "../util-misc/misc.h"
+#include "../util-data/file-open.h"
 
 struct targetset_parser {
     unsigned long long line_number;
@@ -935,7 +936,7 @@ int targetset_parse_file(TargetSet *targetset, const char *filename) {
     if (strcmp(filename, "-") == 0) {
         fp = stdin;
     } else {
-        fp = fopen(filename, "rb");
+        fp = file_open_utf8(filename);
         if (fp == NULL) {
             LOG(LEVEL_ERROR, "(addr parsing) %s: %s\n", filename,
                 strerror(errno));

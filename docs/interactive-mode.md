@@ -31,21 +31,41 @@ In script mode `quit` saves `recover.conf`; `exit` exits without saving.
 
 ```text
 help                 overview + command list
+run                  run the configured scan
 set key = value      set a global parameter
 set-scan <module>    choose a scan module
 set-probe <module>   choose a probe module
 set-out <module>     choose an output module
 set-gen <module>     choose a generate module
-list-param [filter]  list global parameters, optionally by name token
-list-scan/probe/out/gen  list modules
-echo / show          print current configuration
+echo                 print current configuration
+show                 alias of echo
 show diff            only non-default settings
-show all             include defaults
+show all             include defaults (same as echo-all)
+echo-all             print all configuration including defaults
+clear                reset configuration to defaults (keeps `seed`)
+update-seed          replace the global seed with a new random value
+unset-scan           unset the scan module and its args
+unset-probe          unset the probe module and its args
+unset-out            unset the output module and its args
+unset-gen            unset the generate module and its args
+list-param [filter]  list global parameters, optionally by name token
+list-scan            list scan modules
+list-probe           list probe modules
+list-out             list output modules
+list-gen             list generate modules
 help <command>       help for one interactive command
-help-param <name>    detailed global-parameter help
-help-scan <module>   module help
-run                  run the configured scan
-quit                 save and exit
+help-param <name>    detailed help for one global parameter
+help-scan <module>   scan-module help
+help-probe <module>  probe-module help
+help-out <module>    output-module help
+help-gen <module>    generate-module help
+search-param <text>  fuzzy search global parameters
+search-module <text> fuzzy search all module registries
+conf-save <file>     save the current configuration
+conf-read <file>     load a configuration file
+conf-recover         load `recover.conf`
+version              print the Xtate version
+quit                 save to `recover.conf` and exit
 exit                 exit without saving
 ```
 

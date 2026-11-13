@@ -82,8 +82,9 @@ containing `..` are rejected before the filesystem is touched.
 For each allowlisted file the server tries, in order:
 
 1. `$XTATE_MCP_DOCS_DIR/<file>`
-2. the current working directory
-3. the executable's directory and up to four parent directories
+2. the executable's directory and up to four parent directories
+3. the current working directory (tried last, because an MCP client may start
+   the server inside an untrusted project)
 
 `XTATE_MCP_DOCS_DIR` is local operator configuration; point it at the
 repository or install root that contains `docs/` and `schemas/`. It is read from

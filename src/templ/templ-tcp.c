@@ -387,7 +387,13 @@ struct TcpOption tcp_find_opt(const unsigned char *buf, size_t length,
 
     /* We've found it! If we've passed all the checks above, we have
      * a well formatted field, so just return it. */
-    result.kind    = in_kind;
+    result.kind = in_kind;
+    /* Need the length byte itself: offset+1 must be inside the captured
+     * TCP header before it is read. */
+    if (offset + 1 >= hdr.max)
+        goto fail;
+    if (buf[offset + 1] < 2)
+        goto fail;
     result.buf     = buf + offset + 2;
     result.raw_len = buf[offset + 1] - 2;
     result.opt_len = buf[offset + 1];
@@ -1077,12 +1083,12 @@ void tcp_set_window(unsigned char *px, size_t px_length, unsigned window) {
     px[offset + 17] = (unsigned char)(0);
 
     if (parsed.ip_version == 4) {
-        xsum = ~checksum_ipv4_tcp(px, parsed.ip_offset, parsed.transport_offset,
-                                  parsed.transport_length);
+        xsum = checksum_ipv4_tcp(px, parsed.ip_offset, parsed.transport_offset,
+                                 parsed.transport_length);
     } else {
-        xsum = ~checksum_ipv6_upper(px + parsed.ip_offset + 8,
-                                    px + parsed.ip_offset + 24, IP_PROTO_TCP,
-                                    parsed.transport_length, px + offset);
+        xsum = checksum_ipv6_upper(px + parsed.ip_offset + 8,
+                                   px + parsed.ip_offset + 24, IP_PROTO_TCP,
+                                   parsed.transport_length, px + offset);
     }
 
     U16_TO_BE(px + offset + 16, xsum);

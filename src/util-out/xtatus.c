@@ -1,6 +1,7 @@
 #include "xtatus.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <inttypes.h>
 #include <string.h>
 
@@ -10,9 +11,11 @@
 #include "../globals.h"
 #include "../util-out/logger.h"
 #include "../util-out/xprint.h"
+#include "../crypto/crypto-json.h"
 
 void xtatus_print(Xtatus *xtatus, XtatusItem *item) {
     const char *fmt;
+    char       *add_status_json = NULL;
     double      elapsed_time;
     double      rate;
     double      now;
@@ -32,14 +35,14 @@ void xtatus_print(Xtatus *xtatus, XtatusItem *item) {
                                     "\"kpps\":%.2f,"
                                     "\"pps\":%.2f,"
                                     "\"sent ps\":%.0f,"
-                                    "\"successed ps\":%.0f,"
+                                    "\"successed ps\":%.0f"
                                     "},"
                                     "\"sent\":%" PRIu64 ","
                                     "\"repeat\":%" PRIu64 ","
-                                    "\"txq\":%.2f%%,"
-                                    "\"rxq\":%.2f%%,"
-                                    "\"hit\":%.2f%%,"
-                                    "\"add status\":\"%s\""
+                                    "\"txq\":%.2f,"
+                                    "\"rxq\":%.2f,"
+                                    "\"hit\":%.2f,"
+                                    "\"add_status\":%s"
                                     "}\n";
 
     /*waiting state for infinite*/
@@ -51,13 +54,13 @@ void xtatus_print(Xtatus *xtatus, XtatusItem *item) {
                                    "\"kpps\":%.2f,"
                                    "\"pps\":%.2f,"
                                    "\"sent ps\":%.0f,"
-                                   "\"successed ps\":%.0f,"
+                                   "\"successed ps\":%.0f"
                                    "},"
                                    "\"sent\":%" PRIu64 ","
-                                   "\"txq\":%.2f%%,"
-                                   "\"rxq\":%.2f%%,"
-                                   "\"hit\":%.2f%%,"
-                                   "\"add status\":\"%s\""
+                                   "\"txq\":%.2f,"
+                                   "\"rxq\":%.2f,"
+                                   "\"hit\":%.2f,"
+                                   "\"add_status\":%s"
                                    "}\n";
 
     const char *json_fmt_waiting = "{"
@@ -74,9 +77,9 @@ void xtatus_print(Xtatus *xtatus, XtatusItem *item) {
                                    "\"successed\":%" PRIu64 ","
                                    "\"failed\":%" PRIu64 ","
                                    "\"info\":%" PRIu64 ","
-                                   "\"txq\":%.2f%%,"
-                                   "\"rxq\":%.2f%%,"
-                                   "\"hit\":%.2f%%,"
+                                   "\"txq\":%.2f,"
+                                   "\"rxq\":%.2f,"
+                                   "\"hit\":%.2f,"
                                    "\"transmit\":"
                                    "{"
                                    "\"sent\":%" PRIu64 ","
@@ -84,7 +87,7 @@ void xtatus_print(Xtatus *xtatus, XtatusItem *item) {
                                    "\"remaining\":%" PRIu64 ""
                                    "}"
                                    "},"
-                                   "\"add status\":\"%s\""
+                                   "\"add_status\":%s"
                                    "}\n";
 
     const char *json_fmt_running = "{"
@@ -112,11 +115,11 @@ void xtatus_print(Xtatus *xtatus, XtatusItem *item) {
                                    "\"successed\":%" PRIu64 ","
                                    "\"failed\":%" PRIu64 ","
                                    "\"info\":%" PRIu64 ","
-                                   "\"txq\":%.2f%%,"
-                                   "\"rxq\":%.2f%%,"
-                                   "\"hit\":%.2f%%"
+                                   "\"txq\":%.2f,"
+                                   "\"rxq\":%.2f,"
+                                   "\"hit\":%.2f"
                                    "},"
-                                   "\"add status\":\"%s\""
+                                   "\"add_status\":%s"
                                    "}\n";
 
     /* Get the time. NOTE: this is CLOCK_MONOTONIC_RAW on Linux, not
@@ -187,6 +190,13 @@ void xtatus_print(Xtatus *xtatus, XtatusItem *item) {
         LOG(LEVEL_OUT, XPRINT_CLEAR_LINE);
 
     /*
+     * The status text is free-form and must be escaped before it is embedded
+     * in the machine-readable JSON line (otherwise it can break the document).
+     */
+    if (item->print_in_json)
+        add_status_json = json_encode_string(item->add_status);
+
+    /*
      * Print the message to <stderr> so that <stdout> can be redirected
      * to a file (<stdout> reports what systems were found).
      */
@@ -198,7 +208,7 @@ void xtatus_print(Xtatus *xtatus, XtatusItem *item) {
                 LOG(LEVEL_OUT, fmt, (int)item->exiting_secs, kpps,
                     item->cur_pps, sent_rate, successed_rate, item->cur_count,
                     item->tx_queue_ratio, item->rx_queue_ratio, hit_rate,
-                    item->add_status);
+                    add_status_json ? add_status_json : "\"\"");
             } else {
                 fmt = "rate:%6.2f-kpps, waiting %d-secs, sent/s=%.0f, "
                       "[+]/s=%.0f";
@@ -229,7 +239,7 @@ void xtatus_print(Xtatus *xtatus, XtatusItem *item) {
                 LOG(LEVEL_OUT, fmt, kpps, item->cur_pps, sent_rate,
                     successed_rate, item->cur_count, item->repeat_count,
                     item->tx_queue_ratio, item->rx_queue_ratio, hit_rate,
-                    item->add_status);
+                    add_status_json ? add_status_json : "\"\"");
             } else {
                 fmt = "rate:%6.2f-kpps, round=%" PRIu64
                       ", sent/s=%.0f, [+]/s=%.0f";
@@ -264,7 +274,7 @@ void xtatus_print(Xtatus *xtatus, XtatusItem *item) {
                     item->total_successed, item->total_failed, item->total_info,
                     item->tx_queue_ratio, item->rx_queue_ratio, hit_rate,
                     item->cur_count, item->max_count,
-                    item->max_count - item->cur_count, item->add_status);
+                    item->max_count - item->cur_count, add_status_json ? add_status_json : "\"\"");
             } else {
                 fmt = "rate:%6.2f-kpps, %5.2f%% done, waiting %d-secs, "
                       "[+]=%" PRIu64 ", [x]=%" PRIu64;
@@ -305,7 +315,7 @@ void xtatus_print(Xtatus *xtatus, XtatusItem *item) {
                     item->max_count, item->max_count - item->cur_count,
                     item->total_successed, item->total_failed, item->total_info,
                     item->tx_queue_ratio, item->rx_queue_ratio, hit_rate,
-                    item->add_status);
+                    add_status_json ? add_status_json : "\"\"");
             } else {
                 fmt = "rate:%6.2f-kpps, %5.2f%% done,%4u:%02u:%02u remaining, "
                       "[+]=%" PRIu64 ", [x]=%" PRIu64;
@@ -339,6 +349,8 @@ void xtatus_print(Xtatus *xtatus, XtatusItem *item) {
             }
         }
     }
+    if (add_status_json)
+        free(add_status_json);
     LOG(LEVEL_OUT, xtatus->no_ansi ? "          \r" : "\r");
     fflush(stderr);
 

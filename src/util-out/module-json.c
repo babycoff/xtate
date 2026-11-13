@@ -1,4 +1,5 @@
 #include "module-json.h"
+#include "../util-data/file-open.h"
 #include <stdio.h>
 #include <stdlib.h>
 #ifdef _WIN32
@@ -104,10 +105,10 @@ char *module_json_string(void) {
     char tmppath[1200];
     snprintf(tmppath, sizeof(tmppath), "%s/xtate-modules-%ld.tmp", tmpdir,
              (long)getpid());
-    FILE *f = fopen(tmppath, "w+b");
+    FILE *f = file_open_utf8_mode(tmppath, "w+b");
     if (!f) {
         snprintf(tmppath, sizeof(tmppath), "xtate-modules-%ld.tmp", (long)getpid());
-        f = fopen(tmppath, "w+b");
+        f = file_open_utf8_mode(tmppath, "w+b");
     }
     if (!f) return NULL;
     FILE *old = g_out;

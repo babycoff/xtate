@@ -77,7 +77,7 @@ floor 大于非零 limit 会在启动时拒绝。
 ## 已经做得好的地方
 
 - probe 回调前检查源端口 index；
-- payload 大小与 packet buffer 长度检查；
+- 对照 `ZBANNER_PAYLOAD_MAX` 与 packet buffer 长度检查 payload 大小；
 - RST/SYN-ACK/banner/ACK 分支和输出 reason 明确；
 - all-banner 对小 TCP 窗口、snaplen、max packet len 的告警；
 - init 时检查 slot 数和源端口容量。

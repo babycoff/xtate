@@ -1,4 +1,5 @@
 #include "result-store.h"
+#include "../util-data/file-open.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,7 +11,7 @@
 
 #ifndef NOT_FOUND_ZSTD
 static int compress_file(const char *path, uint64_t *size) {
-    FILE *in = fopen(path, "rb");
+    FILE *in = file_open_utf8_mode(path, "rb");
     if (!in) return -1;
     fseek(in, 0, SEEK_END); long n = ftell(in); rewind(in);
     if (n <= 0) { fclose(in); return -1; }
@@ -24,7 +25,7 @@ static int compress_file(const char *path, uint64_t *size) {
     free(src);
     if (ZSTD_isError(c)) { free(dst); return -1; }
     char zp[1200]; snprintf(zp, sizeof(zp), "%s.zst", path);
-    FILE *out = fopen(zp, "wb");
+    FILE *out = file_open_utf8_mode(zp, "wb");
     if (!out) { free(dst); return -1; }
     fwrite(dst, 1, c, out); fclose(out); free(dst);
     remove(path);
@@ -50,13 +51,13 @@ int result_store_build(const char *result_path, uint64_t chunk_bytes,
         LOG(LEVEL_WARN, "zstd is not built; writing uncompressed chunks\n");
         use_zstd = false;
     }
-    FILE *in = fopen(result_path, "rb");
+    FILE *in = file_open_utf8_mode(result_path, "rb");
     if (!in) return -1;
     char manifest[1200], index[1200];
     snprintf(manifest, sizeof(manifest), "%s.manifest.json", result_path);
     snprintf(index, sizeof(index), "%s.index.json", result_path);
-    FILE *mf = fopen(manifest, "w");
-    FILE *ix = build_index ? fopen(index, "w") : NULL;
+    FILE *mf = file_open_utf8_mode(manifest, "w");
+    FILE *ix = build_index ? file_open_utf8_mode(index, "w") : NULL;
     if (!mf) { fclose(in); return -1; }
     fprintf(mf, "{\"format\":\"ndjson\",\"compression\":\"%s\","
                 "\"chunks\":[", use_zstd ? "zstd" : "none");
@@ -92,7 +93,7 @@ int result_store_build(const char *result_path, uint64_t chunk_bytes,
             cid++; cbytes = 0; crecords = 0;
             snprintf(cpath, sizeof(cpath), "%s.%05llu.ndjson", result_path,
                      (unsigned long long)cid);
-            out = fopen(cpath, "wb");
+            out = file_open_utf8_mode(cpath, "wb");
             if (!out) break;
         }
         fwrite(line, 1, n, out); cbytes += n; crecords++; chunk_written = true;

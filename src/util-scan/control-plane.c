@@ -9,18 +9,25 @@
 #include <time.h>
 #include <stdint.h>
 #include <stdarg.h>
-#include <stdlib.h>
+#include <errno.h>
 
 #ifdef _WIN32
 #include <windows.h>
+#include <process.h>
 #else
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <signal.h>
 #endif
 
 static const char *g_token = NULL;
+static unsigned long g_name_seq = 0;
+static volatile int g_stop;
+
+static unsigned long next_name_seq(void) { return ++g_name_seq; }
 
 static bool token_ok(const char *line) {
     if (!g_token || !g_token[0]) return true;
@@ -64,6 +71,24 @@ static int64_t field_int(const char *s, const char *key, int64_t def) {
     p += strlen(pat);
     while (*p == ' ' || *p == '\t') p++;
     return atoll(p);
+}
+
+static bool field_int_checked(const char *s, const char *key, int64_t *out) {
+    char pat[64];
+    snprintf(pat, sizeof(pat), "\"%s\":", key);
+    const char *p = strstr(s, pat);
+    if (!p) return false;
+    p += strlen(pat);
+    while (*p == ' ' || *p == '\t') p++;
+    if (*p != '-' && (*p < '0' || *p > '9')) return false;
+    errno = 0;
+    char *end = NULL;
+    long long v = strtoll(p, &end, 10);
+    if (errno || end == p) return false;
+    while (*end == ' ' || *end == '\t') end++;
+    if (*end != ',' && *end != '}') return false;
+    *out = (int64_t)v;
+    return true;
 }
 
 typedef struct {
@@ -129,7 +154,7 @@ static void maintenance(JobManager *m) {
 #ifndef _WIN32
 static void *maintenance_thread(void *arg) {
     JobManager *m = (JobManager *)arg;
-    for (;;) {
+    while (!g_stop) {
         maintenance(m);
         usleep(500000);
     }
@@ -138,7 +163,7 @@ static void *maintenance_thread(void *arg) {
 #else
 static DWORD WINAPI maintenance_thread(LPVOID arg) {
     JobManager *m = (JobManager *)arg;
-    for (;;) { maintenance(m); Sleep(500); }
+    while (!g_stop) { maintenance(m); Sleep(500); }
     return 0;
 }
 #endif
@@ -205,6 +230,17 @@ static void json_unescape_inplace(char *s) {
     *w = 0;
 }
 
+static FILE *open_write_utf8(const char *path) {
+#ifdef _WIN32
+    wchar_t wpath[2048];
+    if (!path || MultiByteToWideChar(CP_UTF8, 0, path, -1, wpath,
+            (int)(sizeof(wpath) / sizeof(wpath[0]))) <= 0) return NULL;
+    return _wfopen(wpath, L"wb");
+#else
+    return fopen(path, "wb");
+#endif
+}
+
 static void jesc(const char *s, char *out, size_t cap) {
     size_t n = 0;
     if (!out || !cap) return;
@@ -261,21 +297,60 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
         return;
     }
     if (strstr(line, "\"job.start\"")) {
-        char req[600], res[600], params[16384];
+        char req[2048], res[2048], params[16384];
+        int64_t tmo = 0;
+        if (field_int_checked(line, "timeout_sec", &tmo)) {
+            if (tmo < 1 || tmo > 86400) {
+                send_json(out, id, NULL, "INVALID_ARGUMENT", "timeout_sec must be 1..86400");
+                return;
+            }
+        } else if (strstr(line, "\"timeout_sec\"")) {
+            send_json(out, id, NULL, "INVALID_ARGUMENT", "timeout_sec must be an integer");
+            return;
+        }
         if (extract_object(line, "params", params, sizeof(params))) {
             const char *tmpdir = getenv("TMPDIR");
 #ifdef _WIN32
             if (!tmpdir || !tmpdir[0]) tmpdir = getenv("TEMP");
 #endif
             if (!tmpdir || !tmpdir[0]) tmpdir = "/tmp";
-            snprintf(req, sizeof(req), "%s/xtate-job-%lld.request.json",
-                     tmpdir, (long long)time(NULL));
-            FILE *rf = fopen(req, "wb");
-            if (!rf) {
-                snprintf(req, sizeof(req), "xtate-job-%lld.request.json",
-                         (long long)time(NULL));
-                rf = fopen(req, "wb");
+#ifndef _WIN32
+            int rn = snprintf(req, sizeof(req), "%s/xtate-job-XXXXXX", tmpdir);
+            if (rn < 0 || (size_t)rn >= sizeof(req)) {
+                send_json(out, id, NULL, "INVALID_ARGUMENT", "request path too long");
+                return;
             }
+            int rfd = mkstemp(req);
+            FILE *rf = rfd >= 0 ? fdopen(rfd, "wb") : NULL;
+            if (!rf) {
+                if (rfd >= 0) close(rfd);
+                rn = snprintf(req, sizeof(req), "xtate-job-XXXXXX");
+                if (rn < 0 || (size_t)rn >= sizeof(req)) {
+                    send_json(out, id, NULL, "INVALID_ARGUMENT", "request path too long");
+                    return;
+                }
+                rfd = mkstemp(req);
+                rf = rfd >= 0 ? fdopen(rfd, "wb") : NULL;
+                if (!rf && rfd >= 0) close(rfd);
+            }
+#else
+            int rn = snprintf(req, sizeof(req), "%s/xtate-job-%lld-%lu.request.json",
+                              tmpdir, (long long)time(NULL), next_name_seq());
+            if (rn < 0 || (size_t)rn >= sizeof(req)) {
+                send_json(out, id, NULL, "INVALID_ARGUMENT", "request path too long");
+                return;
+            }
+            FILE *rf = open_write_utf8(req);
+            if (!rf) {
+                rn = snprintf(req, sizeof(req), "xtate-job-%lld-%lu.request.json",
+                              (long long)time(NULL), next_name_seq());
+                if (rn < 0 || (size_t)rn >= sizeof(req)) {
+                    send_json(out, id, NULL, "INVALID_ARGUMENT", "request path too long");
+                    return;
+                }
+                rf = open_write_utf8(req);
+            }
+#endif
             if (!rf) { send_json(out, id, NULL, "IO_ERROR", "cannot write request"); return; }
             fwrite(params, 1, strlen(params), rf);
             fclose(rf);
@@ -284,7 +359,8 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
             return;
         }
         if (!field_str(line, "result_path", res, sizeof(res))) {
-            snprintf(res, sizeof(res), "xtate-job-%lld.ndjson", (long long)time(NULL));
+            snprintf(res, sizeof(res), "xtate-job-%lld-%lu.ndjson",
+                     (long long)time(NULL), next_name_seq());
         }
         json_unescape_inplace(res);
 #ifdef _WIN32
@@ -299,9 +375,34 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
         if (el <= 0) { send_json(out, id, NULL, "INTERNAL_ERROR", "cannot find executable"); return; }
         exe[el] = 0;
 #endif
-        char hb[600]; snprintf(hb, sizeof(hb), "%s.heartbeat", res);
-        char hbarg[600]; snprintf(hbarg, sizeof(hbarg), "--job-heartbeat=%s", hb);
-        uint64_t quota = (uint64_t)field_int(line, "quota_bytes", 0);
+        char hb[2100]; int hbn = snprintf(hb, sizeof(hb), "%s.heartbeat", res);
+        char hbarg[2200];
+        int hban = snprintf(hbarg, sizeof(hbarg), "--job-heartbeat=%s", hb);
+        if (hbn < 0 || (size_t)hbn >= sizeof(hb) ||
+            hban < 0 || (size_t)hban >= sizeof(hbarg)) {
+            send_json(out, id, NULL, "INVALID_ARGUMENT", "heartbeat path too long");
+            return;
+        }
+        int64_t quota_i = 0, chunk_i = 0;
+        if (field_int_checked(line, "quota_bytes", &quota_i)) {
+            if (quota_i < 0) {
+                send_json(out, id, NULL, "INVALID_ARGUMENT", "quota_bytes must be >= 0");
+                return;
+            }
+        } else if (strstr(line, "\"quota_bytes\"")) {
+            send_json(out, id, NULL, "INVALID_ARGUMENT", "quota_bytes must be an integer");
+            return;
+        }
+        if (field_int_checked(line, "chunk_size", &chunk_i)) {
+            if (chunk_i < 1) {
+                send_json(out, id, NULL, "INVALID_ARGUMENT", "chunk_size must be > 0");
+                return;
+            }
+        } else if (strstr(line, "\"chunk_size\"")) {
+            send_json(out, id, NULL, "INVALID_ARGUMENT", "chunk_size must be an integer");
+            return;
+        }
+        uint64_t quota = (uint64_t)quota_i;
         char quotarg[64] = {0};
         if (quota) snprintf(quotarg, sizeof(quotarg), "--result-quota=%llu",
                             (unsigned long long)quota);
@@ -321,16 +422,16 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
         if (has_iface) { argv[ac++] = "-if"; argv[ac++] = iface; }
         argv[ac] = NULL;
         job_manager_lock(m);
-        char logpath[1100];
+        char logpath[2200];
         snprintf(logpath, sizeof(logpath), "%s.log", res);
-        unsigned job_timeout = (unsigned)field_int(line, "timeout_sec", 0);
+        unsigned job_timeout = (unsigned)tmo;
         Job *j = job_start(m, argv, res, logpath, job_timeout);
         if (j) {
             job_set_heartbeat(j, hb, 30);
-            job_set_result_config(j, (uint64_t)field_int(line, "chunk_size", 0),
+            job_set_result_config(j, (uint64_t)chunk_i,
                                   strstr(line, "\"index\":true") != NULL,
                                   field_str2(line, "compression"),
-                                  (uint64_t)field_int(line, "quota_bytes", 0));
+                                  quota);
         }
         job_manager_unlock(m);
         if (!j) { send_json(out, id, NULL, "JOB_LIMIT_REACHED", "too many jobs"); return; }
@@ -355,14 +456,15 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
             if ((int64_t)emitted >= limit) break;
             job_poll(j);
             finalize_job(j);
-            char jp[512]; jesc(job_result_path(j), jp, sizeof(jp));
+            char jp[2048]; jesc(job_result_path(j), jp, sizeof(jp));
             off += (size_t)snprintf(buf + off, sizeof(buf) - off,
                 "%s{\"job_id\":\"%s\",\"state\":\"%s\",\"result\":\"%s\"}",
                 first ? "" : ",", job_id(j), job_state_string(job_state(j)), jp);
             first = 0; emitted++;
-            if (off > sizeof(buf) - 512) break;
+            if (off > sizeof(buf) - 4096) break;
         }
         job_manager_unlock(m);
+        if (off >= sizeof(buf)) off = sizeof(buf) - 1;
         snprintf(buf + off, sizeof(buf) - off,
                  "],\"offset\":%lld,\"limit\":%lld,\"next_offset\":%lld,"
                  "\"truncated\":%s,\"total\":%zu}",
@@ -394,11 +496,11 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
     if (strstr(line, "\"job.results\"") ||
         strstr(line, "\"job.result_manifest\"")) {
         char *path = json_encode_string(job_result_path(j) ? job_result_path(j) : "");
-        char manifest_path[1200];
+        char manifest_path[4200];
         snprintf(manifest_path, sizeof(manifest_path), "%s.manifest.json",
                  job_result_path(j) ? job_result_path(j) : "");
         char *mpath = json_encode_string(manifest_path);
-        char res[1600];
+        char res[12000];
         snprintf(res, sizeof(res),
                  "{\"job_id\":\"%s\",\"state\":\"%s\","
                  "\"result_path\":%s,\"manifest_path\":%s,"
@@ -416,7 +518,7 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
     char phase[32] = "unknown";
     uint64_t sent = 0, targets = 0, hb_age = 0;
     bool hb = job_heartbeat_info(j, phase, sizeof(phase), &sent, &targets, &hb_age);
-    char res[4096], esres[512], eslog[512], eserr[512], tail[1100], estail[1400];
+    char res[12000], esres[4200], eslog[4200], eserr[512], tail[1100], estail[1400];
     jesc(job_result_path(j), esres, sizeof(esres));
     jesc(job_log_path(j), eslog, sizeof(eslog));
     jesc(job_error(j), eserr, sizeof(eserr));
@@ -440,25 +542,42 @@ static void handle(JobManager *m, const char *line, ControlResponse *out) {
 #ifndef _WIN32
 int control_plane_serve(const char *endpoint) {
     g_token = getenv("XTATE_CONTROL_TOKEN");
+    g_stop = 0;
     JobManager *m = job_manager_create(16);
 #ifndef _WIN32
     pthread_t mt;
     pthread_create(&mt, NULL, maintenance_thread, m);
 #endif
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (fd < 0) return 1;
+    if (fd < 0) {
+        g_stop = 1;
+#ifndef _WIN32
+        pthread_join(mt, NULL);
+#endif
+        job_manager_destroy(m);
+        return 1;
+    }
     struct sockaddr_un addr = {0};
     addr.sun_family = AF_UNIX;
     snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", endpoint);
     unlink(endpoint);
-    if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) != 0) { close(fd); return 1; }
+    if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
+        close(fd); g_stop = 1;
+#ifndef _WIN32
+        pthread_join(mt, NULL);
+#endif
+        job_manager_destroy(m);
+        return 1;
+    }
+    chmod(endpoint, 0600);
+    signal(SIGPIPE, SIG_IGN);
     listen(fd, 4);
     for (;;) {
         int c = accept(fd, NULL, NULL);
         if (c < 0) break;
         FILE *in = fdopen(c, "r");
         if (!in) { close(c); continue; }
-        char line[8192];
+        char line[65536];
         while (fgets(line, sizeof(line), in)) {
             char data[65536];
             ControlResponse out = {data, 0, sizeof(data), false};
@@ -478,15 +597,18 @@ int control_plane_serve(const char *endpoint) {
         }
         fclose(in);
     }
-    close(fd); unlink(endpoint); job_manager_destroy(m);
+    close(fd); unlink(endpoint);
+    g_stop = 1;
+    pthread_join(mt, NULL);
+    job_manager_destroy(m);
     return 0;
 }
 #else
 int control_plane_serve(const char *endpoint) {
     g_token = getenv("XTATE_CONTROL_TOKEN");
-    g_token = getenv("XTATE_CONTROL_TOKEN");
+    g_stop = 0;
     JobManager *m = job_manager_create(16);
-    CreateThread(NULL, 0, maintenance_thread, m, 0, NULL);
+    HANDLE mt = CreateThread(NULL, 0, maintenance_thread, m, 0, NULL);
     for (;;) {
         HANDLE p = CreateNamedPipeA(endpoint, PIPE_ACCESS_DUPLEX,
             PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
@@ -495,26 +617,54 @@ int control_plane_serve(const char *endpoint) {
         if (!ConnectNamedPipe(p, NULL) && GetLastError() != ERROR_PIPE_CONNECTED) {
             CloseHandle(p); continue;
         }
+        char line[65536];
+        size_t used = 0;
+        bool dropping = false;
         char buf[8192];
         DWORD got = 0;
-        while (ReadFile(p, buf, sizeof(buf)-1, &got, NULL) && got) {
-            buf[got] = 0;
-            char data[65536];
-            ControlResponse out = {data, 0, sizeof(data), false};
-            handle(m, buf, &out);
-            if (out.overflow) {
-                snprintf(data, sizeof(data),
-                         "{\"id\":null,\"error\":{\"code\":\"RESPONSE_TOO_LARGE\","
-                         "\"message\":\"use paging\",\"retryable\":false}}\n");
-                out.len = strlen(data);
+        while (ReadFile(p, buf, sizeof(buf), &got, NULL) && got) {
+            for (DWORD i = 0; i < got; i++) {
+                char ch = buf[i];
+                if (ch == '\n') {
+                    if (dropping) {
+                        const char *msg =
+                            "{\"id\":null,\"error\":{\"code\":\"INVALID_ARGUMENT\","
+                            "\"message\":\"request line too long\",\"retryable\":false}}\n";
+                        DWORD wrote = 0;
+                        WriteFile(p, msg, (DWORD)strlen(msg), &wrote, NULL);
+                        dropping = false;
+                    } else if (used) {
+                        line[used] = 0;
+                        char data[65536];
+                        ControlResponse out = {data, 0, sizeof(data), false};
+                        handle(m, line, &out);
+                        if (out.overflow) {
+                            snprintf(data, sizeof(data),
+                                     "{\"id\":null,\"error\":{\"code\":\"RESPONSE_TOO_LARGE\","
+                                     "\"message\":\"use paging\",\"retryable\":false}}\n");
+                            out.len = strlen(data);
+                        }
+                        size_t sent = 0;
+                        while (sent < out.len) {
+                            DWORD wrote = 0;
+                            DWORD want = (DWORD)(out.len - sent);
+                            if (!WriteFile(p, data + sent, want, &wrote, NULL) || wrote == 0)
+                                break;
+                            sent += wrote;
+                        }
+                    }
+                    used = 0;
+                } else if (!dropping) {
+                    if (used + 1 < sizeof(line)) line[used++] = ch;
+                    else { used = 0; dropping = true; }
+                }
             }
-            DWORD wrote = 0;
-            WriteFile(p, data, (DWORD)out.len, &wrote, NULL);
-            got = 0;
         }
         DisconnectNamedPipe(p);
         CloseHandle(p);
     }
+    g_stop = 1;
+    if (mt) { WaitForSingleObject(mt, 2000); CloseHandle(mt); }
     job_manager_destroy(m);
     return 0;
 }

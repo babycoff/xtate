@@ -316,6 +316,9 @@ static void tcpsyn_validate(uint64_t entropy, Recved *recved, PreHandle *pre) {
         if (cookie == seqno_me - 1) {
             pre->go_dedup = 1;
             pre->no_dedup = tcpsyn_conf.no_dedup_synack;
+        } else {
+            /* Not a reply to our probe: do not report it. */
+            pre->go_record = 0;
         }
     }
     /*RST*/
@@ -324,8 +327,13 @@ static void tcpsyn_validate(uint64_t entropy, Recved *recved, PreHandle *pre) {
         if (cookie == seqno_me - 1 || cookie == seqno_me) {
             pre->go_dedup = 1;
             pre->no_dedup = tcpsyn_conf.no_dedup_rst;
+        } else {
+            pre->go_record = 0;
         }
     }
+    /* Anything else (pure ACK, data) is not a SYN scan result. */
+    else
+        pre->go_record = 0;
 }
 
 static void tcpsyn_handle(unsigned th_idx, uint64_t entropy,
@@ -435,12 +443,12 @@ Scanner TcpSynScan = {
     .required_probe_type = ProbeType_NULL,
     .params              = tcpsyn_parameters,
     /* is syn-ack or rst in ipv4 & ipv6*/
-    .bpf_filter          = "(ip && tcp && (tcp[tcpflags]==(tcp-syn|tcp-ack) || "
-                           "tcp[tcpflags]==tcp-rst || "
-                           "tcp[tcpflags]==(tcp-rst|tcp-ack))) "
-                           "|| (ip6 && tcp && (ip6[40+13]==(tcp-syn|tcp-ack) || "
-                           "ip6[40+13]==tcp-rst || "
-                           "ip6[40+13]==(tcp-rst|tcp-ack)))",
+    .bpf_filter =
+        "(ip && tcp && (((tcp[tcpflags] & (tcp-syn|tcp-ack)) == "
+        "(tcp-syn|tcp-ack)) || ((tcp[tcpflags] & tcp-rst) != 0))) "
+        "|| (ip6 && (tcp && (((ip6[40+13] & (tcp-syn|tcp-ack)) == "
+        "(tcp-syn|tcp-ack)) || ((ip6[40+13] & tcp-rst) != 0)) || "
+        "ip6 proto 44 || ip6 proto 43 || ip6 proto 60 || ip6 proto 51))",
     .short_desc          = "TCP SYN scan to find open port.",
     .desc = "TcpSynScan sends a TCP SYN packet to target port. Expect a SYNACK "
             "response to believe the port is open or an RST for closed in TCP "

@@ -187,6 +187,9 @@ static void yarrpecho_validate(uint64_t entropy, Recved *recved,
             pre->go_dedup        = 1;
             pre->dedup_port_them = recved->parsed.icmp_seqno;
             pre->dedup_port_me   = 0;
+        } else {
+            /* Not a reply to our probe: do not report it. */
+            pre->go_record = 0;
         }
 
         return;
@@ -215,10 +218,19 @@ static void yarrpecho_validate(uint64_t entropy, Recved *recved,
                 get_cookie(ip_them, info.icmp_seqno, ip_me, 0, entropy);
 
             if (info.icmp_id == (cookie & 0xFF)) {
-                pre->go_dedup        = 1;
+                pre->go_dedup = 1;
+                /* The outer source is a router, not the original target; use
+                 * the quoted destination so results for different targets at
+                 * the same hop/TTL do not collide in the dedup table. */
+                pre->dedup_ip_them   = info.dst_ip;
                 pre->dedup_port_them = info.icmp_seqno;
                 pre->dedup_port_me   = 0;
+            } else {
+                pre->go_record = 0;
             }
+        } else {
+            /* Cannot parse the quoted packet: not a valid yarrp result. */
+            pre->go_record = 0;
         }
     }
 }
@@ -258,9 +270,13 @@ static void yarrpecho_handle(unsigned th_idx, uint64_t entropy,
     } else {
         /*ttl/hop limit exceeded*/
         PreInfo info = {0};
-        preprocess_frame(recved->packet + recved->parsed.app_offset,
-                         recved->length - recved->parsed.app_offset,
-                         PCAP_DLT_RAW, &info);
+        if (!preprocess_frame(recved->packet + recved->parsed.app_offset,
+                              recved->length - recved->parsed.app_offset,
+                              PCAP_DLT_RAW, &info)) {
+            /* Cannot parse the quoted datagram: no usable path information. */
+            item->no_output = 1;
+            return;
+        }
 
         if (yarrpecho_conf.record_icmp_id)
             dach_set_int(&item->scan_report, "icmp id", info.icmp_id);

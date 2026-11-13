@@ -53,4 +53,42 @@ for gen, base in cases:
     assert p.returncode != 0, (gen, "max-errors", p.returncode)
     p = run_raw(gen, base + " --max-error-rate 10", "127.0.0.1\nBAD\n", gen + "-rate.txt")
     assert p.returncode != 0, (gen, "max-error-rate", p.returncode)
+
+# a rejected option value must say what is wrong, not just "sub param parsing" (F7)
+for gen, base in cases:
+    p = run_raw(gen, base + " --max-errors nope", "127.0.0.1\n", gen + "-bad-max.txt")
+    assert p.returncode != 0, (gen, "bad max-errors accepted", p.returncode)
+    assert "max-errors" in p.stderr, (gen, p.stderr[-400:])
+    p = run_raw(gen, base + " --max-error-rate 101", "127.0.0.1\n", gen + "-bad-rate.txt")
+    assert p.returncode != 0, (gen, "bad max-error-rate accepted", p.returncode)
+    assert "max-error-rate" in p.stderr, (gen, p.stderr[-400:])
+
+# a file whose targets are all rejected must name the file (F9)
+p = run_raw("addr-stream", "--address-file FILE", "BAD 1\nBAD2 1\n", "addr-allbad.txt")
+assert p.returncode != 0, ("addr-stream", "all invalid", p.returncode)
+assert "addr-allbad.txt" in p.stderr, p.stderr[-400:]
+
+# overlong lines are consumed and counted by the shared reader (F8)
+long_line = "9" * 400
+p = run_raw("ip-stream", "--ip-file FILE --default-port 1",
+            "127.0.0.1\n" + long_line + "\n127.0.0.2\n", "ip-long.txt")
+assert p.returncode == 0, ("ip-stream", "long line", p.returncode, p.stderr[-400:])
+assert "target line too long" in p.stderr, p.stderr[-400:]
+p = run_raw("ip-stream", "--ip-file FILE --default-port 1 --max-errors 1",
+            "127.0.0.1\n" + long_line + "\n127.0.0.2\n", "ip-long-max.txt")
+assert p.returncode != 0, ("ip-stream", "long line not counted", p.returncode)
+# a blank-only file has no rejected line, so it is not an all-invalid failure (F8)
+p = run_raw("ip-stream", "--ip-file FILE --default-port 1", "\n\n\n", "ip-blank.txt")
+assert p.returncode == 0, ("ip-stream", "blank only", p.returncode, p.stderr[-400:])
+
+# lines skipped for an un-scannable range must count against the error policy (F17)
+for gen, base, big, ok in [
+    ("ip-stream", "--ip-file FILE --default-port 1", "::/1", "127.0.0.1"),
+    ("addr-stream", "--address-file FILE", "::/1 1", "127.0.0.1 1"),
+]:
+    p = run_raw(gen, base, big + "\n" + ok + "\n", gen + "-big.txt")
+    assert p.returncode == 0, (gen, "big range", p.returncode, p.stderr[-400:])
+    assert "range too large" in p.stderr, (gen, p.stderr[-400:])
+    p = run_raw(gen, base + " --max-errors 1", big + "\n" + ok + "\n", gen + "-big-max.txt")
+    assert p.returncode != 0, (gen, "big range not counted", p.returncode)
 print("Generate input tests: PASS")

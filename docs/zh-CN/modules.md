@@ -2,7 +2,7 @@
 
 [English](../modules.md) · **中文**
 
-Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上以 `NULL` 结尾的注册表里的一行；没有运行期插件加载。完整构建会注册 **11 个基础扫描 + 55 个探测 + 7 个输出 + 5 个生成**模块；另有可选的 `quic-state` 和 `http3-state`（需要 ngtcp2/GnuTLS）。缺少可选库的模块会直接从构建中消失（也从 `--list-*` 中消失）。
+Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上以 `NULL` 结尾的注册表里的一行；没有运行期插件加载。完整构建会注册 **11 个基础扫描 + 59 个探测 + 7 个输出 + 5 个生成**模块；另有可选的 `quic-state` 和 `http3-state`（需要 ngtcp2/GnuTLS）。缺少可选库的模块会直接从构建中消失（也从 `--list-*` 中消失）。
 
 | 类别 | 职责 | 参数 | 注册表 |
 |:---|:---|:---|:---|
@@ -15,7 +15,7 @@ Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上�
 
 ```bash
 xtate --list-scan      # 11，若有 quic-state 则为 12
-xtate --list-probe     # 55 个探测模块
+xtate --list-probe     # 59 个探测模块
 xtate --list-out       # 7 个输出模块
 xtate --list-gen       # 5 个生成模块
 
@@ -45,7 +45,7 @@ xtate --help-gen blackrock
 
 每个扫描模块都通过 `--help-scan <name>` 暴露自己的选项（记录 TTL/IPID/窗口、重复/去重开关、TTL 覆盖等）。如何选择模式、哪些模式需要防火墙规则，见[扫描模式](./scanning-modes.md)。
 
-## 探测模块（27，另有可选 `http3-state`）
+## 探测模块（59，另有可选 `http3-state`）
 
 探测模块会声明一个**类型**，必须与扫描模块匹配：`zbanner` 用 `tcp`，`udp` 用 `udp`，`tcp-state` 用 `state`。它可以声明 `ProbeSlotPlan`（JARM 和 `slot-test` 示例）；见[扫描模式](./scanning-modes.md#探测-slot)。
 
@@ -127,7 +127,7 @@ HTTP/3。不要把 `quic_response: initial` 标成 `http3`。
 
 ### TLS 证据、证书细节与 STARTTLS
 
-`tls-state` 是 HLTCP 中间层，必须指定一个 `state` 子探测。证书和 TLS 字段在
+`tls-state` 是 HLTCP 中间层，必须指定一个 `state` 子探测。`--after-tls` 与隐式/STARTTLS 示例见 [TLS 组合](./tls-composition.md)。证书和 TLS 字段在
 握手成功后输出，与子探测之后做什么无关。
 
 ```bash
@@ -189,6 +189,7 @@ STARTTLS 失败输出 `starttls error`。`--dump-cert-details` 输出
 | `mqtt` | tcp | MQTT 3.1.1 CONNECT 与 CONNACK return-code。 |
 | `socks5` | state | SOCKS5 greeting 和方法选择。 |
 | `telnet` | state | 初始 Telnet banner 和 IAC 选项解析。 |
+| `quic` | udp | QUIC v1 Initial 能力探测；分类 Version Negotiation/Retry/Initial/Handshake；不声称 QUIC 握手或 HTTP/3。 |
 | `jarm` | tcp | 通过 10 个 ClientHello slot 做 JARM；`--first-probe 1..10` 轮换哪个标准探针先发，`jarm_slot` 保留标准编号；`--probe-index` 只发一个；`jarm_part` 由 `tools/jarm_aggregate.py` 聚合。 |
 | `doh-h2` | state | `tls-state` 内的 DoH over HTTP/2（`-alpn h2`）；支持 HPACK literal/Huffman。 |
 | `doh` | state | `tls-state` 内的 DNS over HTTPS（HTTP/1.1 POST）。 |

@@ -2,7 +2,7 @@
 
 [English](../dns-over-tls.md) · **中文**
 
-`dot` 是 DNS over TLS（RFC 7858）的 state 子探针。TLS 由 `tls-state` 负责，
+`dot` 是 DNS over TLS（RFC 7858）的 state 子探测。TLS 由 `tls-state` 负责，
 `dot` 只发送带 2 字节长度前缀的 DNS 查询并解析响应。
 
 ```text
@@ -49,7 +49,7 @@ dot_dnssec_present
 
 ## 注意事项
 
-- 必须使用 `tls-state -alpn dot`；服务器不协商 `dot` 时子探针不会运行。
+- 必须使用 `tls-state -alpn dot`；服务器不协商 `dot` 时子探测不会运行。
 - 2 字节长度前缀是 RFC 7858 必需的。
 - 每个连接只发送一次 DNS 查询/响应。
-- 未安装 RST 抑制规则时，Linux 可能在 TLS 完成前重置连接。
+- 未安装 RST 抑制规则时，Linux 可能在 `tls-state` 完成前重置连接。

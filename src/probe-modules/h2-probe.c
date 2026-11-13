@@ -635,7 +635,7 @@ static bool h2_hpack_str(const unsigned char *data, size_t len, size_t *off,
         return false;
     bool huffman = (data[*off] & 0x80) != 0;
     size_t slen = h2_hpack_int(data, len, off, 7);
-    if (slen == (size_t)-1 || *off + slen > len)
+    if (slen == (size_t)-1 || slen > len - *off)
         return false;
     if (huffman) {
         int d = h2_huffman_decode(data + *off, slen, out, out_size);

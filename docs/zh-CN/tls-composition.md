@@ -5,10 +5,10 @@
 `tls-state` 不是应用层探针，而是 HLTCP 内部的 TLS 中间层：
 
 ```text
-tcp-state -> tls-state -> TLS 内的 state 子探针
+tcp-state -> tls-state -> TLS 内的 state 子探测
 ```
 
-子探针看不到明文 STARTTLS 交换，这正是 `--after-tls` 存在的原因。
+子探测看不到明文 STARTTLS 交换，这正是 `--after-tls` 存在的原因。
 
 ## 两种组合模式
 
@@ -26,7 +26,7 @@ PostgreSQL TLS 5432
 MongoDB TLS    27017
 ```
 
-`tls-state` 完成握手后，在 TLS 内启动 state 子探针。
+`tls-state` 完成握手后，在 TLS 内启动 state 子探测。
 
 ### STARTTLS
 
@@ -40,17 +40,17 @@ FTP       220 -> AUTH TLS -> 234 -> TLS
 ManageSieve greeting -> STARTTLS -> "OK" -> TLS
 ```
 
-`tls-state` 会消费明文 greeting 和升级响应。子探针在 TLS 握手**之后**启动，
+`tls-state` 会消费明文 greeting 和升级响应。子探测在 TLS 握手**之后**启动，
 不能再等待那个 greeting。
 
 ## `--after-tls` 的含义
 
-`--after-tls` **不是**开启 TLS 的开关，只改变子探针状态机：
+`--after-tls` **不是**开启 TLS 的开关，只改变子探测状态机：
 
 > “明文 greeting/SSLRequest 阶段已经完成，或者我已经在 TLS 内；
 > 跳过这个阶段，直接走 TLS 后的流程。”
 
-它是**子探针参数**，通过 `-subprobe-arg` 传入，不是 `tls-state` 自己的参数。
+它是**子探测参数**，通过 `-subprobe-arg` 传入，不是 `tls-state` 自己的参数。
 
 ## 各协议行为
 
@@ -121,7 +121,7 @@ sudo ./bin/xtate -ip 203.0.113.10 -p 27017 -scan tcp-state -probe tls-state   -p
 
 ## 为什么不能自动判断
 
-子探针无法知道：
+子探测无法知道：
 
 - `tls-state` 是否已经消费 greeting；
 - 当前是隐式 TLS 还是 STARTTLS；

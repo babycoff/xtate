@@ -8,7 +8,7 @@
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80 -scan tcp-syn > results.txt
 ```
 
-> 文档以 Xtate v2.39.1 为准。你所用构建的确切 flag 以 `--help` 和 `--help-output <module>` 为准。
+> 文档以 Xtate v2.42.0 为准。你所用构建的确切 flag 以 `--help` 和 `--help-output <module>` 为准。
 
 ## 结果行
 
@@ -121,7 +121,7 @@ SHA-256 的前 32 个十六进制字符；`jarm_sha256` 是扫描器原始片段
 SHA-256，不是标准 JARM 值；`jarm-retry.jsonl`/`.csv`
 列出缺失 slot 的目标及缺失编号。CSV 仅用于人工查看，因为 Xtate 的目标文件只有地址，不能直接表达 `ip:port`。
 `--retry-dir` 会按端口生成 Xtate 可直接读取的 `port-<port>.ips`，配合 `--retry-template` 生成可执行命令；
-`--retry-ports-file` 输出缺失目标的唯一端口列表。统计输出包含缺失 slot 计数和重复 slot 计数。
+`--retry-ports-file` 输出缺失目标的唯一端口列表。统计输出包含 `missing_slot_counts` 与重复 slot 计数。
 
 **统计字段要按字面理解：** `targets_with_parts` 是“至少有 1 个 JARM part 的目标数”，不是实际扫描目标数。第一个响应丢失的目标不会产生 part，因此不会出现在 `targets_with_parts`、`complete` 或 `incomplete` 中。`records_without_parts` 统计的是有效但没有 JARM part 的输出行（例如一条 `open` 行），它们自身不能证明这是一个 JARM 目标。stats 里的 `meaning` 字段也会重复这句解释。retry 文件只覆盖至少有一个 part 的目标；0 part 的目标必须从原始目标/端口清单中补回。
 

@@ -31,4 +31,18 @@ run({**base, "bad": 1}, "INVALID_ARGUMENT")
 run({**base, "scan": "does-not-exist"}, "UNSUPPORTED_SCAN")
 run({**base, "probe": "does-not-exist"}, "UNSUPPORTED_PROBE")
 run({**base, "targets": ["not-an-ip"]}, "TARGET_INVALID")
+
+# Deeply nested JSON must be rejected by the parser depth limit, not crash the
+# worker with a stack overflow.
+deep = ('{"scan":"tcp-syn","targets":["1.1.1.1"],"probe_args":' +
+        "[" * 5000 + "]" * 5000 + "}")
+with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+    f.write(deep); deep_path = f.name
+try:
+    r = subprocess.run([BIN, "--scan-request=" + deep_path], text=True,
+                       capture_output=True, timeout=15)
+finally:
+    os.unlink(deep_path)
+assert r.returncode != 0, r.stdout
+assert '"code":"INVALID_JSON"' in r.stderr, r.stderr
 print("scan-request runtime: PASS")

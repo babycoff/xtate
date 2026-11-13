@@ -11,6 +11,7 @@
  */
 
 #include "probe-modules.h"
+#include "../util-data/file-open.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -809,7 +810,7 @@ static bool h3_init(const struct XtateConf *xconf) {
     if (!match_spec_finalize(&h3_conf.match))
         return false;
     if (h3_conf.data_file) {
-        FILE *fp = fopen(h3_conf.data_file, "rb");
+        FILE *fp = file_open_utf8_mode(h3_conf.data_file, "rb");
         if (!fp) {
             LOGPERROR("http3 data-file");
             return false;

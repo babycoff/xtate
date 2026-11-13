@@ -14,22 +14,41 @@ int control_client_request(const char *endpoint, const char *request,
                            char *response, size_t cap) {
     if (!endpoint || !request || !response || cap == 0) return -1;
 #ifdef _WIN32
-    HANDLE p = CreateFileA(endpoint, GENERIC_READ | GENERIC_WRITE, 0, NULL,
+    wchar_t wpath[1024];
+    if (MultiByteToWideChar(CP_UTF8, 0, endpoint, -1, wpath, 1024) <= 0) return -1;
+    HANDLE p = CreateFileW(wpath, GENERIC_READ | GENERIC_WRITE, 0, NULL,
                            OPEN_EXISTING, 0, NULL);
     if (p == INVALID_HANDLE_VALUE) {
         return -1;
     }
-    DWORD wrote = 0;
-    if (!WriteFile(p, request, (DWORD)strlen(request), &wrote, NULL)) {
-        CloseHandle(p); return -1;
+    size_t reqlen = strlen(request);
+    bool add_nl = reqlen == 0 || request[reqlen - 1] != '\n';
+    size_t sent = 0;
+    while (sent < reqlen) {
+        DWORD wrote = 0;
+        DWORD want = (DWORD)(reqlen - sent);
+        if (!WriteFile(p, request + sent, want, &wrote, NULL) || wrote == 0) {
+            CloseHandle(p); return -1;
+        }
+        sent += wrote;
     }
-    DWORD got = 0;
-    if (!ReadFile(p, response, (DWORD)cap - 1, &got, NULL)) {
-        CloseHandle(p); return -1;
+    if (add_nl) {
+        DWORD wrote = 0;
+        if (!WriteFile(p, "\n", 1, &wrote, NULL) || wrote != 1) {
+            CloseHandle(p); return -1;
+        }
     }
-    response[got] = 0;
+    size_t total = 0;
+    while (total + 1 < cap) {
+        DWORD got = 0;
+        DWORD want = (DWORD)(cap - 1 - total);
+        if (!ReadFile(p, response + total, want, &got, NULL) || got == 0) break;
+        total += got;
+        if (memchr(response, '\n', total)) break;
+    }
+    response[total] = 0;
     CloseHandle(p);
-    return (int)got;
+    return (int)total;
 #else
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) return -1;

@@ -88,14 +88,28 @@ static ConfRes SET_strict(void *conf, const char *name, const char *value) {
 static ConfRes SET_max_errors(void *conf, const char *name, const char *value) {
     UNUSEDPARM(conf); UNUSEDPARM(name);
     uint64_t n = 0;
-    if (!conf_parse_int_checked(value, &n)) return Conf_ERR;
+    if (!conf_parse_int_checked(value, &n)) {
+        LOG(LEVEL_ERROR, "max-errors: \"%s\" is not a non-negative integer. "
+                         "Use an integer count, or 0 to disable the limit.\n",
+            value ? value : "");
+        return Conf_ERR;
+    }
     addrstream_conf.max_errors = n;
     return Conf_OK;
 }
 static ConfRes SET_max_rate(void *conf, const char *name, const char *value) {
     UNUSEDPARM(conf); UNUSEDPARM(name);
     uint64_t n = 0;
-    if (!conf_parse_int_checked(value, &n) || n > 100) return Conf_ERR;
+    if (!conf_parse_int_checked(value, &n)) {
+        LOG(LEVEL_ERROR, "max-error-rate: \"%s\" is not an integer percent "
+                         "(0..100).\n", value ? value : "");
+        return Conf_ERR;
+    }
+    if (n > 100) {
+        LOG(LEVEL_ERROR, "max-error-rate: %llu is out of range (0..100 "
+                         "percent).\n", (unsigned long long)n);
+        return Conf_ERR;
+    }
     addrstream_conf.max_error_percent = (unsigned)n;
     return Conf_OK;
 }
@@ -190,7 +204,7 @@ bool addrstream_hasmore(unsigned tx_index, uint64_t index) {
             else {
                 LOG(LEVEL_DEBUG, "(stream generator) EOF of stream.\n");
                 if (addrstream_conf.valid_lines == 0 && addrstream_conf.bad_lines > 0) {
-                    LOG(LEVEL_ERROR, "addrstream_conf: no valid targets; all lines were rejected\n",
+                    LOG(LEVEL_ERROR, "%s: no valid targets; all lines were rejected\n",
                         addrstream_conf.filename ? addrstream_conf.filename : "<stdin>");
                     exit(1);
                 }
@@ -257,6 +271,7 @@ bool addrstream_hasmore(unsigned tx_index, uint64_t index) {
                 addrstream_conf.filename ? addrstream_conf.filename : "<stdin>",
                 (unsigned long long)addrstream_conf.line_number, line);
             targetset_rm_ip(cur_tgt);
+            targetset_rm_port(cur_tgt);
             continue;
         }
 
@@ -267,9 +282,16 @@ bool addrstream_hasmore(unsigned tx_index, uint64_t index) {
 
         if (cur_tgt->count_ports == 0) {
             sub[0] = addrstream_conf.splitter[0];
-            LOG(LEVEL_ERROR, "(stream generator) not valid port in address: %s",
-                line);
+            addrstream_conf.bad_lines++;
+            if (stream_bad_limit(addrstream_conf.bad_lines, addrstream_conf.line_number,
+                            addrstream_conf.strict_errors, addrstream_conf.max_errors,
+                            addrstream_conf.max_error_percent,
+                            addrstream_conf.filename, addrstream_conf.line_number)) exit(1);
+            LOG(LEVEL_ERROR, "%s:%llu: (stream generator) not valid port in address: %s",
+                addrstream_conf.filename ? addrstream_conf.filename : "<stdin>",
+                (unsigned long long)addrstream_conf.line_number, line);
             targetset_rm_ip(cur_tgt);
+            targetset_rm_port(cur_tgt);
             continue;
         }
 
@@ -277,16 +299,37 @@ bool addrstream_hasmore(unsigned tx_index, uint64_t index) {
          * !only support 63-bit scans for every line
          */
         if (int128_bitcount(targetset_count(cur_tgt)) > 63) {
+            addrstream_conf.bad_lines++;
+            if (stream_bad_limit(addrstream_conf.bad_lines, addrstream_conf.line_number,
+                            addrstream_conf.strict_errors, addrstream_conf.max_errors,
+                            addrstream_conf.max_error_percent,
+                            addrstream_conf.filename, addrstream_conf.line_number)) exit(1);
             LOG(LEVEL_ERROR,
-                "(stream generator) range too large for scanning: "
+                "%s:%llu: (stream generator) range too large for scanning: "
                 "%u-bits(>63).\n",
+                addrstream_conf.filename ? addrstream_conf.filename : "<stdin>",
+                (unsigned long long)addrstream_conf.line_number,
                 int128_bitcount(targetset_count(cur_tgt)));
+            targetset_rm_ip(cur_tgt);
+            targetset_rm_port(cur_tgt);
             continue;
         }
 
         if (cur_tgt->count_ipv4s == 0 && cur_tgt->count_ipv6s.hi == 0 &&
-            cur_tgt->count_ipv6s.lo == 0)
+            cur_tgt->count_ipv6s.lo == 0) {
+            sub[0] = addrstream_conf.splitter[0];
+            addrstream_conf.bad_lines++;
+            if (stream_bad_limit(addrstream_conf.bad_lines, addrstream_conf.line_number,
+                            addrstream_conf.strict_errors, addrstream_conf.max_errors,
+                            addrstream_conf.max_error_percent,
+                            addrstream_conf.filename, addrstream_conf.line_number)) exit(1);
+            LOG(LEVEL_ERROR, "%s:%llu: no ip in address: %s",
+                addrstream_conf.filename ? addrstream_conf.filename : "<stdin>",
+                (unsigned long long)addrstream_conf.line_number, line);
+            targetset_rm_ip(cur_tgt);
+            targetset_rm_port(cur_tgt);
             continue;
+        }
         addrstream_conf.valid_lines++;
         break;
     }

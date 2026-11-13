@@ -315,6 +315,9 @@ static size_t luatcp_make_payload(ProbeTarget   *target,
     }
 
     ret = lua_tolstring(luatcp_conf.Ltx, -1, &ret_len);
+    if (ret_len > PM_PAYLOAD_SIZE) {
+        ret_len = PM_PAYLOAD_SIZE;
+    }
     memcpy(payload_buf, ret, ret_len);
     lua_settop(luatcp_conf.Ltx, 0);
     return ret_len;
@@ -352,7 +355,13 @@ static size_t luatcp_get_payload_length(ProbeTarget *target) {
     ret_len = lua_tointeger(luatcp_conf.Lrx, -1);
     lua_settop(luatcp_conf.Lrx, 0);
 
-    return ret_len;
+    if (ret_len < 0) {
+        return 0;
+    }
+    if ((size_t)ret_len > PM_PAYLOAD_SIZE) {
+        return PM_PAYLOAD_SIZE;
+    }
+    return (size_t)ret_len;
 }
 
 static unsigned luatcp_handle_response(unsigned th_idx, ProbeTarget *target,
@@ -418,7 +427,11 @@ static unsigned luatcp_handle_response(unsigned th_idx, ProbeTarget *target,
         return 0;
     }
     lua_ret = lua_tolstring(luatcp_conf.Lhx, -3, &ret_len);
+    if (ret_len >= OUT_CLS_SIZE) {
+        ret_len = OUT_CLS_SIZE - 1;
+    }
     memcpy(item->classification, lua_ret, ret_len);
+    item->classification[ret_len] = 0;
 
     if (lua_isstring(luatcp_conf.Lhx, -2) == 0) {
         LOG(LEVEL_ERROR,
@@ -429,7 +442,11 @@ static unsigned luatcp_handle_response(unsigned th_idx, ProbeTarget *target,
         return 0;
     }
     lua_ret = lua_tolstring(luatcp_conf.Lhx, -2, &ret_len);
+    if (ret_len >= OUT_RSN_SIZE) {
+        ret_len = OUT_RSN_SIZE - 1;
+    }
     memcpy(item->reason, lua_ret, ret_len);
+    item->reason[ret_len] = 0;
 
     if (lua_isstring(luatcp_conf.Lhx, -1) == 0) {
         LOG(LEVEL_ERROR,

@@ -382,6 +382,7 @@ static void tcpstate_validate(uint64_t entropy, Recved *recved,
     if (TCP_HAS_FLAG(recved->packet, recved->parsed.transport_offset,
                      TCP_FLAG_SYN | TCP_FLAG_ACK)) {
         if (cookie != seqno_me - 1) {
+            pre->go_record = 0;
             return;
         }
     }
@@ -392,6 +393,7 @@ static void tcpstate_validate(uint64_t entropy, Recved *recved,
     if (TCP_HAS_FLAG(recved->packet, recved->parsed.transport_offset,
                      TCP_FLAG_RST)) {
         if (seqno_me != cookie + 1 && seqno_me != cookie) {
+            pre->go_record = 0;
             return;
         }
         pre->go_dedup = 1;

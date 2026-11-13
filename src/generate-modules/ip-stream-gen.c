@@ -92,14 +92,28 @@ static ConfRes SET_strict(void *conf, const char *name, const char *value) {
 static ConfRes SET_max_errors(void *conf, const char *name, const char *value) {
     UNUSEDPARM(conf); UNUSEDPARM(name);
     uint64_t n = 0;
-    if (!conf_parse_int_checked(value, &n)) return Conf_ERR;
+    if (!conf_parse_int_checked(value, &n)) {
+        LOG(LEVEL_ERROR, "max-errors: \"%s\" is not a non-negative integer. "
+                         "Use an integer count, or 0 to disable the limit.\n",
+            value ? value : "");
+        return Conf_ERR;
+    }
     ipstream_conf.max_errors = n;
     return Conf_OK;
 }
 static ConfRes SET_max_rate(void *conf, const char *name, const char *value) {
     UNUSEDPARM(conf); UNUSEDPARM(name);
     uint64_t n = 0;
-    if (!conf_parse_int_checked(value, &n) || n > 100) return Conf_ERR;
+    if (!conf_parse_int_checked(value, &n)) {
+        LOG(LEVEL_ERROR, "max-error-rate: \"%s\" is not an integer percent "
+                         "(0..100).\n", value ? value : "");
+        return Conf_ERR;
+    }
+    if (n > 100) {
+        LOG(LEVEL_ERROR, "max-error-rate: %llu is out of range (0..100 "
+                         "percent).\n", (unsigned long long)n);
+        return Conf_ERR;
+    }
     ipstream_conf.max_error_percent = (unsigned)n;
     return Conf_OK;
 }
@@ -188,15 +202,17 @@ bool ipstream_hasmore(unsigned tx_index, uint64_t index) {
     /*add new ips*/
     char line[256];
     while (true) {
-        char *s = fgets(line, sizeof(line), ipstream_conf.fp);
-        if (s != NULL) ipstream_conf.line_number++;
-
-        if (s == NULL) {
+        bool too_long = false;
+        int rr = stream_read_line(ipstream_conf.fp, line, sizeof(line),
+                                  ipstream_conf.filename,
+                                  &ipstream_conf.line_number,
+                                  &ipstream_conf.bad_lines, &too_long);
+        if (rr < 0) {
             if (ferror(ipstream_conf.fp))
                 LOG(LEVEL_DEBUG, "(stream generator) error of stream.\n");
             else if (feof(ipstream_conf.fp)) {
                 LOG(LEVEL_DEBUG, "(stream generator) EOF of stream.\n");
-                if (ipstream_conf.valid_lines == 0 && ipstream_conf.line_number > 0) {
+                if (ipstream_conf.valid_lines == 0 && ipstream_conf.bad_lines > 0) {
                     LOG(LEVEL_ERROR, "%s: no valid targets; all input lines were rejected\n",
                         ipstream_conf.filename ? ipstream_conf.filename : "<stdin>");
                     exit(1);
@@ -205,11 +221,7 @@ bool ipstream_hasmore(unsigned tx_index, uint64_t index) {
             return false;
         }
 
-        size_t _ll = strlen(line);
-        if (_ll == sizeof(line) - 1 && line[_ll - 1] != '\n') {
-            int _c;
-            while ((_c = fgetc(ipstream_conf.fp)) != EOF && _c != '\n') {}
-            ipstream_conf.bad_lines++;
+        if (rr > 0) {
             if (stream_bad_limit(ipstream_conf.bad_lines, ipstream_conf.line_number,
                             ipstream_conf.strict_errors, ipstream_conf.max_errors,
                             ipstream_conf.max_error_percent,
@@ -220,6 +232,8 @@ bool ipstream_hasmore(unsigned tx_index, uint64_t index) {
                 sizeof(line) - 1);
             continue;
         }
+
+        char *s = line;
         /*absolute null line or the last line*/
         if (s[0] == '\n' || s[0] == '\r') {
             continue;
@@ -250,16 +264,34 @@ bool ipstream_hasmore(unsigned tx_index, uint64_t index) {
          * !only support 63-bit scans for every line
          */
         if (int128_bitcount(targetset_count(cur_tgt)) > 63) {
+            ipstream_conf.bad_lines++;
+            if (stream_bad_limit(ipstream_conf.bad_lines, ipstream_conf.line_number,
+                            ipstream_conf.strict_errors, ipstream_conf.max_errors,
+                            ipstream_conf.max_error_percent,
+                            ipstream_conf.filename, ipstream_conf.line_number)) exit(1);
             LOG(LEVEL_ERROR,
-                "(stream generator) range too large for scanning: "
+                "%s:%llu: (stream generator) range too large for scanning: "
                 "%u-bits(>63).\n",
+                ipstream_conf.filename ? ipstream_conf.filename : "<stdin>",
+                (unsigned long long)ipstream_conf.line_number,
                 int128_bitcount(targetset_count(cur_tgt)));
+            targetset_rm_ip(cur_tgt);
             continue;
         }
 
         if (cur_tgt->count_ipv4s == 0 && cur_tgt->count_ipv6s.hi == 0 &&
-            cur_tgt->count_ipv6s.lo == 0)
+            cur_tgt->count_ipv6s.lo == 0) {
+            ipstream_conf.bad_lines++;
+            if (stream_bad_limit(ipstream_conf.bad_lines, ipstream_conf.line_number,
+                            ipstream_conf.strict_errors, ipstream_conf.max_errors,
+                            ipstream_conf.max_error_percent,
+                            ipstream_conf.filename, ipstream_conf.line_number)) exit(1);
+            LOG(LEVEL_ERROR, "%s:%llu: no ip in address: %s",
+                ipstream_conf.filename ? ipstream_conf.filename : "<stdin>",
+                (unsigned long long)ipstream_conf.line_number, line);
+            targetset_rm_ip(cur_tgt);
             continue;
+        }
         ipstream_conf.valid_lines++;
         break;
     }

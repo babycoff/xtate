@@ -36,6 +36,7 @@
  */
 
 #include <stdio.h>
+#include "../util-data/file-open.h"
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -246,7 +247,7 @@ static FILE *s_crossline_debug_fp = NULL;
 #define crossline_debug(...)                                                   \
     do {                                                                       \
         if (NULL == s_crossline_debug_fp) {                                    \
-            s_crossline_debug_fp = fopen("crossline_debug.txt", "a");          \
+            s_crossline_debug_fp = file_open_utf8_mode("crossline_debug.txt", "a");          \
         }                                                                      \
         fprintf(s_crossline_debug_fp, __VA_ARGS__);                            \
         fflush(s_crossline_debug_fp);                                          \
@@ -480,7 +481,7 @@ int crossline_history_save(const char *filename) {
     if (NULL == filename) {
         return -1;
     } else {
-        FILE *file = fopen(filename, "wt");
+        FILE *file = file_open_utf8_mode(filename, "wt");
         if (file == NULL) {
             return -1;
         }
@@ -498,7 +499,7 @@ int crossline_history_load(const char *filename) {
     if (NULL == filename) {
         return -1;
     }
-    file = fopen(filename, "rt");
+    file = file_open_utf8_mode(filename, "rt");
     if (NULL == file) {
         return -1;
     }

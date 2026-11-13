@@ -285,11 +285,24 @@ static void yarrpudp_validate(uint64_t entropy, Recved *recved,
                 (!yarrpudp_conf.fixed_port_me_set &&
                  yarrpudp_conf.port_me_offset - port_me ==
                      port_them - yarrpudp_conf.port_them_offset)) {
-                pre->go_dedup        = 1;
+                pre->go_dedup = 1;
+                /* The outer source is a router, not the original target; use
+                 * the quoted destination so results for different targets at
+                 * the same hop/TTL do not collide in the dedup table. */
+                pre->dedup_ip_them   = info.dst_ip;
                 pre->dedup_port_them = port_them;
                 pre->dedup_port_me   = port_me;
+            } else {
+                /* Port pair does not belong to our probe. */
+                pre->go_record = 0;
             }
+        } else {
+            /* Cannot parse the quoted UDP packet: not a valid yarrp result. */
+            pre->go_record = 0;
         }
+    } else {
+        /* Not a port-unreachable/hop-limit ICMP error. */
+        pre->go_record = 0;
     }
 }
 
@@ -308,9 +321,13 @@ static void yarrpudp_handle(unsigned th_idx, uint64_t entropy,
     item->level            = OUT_SUCCESS;
 
     PreInfo info = {0};
-    preprocess_frame(recved->packet + recved->parsed.app_offset,
-                     recved->length - recved->parsed.app_offset, PCAP_DLT_RAW,
-                     &info);
+    if (!preprocess_frame(recved->packet + recved->parsed.app_offset,
+                          recved->length - recved->parsed.app_offset,
+                          PCAP_DLT_RAW, &info)) {
+        /* Cannot parse the quoted datagram: no usable path information. */
+        item->no_output = 1;
+        return;
+    }
 
     if (yarrpudp_conf.record_ttl)
         dach_set_int(&item->scan_report, "ttl", recved->parsed.ip_ttl);

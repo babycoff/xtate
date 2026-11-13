@@ -443,13 +443,16 @@ static unsigned tlshello_handle_reponse(unsigned th_idx, ProbeTarget *target,
         return 0;
 
     } else if (px[0] == 0x15 && px[1] == 0x03 && sizeof_px >= 7) {
-        if (px[10] == 0x00) {
+        /* TLS Alert record: type(1) version(2) length(2) level(1) desc(1).
+         * The peer version lives in px[1..2], not in the body. Use px[2]
+         * (the minor version byte) for classification. */
+        if (px[2] == 0x00) {
             safe_strcpy(item->classification, OUT_CLS_SIZE, "SSLv3.0");
-        } else if (px[10] == 0x01) {
+        } else if (px[2] == 0x01) {
             safe_strcpy(item->classification, OUT_CLS_SIZE, "TLSv1.0");
-        } else if (px[10] == 0x02) {
+        } else if (px[2] == 0x02) {
             safe_strcpy(item->classification, OUT_CLS_SIZE, "TLSv1.1");
-        } else if (px[10] == 0x03) {
+        } else if (px[2] == 0x03) {
             /**
              * NOTE: (TRICK)
              * In practice, our default probe can support normal TLS from

@@ -1242,6 +1242,54 @@ utf8codepoint(const utf8_int8_t *utf8_restrict str,
     return (utf8_int8_t *)str;
 }
 
+/* Decode at most one UTF-8 codepoint from `str`, where only `avail` bytes may
+ * be read. Unlike utf8codepoint(), this never reads past the caller's buffer.
+ *
+ * Returns the number of bytes consumed (1..4), or 0 when the sequence is
+ * truncated (fewer than avail bytes), starts with a stray continuation byte,
+ * or has an invalid lead byte (0xf8..0xff). In the 0 case `*out_codepoint`
+ * may be left unchanged; the caller is expected to escape/emit the single
+ * lead byte itself. */
+utf8_constexpr14_impl size_t
+utf8codepointbounded(const utf8_int8_t *str, size_t avail,
+                     utf8_int32_t *out_codepoint) {
+    size_t need;
+    size_t i;
+
+    if (str == utf8_null || avail == 0) {
+        return 0;
+    }
+
+    if (0xf0 == (0xf8 & str[0])) {
+        need = 4;
+    } else if (0xe0 == (0xf0 & str[0])) {
+        need = 3;
+    } else if (0xc0 == (0xe0 & str[0])) {
+        need = 2;
+    } else if (0x80 == (0xc0 & str[0])) {
+        /* stray continuation byte (0b10xxxxxx) */
+        return 0;
+    } else if (0xf8 == (0xf8 & str[0])) {
+        /* invalid 5/6-byte lead (0xf8..0xff) */
+        return 0;
+    } else {
+        need = 1;
+    }
+
+    if (need > avail) {
+        return 0;
+    }
+
+    for (i = 1; i < need; i++) {
+        if (0x80 != (0xc0 & str[i])) {
+            return 0;
+        }
+    }
+
+    (void)utf8codepoint(str, out_codepoint);
+    return need;
+}
+
 utf8_constexpr14_impl size_t utf8codepointcalcsize(const utf8_int8_t *str) {
     if (0xf0 == (0xf8 & str[0])) {
         /* 4 byte utf8 codepoint */

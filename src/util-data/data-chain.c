@@ -573,43 +573,53 @@ DataLink *dach_append_banner(DataChain *dach, const char *name, const void *px,
 
 /***************************************************************************
  ***************************************************************************/
+static DataLink *_dach_append_escaped(DataLink *link, int c) {
+    if (no_escape_char) {
+        link = dach_append_by_link(link, "\\\\x", 3);
+    } else {
+        link = dach_append_by_link(link, "\\x", 2);
+    }
+    link = dach_append_char_by_link(link, HEX_ARRAY[(c >> 4) & 0xF]);
+    link = dach_append_char_by_link(link, HEX_ARRAY[(c >> 0) & 0xF]);
+    return link;
+}
+
+/***************************************************************************
+ ***************************************************************************/
 DataLink *dach_append_utf8_by_link(DataLink *link, const void *px,
                                    size_t length) {
     int          c;
     utf8_int32_t utf8_c;
     size_t       utf8_len;
-    const char  *next_ptr = px;
-    const char  *ptr      = px;
+    const char  *ptr = px;
 
-    for (; next_ptr - (char *)px < length;) {
-        next_ptr = utf8codepoint(ptr, &utf8_c);
-        utf8_len = utf8codepointsize(utf8_c);
+    while ((size_t)(ptr - (const char *)px) < length) {
+        size_t remaining = length - (size_t)(ptr - (const char *)px);
+
+        utf8_len =
+            utf8codepointbounded((const utf8_int8_t *)ptr, remaining, &utf8_c);
+        if (utf8_len == 0) {
+            /* Truncated or invalid sequence: emit the lead byte escaped and
+             * never read or copy beyond the caller's buffer. */
+            c = (int)(unsigned char)ptr[0];
+            link = _dach_append_escaped(link, c);
+            ptr += 1;
+            continue;
+        }
 
         if (utf8_len == 1) {
-            c = ((char *)ptr)[0];
+            c = (int)(unsigned char)ptr[0];
 
             if (isprint(c) && c != '\\' && c != '"' && c != '\'') {
-
                 link = dach_append_char_by_link(link, c);
-
             } else {
-
-                if (no_escape_char) {
-                    link = dach_append_by_link(link, "\\\\x", 3);
-                } else {
-                    link = dach_append_by_link(link, "\\x", 2);
-                }
-                link =
-                    dach_append_char_by_link(link, HEX_ARRAY[(c >> 4) & 0xF]);
-                link =
-                    dach_append_char_by_link(link, HEX_ARRAY[(c >> 0) & 0xF]);
+                link = _dach_append_escaped(link, c);
             }
-
         } else {
             link = dach_append_by_link(link, ptr, utf8_len);
         }
 
-        ptr = next_ptr;
+        ptr += utf8_len;
     }
 
     return link;
@@ -1034,6 +1044,55 @@ int datachain_selftest(void) {
             goto fail;
         }
         if (!dach_equals_str(dach, "5", "ZmdoaWo=")) {
+            line = __LINE__;
+            goto fail;
+        }
+
+        dach_release(dach);
+        free(dach);
+    }
+
+    /*
+     * Test UTF-8 boundary handling: truncated or invalid sequences must be
+     * escaped byte by byte and must never read or copy beyond `length`.
+     */
+    {
+        DataChain *dach = CALLOC(1, sizeof(DataChain));
+        static const unsigned char invalid_lead[] = {'A', 'B', 0xFF};
+        static const unsigned char truncated_2[] = {'A', 0xE4};
+        static const unsigned char truncated_3[] = {'A', 'B', 0xF0};
+        static const unsigned char truncated_4[] = {'A', 'B', 'C', 0xF0};
+        static const unsigned char valid_2[] = {0xC3, 0xA9};
+        static const unsigned char stray_cont[] = {'A', 0x80};
+
+        dach_append_utf8(dach, "invalid", invalid_lead, sizeof(invalid_lead));
+        dach_append_utf8(dach, "trunc2", truncated_2, sizeof(truncated_2));
+        dach_append_utf8(dach, "trunc3", truncated_3, sizeof(truncated_3));
+        dach_append_utf8(dach, "trunc4", truncated_4, sizeof(truncated_4));
+        dach_append_utf8(dach, "valid2", valid_2, sizeof(valid_2));
+        dach_append_utf8(dach, "stray", stray_cont, sizeof(stray_cont));
+
+        if (!dach_equals_str(dach, "invalid", "AB\\xff")) {
+            line = __LINE__;
+            goto fail;
+        }
+        if (!dach_equals_str(dach, "trunc2", "A\\xe4")) {
+            line = __LINE__;
+            goto fail;
+        }
+        if (!dach_equals_str(dach, "trunc3", "AB\\xf0")) {
+            line = __LINE__;
+            goto fail;
+        }
+        if (!dach_equals_str(dach, "trunc4", "ABC\\xf0")) {
+            line = __LINE__;
+            goto fail;
+        }
+        if (!dach_equals_str(dach, "valid2", "\xC3\xA9")) {
+            line = __LINE__;
+            goto fail;
+        }
+        if (!dach_equals_str(dach, "stray", "A\\x80")) {
             line = __LINE__;
             goto fail;
         }

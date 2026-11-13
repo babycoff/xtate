@@ -5,7 +5,7 @@
   <h3>Xtate —— 面向互联网级测量的模块化全栈网络扫描器</h3>
 
   <p>
-    <b>无状态 TCP banner。</b> <b>混合状态 TCP/TLS。</b> <b>50 个已注册模块。</b><br>
+    <b>无状态 TCP banner。</b> <b>混合状态 TCP/TLS。</b> <b>82 个已注册模块。</b><br>
     <sub>C99 · Linux glibc/musl &amp; Windows · GCC/Clang/MSVC/MinGW · Make/Ninja · IPv4 &amp; IPv6</sub>
   </p>
 
@@ -24,9 +24,9 @@
 
 > **God is Stateless.** —— Xtate 的格言
 
-> **Linux 前置条件（不适用于 Windows）：** `zbanner`、`tcp-state`、`tls-state` 和所有 state 子探针
+> **Linux 前置条件（不适用于 Windows）：** `zbanner`、`tcp-state`、`tls-state` 和所有 state 子探测
 > 在扫描端必须先执行 `sudo ./firewall/add_rules.sh`（`tcp-syn` 等无状态扫描不需要）。缺失规则会出现
-> `open` 但没有 banner/TLS/探针输出。见 [Linux 防火墙](./docs/firewall.md)。
+> `open` 但没有 banner/TLS/探针输出。见 [Linux 防火墙](./docs/zh-CN/firewall.md)。
 
 Xtate 是一款面向大规模主动测量的网络扫描器。它把扫描栈拆成四种可插拔的模块类型——**扫描**（L3/L4 数据包）、**探测**（L5 及以上载荷与解析器）、**生成**（目标）和**输出**（结果）——并自带两个原创引擎：
 
@@ -54,12 +54,10 @@ Xtate 是一款面向大规模主动测量的网络扫描器。它把扫描栈�
 - ⚡ **ZBanner**——无需为每个目标维护连接表，也能拿到真实的 TCP 响应。状态由对端的 TCP 协议栈保存，一个 SipHash cookie 就能证明这条回应是给你的。
 - 🧬 **HLTCP**——按需创建的混合状态用户态 TCP 协议栈。它能完成 TLS 握手，并在握手之上直接讲 HTTP。
 - 🛰 **QUIC 能力探测**——发送真实 QUIC v1 Initial，识别 Version Negotiation/Retry/Initial/Handshake；不声称完成 HTTP/3 握手。
-- 🔄 **QUIC state**——可选 ngtcp2/GnuTLS 有状态 QUIC 握手，输出版本、TLS/ALPN、证书字段并支持 state 子探测；原始 UDP 与源端口仍由 Xtate 控制。
 - 🌐 **HTTP 与 DNS 协议覆盖**——HTTP/1.0/1.1、HTTP/2（HPACK，含 Huffman）、QUIC 上的 HTTP/3、HTTPS/TLS；UDP DNS、DNSSEC 证据（`--dnssec`）、DoT（`dot`）、DoH HTTP/1.1（`doh`）与 DoH HTTP/2（`doh-h2`）。
 - 🔐 **TLS 证据**——完整握手后可输出结构化证书细节（subject、issuer、SAN、有效期、序列号、公钥、签名、ALPN），并支持 SMTP/IMAP/POP3/FTP STARTTLS 升级。
 - 🧪 **JARM**——十个标准 Salesforce 探针，可用 `--first-probe` 轮换首个标准探针；后续探针批量发送，输出与顺序无关。
-- 🧩 **模块**——11 个基础扫描模块（有 ngtcp2/GnuTLS 时另有 `quic-state`）/ 27 个基础探测模块（另有 `http3-state`）/ 7 个输出模块 / 5 个生成模块。四套接口，一条流水线，没有运行时的插件魔法。
-- 🪟 **Windows 限制**——`quic-state`/`http3-state` 当前仅支持 Linux + ngtcp2/GnuTLS；Windows MSVC 会省略它们，OpenSSL backend 已列入 roadmap TODO。
+- 🧩 **模块**——11 个基础扫描 / 59 个探测 / 7 个输出 / 5 个生成模块；有 ngtcp2/GnuTLS 时另有 `quic-state` 与 `http3-state`。四套接口，一条流水线，没有运行时的插件魔法。
 - 🌐 **中文帮助**——`--lang zh` 或 `XTATE_LANG=zh` 可切换人类可读帮助；支持 UTF-8 宽度换行，未翻译内容安全回退英文。
 - 🎯 **稀疏目标模式**——支持 `132.80-88.90.15`、`2001:db8:1-5::1` 这类分量范围；单个 token 最多 4 个范围组成笛卡尔积（上限 1,048,576 个地址），大范围连续空间仍用 CIDR/区间。
 
@@ -86,8 +84,8 @@ Windows CI 覆盖上述四种工具链。详见[平台支持](docs/zh-CN/platfor
 
 - 分组 `help` / `help <command>`，支持中文帮助（`--lang zh`）；
 - `<TAB>` 补全命令、参数名、模块名、常见值和文件路径；
-- 选择 scan/probe/output/generate 模块后补全该模块的 `--选项`；
-- 命令历史、`set`、`show diff`、`show all`、`list-param <过滤词>`；
+- 选择 scan/probe/output/generate 模块后补全该模块的 `--options`；
+- 命令历史、`set`、`show diff`、`show all`、`list-param <filter>`；
 - 真实 TTY 模式 + 确定性的非 TTY 脚本模式，退出时恢复终端；
 - Linux 和 Windows 同一个二进制，不需要 Python/Go 启动器。
 
@@ -243,6 +241,10 @@ README 是落地页，手册在 [`docs/`](docs/zh-CN/README.md) 目录下：
 - [模块开发](docs/zh-CN/module-development.md)——C 接口、注册和 slot plan 示例
 - [架构](docs/zh-CN/architecture.md) · [ZBanner](docs/zh-CN/zbanner.md) · [HLTCP](docs/zh-CN/hltcp.md)
 - [中文帮助与 i18n](docs/zh-CN/help-i18n.md)——`--lang`、catalog 回退与 UTF-8 排版
+- [QUIC state](docs/zh-CN/quic-state.md)——可选的 ngtcp2/GnuTLS 握手、证书与子探测
+- [HTTP/3 子探测](docs/zh-CN/quic-state.md#http3-子探测)——quic-state 上的方法/头部/正文与 Huffman QPACK
+- [HTTP 响应匹配](docs/zh-CN/matching.md)——HTTP/1、h2 与 http3 的关键字/正则范围
+- [ZBanner 审计](docs/zh-CN/zbanner-audit.md)——复杂度、边界问题与重构计划
 - [交互式模式](docs/zh-CN/interactive-mode.md)——TTY/脚本模式、补全、历史与中文帮助
 - [平台支持](docs/zh-CN/platform-support.md)——CMake 3.13、旧发行版、Ninja 与 musl 构建
 - [构建产物](docs/zh-CN/build-artifacts.md)——别名、按工具链命名、Debug/DLL 布局
@@ -287,7 +289,7 @@ PCRE2 的发现优先使用 CMake 包配置；在 Debian/Ubuntu 上会回退到 
 <details>
 <summary><b>Windows 构建</b></summary>
 
-安装 **Npcap**（运行时）、CMake，以及 Visual Studio 2022/2026 或 MinGW-w64。新手分步说明见 [Windows 快速上手](docs/zh-CN/windows-quickstart.md)；完整平台/工具链矩阵和问题排查见[快速上手](docs/zh-CN/getting-started.md)。
+安装 **Npcap**（运行时）、CMake，以及 Visual Studio 2022/2026 或 MinGW-w64。新手分步说明见 [Windows 快速上手](docs/zh-CN/windows-quickstart.md)；完整平台/工具链矩阵和问题排查见[快速上手](docs/zh-CN/getting-started.md#在-windows-上构建)。
 
 可选依赖可以用 Scoop 安装（MSVC/clang-cl）：
 
@@ -340,6 +342,9 @@ pwsh -File .\scripts\clean-windows.ps1 -IncludeStage  # 同时删除 %LOCALAPPDA
 | libpcap / Npcap | 数据包 I/O（运行时） | 动态加载 |
 | PF_RING | Linux 上的零拷贝数据包 I/O（运行时） | 可选 |
 | Lua 5.3/5.4 | `lua-tcp`、`lua-udp`（运行时） | 可选 |
+| ngtcp2 + GnuTLS | `quic-state` QUIC 传输扫描器 | `-DWITH_NGTCP2=OFF` |
+
+`quic-state` 与 `http3-state` 目前仅支持 Linux + ngtcp2/GnuTLS；Windows MSVC 会省略它们。OpenSSL backend 支持见 [roadmap TODO](docs/zh-CN/roadmap.md#windows-quic-state-todo)。
 
 缺少可选库只会在编译时移除相应模块——核心扫描器仍可正常构建。Windows 上 CMake 可能提示 Conda 里的 PCRE2 找到但配置不完整，或提示 LibXml2/libbson/libmongoc 未安装；这些依赖都是可选的。需要对应模块时，请安装匹配的 vcpkg triplet（例如 `vcpkg install pcre2 libxml2 mongo-c-driver --triplet x64-windows`；MinGW/MSYS2 与完整安装说明见 [Windows 可选依赖](docs/zh-CN/windows-dependencies.md)）。
 </details>
@@ -350,16 +355,16 @@ pwsh -File .\scripts\clean-windows.ps1 -IncludeStage  # 同时删除 %LOCALAPPDA
 ## 探索 CLI
 
 ```bash
-xtate --usage                 # short usage and examples
-xtate --help                  # every global parameter
-xtate --intro                 # the architecture tour
-xtate --list-scan             # 11，若有 quic-state 则为 12
-xtate --list-probe            # 27 probe modules
-xtate --list-out              # 7 output modules
-xtate --list-gen              # 5 generate modules
-xtate --help-scan zbanner     # module-specific parameters
+xtate --usage                 # 简短用法与示例
+xtate --help                  # 所有全局参数
+xtate --intro                 # 架构导览
+xtate --list-scan             # 11，启用 quic-state 时为 12
+xtate --list-probe            # 59 个探测模块
+xtate --list-out              # 7 个输出模块
+xtate --list-gen              # 5 个生成模块
+xtate --help-scan zbanner     # 模块专有参数
 xtate --lang zh --help        # 中文人类帮助（未翻译内容回退英文）
-xtate --interact              # interactive shell with tab completion
+xtate --interact              # 交互式 shell（TTY：补全/历史；管道：脚本）
 ```
 
 ## AI 集成（MCP）

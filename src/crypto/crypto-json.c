@@ -323,9 +323,12 @@ static bool parse_number(const char **sp, double *out);
 static bool parse_array(const char **sp, JsonNode **out);
 static bool parse_object(const char **sp, JsonNode **out);
 static bool parse_hex16(const char **sp, uint16_t *out);
-
 static bool expect_literal(const char **sp, const char *str);
 static void skip_space(const char **sp);
+
+/* Bound parser recursion so a hostile 1 MB scan-request file cannot exhaust
+ * the worker stack with deeply nested arrays/objects. */
+static int g_json_depth;
 
 static void emit_value(SB *out, const JsonNode *node);
 static void emit_value_indented(SB *out, const JsonNode *node,
@@ -354,6 +357,7 @@ JsonNode *json_decode(const char *json) {
     const char *s = json;
     JsonNode   *ret;
 
+    g_json_depth = 0;
     skip_space(&s);
     if (!parse_value(&s, &ret))
         return NULL;
@@ -616,19 +620,27 @@ static bool parse_value(const char **sp, JsonNode **out) {
             return false;
         }
 
-        case '[':
-            if (parse_array(&s, out)) {
+        case '[': {
+            if (++g_json_depth > 256) { --g_json_depth; return false; }
+            bool ok = parse_array(&s, out);
+            --g_json_depth;
+            if (ok) {
                 *sp = s;
                 return true;
             }
             return false;
+        }
 
-        case '{':
-            if (parse_object(&s, out)) {
+        case '{': {
+            if (++g_json_depth > 256) { --g_json_depth; return false; }
+            bool ok = parse_object(&s, out);
+            --g_json_depth;
+            if (ok) {
                 *sp = s;
                 return true;
             }
             return false;
+        }
 
         default: {
             double num;

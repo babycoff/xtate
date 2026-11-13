@@ -1,6 +1,8 @@
 #include "target-rangeport.h"
 
 #include <ctype.h>
+#include <errno.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -41,6 +43,26 @@ void rangelist_add_range_tcp(struct RangeList *targets, unsigned begin,
 void rangelist_add_range_udp(struct RangeList *targets, unsigned begin,
                              unsigned end) {
     rangelist_add_range(targets, UDP_START + begin, UDP_START + end);
+}
+
+/*
+ * Parse one port number. The previous code cast strtoul() straight to
+ * `unsigned` and only range-checked afterwards, so on LP64 a value like
+ * 4294967296 truncated to 0 and silently passed as port 0. Check the
+ * 64-bit result (and ERANGE) first instead.
+ */
+static int parse_one_port(char **pstr, unsigned *port) {
+    char         *end = NULL;
+    unsigned long value;
+
+    errno = 0;
+    value = strtoul(*pstr, &end, 0);
+    if (end == *pstr || errno == ERANGE || value > PORT_SPEC)
+        return -1;
+
+    *pstr = end;
+    *port = (unsigned)value;
+    return 0;
 }
 
 /***************************************************************************
@@ -102,10 +124,12 @@ const char *rangelist_parse_ports(struct RangeList *ports, const char *string,
         if (p[0] == '-') {
             /* nmap style port range spec meaning starting with 0 */
             port = 1;
-        } else if (isdigit(p[0] & 0xFF)) {
-            port = (unsigned)strtoul(p, &p, 0);
-        } else {
-            break;
+        } else if (parse_one_port(&p, &port) != 0) {
+            if (!isdigit(p[0] & 0xFF))
+                break;
+            LOG(LEVEL_ERROR, "bad port number: %s\n", string);
+            *is_error = 2;
+            return p;
         }
 
         /*
@@ -116,8 +140,10 @@ const char *rangelist_parse_ports(struct RangeList *ports, const char *string,
             if (!isdigit(*p)) {
                 /* nmap style range spec meaning end with 65535 */
                 end = PORT_SPEC;
-            } else {
-                end = (unsigned)strtoul(p, &p, 0);
+            } else if (parse_one_port(&p, &end) != 0) {
+                LOG(LEVEL_ERROR, "bad port number: %s\n", string);
+                *is_error = 2;
+                return p;
             }
         } else
             end = port;

@@ -66,7 +66,7 @@ static void pop3_hello(DataPass *pass, ProbeState *state, ProbeTarget *target) {
     UNUSEDPARM(target);
     if (pop3_after_tls) {
         state->state = 1;
-        datapass_set_data(pass, (unsigned char *)"CAPA\r\n", 8, false);
+        datapass_set_data(pass, (unsigned char *)"CAPA\r\n", 6, false);
     } else {
         datapass_set_data(pass, NULL, 0, false);
     }

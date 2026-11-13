@@ -49,9 +49,9 @@ exit                 不保存直接退出
 ```
 
 `<TAB>` 可补全命令、参数名和模块名；补全菜单同时显示简短说明。
-`set <参数> = ...` 会补全已知值（`lang`、输出级别、布尔值）、模块名和文件路径
+`set <param> = ...` 会补全已知值（`lang`、输出级别、布尔值）、模块名和文件路径
 （包括 `conf-save`/`conf-read`）。选择模块后，`*-module-args` 会补全该模块的
-`--选项`。
+`--options`。
 
 ## 历史
 
@@ -78,7 +78,7 @@ xtate --lang zh -interactive
 - Windows TTY 扫描结束后不会自动重启；需要手动再次启动。Linux 会用
   `recover.conf` 重新执行。
 - 补全覆盖命令/模块/参数名、常见值和文件路径；模块参数值的补全仍有限。
-- `list-param <过滤词>` 按完整名称 token 匹配，不做任意子串匹配。
+- `list-param <filter>` 按完整名称 token 匹配，不做任意子串匹配。
 - 非 TTY 模式只去掉终端 UI，不改变扫描本身对目标、权限和
   libpcap/Npcap 的要求。
 - Windows 中文 TTY 输出只在交互期间临时切到 UTF-8 代码页，正常退出/Ctrl-C

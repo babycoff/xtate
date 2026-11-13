@@ -80,6 +80,8 @@ parse_ipv4: {
 
     /* Check header length */
     header_length = (px[offset] & 0x0F) * 4;
+    if (header_length < 20)
+        return false; /* too short to be a valid IPv4 header */
     VERIFY_REMAINING(header_length, FOUND_IPV4);
 
     /*TODO: verify checksum */
@@ -383,7 +385,7 @@ parse_wifi:
     switch (px[offset]) {
         case 0x08:
         case 0x88: /* QoS data */
-            if (px[1] & 0x40)
+            if (px[offset + 1] & 0x40)
                 return false;
             goto wifi_data;
             break;

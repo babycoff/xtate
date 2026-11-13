@@ -1,6 +1,7 @@
 #ifndef NOT_FOUND_PCRE2
 
 #include "nmap-service.h"
+#include "../util-data/file-open.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -179,12 +180,20 @@ static unsigned _parse_number(struct NmapServiceProbeList *list,
      tcpwrappedms 3000
      rarity 6
      */
-    unsigned number = 0;
+    unsigned long long number = 0;
 
     while (offset < line_length && isdigit(line[offset])) {
         number = number * 10;
         number = number + (line[offset] - '0');
         offset++;
+        if (number > 0xFFFFFFFFULL) {
+            LOG(LEVEL_ERROR, "%s:%u:%u: number out of range\n",
+                list->filename, list->line_number, (unsigned)offset);
+            number = 0xFFFFFFFFULL;
+            while (offset < line_length && isdigit(line[offset]))
+                offset++;
+            break;
+        }
     }
     while (offset < line_length && isspace(line[offset]))
         offset++;
@@ -735,7 +744,7 @@ static void _parse_line(struct NmapServiceProbeList *list, const char *line) {
     /* trim whitespace */
     offset      = 0;
     line_length = strlen(line);
-    while (offset && isspace(line[offset]))
+    while (offset < line_length && isspace(line[offset]))
         offset++;
     while (line_length && isspace(line[line_length - 1]))
         line_length--;
@@ -876,7 +885,7 @@ struct NmapServiceProbeList *nmapservice_read_file(const char *filename) {
     /*
      * Open the file
      */
-    fp = fopen(filename, "rt");
+    fp = file_open_utf8_mode(filename, "rt");
     if (fp == NULL) {
         LOGPERROR(filename);
         return 0;
@@ -893,6 +902,16 @@ struct NmapServiceProbeList *nmapservice_read_file(const char *filename) {
     while (fgets(line, sizeof(line), fp)) {
         /* Track line number for error messages */
         result->line_number++;
+
+        /* A physical line longer than the buffer would otherwise be parsed as
+         * several logical lines; drop the remainder and say so. */
+        if (!strchr(line, '\n') && !feof(fp)) {
+            int ch;
+            LOG(LEVEL_WARN, "%s:%u: line too long, truncated\n",
+                result->filename, result->line_number);
+            while ((ch = fgetc(fp)) != EOF && ch != '\n')
+                ;
+        }
 
         /* Parse this string into a record */
         _parse_line(result, line);

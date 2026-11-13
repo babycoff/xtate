@@ -1,4 +1,5 @@
 #include "as-query.h"
+#include "../util-data/file-open.h"
 
 #include <stdio.h>
 #include <inttypes.h>
@@ -81,7 +82,7 @@ struct AS_Query *as_query_new(const char *filename_v4,
     struct AS6_Table *as_table_v6      = NULL;
 
     if (filename_v4 != NULL) {
-        fp_v4 = fopen(filename_v4, "rb");
+        fp_v4 = file_open_utf8_mode(filename_v4, "rb");
         if (fp_v4 == NULL) {
             LOGPERROR("fopen");
             goto no_as_v4;
@@ -187,7 +188,7 @@ struct AS_Query *as_query_new(const char *filename_v4,
 no_as_v4:
 
     if (filename_v6 != NULL) {
-        fp_v6 = fopen(filename_v6, "rb");
+        fp_v6 = file_open_utf8_mode(filename_v6, "rb");
         if (fp_v6 == NULL) {
             LOGPERROR("fopen");
             goto no_as_v6;

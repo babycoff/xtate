@@ -1,7 +1,9 @@
 #include "scan-request.h"
+#include "../util-data/file-open.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "../crypto/crypto-json.h"
 #include "../util-data/fine-malloc.h"
 #include "../util-out/logger.h"
@@ -92,7 +94,7 @@ static char *args_string(JsonNode *obj) {
 }
 
 unsigned scan_request_timeout(const char *filename) {
-    FILE *fp = fopen(filename, "rb");
+    FILE *fp = file_open_utf8_mode(filename, "rb");
     if (!fp) return 0;
     fseek(fp, 0, SEEK_END); long sz = ftell(fp); rewind(fp);
     if (sz <= 0 || sz > 1024*1024) { fclose(fp); return 0; }
@@ -114,7 +116,7 @@ unsigned scan_request_timeout(const char *filename) {
 
 int scan_request_build_argv(const char *filename, int *argc_out,
                             char ***argv_out) {
-    FILE *fp = fopen(filename, "rb");
+    FILE *fp = file_open_utf8_mode(filename, "rb");
     if (!fp) { req_error(ERR_IO_ERROR, "cannot open scan request"); return -1; }
     fseek(fp, 0, SEEK_END); long sz = ftell(fp); rewind(fp);
     if (sz <= 0 || sz > 1024*1024) { fclose(fp); req_error(ERR_INVALID_ARGUMENT,"bad request size"); return -1; }
@@ -180,7 +182,15 @@ int scan_request_build_argv(const char *filename, int *argc_out,
     JsonNode *ports=json_find_member(root,"ports");
     if (ports) { char *p=join_array(ports,true); if(!p){req_error(ERR_INVALID_ARGUMENT,"invalid ports");} argv[ac++]=STRDUP("-p"); argv[ac++]=p; }
     JsonNode *rate=json_find_member(root,"rate");
-    if (rate && rate->tag==JSON_NUMBER) { char t[32]; snprintf(t,sizeof(t),"%d",(int)rate->number_); argv[ac++]=STRDUP("-rate"); argv[ac++]=STRDUP(t); }
+    if (rate && rate->tag==JSON_NUMBER) {
+        double rv = rate->number_;
+        if (!isfinite(rv) || rv < 0 || rv > 10000) {
+            req_error(ERR_INVALID_ARGUMENT, "rate must be finite and in 0..10000");
+            json_delete(root); return -1;
+        }
+        char t[32]; snprintf(t,sizeof(t),"%d",(int)rv);
+        argv[ac++]=STRDUP("-rate"); argv[ac++]=STRDUP(t);
+    }
     JsonNode *pa=json_find_member(root,"probe_args"); char *pas=args_string(pa);
     if (pas) { argv[ac++]=STRDUP("-probe-arg"); argv[ac++]=pas; }
     JsonNode *sa=json_find_member(root,"scan_args"); char *sas=args_string(sa);

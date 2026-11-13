@@ -53,8 +53,11 @@ static bool request_mode = false;
 
 #if defined(_WIN32)
 #include <WinSock.h>
+#include <windows.h>
+#include <shellapi.h>
 #if defined(_MSC_VER)
 #pragma comment(lib, "Ws2_32.lib")
+#pragma comment(lib, "Shell32.lib")
 #endif
 #else
 #include <netinet/in.h>
@@ -74,13 +77,43 @@ TmplSet *global_tmplset;
 
 static uint64_t _usec_start;
 
-static void _control_c_handler(int x) {
-    static unsigned control_c_pressed = 0;
+/*
+ * Ctrl-C messages are deferred out of the signal handler because LOG() takes
+ * a mutex and is not async-signal-safe. The handler only touches
+ * sig_atomic_t flags and atomics; the main loops call
+ * _handle_ctrl_c_messages() to print and act on them.
+ */
+static volatile sig_atomic_t _sigint_wait_msg = 0;
+static volatile sig_atomic_t _sigint_rx_msg   = 0;
+static volatile sig_atomic_t _sigint_quit     = 0;
 
-    if (control_c_pressed == 0) {
+static void _handle_ctrl_c_messages(void) {
+    if (_sigint_wait_msg) {
+        _sigint_wait_msg = 0;
         LOG(LEVEL_OUT, "waiting several seconds to exit..."
                        "                                                       "
                        "                    \n");
+    }
+
+    if (_sigint_rx_msg) {
+        _sigint_rx_msg = 0;
+        LOG(LEVEL_OUT, "\nERROR: Rx Thread is still running\n");
+    }
+
+    if (_sigint_quit) {
+        _sigint_quit = 0;
+        xcmd_try_reboot();
+        exit(1);
+    }
+}
+
+static void _control_c_handler(int x) {
+    static volatile sig_atomic_t control_c_pressed = 0;
+
+    (void)x;
+
+    if (control_c_pressed == 0) {
+        _sigint_wait_msg = 1;
         /*First time of <ctrl-c>, tell Tx to stop*/
         control_c_pressed = 1;
         pixie_locked_cas_u32(&time_to_finish_tx, 1, 0);
@@ -88,12 +121,10 @@ static void _control_c_handler(int x) {
         if (pixie_locked_fetch_u32(&time_to_finish_rx)) {
             /*Not first time of <ctrl-c> */
             /*and Rx is exiting, we just warn*/
-            LOG(LEVEL_OUT, "\nERROR: Rx Thread is still running\n");
+            _sigint_rx_msg = 1;
             /*Exit many <ctrl-c>*/
-            if (pixie_locked_fetch_u32(&time_to_finish_rx) > 1) {
-                xcmd_try_reboot();
-                exit(1);
-            }
+            if (pixie_locked_fetch_u32(&time_to_finish_rx) > 1)
+                _sigint_quit = 1;
             pixie_locked_add_u32(&time_to_finish_rx, 1);
         } else {
             /*Not first time of <ctrl-c> */
@@ -565,6 +596,8 @@ static int _main_scan(XConf *xconf) {
     LOG(LEVEL_INFO, "waiting for threads to finish\n");
     global_update_time();
     while (!pixie_locked_fetch_u32(&time_to_finish_tx)) {
+        _handle_ctrl_c_messages();
+
         /* Find the min-index, repeat and rate */
         status_item.total_sent   = 0;
         status_item.cur_pps      = 0.0;
@@ -676,6 +709,8 @@ static int _main_scan(XConf *xconf) {
         pixie_mssleep(_LOOP_SLEEP_MS);
     }
 
+    _handle_ctrl_c_messages();
+
     /*
      * If we haven't completed the scan, then save the resume
      * information.
@@ -698,6 +733,8 @@ static int _main_scan(XConf *xconf) {
     global_update_time();
     now = global_get_time();
     for (;;) {
+        _handle_ctrl_c_messages();
+
         /* Find the min-index, repeat and rate */
         status_item.total_sent   = 0;
         status_item.cur_pps      = 0.0;
@@ -804,6 +841,8 @@ static int _main_scan(XConf *xconf) {
         global_update_time();
         pixie_mssleep(_LOOP_SLEEP_MS);
     }
+
+    _handle_ctrl_c_messages();
 
     /*
      * untrap <ctrl-c>
@@ -958,9 +997,15 @@ static int run_job_cli(XConf *xconf, const char *exe) {
 
 /***************************************************************************
  ***************************************************************************/
-int main(int argc, char *argv[]) {
+static int xtate_main(int argc, char *argv[]) {
 
     int err;
+
+#ifndef _WIN32
+    /* A peer closing an output or control-plane connection must not kill the
+     * process on the next write()/send(); report EPIPE instead. */
+    signal(SIGPIPE, SIG_IGN);
+#endif
 
     /*init logger at first*/
     LOG_init();
@@ -1337,3 +1382,51 @@ int main(int argc, char *argv[]) {
 
     return exit_code;
 }
+
+/*
+ * MSVC decodes the narrow argv using the ANSI code page, while every path in
+ * Xtate is treated as UTF-8. Rebuild argv from the wide command line so
+ * non-ASCII paths survive the entry point on Windows.
+ */
+#if defined(_WIN32)
+int main(void) {
+    int    wargc = 0;
+    LPWSTR *wargv = CommandLineToArgvW(GetCommandLineW(), &wargc);
+    if (!wargv)
+        return xtate_main(0, NULL);
+
+    char **argv = calloc((size_t)wargc + 1, sizeof(char *));
+    if (!argv) {
+        LocalFree(wargv);
+        return 1;
+    }
+
+    for (int i = 0; i < wargc; i++) {
+        int len = WideCharToMultiByte(CP_UTF8, 0, wargv[i], -1, NULL, 0, NULL,
+                                      NULL);
+        if (len <= 0)
+            goto fail;
+        argv[i] = malloc((size_t)len);
+        if (!argv[i])
+            goto fail;
+        WideCharToMultiByte(CP_UTF8, 0, wargv[i], -1, argv[i], len, NULL, NULL);
+    }
+
+    int rc = xtate_main(wargc, argv);
+
+    for (int i = 0; i < wargc; i++)
+        free(argv[i]);
+    free(argv);
+    LocalFree(wargv);
+    return rc;
+
+fail:
+    for (int i = 0; i < wargc; i++)
+        free(argv[i]);
+    free(argv);
+    LocalFree(wargv);
+    return 1;
+}
+#else
+int main(int argc, char *argv[]) { return xtate_main(argc, argv); }
+#endif
