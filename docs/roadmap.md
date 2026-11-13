@@ -281,7 +281,7 @@ Delivered in 2.44.2:
   multiple-default-interface error points at `--explain-target`/`--list-if`.
 - scan startup and the meta file show the effective `Rate:` (default or `--rate`).
 
-Delivered in 3.0.0-rc.1 (release candidate):
+Delivered in 3.0.0-rc.2 (release candidate):
 
 - scan-first browser console with server-side preflight, live job view,
   interfaces, module catalog and settings;
@@ -308,7 +308,7 @@ Phases:
 2.44.0  browser GUI for the control plane (done, released)
 2.44.1  one-command local TUI/GUI startup (done, released)
 2.44.2  RAW/TUN link preflight + startup rate display (done)
-3.0.0-rc.1  scan-first GUI + AI/MCP startup + capability reporting (candidate)
+3.0.0-rc.2  scan-first GUI + AI/MCP startup + capability reporting (candidate)
 next    RC trial fixes, evaluation suite and packaging
 later   MCP generate/stream input
 ```

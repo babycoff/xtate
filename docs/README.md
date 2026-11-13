@@ -2,11 +2,11 @@
 
 **English** · [中文](zh-CN/README.md)
 
-This directory is the user manual for **Xtate v3.0.0-rc.1** — a modular all-stack network scanner for Internet-scale surveys.
+This directory is the user manual for **Xtate v3.0.0-rc.2** — a modular all-stack network scanner for Internet-scale surveys.
 
 The [README](../README.md) is the landing page. Start here if you want to use Xtate rather than skim its feature list.
 
-**Release notes:** [3.0.0-rc.1](./release-notes/3.0.0-rc.1.md) — scan-first browser console, server-side preflight, one-command MCP/GUI startup, capability reporting, and the Linux-only HTTP/3 + QUIC contract. This is a release candidate for hands-on trial, not the final 3.0.0.
+**Release notes:** [3.0.0-rc.2](./release-notes/3.0.0-rc.2.md) — scan-first browser console with editable module parameters, server-side preflight, one-command MCP/GUI startup, capability reporting, and the Linux-only HTTP/3 + QUIC contract. This is a release candidate for hands-on trial, not the final 3.0.0.
 
 ## Where to start
 
@@ -105,7 +105,7 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-The docs are written against the v3.0.0-rc.1 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
+The docs are written against the v3.0.0-rc.2 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
 
 ## Planned
 

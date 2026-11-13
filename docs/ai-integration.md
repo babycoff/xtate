@@ -48,7 +48,7 @@ Delivered for 2.44.2:
 - scan startup and meta output include the effective `Rate:` (default or
   `--rate`).
 
-Delivered for 3.0.0-rc.1 (candidate):
+Delivered for 3.0.0-rc.2 (candidate):
 
 - one-command `xtate --mcp` with a private control plane;
 - `capabilities` MCP tool and `--list-capabilities` JSON for agent hosts;
