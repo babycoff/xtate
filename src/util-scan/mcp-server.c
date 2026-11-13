@@ -95,6 +95,7 @@ static const char *instructions =
 static const char *tools_json =
 "{\"tools\":["
 "{\"name\":\"capabilities\",\"description\":\"Return build capabilities and module counts: platform, HTTP/3/QUIC availability, raw sockets, scan/probe/output/generate counts. Use before choosing protocol probes.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{}},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
+"{\"name\":\"iface.list\",\"description\":\"List capture interfaces with IPv4/IPv6 addresses, MAC, gateway, default flag, link type and raw-IP capability. Use before choosing an interface or explaining a route.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{}},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"list_modules\",\"description\":\"List Xtate scan, probe, output and generate modules with their parameters. Use this before choosing a scanner/probe.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{}},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"job_list\",\"description\":\"List managed scan jobs with pagination. Returns job id, state and result path only; use job_result_manifest for result metadata.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"offset\":{\"type\":\"integer\",\"minimum\":0},\"limit\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":1000}}},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"job_status\",\"description\":\"Return a job's state, phase, sent/targets progress, success/failed counts, heartbeat age and elapsed time. Does not return result records.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"job_id\":{\"type\":\"string\",\"description\":\"Job id returned by job.start\"}},\"required\":[\"job_id\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
@@ -724,6 +725,13 @@ static void tool_call(const char *id, const char *name, const char *args,
         if (!c) { text_result(id, "cannot read capabilities", true); return; }
         text_result(id, c, false);
         free(c);
+        return;
+    }
+    if (strcmp(name, "iface.list") == 0) {
+        char *ifs = gui_interfaces_json();
+        if (!ifs) { text_result(id, "cannot enumerate interfaces", true); return; }
+        text_result(id, ifs, false);
+        free(ifs);
         return;
     }
     if (strcmp(name, "list_modules") == 0) {

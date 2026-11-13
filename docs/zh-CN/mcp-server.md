@@ -33,6 +33,7 @@ Windows 的 endpoint 形如 `\\.\pipe\xtate-control`。`--control-connect` 只�
 | 工具 | 用途 |
 |---|---|
 | `capabilities` | 版本、平台、raw socket/HTTP3/QUIC 能力与模块数量 |
+| `iface.list` | 采集网卡的地址、MAC、网关、默认标志、链路类型与 raw-IP 能力 |
 | `list_modules` | 全部模块元数据：扫描、探测、输出、生成模块 |
 | `describe_probe` | 查询单个扫描/探测模块的元数据 |
 | `explain_target` | 目标集的路由分组、接口/源地址/网关和 Linux 防火墙状态 |

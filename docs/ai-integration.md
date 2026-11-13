@@ -108,10 +108,13 @@ xtate --mcp --control-connect=/tmp/xtate-ctl.sock
 Tools:
 
 ```text
+capabilities
+iface.list
 list_modules
 describe_probe
 explain_target
 check
+preflight
 validate_config
 start_scan
 job_list

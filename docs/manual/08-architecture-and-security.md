@@ -211,7 +211,7 @@ The GUI is a local scan console served by the same process. The browser page,
 its assets and the API are local: the server binds loopback only (`--gui-listen`
 must be `127.0.0.1:PORT`), serves the page from the binary, and exposes a small
 JSON API — `/api/info`, `/api/system`, `/api/interfaces`, `/api/modules`,
-`/api/preflight` and `/api/rpc` for the job allowlist. The GUI never shells out
+`/api/preflight`, `/api/results` and `/api/rpc` for the job allowlist. The GUI never shells out
 and never forwards an arbitrary method to the control plane.
 
 The security contract for the loopback API is the important part:
@@ -251,10 +251,11 @@ plane plus read-only discovery tools. It never embeds scan results, never
 spawns a shell, and never accepts a command string; discovery runs the same
 executable with a fixed argv.
 
-Its tool surface is intentionally small and structured: `list_modules`,
-`describe_probe`, `explain_target`, `check`, `validate_config`, `start_scan`,
-`job_list`, `job_status`, `job_result_manifest` and `job_cancel` — module
-discovery, route/firewall explanation, config validation, job
+Its tool surface is intentionally small and structured: `capabilities`,
+`iface.list`, `list_modules`, `describe_probe`, `explain_target`, `check`,
+`preflight`, `validate_config`, `start_scan`, `job_list`, `job_status`,
+`job_result_manifest` and `job_cancel` — build/interface/module discovery,
+route/firewall explanation, packet-free preflight, config validation, job
 start/list/status/cancel and result-manifest reads. Scan data is returned as
 filesystem metadata, not inline: the client reads the manifest, then chunks.
 

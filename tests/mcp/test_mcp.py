@@ -23,7 +23,7 @@ try:
     mp.stdin.write(json.dumps({"jsonrpc":"2.0","method":"notifications/initialized"})+"\n"); mp.stdin.flush()
     tools = rpc({"jsonrpc":"2.0","id":2,"method":"tools/list"})["result"]["tools"]
     names = {t["name"] for t in tools}
-    for n in ["capabilities","list_modules","describe_probe","explain_target","check","preflight","validate_config","start_scan","job_list","job_status","job_result_manifest","job_cancel"]: assert n in names, n
+    for n in ["capabilities","iface.list","list_modules","describe_probe","explain_target","check","preflight","validate_config","start_scan","job_list","job_status","job_result_manifest","job_cancel"]: assert n in names, n
     caps = rpc({"jsonrpc":"2.0","id":16,"method":"tools/call","params":{"name":"capabilities","arguments":{}}})
     assert not caps["result"]["isError"]
     ctext = caps["result"]["content"][0]["text"]
@@ -32,6 +32,13 @@ try:
     assert not pf["result"]["isError"], pf
     pfj = json.loads(pf["result"]["content"][0]["text"])
     assert pfj["ok"] is True and pfj["targets"] == 1 and pfj["ports"] == 1, pfj
+    ifs = rpc({"jsonrpc":"2.0","id":19,"method":"tools/call","params":{"name":"iface.list","arguments":{}}})
+    assert not ifs["result"]["isError"], ifs
+    ifj = json.loads(ifs["result"]["content"][0]["text"])
+    assert isinstance(ifj.get("interfaces"), list) and ifj["interfaces"], ifj
+    first = ifj["interfaces"][0]
+    for k in ("index","name","link_type","raw_capable"):
+        assert k in first, (k, first)
     pfbad = rpc({"jsonrpc":"2.0","id":18,"method":"tools/call","params":{"name":"preflight","arguments":{"config":{"scan":"tcp-syn","targets":SCAN_TARGET,"ports":"U:53"}}}})
     assert not pfbad["result"]["isError"]
     assert json.loads(pfbad["result"]["content"][0]["text"])["ok"] is False

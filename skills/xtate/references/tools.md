@@ -34,6 +34,7 @@ Every successful tool result has this shape:
 | Tool | Arguments | Returns |
 |---|---|---|
 | `capabilities` | none | version, platform, module counts, HTTP/3/QUIC and raw-socket availability |
+| `iface.list` | none | capture interfaces with addresses, MAC, gateway, default flag, link type and raw-IP capability |
 | `list_modules` | none | scan, probe, output and generate module metadata |
 | `describe_probe` | `{"name":"tls"}` | module parameters, probe type, description |
 | `explain_target` | `{"target":"203.0.113.10"}` | targets, route groups, interface, source, gateway, samples |

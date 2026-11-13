@@ -116,7 +116,7 @@ job 经过 `queued`、`running`、`completed`、`failed`、`cancelled`、`timed_
 
 ## GUI：回环控制台
 
-GUI 是由同一进程提供的本地扫描控制台。浏览器页面、其资源和 API 都是本地的：服务器只绑定回环（`--gui-listen` 必须是 `127.0.0.1:PORT`），从二进制提供页面，并暴露一个小型 JSON API —— `/api/info`、`/api/system`、`/api/interfaces`、`/api/modules`、`/api/preflight`，以及用于 job 白名单的 `/api/rpc`。GUI 从不执行外部命令，也从不把任意方法转发到控制面。
+GUI 是由同一进程提供的本地扫描控制台。浏览器页面、其资源和 API 都是本地的：服务器只绑定回环（`--gui-listen` 必须是 `127.0.0.1:PORT`），从二进制提供页面，并暴露一个小型 JSON API —— `/api/info`、`/api/system`、`/api/interfaces`、`/api/modules`、`/api/preflight`、`/api/results`，以及用于 job 白名单的 `/api/rpc`。GUI 从不执行外部命令，也从不把任意方法转发到控制面。
 
 回环 API 的安全契约才是重点：
 
@@ -134,7 +134,7 @@ GUI 是由同一进程提供的本地扫描控制台。浏览器页面、其资�
 
 MCP server 是一个 stdio 进程（用 `--mcp` 启动），对本地 agent 讲 Model Context Protocol，并作为控制面的有类型客户端加只读发现工具。它从不内嵌扫描结果、从不派生 shell、从不接受命令字符串；发现功能用固定 argv 运行同一可执行文件。
 
-它的工具面刻意小而结构化：`list_modules`、`describe_probe`、`explain_target`、`check`、`validate_config`、`start_scan`、`job_list`、`job_status`、`job_result_manifest` 和 `job_cancel` —— 模块发现、路由/防火墙解释、配置校验、job 启动/列出/状态/取消以及结果 manifest 读取。扫描数据以文件系统元数据返回，不内联：客户端先读 manifest，再读分片。
+它的工具面刻意小而结构化：`capabilities`、`iface.list`、`list_modules`、`describe_probe`、`explain_target`、`check`、`preflight`、`validate_config`、`start_scan`、`job_list`、`job_status`、`job_result_manifest` 和 `job_cancel` —— 构建/网卡/模块发现、路由与防火墙解释、无发包预检、配置校验、job 启动/列出/状态/取消以及结果 manifest 读取。扫描数据以文件系统元数据返回，不内联：客户端先读 manifest，再读分片。
 
 MCP 加了自己的边界：
 

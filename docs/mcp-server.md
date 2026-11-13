@@ -37,6 +37,7 @@ connection; it does not listen on TCP.
 | Tool | Purpose |
 |---|---|
 | `capabilities` | Version, platform, raw-socket/HTTP3/QUIC capability and module counts |
+| `iface.list` | Capture interfaces with addresses, MAC, gateway, default flag, link type and raw-IP capability |
 | `list_modules` | Full module metadata: scan, probe, output and generate modules |
 | `describe_probe` | Metadata for one named scan/probe module |
 | `explain_target` | Route groups, interface/source/gateway and Linux firewall state for a target set |
