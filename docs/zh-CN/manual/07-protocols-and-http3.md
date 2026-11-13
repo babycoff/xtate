@@ -245,13 +245,14 @@ http3_content_type  http3_server  http3_location
 xtate --list-capabilities
 ```
 
-该命令打印一个 JSON 对象并以 `0` 退出，不启动扫描。对象报告构建的平台、原始套接字是否可用、QUIC 传输与 HTTP/3 是否编译进来、不可用时的原因，以及模块计数。节选结构（版本和计数因构建而异）：
+该命令打印一个 JSON 对象并以 `0` 退出，不启动扫描。对象报告构建的平台、原始套接字是否可用、zstd 结果压缩与 QUIC 传输/HTTP/3 是否编译进来、HTTP/3 不可用时的原因，以及模块计数。节选结构（版本和计数因构建而异）：
 
 ```json
 {
   "version": "<build version>",
   "platform": "linux",
   "raw_sockets": true,
+  "zstd": true,
   "http3": true,
   "quic_transport": true,
   "http3_reason": null,

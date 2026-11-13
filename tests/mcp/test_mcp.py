@@ -27,7 +27,7 @@ try:
     caps = rpc({"jsonrpc":"2.0","id":16,"method":"tools/call","params":{"name":"capabilities","arguments":{}}})
     assert not caps["result"]["isError"]
     ctext = caps["result"]["content"][0]["text"]
-    assert '"modules"' in ctext and '"version"' in ctext, ctext[:200]
+    assert '"modules"' in ctext and '"version"' in ctext and '"zstd"' in ctext, ctext[:200]
     pf = rpc({"jsonrpc":"2.0","id":17,"method":"tools/call","params":{"name":"preflight","arguments":{"config":{"scan":"tcp-syn","targets":SCAN_TARGET,"ports":"1"}}}})
     assert not pf["result"]["isError"], pf
     pfj = json.loads(pf["result"]["content"][0]["text"])

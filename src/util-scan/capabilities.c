@@ -52,6 +52,11 @@ char *capabilities_json(void) {
     json_append_member(out, "platform", json_mkstring("linux"));
     json_append_member(out, "raw_sockets", json_mkbool(1));
 #endif
+#ifndef NOT_FOUND_ZSTD
+    json_append_member(out, "zstd", json_mkbool(1));
+#else
+    json_append_member(out, "zstd", json_mkbool(0));
+#endif
 #ifdef HAVE_NGTCP2
     json_append_member(out, "http3", json_mkbool(1));
     json_append_member(out, "quic_transport", json_mkbool(1));

@@ -311,8 +311,8 @@ xtate --list-capabilities
 
 The command prints one JSON object and exits `0`, without starting a scan. The
 object reports the build's platform, whether raw sockets are available, whether
-the QUIC transport and HTTP/3 are compiled in, the reason when they are not,
-and the module counts. Abridged shape (the version and the counts are
+zstd result compression and the QUIC transport/HTTP/3 are compiled in, the
+reason when HTTP/3 is not, and the module counts. Abridged shape (the version and the counts are
 build-specific):
 
 ```json
@@ -320,6 +320,7 @@ build-specific):
   "version": "<build version>",
   "platform": "linux",
   "raw_sockets": true,
+  "zstd": true,
   "http3": true,
   "quic_transport": true,
   "http3_reason": null,
