@@ -255,7 +255,12 @@ static ConfRes SET_qs_cc_algo(void *conf, const char *name,
     else if (conf_equals(value, "bbr"))
         qs_conf.cc_algo = NGTCP2_CC_ALGO_BBR;
     else if (conf_equals(value, "bbr2"))
+#ifdef HAVE_NGTCP2_CC_ALGO_BBR2
         qs_conf.cc_algo = NGTCP2_CC_ALGO_BBR2;
+#else
+        /* Current ngtcp2 exposes BBR v2 as NGTCP2_CC_ALGO_BBR. */
+        qs_conf.cc_algo = NGTCP2_CC_ALGO_BBR;
+#endif
     else {
         LOG(LEVEL_ERROR, "quic-state cc-algo must be reno|cubic|bbr|bbr2\n");
         return Conf_ERR;

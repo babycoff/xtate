@@ -134,22 +134,75 @@ jobs:
         run: |
           ./build.sh --compiler gcc --config release --generator ninja
 
-      - name: MCP, Agent Skill, GUI and control contracts
+      - name: Prepare integration environment
         env:
           XTATE_BIN: ./bin/xtate
           XTATE_STATE_DIR: ${{ runner.temp }}/xtate-state
           XTATE_MCP_DOCS_DIR: ${{ github.workspace }}
-        run: |
-          mkdir -p "$XTATE_STATE_DIR"
-          python3 tests/release/test_version_consistency.py --skip-docs
-          python3 tests/mcp/test_mcp_contract.py
-          python3 tests/skill/test_skill_contract.py
-          python3 tests/gui/test_gui.py
-          python3 tests/control/test_control.py
-          python3 tests/schema/test_scan_request_runtime.py
-          python3 tests/input/test_generate.py
-          python3 tests/schema/validate_schemas.py
-          python3 tests/schema/validate_modules.py
+        run: mkdir -p "$XTATE_STATE_DIR"
+
+      - name: Version consistency
+        env:
+          XTATE_BIN: ./bin/xtate
+          XTATE_STATE_DIR: ${{ runner.temp }}/xtate-state
+          XTATE_MCP_DOCS_DIR: ${{ github.workspace }}
+        run: python3 tests/release/test_version_consistency.py --skip-docs
+
+      - name: MCP contract
+        env:
+          XTATE_BIN: ./bin/xtate
+          XTATE_STATE_DIR: ${{ runner.temp }}/xtate-state
+          XTATE_MCP_DOCS_DIR: ${{ github.workspace }}
+        run: python3 tests/mcp/test_mcp_contract.py
+
+      - name: Agent Skill contract
+        env:
+          XTATE_BIN: ./bin/xtate
+          XTATE_STATE_DIR: ${{ runner.temp }}/xtate-state
+          XTATE_MCP_DOCS_DIR: ${{ github.workspace }}
+        run: python3 tests/skill/test_skill_contract.py
+
+      - name: GUI contracts
+        env:
+          XTATE_BIN: ./bin/xtate
+          XTATE_STATE_DIR: ${{ runner.temp }}/xtate-state
+          XTATE_MCP_DOCS_DIR: ${{ github.workspace }}
+        run: python3 tests/gui/test_gui.py
+
+      - name: Control plane contracts
+        env:
+          XTATE_BIN: ./bin/xtate
+          XTATE_STATE_DIR: ${{ runner.temp }}/xtate-state
+          XTATE_MCP_DOCS_DIR: ${{ github.workspace }}
+        run: python3 tests/control/test_control.py
+
+      - name: Scan-request runtime
+        env:
+          XTATE_BIN: ./bin/xtate
+          XTATE_STATE_DIR: ${{ runner.temp }}/xtate-state
+          XTATE_MCP_DOCS_DIR: ${{ github.workspace }}
+        run: python3 tests/schema/test_scan_request_runtime.py
+
+      - name: Input generation
+        env:
+          XTATE_BIN: ./bin/xtate
+          XTATE_STATE_DIR: ${{ runner.temp }}/xtate-state
+          XTATE_MCP_DOCS_DIR: ${{ github.workspace }}
+        run: python3 tests/input/test_generate.py
+
+      - name: Schema validator
+        env:
+          XTATE_BIN: ./bin/xtate
+          XTATE_STATE_DIR: ${{ runner.temp }}/xtate-state
+          XTATE_MCP_DOCS_DIR: ${{ github.workspace }}
+        run: python3 tests/schema/validate_schemas.py
+
+      - name: Module validator
+        env:
+          XTATE_BIN: ./bin/xtate
+          XTATE_STATE_DIR: ${{ runner.temp }}/xtate-state
+          XTATE_MCP_DOCS_DIR: ${{ github.workspace }}
+        run: python3 tests/schema/validate_modules.py
 
   docker:
     name: Ubuntu 24.04 full-feature Docker image
