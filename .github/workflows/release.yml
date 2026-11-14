@@ -25,6 +25,7 @@ jobs:
           echo "XTATE_VERSION=$VERSION" >> "$GITHUB_ENV"
           docker build -f docker/ubuntu24-build/Dockerfile -t "xtate:${GITHUB_REF_NAME}" .
           docker create --name xtate-release "xtate:${GITHUB_REF_NAME}"
+          mkdir -p reports/docker-out
           docker cp xtate-release:/usr/local/bin/xtate reports/docker-out/xtate-linux
           docker rm xtate-release
           docker image inspect --format '{{json .}}' "xtate:${GITHUB_REF_NAME}" > "docker-image-${GITHUB_REF_NAME}.json"

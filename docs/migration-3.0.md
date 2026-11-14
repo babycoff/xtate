@@ -22,7 +22,7 @@ before upgrading automation that wraps Xtate.
 4. If you use `--tui`, migrate to `--gui`; TUI is deprecated in 3.0.
 5. Re-check HTTP/3 and QUIC expectations: Linux-only, and only when built with
    ngtcp2/GnuTLS.
-6. Read the [3.0 release notes](./release-notes/3.0.0-rc.8.md) and
+6. Read the [3.0 release notes](./release-notes/3.0.0-rc.9.md) and
    [known limitations](./known-limitations.md).
 
 ## Breaking or behavior-changing items
