@@ -133,6 +133,7 @@ jobs:
       - name: Build release binary
         run: |
           ./build.sh --compiler gcc --config release --generator ninja
+          sudo setcap cap_net_raw,cap_net_admin+ep ./bin/xtate
 
       - name: Prepare integration environment
         env:
