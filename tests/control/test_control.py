@@ -25,6 +25,25 @@ try:
     open(req,"w").write('{"scan":"tcp-syn","targets":["127.0.0.1"],"ports":[1]}')
     rc,o=rpc({"id":4,"method":"job.start","params":{"scan":"tcp-syn","targets":["127.0.0.1"],"ports":[1],"result_path":res}}); assert "job_id" in o["result"]
     rc,o=rpc({"id":5,"method":"job.list"}); assert o["result"]["jobs"]
+    # A nested subprobe value containing spaces must survive the JSON -> argv
+    # conversion as one -subprobe-arg token.  dry_run makes this a parsing-only
+    # job (--list-target), so it needs no raw-socket privilege.
+    nested_res=req+".nested.ndjson"
+    rc,o=rpc({"id":6,"method":"job.start","params":{
+        "scan":"tcp-state","targets":["127.0.0.1"],"ports":[443],
+        "probe":"tls-state",
+        "probe_args":{"subprobe":"http-state",
+                      "subprobe-arg":"--max-body=4096 --user-agent='a b' "
+                                     "--header='X-Test: a\"b'"},
+        "dry_run":True,"timeout_sec":20,"result_path":nested_res}})
+    assert "job_id" in o.get("result",{}), o
+    jid=o["result"]["job_id"]; state=""
+    for _ in range(100):
+        rc,o=rpc({"id":7,"method":"job.status","job_id":jid})
+        state=o["result"]["state"]
+        if state in ("completed","failed","cancelled","timed_out"): break
+        time.sleep(0.1)
+    assert state=="completed", o
     print("control plane: PASS")
 finally:
     shutil.rmtree(state_dir,ignore_errors=True)

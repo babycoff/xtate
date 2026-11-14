@@ -71,6 +71,11 @@ the MCP argument buffer is 8 KiB. `preflight` accepts the same shapes
 (`targets`/`ports` as arrays or as comma-separated strings) and sends no
 packets.
 
+For a nested probe such as `tls-state`, set `probe_args.subprobe` to the inner
+probe name and `probe_args["subprobe-arg"]` to one command-line string. Values
+that contain spaces must be single-quoted inside that string, with backslashes
+escaping literal single quotes, exactly as on the CLI.
+
 ## Model-facing metadata
 
 `initialize` returns `serverInfo` and an `instructions` string that describes

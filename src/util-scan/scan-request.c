@@ -157,38 +157,92 @@ static char *join_array(JsonNode *a, bool ports) {
     return out;
 }
 
+static bool arg_append(char **out, size_t *len, size_t *cap, const char *s,
+                       size_t n) {
+    if (*len + n + 1 > *cap) {
+        size_t want = (*len + n + 1) * 2;
+        char  *p    = REALLOC(*out, want);
+        if (!p) return false;
+        *out = p;
+        *cap = want;
+    }
+    memcpy(*out + *len, s, n);
+    *len += n;
+    (*out)[*len] = 0;
+    return true;
+}
+
+static bool arg_needs_quote(const char *v) {
+    for (; *v; v++) {
+        if (*v == ' ' || *v == '\t' || *v == '\r' || *v == '\n' ||
+            *v == '\'' || *v == '"' || *v == '\\')
+            return true;
+    }
+    return false;
+}
+
+static bool arg_append_string(char **out, size_t *len, size_t *cap,
+                              const char *key, const char *value) {
+    char head[320];
+    int  n = snprintf(head, sizeof(head), "--%s=", key);
+    if (n < 0 || (size_t)n >= sizeof(head)) return false;
+    if (!arg_append(out, len, cap, head, (size_t)n)) return false;
+    if (!arg_needs_quote(value))
+        return arg_append(out, len, cap, value, strlen(value));
+    if (!arg_append(out, len, cap, "'", 1)) return false;
+    for (const char *p = value; *p; p++) {
+        if (*p == '\'' || *p == '\\') {
+            char esc = '\\';
+            if (!arg_append(out, len, cap, &esc, 1)) return false;
+        }
+        if (!arg_append(out, len, cap, p, 1)) return false;
+    }
+    return arg_append(out, len, cap, "'", 1);
+}
+
 static char *args_string(JsonNode *obj) {
     if (!obj || obj->tag != JSON_OBJECT) return NULL;
     size_t cap = 128, len = 0;
-    char *out = MALLOC(cap);
+    char  *out = MALLOC(cap);
     if (!out) return NULL;
+    out[0] = 0;
     for (JsonNode *n = obj->children.head; n; n = n->next) {
-        char tmp[512];
         char keybuf[256];
         snprintf(keybuf, sizeof(keybuf), "%s", n->key ? n->key : "");
-        for (char *p=keybuf; *p; p++) if (*p=='_') *p='-';
+        for (char *p = keybuf; *p; p++)
+            if (*p == '_') *p = '-';
         const char *key = keybuf;
+        if (len && !arg_append(&out, &len, &cap, " ", 1)) goto fail;
         if (n->tag == JSON_BOOL) {
-            if (!n->bool_) continue;
-            snprintf(tmp, sizeof(tmp), "--%s", key);
+            if (!n->bool_) {
+                if (len) len--;
+                out[len] = 0;
+                continue;
+            }
+            char tmp[320];
+            int  k = snprintf(tmp, sizeof(tmp), "--%s", key);
+            if (k < 0 || (size_t)k >= sizeof(tmp) ||
+                !arg_append(&out, &len, &cap, tmp, (size_t)k))
+                goto fail;
         } else if (n->tag == JSON_STRING) {
-            snprintf(tmp, sizeof(tmp), "--%s=%s", key, n->string_);
+            if (!arg_append_string(&out, &len, &cap, key,
+                                   n->string_ ? n->string_ : ""))
+                goto fail;
         } else if (n->tag == JSON_NUMBER) {
-            snprintf(tmp, sizeof(tmp), "--%s=%g", key, n->number_);
-        } else return NULL;
-        size_t need = strlen(tmp) + (len ? 1 : 0) + 1;
-        if (len + need > cap) {
-            cap = (len + need) * 2;
-            char *p = REALLOC(out, cap);
-            if (!p) { FREE(out); return NULL; }
-            out = p;
+            char tmp[320];
+            int  k = snprintf(tmp, sizeof(tmp), "--%s=%g", key, n->number_);
+            if (k < 0 || (size_t)k >= sizeof(tmp) ||
+                !arg_append(&out, &len, &cap, tmp, (size_t)k))
+                goto fail;
+        } else {
+            goto fail;
         }
-        if (len) out[len++] = ' ';
-        memcpy(out + len, tmp, strlen(tmp));
-        len += strlen(tmp);
     }
     out[len] = 0;
     return len ? out : NULL;
+fail:
+    FREE(out);
+    return NULL;
 }
 
 unsigned scan_request_timeout(const char *filename) {

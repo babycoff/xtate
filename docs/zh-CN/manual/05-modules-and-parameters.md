@@ -64,7 +64,7 @@ xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
   -show info
 ```
 
-嵌套的单引号由 Xtate 自己的参数拆分器消费。嵌套引号是 `subprobe` 错误最常见的来源；像 `-subprobe-arg --path=/h2` 这样的单个 token 可以完全避开该问题。
+嵌套的单引号由 Xtate 自己的参数拆分器消费。整个 `-subprobe-arg` 值必须是一个用单引号包住的字符串；没有这层单引号时，只有第一个嵌套选项会赋给子探测，后面的选项会被 `tls-state` 解析。嵌套引号是 `subprobe` 错误最常见的来源；像 `-subprobe-arg --path=/h2` 这样的单个 token 可以完全避开该问题。
 
 ## 扫描模块
 

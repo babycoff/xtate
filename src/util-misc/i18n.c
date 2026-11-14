@@ -533,7 +533,7 @@ static const I18nModuleParamEntry i18n_module_param_help[] = {
     {"dnssec", "发送 EDNS0 OPT 且 DO=1，报告 AD/DO、RRSIG/DNSKEY/DS/NSEC 计数；这是部署证据探测，不做完整 DNSSEC 链验证。"},
     {"edns-size", "EDNS0 UDP 负载大小（512..65535，默认 1232）；响应截断时输出 dns_truncated=1。"},
     {"after-tls", "在已经建立的 TLS/STARTTLS 流中运行子探测：跳过明文 greeting，直接发送协议能力命令或 StartupMessage。"},
-    {"subprobe-arg", "向 state 子探测传递参数；字符串在 TLS 握手/STARTTLS 升级后由子探测自己的参数表解析。嵌套引号最容易出错，优先使用不含空格的单 token，例如 -subprobe-arg --path=/h2；只有值确实包含空格时才使用双/单引号。"},
+    {"subprobe-arg", "向 state 子探测传递参数；字符串在 TLS 握手/STARTTLS 升级后由子探测自己的参数表解析。嵌套引号最容易出错，优先使用不含空格的单 token，例如 -subprobe-arg --path=/h2；整个参数串确实包含空格时必须用单引号（不是双引号）包住，串内的单引号和反斜杠用反斜杠转义。"},
     {"sni", "ClientHello 中发送的 TLS SNI 主机名。目标通常是 IP，因此这是对整个运行统一设置的单个主机名；留空则不发送 SNI。适合一批 IP 都属于同一 CDN/vhost 的场景。"},
     {"alpn", "逗号/空格分隔的 ALPN 协议列表，例如 h2,http/1.1；顺序保留，留空则不发送 ALPN 扩展。QUIC 探针默认使用 h3。"},
     {"ssl-keylog", "把 TLS 密钥日志（SSLKEYLOGFILE 格式）记录为 INFO，便于 Wireshark 解密。"},

@@ -333,9 +333,11 @@ static ConfParam tlsstate_parameters[] = {
      {"subprobe-args", "subarg", "subargs", 0},
      "Specifies arguments for the state subprobe. The string is parsed by the "
      "subprobe's own parameter table after the TLS handshake/STARTTLS upgrade. "
-     "Nested quotes are the usual failure mode; prefer single unquoted tokens "
-     "such as -subprobe-arg --path=/h2 and use double/single quotes only for "
-     "values that really contain spaces."},
+     "Nested quoting is the usual failure mode; prefer single unquoted tokens "
+     "such as -subprobe-arg --path=/h2. When the nested argument list must "
+     "contain spaces, wrap the whole value in single quotes (not double "
+     "quotes) and escape any literal single quote or backslash with a "
+     "backslash."},
     {"sni",
      SET_sni,
      Type_ARG,
@@ -2044,8 +2046,9 @@ Probe TlsStateProbe = {
         "NOTE2: TlsState is deliberately compatible with TLS 1.0-1.3; the "
         "OpenSSL settings are not safe for modern verification.\n"
         "NOTE3: Nested quotes are the usual source of subprobe-arg errors. "
-        "Prefer a single unquoted token such as "
-        "-subprobe-arg --path=/h2 when possible.\n"
+        "Prefer a single unquoted token such as -subprobe-arg --path=/h2. "
+        "When the nested argument list contains spaces, wrap the whole value "
+        "in single quotes (not double quotes).\n"
         "Dependencies: OpenSSL.",
 
     .init_cb           = &tlsstate_init,

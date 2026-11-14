@@ -67,6 +67,7 @@ run_ok "rate equals form" --rate=100 --list-probe
 run_ok "rate colon form" --rate:100 --list-probe
 run_ok "duplicate rate" --rate 100 --rate 200 --list-probe
 run_ok "nested probe argument token" --list-probe -probe-arg "-subprobe h2 -subprobe-arg --path=/h2"
+run_ok "nested probe argument list" --list-probe -probe-arg "-subprobe http-state -subprobe-arg '--max-body=4096 --user-agent=probe'"
 run_ok "probe help" --help-probe ssh
 run_ok "scan help" --help-scan zbanner
 

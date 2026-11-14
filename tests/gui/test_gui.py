@@ -127,6 +127,12 @@ def main():
         if 'id="module-params"' not in text or "scan_args" not in text:
             print("GUI module parameter editor is missing", file=sys.stderr)
             return 1
+        if ('id="subprobe"' not in text or "collectProbeArgs" not in text
+                or "probeHasSubprobe" not in text
+                or 'option value=""' not in text
+                or 'm.name !== "null"' not in text):
+            print("GUI nested probe editor is missing", file=sys.stderr)
+            return 1
         if 'id="live-records"' not in text or "/api/results" not in text:
             print("GUI result records browser is missing", file=sys.stderr)
             return 1
@@ -213,6 +219,20 @@ def main():
                 or preflight.get("ports") != 2
                 or preflight.get("attempts") != 2):
             print("GUI preflight failed:", status, body[:300], file=sys.stderr)
+            return 1
+        # A nested probe is sent as a flat probe_args object.  Keep the outer
+        # tls-state arguments and carry the inner probe in subprobe/subprobe-arg.
+        status, body = http_json(
+            port, "/api/preflight", token,
+            {"targets": "127.0.0.1", "ports": "443",
+             "scan": "tcp-state", "probe": "tls-state",
+             "rate": 1000, "timeout_sec": 300,
+             "probe_args": {"subprobe": "http-state",
+                            "subprobe-arg": "--all-banner --max-body=4096"}})
+        nested = json.loads(body.decode()) if status == 200 else {}
+        if status != 200 or not nested.get("ok"):
+            print("GUI nested-probe preflight failed:", status, body[:500],
+                  file=sys.stderr)
             return 1
         status, body = http_json(
             port, "/api/preflight", token,
@@ -509,6 +529,16 @@ def main():
                 auto.kill()
                 auto.wait()
 
+        node = shutil.which("node")
+        if node:
+            js_test = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   "nested_probe_js_test.js")
+            checked = subprocess.run([node, js_test], capture_output=True,
+                                     text=True, timeout=30)
+            if checked.returncode != 0:
+                print("nested-probe JS test failed:", checked.stdout,
+                      checked.stderr, file=sys.stderr)
+                return 1
         print("GUI tests: PASS")
         return 0
     finally:

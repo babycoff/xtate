@@ -120,6 +120,17 @@ scan or probe changes. Preflight does not validate module parameter names or
 values; if the worker rejects one, the job fails and its `stderr_tail`/log shows
 the argument error.
 
+**Subprobe.** A probe such as `tls-state` can run one further probe after the
+handshake. When that probe is selected, a **Subprobe** field appears below the
+Method row. Choose the inner probe (for example `http-state`, `h2` or
+`close-state`); its own flags and arguments are shown below the selector. The
+selector starts with no subprobe selected, so a plain TLS scan is unchanged;
+choose one only when the scan should continue inside the TLS session. The
+GUI sends the name as `probe_args.subprobe` and the nested arguments as a
+single quoted `probe_args.subprobe-arg` string, exactly like
+`-probe-arg "-subprobe http-state -subprobe-arg '...'"` on the CLI.
+The subprobe's parameters are not repeated in *Module parameters*.
+
 **Global parameters.** *Global parameters* is a controlled list of 23 safe
 scan-wide options (seed, packet TTL, TCP window/MSS, buffer sizing, dedup and
 similar), with search. Each row shows a description and takes a checkbox for a

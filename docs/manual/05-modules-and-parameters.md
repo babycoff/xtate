@@ -88,8 +88,11 @@ xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
 ```
 
 The nested single quotes are consumed by Xtate's own argument splitter.
-Nested quoting is the most common source of `subprobe` errors; a single token
-such as `-subprobe-arg --path=/h2` avoids the problem entirely.
+The whole `-subprobe-arg` value must be one single-quoted string; without the
+quotes, only the first nested option is assigned to the subprobe and the rest
+are parsed by `tls-state`. Nested quoting is the most common source of
+`subprobe` errors; a single token such as `-subprobe-arg --path=/h2` avoids the
+problem entirely.
 
 ## Scan modules
 

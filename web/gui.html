@@ -202,6 +202,12 @@ input.invalid, textarea.invalid { border-color: rgba(180,35,24,.7); }
 .global-row .gval input:disabled { opacity: .45; }
 .global-row .gtype { color: var(--faint); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
 .arg-empty { color: var(--faint); font-size: 11px; margin-top: 12px; }
+.subprobe-field { border: 1px solid var(--line-soft); border-radius: 9px; background: var(--input); padding: 12px; margin-top: 12px; }
+.subprobe-field .field-label { margin-bottom: 7px; }
+.subprobe-field select { width: 100%; }
+.subprobe-field .subprobe-note { color: var(--faint); font-size: 10.5px; line-height: 1.45; margin: 7px 0 0; }
+.subprobe-field .arg-grid { margin-top: 12px; }
+.subprobe-field .arg-empty { margin-top: 10px; }
 .iface-line {
   display: flex; align-items: center; gap: 10px; border: 1px solid var(--line-soft);
   border-radius: 9px; background: var(--input); padding: 10px 11px;
@@ -501,6 +507,12 @@ textarea { font-size: 13.5px; line-height: 1.5; }
                 <select id="probe"><option value="">— none —</option></select>
               </div>
             </div>
+            <div id="subprobe-field" class="subprobe-field hidden">
+              <div class="field-label"><span>Subprobe</span><span class="field-hint">next-layer probe inside the selected probe</span></div>
+              <select id="subprobe"><option value="">— choose subprobe —</option></select>
+              <p class="subprobe-note" id="subprobe-note">Choose a subprobe only when the selected probe supports one; its parameters appear below.</p>
+              <div class="arg-grid" id="subprobe-args"></div>
+            </div>
             <div class="grid-3">
               <div>
                 <div class="field-label"><span>Rate</span><span class="field-hint mono">packets / sec</span></div>
@@ -748,6 +760,11 @@ Object.assign(ZH, {
   "TCP · stateful": "TCP · 有状态",
   "UDP · stateful": "UDP · 有状态",
   "Unknown": "未知",
+  "Subprobe": "子探针",
+  "next-layer probe inside the selected probe": "所选探针内部运行的下一层探针",
+  "— choose subprobe —": "— 选择子探针 —",
+  "Choose a subprobe only when the selected probe supports one; its parameters appear below.": "仅在所选探针支持子探针时选择；其参数会显示在下方。",
+  "This subprobe has no parameters.": "该子探针没有可设置参数。",
 });
 const state = {
   lang: "en",
@@ -756,6 +773,7 @@ const state = {
   interfaces: [],
   modules: [],
   scan: "tcp-syn",
+  subprobe: "",
   preflight: null,
   preflightSeq: 0,
   preflightTimer: null,
@@ -999,7 +1017,7 @@ function parsePreflightInput() {
     timeout_sec: +$("timeout").value,
     interface: $("interface").value || undefined,
     scan_args: collectModuleArgs("scan"),
-    probe_args: collectModuleArgs("probe"),
+    probe_args: collectProbeArgs(),
     global_args: collectGlobalArgs(),
   };
 }
@@ -1278,16 +1296,127 @@ function collectModuleArgs(kind) {
   }
   return out;
 }
+function probeHasSubprobe(mod) {
+  return !!(mod && (mod.parameters || []).some((p) => p.name === "subprobe"));
+}
+function subprobeCandidates() {
+  const current = $("probe").value;
+  return (state.probes || []).filter((m) =>
+    m.name !== current && m.name !== "tls-state" && m.name !== "null");
+}
+function updateSubprobeVisibility() {
+  const field = $("subprobe-field");
+  if (!field) return;
+  const probe = selectedModule("probe", $("probe").value);
+  const active = probeHasSubprobe(probe);
+  field.classList.toggle("hidden", !active);
+  if (!active) {
+    state.subprobe = "";
+    $("subprobe").innerHTML = '<option value="">— choose subprobe —</option>';
+    renderSubprobeArgs();
+    return;
+  }
+  const select = $("subprobe");
+  const candidates = subprobeCandidates();
+  const current = state.subprobe || select.value;
+  select.innerHTML = '<option value="">' + t("— choose subprobe —") + "</option>" + candidates.map((m) =>
+    '<option value="' + esc(m.name) + '">' + esc(m.name + (m.short_description ? " — " + m.short_description : "")) + "</option>").join("");
+  const chosen = candidates.some((m) => m.name === current) ? current : "";
+  if (chosen) select.value = chosen;
+  state.subprobe = select.value;
+  renderSubprobeArgs();
+}
+function subprobeArgValue(module, name, type) {
+  const key = "subprobe:" + module + ":" + name;
+  if (!state.argValues.has(key)) state.argValues.set(key, type === "flag" ? false : "");
+  return state.argValues.get(key);
+}
+function renderSubprobeArgs() {
+  const host = $("subprobe-args");
+  if (!host) return;
+  const name = $("subprobe").value;
+  const mod = name ? selectedModule("probe", name) : null;
+  if (!mod) {
+    host.innerHTML = "";
+    return;
+  }
+  const params = (mod.parameters || []).filter((p) => p.name !== "subprobe" && p.name !== "subprobe-arg");
+  if (!params.length) {
+    host.innerHTML = '<div class="arg-empty">' + esc(t("This subprobe has no parameters.")) + "</div>";
+    return;
+  }
+  const rows = params.map((p) => {
+    const type = p.type === "flag" ? "flag" : "arg";
+    const val = subprobeArgValue(mod.name, p.name, type);
+    const control = type === "flag"
+      ? '<input type="checkbox" data-arg-kind="subprobe" data-arg-module="' + esc(mod.name) + '" data-arg-name="' + esc(p.name) + '" data-arg-type="flag"' + (val ? " checked" : "") + ">"
+      : '<input type="text" spellcheck="false" autocomplete="off" data-arg-kind="subprobe" data-arg-module="' + esc(mod.name) + '" data-arg-name="' + esc(p.name) + '" data-arg-type="arg" value="' + esc(val) + '" placeholder="value">';
+    return '<div class="arg-row"><span class="arg-name mono">' + esc(p.name) + "</span>" + control + "</div>" +
+      (p.description ? '<div class="arg-desc">' + esc(p.description) + "</div>" : "");
+  }).join("");
+  host.innerHTML = '<div class="arg-group"><div class="arg-group-title mono">subprobe · ' + esc(mod.name) + "</div>" + rows + "</div>";
+  for (const el of host.querySelectorAll("[data-arg-kind]")) {
+    el.addEventListener(el.dataset.argType === "flag" ? "change" : "input", () => {
+      state.argValues.set("subprobe:" + el.dataset.argModule + ":" + el.dataset.argName,
+        el.dataset.argType === "flag" ? el.checked : el.value);
+      schedulePreflight();
+    });
+  }
+}
+function collectSubprobeArgs() {
+  const out = {};
+  for (const el of document.querySelectorAll('[data-arg-kind="subprobe"]')) {
+    const name = el.dataset.argName;
+    if (el.dataset.argType === "flag") {
+      if (el.checked) out[name] = true;
+    } else if (el.value.trim()) {
+      out[name] = el.value.trim();
+    }
+  }
+  return out;
+}
+function quoteSubprobeValue(value) {
+  if (!/[\s'\\]/.test(value)) return value;
+  let out = "'";
+  for (const ch of value) {
+    if (ch === "'" || ch === "\\") out += "\\";
+    out += ch;
+  }
+  return out + "'";
+}
+function serializeSubprobeArgs(args) {
+  const parts = [];
+  for (const [name, value] of Object.entries(args)) {
+    const key = name.replace(/_/g, "-");
+    if (value === true) parts.push("--" + key);
+    else if (String(value).trim()) parts.push("--" + key + "=" + quoteSubprobeValue(String(value).trim()));
+  }
+  return parts.join(" ");
+}
+function collectProbeArgs() {
+  const out = collectModuleArgs("probe");
+  const subprobe = $("subprobe").value;
+  if (subprobe && probeHasSubprobe(selectedModule("probe", $("probe").value))) {
+    out.subprobe = subprobe;
+    const nested = serializeSubprobeArgs(collectSubprobeArgs());
+    if (nested) out["subprobe-arg"] = nested;
+  }
+  return out;
+}
 function renderModuleArgs() {
   const host = $("module-args");
   if (!host) return;
+  updateSubprobeVisibility();
   const groups = [];
   const scan = selectedModule("scan", state.scan);
   const probeName = $("probe").value;
   const probe = probeName ? selectedModule("probe", probeName) : null;
+  const nested = probeHasSubprobe(probe);
   for (const [kind, mod] of [["scan", scan], ["probe", probe]]) {
     if (!mod || !(mod.parameters || []).length) continue;
-    const rows = mod.parameters.map((p) => {
+    const params = (mod.parameters || []).filter((p) => !(nested && kind === "probe" && (p.name === "subprobe" || p.name === "subprobe-arg")));
+    if (!params.length) continue;
+    const rows = params.map((p) => {
       const type = p.type === "flag" ? "flag" : "arg";
       const key = kind + ":" + p.name;
       const val = moduleArgValue(kind, p.name, type);
@@ -1311,6 +1440,7 @@ function renderModuleArgs() {
       schedulePreflight();
     });
   }
+  renderSubprobeArgs();
 }
 function updateProbeVisibility() {
   const info = scanInfo(state.scan);
@@ -1344,7 +1474,7 @@ async function startScan() {
   }
   if (info.probe && $("probe").value) params.probe = $("probe").value;
   const scanArgs = collectModuleArgs("scan");
-  const probeArgs = collectModuleArgs("probe");
+  const probeArgs = collectProbeArgs();
   if (Object.keys(scanArgs).length) params.scan_args = scanArgs;
   if (Object.keys(probeArgs).length) params.probe_args = probeArgs;
   const globalArgs = collectGlobalArgs();
@@ -1576,6 +1706,11 @@ function init() {
   $("rate").addEventListener("input", schedulePreflight);
   $("timeout").addEventListener("input", schedulePreflight);
   $("probe").addEventListener("change", () => { renderModuleArgs(); schedulePreflight(); });
+  $("subprobe").addEventListener("change", () => {
+    state.subprobe = $("subprobe").value;
+    renderSubprobeArgs();
+    schedulePreflight();
+  });
   $("interface").addEventListener("change", schedulePreflight);
   $("auth").addEventListener("change", () => {
     $("btn-start").disabled = !(state.preflight && state.preflight.ok && $("auth").checked && !state.dirty);

@@ -64,6 +64,10 @@ Windows 的 endpoint 形如 `\\.\pipe\xtate-control`。`--control-connect` 只�
 接受同样形状的输入（`targets`/`ports` 可以是数组，也可以是逗号分隔字符串），
 且不会发送数据包。
 
+对于 `tls-state` 这类嵌套探针，把 `probe_args.subprobe` 设为内层探针名，把
+`probe_args["subprobe-arg"]` 设为一个命令行字符串。字符串内包含空格的值必须用
+单引号包住，字面单引号用反斜杠转义，规则与 CLI 相同。
+
 ## 面向模型的元数据
 
 `initialize` 返回 `serverInfo` 和 `instructions`，说明 Xtate、支持的协议、授权要求、
