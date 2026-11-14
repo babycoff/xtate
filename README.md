@@ -5,13 +5,17 @@
   <h3>Xtate — a modular all-stack scanner for professional Internet measurement</h3>
 
   <p>
+    <b>English</b> · <a href="README.zh-CN.md">简体中文</a>
+  </p>
+
+  <p>
     <b>Stateless TCP banners.</b> <b>Hybrid-state TCP/TLS.</b>
     <b>84 modules in a full Linux build.</b> <b>CLI, GUI and MCP.</b><br>
     <sub>C99 · Linux glibc/musl &amp; Windows · GCC/Clang/MSVC/MinGW · Make/Ninja · IPv4 &amp; IPv6</sub>
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-rc.10-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0--rc.10-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>

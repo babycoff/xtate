@@ -5,13 +5,17 @@
   <h3>Xtate — 面向专业互联网测量的模块化全栈扫描器</h3>
 
   <p>
+    <a href="README.md">English</a> · <b>简体中文</b>
+  </p>
+
+  <p>
     <b>无状态 TCP banner。</b> <b>混合状态 TCP/TLS。</b>
     <b>完整 Linux 构建 84 个模块。</b> <b>CLI、GUI 与 MCP。</b><br>
     <sub>C99 · Linux glibc/musl 与 Windows · GCC/Clang/MSVC/MinGW · Make/Ninja · IPv4 与 IPv6</sub>
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-rc.10-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0--rc.10-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>

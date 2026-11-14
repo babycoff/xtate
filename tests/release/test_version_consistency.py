@@ -84,8 +84,9 @@ def check_mcp(binary, expected):
 
 def check_docs(expected):
     checks = [
-        ("README.md", r"badge/version-([0-9][^?\"-]*(?:-[^?\"-]+)*)-"),
-        ("README.zh-CN.md", r"badge/version-([0-9][^?\"-]*(?:-[^?\"-]+)*)-"),
+        # Shields escapes a literal hyphen as "--" in a static badge URL.
+        ("README.md", r"badge/version-([0-9][^?\"-]*(?:(?:--|-)[^?\"-]+)*)-"),
+        ("README.zh-CN.md", r"badge/version-([0-9][^?\"-]*(?:(?:--|-)[^?\"-]+)*)-"),
         ("docs/README.md", r"\*\*Xtate v([0-9][^\s*]+)\*\*"),
         ("docs/zh-CN/README.md", r"\*\*Xtate v([0-9][^\s*]+)\*\*"),
     ]
@@ -93,7 +94,7 @@ def check_docs(expected):
         text = read(path)
         m = re.search(pattern, text)
         assert m, f"no version banner found in {path} with {pattern!r}"
-        got = m.group(1)
+        got = m.group(1).replace("--", "-")
         assert got == expected, f"{path} version banner {got!r}, expected {expected!r}"
 
 
