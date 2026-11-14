@@ -267,7 +267,7 @@ char *gui_preflight_json(const char *body) {
     unsigned ports;
     double attempts;
     int ok = 1;
-    int rate = 1000;
+    double rate = 100.0;
     int timeout_sec = 300;
     const char *iface = NULL;
     const char *scan_name = NULL;
@@ -445,12 +445,10 @@ char *gui_preflight_json(const char *body) {
 
     if (rate_node) {
         if (rate_node->tag != JSON_NUMBER || !isfinite(rate_node->number_) ||
-            rate_node->number_ != floor(rate_node->number_)) {
-            add_error(root, "rate must be an integer");
+            rate_node->number_ <= 0.0) {
+            add_error(root, "rate must be a finite number greater than 0");
         } else {
-            rate = (int)rate_node->number_;
-            if (rate < 1 || rate > 10000)
-                add_error(root, "rate must be between 1 and 10000 packets/sec");
+            rate = rate_node->number_;
         }
     }
     if (timeout_node) {

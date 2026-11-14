@@ -72,6 +72,13 @@ try:
     badg = rpc({"jsonrpc":"2.0","id":322,"method":"tools/call","params":{"name":"validate_config","arguments":{"config":{"scan":"tcp-syn","targets":[SCAN_TARGET],"global_args":{"seed":"abc"}}}}})
     assert badg["result"]["isError"], badg
     assert "global argument" in badg["result"]["content"][0]["text"].lower(), badg
+    # Rates are positive doubles: fractions and multi-million values are valid;
+    # the 1-10000 limit belongs to the browser GUI only.
+    for rid, rate in ((323, 0.5), (324, 1000000)):
+        rr = rpc({"jsonrpc":"2.0","id":rid,"method":"tools/call","params":{"name":"validate_config","arguments":{"config":{"scan":"tcp-syn","targets":[SCAN_TARGET],"rate":rate}}}})
+        assert not rr["result"]["isError"], rr
+    rr = rpc({"jsonrpc":"2.0","id":325,"method":"tools/call","params":{"name":"validate_config","arguments":{"config":{"scan":"tcp-syn","targets":[SCAN_TARGET],"rate":0}}}})
+    assert rr["result"]["isError"], rr
     badjob = rpc({"jsonrpc":"2.0","id":33,"method":"tools/call","params":{"name":"job_status","arguments":{"job_id":"job-nope"}}})
     assert badjob["result"]["isError"]
     badres = rpc({"jsonrpc":"2.0","id":34,"method":"resources/read","params":{"uri":"xtate://nope"}})

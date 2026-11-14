@@ -65,7 +65,10 @@ run_fail "negative rate" --rate -1 --list-probe
 run_ok "list probes" --list-probe
 run_ok "rate equals form" --rate=100 --list-probe
 run_ok "rate colon form" --rate:100 --list-probe
-run_ok "duplicate rate" --rate 100 --rate 200 --list-probe
+run_ok "rate fractional" --rate=0.5 --list-probe
+run_ok "rate millions" --rate=1000000 --list-probe
+run_fail "rate zero" --rate=0 --list-probe
+run_fail "rate trailing junk" --rate=4x --list-probe
 run_ok "nested probe argument token" --list-probe -probe-arg "-subprobe h2 -subprobe-arg --path=/h2"
 run_ok "nested probe argument list" --list-probe -probe-arg "-subprobe http-state -subprobe-arg '--max-body=4096 --user-agent=probe'"
 run_fail "nested probe rejects tcp subprobe" --offline -ip 127.0.0.1 -p 443 -scan tcp-state -probe tls-state -probe-arg "-subprobe http"
@@ -85,6 +88,13 @@ fi
 
 # Language validation.
 run_fail "invalid language" --lang nope --version
+
+# Interactive-mode parser and compatibility checks.
+if [[ -f "$ROOT/tests/config/test_interactive.sh" ]]; then
+    if ! XTATE_BIN="$BIN" bash "$ROOT/tests/config/test_interactive.sh"; then
+        fail=$((fail + 1))
+    fi
+fi
 
 if [[ "$fail" -ne 0 ]]; then
     echo "$fail parser check(s) failed" >&2

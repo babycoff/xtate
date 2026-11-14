@@ -163,7 +163,7 @@ xtate -ip 10.0.0.0/24 -p 22 -scan tcp-syn -rate 250.5
 
 每秒尝试次数取决于引擎：`tcp-syn` 和 `udp` 每次尝试约发一个报文，因此尝试/秒 ≈ rate；默认 `zbanner` 每目标约发三个报文，因此尝试/秒约为 rate/3；`tcp-state` 随会话变化。生成的后续报文（RST、ACK）也消耗速率。
 
-通过控制面发送的扫描请求把 `rate` 限制在 1–10000。CLI 接受任何正浮点值。
+通过控制面发送的扫描请求与 CLI 一样接受任意正浮点值，没有上限；GUI 另有 1–10000 的界面稳定性限制。
 
 `--wait` 是 Xtate 在最后一个报文发出后继续接收的秒数，默认 10。总墙钟超时属于 job 层（扫描请求中的 `timeout_sec`，1–86400 秒，或 CLI 上的 `--job-timeout`）。
 
@@ -219,7 +219,7 @@ xtate -ip 203.0.113.10 -p o:1-20 -scan yarrp-echo -gen blackrock -show info
 | include 文件行长度 | 65,535 字节 |
 | Blackrock 目标空间 | 63 位（地址 × 端口） |
 | `-rate` | > 0，浮点 |
-| 控制面 `rate` | 1–10000 |
+| 控制面 `rate` | > 0，浮点数；无上限 |
 | 控制面 `timeout_sec` | 1–86400 秒 |
 | `--wait` 默认值 | 10 秒 |
 

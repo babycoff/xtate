@@ -31,6 +31,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <math.h>
 #include <stdbool.h>
 #include <sys/stat.h>
 #ifdef _WIN32
@@ -134,7 +135,7 @@ static const char *tools_json =
 "{\"name\":\"check\",\"description\":\"Read-only route preflight for a target set: interfaces, sources, gateways, link type and link capability. Does not inspect Linux firewall rules; read the firewall resource before stateful scans.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"target\":{\"type\":\"string\",\"description\":\"IP, CIDR, range, or comma-separated set\"}},\"required\":[\"target\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"preflight\",\"description\":\"Run a read-only, server-side scan preflight: parse targets and ports, resolve routes and link type, validate scan/probe pairing, and return target/port/attempt counts plus errors and warnings. Sends no packets; call before start_scan.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"config\":{\"type\":\"object\",\"description\":\"Scan request with scan, targets, optional probe/ports/rate/timeout_sec/interface\"}},\"required\":[\"config\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
 "{\"name\":\"validate_config\",\"description\":\"Validate a scan-request object (scan, targets, probe, ports, args) before starting a job.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"config\":{\"type\":\"object\",\"description\":\"Scan-request object\"}},\"required\":[\"config\"]},\"annotations\":{\"readOnlyHint\":true,\"openWorldHint\":false}},"
-"{\"name\":\"start_scan\",\"description\":\"Start a scan job. Pass scan-request fields directly as this tool's arguments (do not wrap them in an arguments object). Returns a job id; results are read via job_result_manifest and job.records. Only use with authorized targets.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"scan\":{\"type\":\"string\",\"description\":\"Scan module name, e.g. tcp-syn\"},\"targets\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"IPs, CIDRs, ranges, or comma-separated target strings\"},\"include_file\":{\"type\":\"string\",\"description\":\"Target file or - for stdin; mutually exclusive with targets\"},\"ports\":{\"type\":\"array\",\"items\":{\"type\":\"integer\"},\"description\":\"Ports for port-based scans\"},\"probe\":{\"type\":\"string\",\"description\":\"Probe module for zbanner/udp/tcp-state\"},\"rate\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":10000,\"description\":\"Total packets per second; omitted means the default 100\"},\"timeout_sec\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":86400},\"result_path\":{\"type\":\"string\",\"description\":\"Optional result path; omit to use the managed run folder\"},\"interface\":{\"type\":\"string\",\"description\":\"Capture interface from explain_target/preflight\"},\"scan_args\":{\"type\":\"object\"},\"probe_args\":{\"type\":\"object\"},\"global_args\":{\"type\":\"object\"},\"chunk_size\":{\"type\":\"integer\",\"minimum\":1},\"quota_bytes\":{\"type\":\"integer\",\"minimum\":0},\"compression\":{\"type\":\"string\",\"enum\":[\"none\",\"zstd\"]},\"index\":{\"type\":\"boolean\"},\"dry_run\":{\"type\":\"boolean\"},\"authorized\":{\"type\":\"boolean\",\"description\":\"Must be true after confirming target authorization\"}},\"required\":[\"scan\",\"authorized\"]},\"annotations\":{\"readOnlyHint\":false,\"destructiveHint\":false,\"openWorldHint\":true}}"
+"{\"name\":\"start_scan\",\"description\":\"Start a scan job. Pass scan-request fields directly as this tool's arguments (do not wrap them in an arguments object). Returns a job id; results are read via job_result_manifest and job.records. Only use with authorized targets.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{\"scan\":{\"type\":\"string\",\"description\":\"Scan module name, e.g. tcp-syn\"},\"targets\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"description\":\"IPs, CIDRs, ranges, or comma-separated target strings\"},\"include_file\":{\"type\":\"string\",\"description\":\"Target file or - for stdin; mutually exclusive with targets\"},\"ports\":{\"type\":\"array\",\"items\":{\"type\":\"integer\"},\"description\":\"Ports for port-based scans\"},\"probe\":{\"type\":\"string\",\"description\":\"Probe module for zbanner/udp/tcp-state\"},\"rate\":{\"type\":\"number\",\"exclusiveMinimum\":0,\"description\":\"Total packets per second, including fractional values such as 0.5; omitted means the default 100. Xtate does not impose an upper limit here; the desktop GUI limits its own input to 10000 for stability.\"},\"timeout_sec\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":86400},\"result_path\":{\"type\":\"string\",\"description\":\"Optional result path; omit to use the managed run folder\"},\"interface\":{\"type\":\"string\",\"description\":\"Capture interface from explain_target/preflight\"},\"scan_args\":{\"type\":\"object\"},\"probe_args\":{\"type\":\"object\"},\"global_args\":{\"type\":\"object\"},\"chunk_size\":{\"type\":\"integer\",\"minimum\":1},\"quota_bytes\":{\"type\":\"integer\",\"minimum\":0},\"compression\":{\"type\":\"string\",\"enum\":[\"none\",\"zstd\"]},\"index\":{\"type\":\"boolean\"},\"dry_run\":{\"type\":\"boolean\"},\"authorized\":{\"type\":\"boolean\",\"description\":\"Must be true after confirming target authorization\"}},\"required\":[\"scan\",\"authorized\"]},\"annotations\":{\"readOnlyHint\":false,\"destructiveHint\":false,\"openWorldHint\":true}}"
 "]}";
 
 static const char *resources_json =
@@ -232,7 +233,7 @@ static bool regular_file_utf8(const char *path) {
 }
 
 static bool validate_cfg(const char *cfg, char *err, size_t errcap,
-                         unsigned *ntargets, unsigned *rate) {
+                         unsigned *ntargets, double *rate) {
     JsonNode *root = json_decode(cfg);
     if (!root || root->tag != JSON_OBJECT) {
         snprintf(err, errcap, "config must be a JSON object"); if (root) json_delete(root); return false;
@@ -311,15 +312,15 @@ static bool validate_cfg(const char *cfg, char *err, size_t errcap,
                 snprintf(err, errcap, "invalid port"); json_delete(root); return false;
             }
     }
-    unsigned r = 0;
+    double r = 100.0;
     JsonNode *rn = json_find_member(root, "rate");
     if (rn) {
-        if (rn->tag != JSON_NUMBER || rn->number_ < 0 || rn->number_ > 10000 ||
-            rn->number_ != (double)(long long)rn->number_) {
-            snprintf(err, errcap, "rate must be an integer in 0..10000");
+        if (rn->tag != JSON_NUMBER || !isfinite(rn->number_) ||
+            rn->number_ <= 0.0) {
+            snprintf(err, errcap, "rate must be a finite number greater than 0");
             json_delete(root); return false;
         }
-        r = (unsigned)rn->number_;
+        r = rn->number_;
     }
     JsonNode *n = json_find_member(root, "timeout_sec");
     if (n && (n->tag != JSON_NUMBER || n->number_ < 1 || n->number_ > 86400 ||
@@ -856,7 +857,7 @@ static void tool_call(const char *id, const char *name, const char *args,
     }
     if (strcmp(name, "validate_config") == 0) {
         char cfg[8192], err[256] = {0};
-        unsigned nt = 0, rate = 0;
+        unsigned nt = 0; double rate = 100.0;
         if (!extract_object(args ? args : "", "config", cfg, sizeof(cfg))) {
             text_result(id, "{\"valid\":false,\"reason\":\"config object required\"}", true); return;
         }
@@ -865,7 +866,7 @@ static void tool_call(const char *id, const char *name, const char *args,
             text_result(id, out, true);
         } else {
             char out[256]; snprintf(out, sizeof(out),
-                "{\"valid\":true,\"targets\":%u,\"rate\":%u}", nt, rate);
+                "{\"valid\":true,\"targets\":%u,\"rate\":%.10g}", nt, rate);
             text_result(id, out, false);
         }
         return;
@@ -918,7 +919,7 @@ static void tool_call(const char *id, const char *name, const char *args,
         if (!extract_object(args ? args : "", "arguments", cfg, sizeof(cfg))) {
             text_result(id, "arguments object required", true); return;
         }
-        char verr[256] = {0}; unsigned targets = 0, rate = 0;
+        char verr[256] = {0}; unsigned targets = 0; double rate = 100.0;
         if (!validate_cfg(cfg, verr, sizeof(verr), &targets, &rate)) {
             text_result(id, verr, true); return;
         }
@@ -946,7 +947,7 @@ static void tool_call(const char *id, const char *name, const char *args,
         }
         if (rg < 0) { text_result(id, "cannot determine route groups", true); return; }
         if (rg > 1) { text_result(id, "targets span multiple routes; split into separate jobs", true); return; }
-        mcp_audit("start_scan rate=%u cfg=%.*s\n", rate, 500, cfg);
+        mcp_audit("start_scan rate=%.10g cfg=%.*s\n", rate, 500, cfg);
     }
     char iface[256] = {0};
     if (strcmp(name, "start_scan") == 0) {

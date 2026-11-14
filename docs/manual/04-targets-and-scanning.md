@@ -213,8 +213,7 @@ packet per attempt, so attempts/s ≈ rate; default `zbanner` sends about three
 packets per target, so attempts/s is roughly rate/3; `tcp-state` varies with the
 conversation. Generated follow-up packets (RST, ACK) also consume the rate.
 
-Scan requests sent through the control plane cap `rate` at 1–10000. The CLI
-accepts any positive floating-point value.
+Scan requests sent through the control plane accept the same positive floating-point values as the CLI, with no upper cap; the GUI applies its own 1–10000 stability limit.
 
 `--wait` is the number of seconds Xtate keeps receiving after the last packet
 is sent; the default is 10. A total wall-clock timeout belongs to the job
@@ -284,7 +283,7 @@ yarrp engines do not need them. Windows has no equivalent script — use
 | Include-file line length | 65,535 bytes |
 | Blackrock target space | 63 bits (addresses × ports) |
 | `-rate` | > 0, floating point |
-| Control-plane `rate` | 1–10000 |
+| Control-plane `rate` | > 0, floating point; no upper cap |
 | Control-plane `timeout_sec` | 1–86400 seconds |
 | `--wait` default | 10 seconds |
 

@@ -110,9 +110,12 @@ the engine's probe type:
 `quic-state` never offers `tls-state` (TCP/TLS only); `tcp-state` never offers
 `http3-state` (QUIC only). The backend rejects both combinations.
 
-Rate is in packets per second (1–10000, default 100). Timeout is the total
-wall-clock limit in seconds (1–86400, default 300). Output is fixed to NDJSON
-with a result manifest; the console does not choose output modules.
+Rate is in packets per second (1–10000 in the browser GUI, default 100). The
+10000 cap is a GUI input safety limit, not an Xtate limit: the CLI, control
+plane and MCP accept fractions such as `0.5` and rates in the millions. Use the
+CLI for sustained high-rate scans. Timeout is the total wall-clock limit in
+seconds (1–86400, default 300). Output is fixed to NDJSON with a result
+manifest; the console does not choose output modules.
 
 **Module parameters.** Below the method cards, *Module parameters* lists the
 flags and text arguments exposed by the selected scan engine and probe. Flags

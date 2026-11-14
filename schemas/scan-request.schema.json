@@ -29,7 +29,7 @@
       "type": "object",
       "additionalProperties": {"type": ["string", "number", "boolean"]}
     },
-    "rate": {"type": "integer", "minimum": 0, "maximum": 10000, "description": "Total packets per second. When omitted, the worker uses the default of 100."},
+    "rate": {"type": "number", "exclusiveMinimum": 0, "description": "Total packets per second. Fractional values such as 0.5 are accepted. Xtate imposes no upper limit; the desktop GUI limits its own input to 10000 for stability. When omitted, the worker uses the default of 100."},
     "timeout_sec": {"type": "integer", "minimum": 1, "maximum": 86400},
     "dry_run": {
       "type": "boolean",

@@ -136,7 +136,7 @@ to verify it.
 
 - `scan` must name a registered scan module; `probe` must name a registered probe.
 - Inline `targets` are limited to 20000 array entries; port values must be 0-65535.
-- `rate` is capped at 10000 packets per second; when omitted, the worker uses the default of 100 packets per second.
+- `rate` accepts any positive number, including fractional values such as `0.5` (one packet every two seconds) and millions of packets per second; when omitted, the worker uses the default of 100 packets per second. The browser GUI caps the field at 10000 for interface stability only; that is not an engine or MCP limit.
 - `result_path` is probed for writability before the job starts.
 - `dry_run` defaults to `false` (a real scan). Set `dry_run: true` to list the
   planned targets and send no packets.

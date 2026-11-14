@@ -1,5 +1,6 @@
 #include "xcmd.h"
 
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -314,6 +315,9 @@ static ActRes ACT_prefix(void *conf) { return ActRes_Prefix; }
 #define PRE_SET_PROBE     "set-probe"
 #define PRE_SET_OUT       "set-out"
 #define PRE_SET_GEN       "set-gen"
+#define PRE_SET_SUBPROBE  "set-subprobe"
+#define PRE_SET_SUBPROBE_ARG "set-subprobe-arg"
+#define PRE_HISTORY       "history"
 #define PRE_HELP_PARAM    "help-param"
 #define PRE_HELP_SCAN     "help-scan"
 #define PRE_HELP_PROBE    "help-probe"
@@ -326,15 +330,30 @@ static ActRes ACT_prefix(void *conf) { return ActRes_Prefix; }
 #define PRE_CONF_RECOVER  "conf-recover"
 
 static ActRes ACT_help(void *conf);
+static ActRes ACT_check(void *conf);
+static void   HDL_history(void *conf, char *subcmd);
 
 static const XCmd config_cmd[] = {
     {"run", "Start scanning with the configured parameters.", ACT_run},
+    {"check", "Validate the current scan/probe/rate/timeout configuration "
+              "without sending packets.",
+     ACT_check},
     {PRE_SET_PARAM, "Set a global parameter, for example `set key = value`.",
      ACT_prefix},
     {PRE_SET_SCAN, "Choose a scan module.", ACT_prefix},
     {PRE_SET_PROBE, "Choose a probe module.", ACT_prefix},
     {PRE_SET_OUT, "Choose an output module.", ACT_prefix},
     {PRE_SET_GEN, "Choose a generate module.", ACT_prefix},
+    {PRE_SET_SUBPROBE,
+     "Choose the nested state subprobe (only useful when the selected probe "
+     "has a subprobe, for example tls-state).",
+     ACT_prefix},
+    {PRE_SET_SUBPROBE_ARG,
+     "Set all arguments for the nested subprobe as one value (only useful "
+     "when the selected probe has a subprobe).",
+     ACT_prefix},
+    {PRE_HISTORY, "Clear saved command history with `history clear`.",
+     ACT_prefix},
     {"echo", "Print current configuration.", ACT_echo},
     {"show", "Print current configuration (alias of echo).", ACT_echo},
     {"echo-all", "Print all configuration, including default settings.",
@@ -429,6 +448,127 @@ static void HDL_set(void *conf, char *subcmd) {
     }
 }
 
+static bool probe_has_param(const Probe *probe, const char *name) {
+    if (!probe || !probe->params)
+        return false;
+    for (const ConfParam *p = probe->params; p->name; p++) {
+        if (conf_equals(p->name, name))
+            return true;
+        for (unsigned i = 0; i < sizeof(p->alt_names) / sizeof(p->alt_names[0]);
+             i++) {
+            if (p->alt_names[i] && conf_equals(p->alt_names[i], name))
+                return true;
+        }
+    }
+    return false;
+}
+
+static bool probe_compatible(const Scanner *scan, const Probe *probe,
+                             char *err, size_t errcap) {
+    if (!scan)
+        return true;
+
+    if (scan->required_probe_type == ProbeType_NULL) {
+        if (probe) {
+            snprintf(err, errcap,
+                     "scan module %s does not accept a probe; clear the probe "
+                     "with `unset-probe`.",
+                     scan->name);
+            return false;
+        }
+        return true;
+    }
+
+    if (!probe) {
+        snprintf(err, errcap, "scan module %s requires a %s probe.", scan->name,
+                 get_probe_type_name(scan->required_probe_type));
+        return false;
+    }
+    if (probe->type != scan->required_probe_type) {
+        snprintf(err, errcap,
+                 "probe %s is %s, but scan module %s requires a %s probe.",
+                 probe->name, get_probe_type_name(probe->type), scan->name,
+                 get_probe_type_name(scan->required_probe_type));
+        return false;
+    }
+
+    if (strcmp(scan->name, "quic-state") == 0 &&
+        strcmp(probe->name, "tls-state") == 0) {
+        snprintf(err, errcap,
+                 "quic-state cannot use tls-state: tls-state expects a "
+                 "TCP/TLS stream. Use http3-state or close-state.");
+        return false;
+    }
+    if (strcmp(scan->name, "tcp-state") == 0 &&
+        strcmp(probe->name, "http3-state") == 0) {
+        snprintf(err, errcap,
+                 "tcp-state cannot use http3-state: http3-state requires "
+                 "quic-state.");
+        return false;
+    }
+
+    return true;
+}
+
+static void append_probe_args(XConf *xconf, const char *args) {
+    size_t old_len = xconf->probe_args ? strlen(xconf->probe_args) : 0;
+    size_t add_len = strlen(args);
+    char  *next    = MALLOC(old_len + add_len + 2);
+    if (old_len > 0) {
+        memcpy(next, xconf->probe_args, old_len);
+        next[old_len] = ' ';
+        memcpy(next + old_len + 1, args, add_len + 1);
+    } else {
+        memcpy(next, args, add_len + 1);
+    }
+    FREE(xconf->probe_args);
+    xconf->probe_args = next;
+}
+
+static char *single_quote(const char *value) {
+    size_t n = strlen(value);
+    char  *out = MALLOC(n * 2 + 3);
+    size_t o   = 0;
+    out[o++]   = '\'';
+    for (size_t i = 0; i < n; i++) {
+        if (value[i] == '\\' || value[i] == '\'')
+            out[o++] = '\\';
+        out[o++] = value[i];
+    }
+    out[o++] = '\'';
+    out[o]   = 0;
+    return out;
+}
+
+static ActRes ACT_check(void *conf) {
+    XConf *xconf = conf;
+    char   err[512];
+
+    if (!xconf->scanner) {
+        printf("check: no scan module selected. Use `set-scan NAME`.\n");
+        return ActRes_Next;
+    }
+    if (!probe_compatible(xconf->scanner, xconf->probe, err, sizeof(err))) {
+        printf("check: %s\n", err);
+        return ActRes_Next;
+    }
+    if (!isfinite(xconf->max_rate) || xconf->max_rate <= 0) {
+        printf("check: invalid rate %.10g; rate must be a positive number.\n",
+               xconf->max_rate);
+        return ActRes_Next;
+    }
+
+    printf("check: configuration looks valid.\n");
+    printf("  scan:    %s\n", xconf->scanner->name);
+    printf("  probe:   %s\n", xconf->probe ? xconf->probe->name : "(none)");
+    printf("  rate:    %.10g packets/sec\n", xconf->max_rate);
+    printf("  timeout: %u s\n", xconf->wait);
+    printf("  This checks configuration only; target/route preflight is "
+           "performed by the CLI `--check` option.\n");
+    return ActRes_Next;
+}
+
+
 static void HDL_set_scan(void *conf, char *subcmd) {
     XConf *xconf = conf;
 
@@ -439,6 +579,19 @@ static void HDL_set_scan(void *conf, char *subcmd) {
     }
 
     xconf->scanner = scan;
+
+    if (xconf->probe) {
+        char err[512];
+        if (!probe_compatible(scan, xconf->probe, err, sizeof(err))) {
+            char *old_name = STRDUP(xconf->probe->name);
+            LOG(LEVEL_ERROR, "%s\n", err);
+            xconf->probe = NULL;
+            LOG(LEVEL_HINT, "probe %s was cleared; use `set-probe NAME` to choose "
+                            "a compatible probe.\n",
+                old_name);
+            FREE(old_name);
+        }
+    }
 
     LOG(LEVEL_HINT, "set scan module successfully.\n");
 }
@@ -452,9 +605,85 @@ static void HDL_set_probe(void *conf, char *subcmd) {
         return;
     }
 
+    char err[512];
+    if (!probe_compatible(xconf->scanner, probe, err, sizeof(err))) {
+        LOG(LEVEL_ERROR, "%s\n", err);
+        return;
+    }
+
     xconf->probe = probe;
 
     LOG(LEVEL_HINT, "set probe module successfully.\n");
+}
+
+static void HDL_set_subprobe(void *conf, char *subcmd) {
+    XConf *xconf = conf;
+
+    if (!xconf->probe || !probe_has_param(xconf->probe, "subprobe")) {
+        LOG(LEVEL_ERROR,
+            "the selected probe has no subprobe; `set-subprobe` only applies "
+            "when a probe with a subprobe is selected (for example tls-state).\n");
+        return;
+    }
+
+    Probe *sub = get_probe_module_by_name(subcmd);
+    if (!sub) {
+        LOG(LEVEL_ERROR, "no such probe module named %s\n", subcmd);
+        return;
+    }
+    if (sub->type != ProbeType_STATE) {
+        LOG(LEVEL_ERROR,
+            "invalid subprobe %s: %s is a %s probe, but a state probe is "
+            "required.\n",
+            sub->name, sub->name, get_probe_type_name(sub->type));
+        return;
+    }
+    if (strcmp(sub->name, "tls-state") == 0) {
+        LOG(LEVEL_ERROR, "invalid subprobe tls-state: a probe cannot run itself "
+                         "as a subprobe.\n");
+        return;
+    }
+    if (strcmp(sub->name, "http3-state") == 0) {
+        LOG(LEVEL_ERROR, "invalid subprobe http3-state: it requires quic-state, "
+                         "not a TLS stream.\n");
+        return;
+    }
+
+    char args[256];
+    snprintf(args, sizeof(args), "-subprobe %s", sub->name);
+    append_probe_args(xconf, args);
+    LOG(LEVEL_HINT,
+        "nested subprobe set to %s. This setting only applies while the "
+        "selected probe has a subprobe.\n",
+        sub->name);
+}
+
+static void HDL_set_subprobe_arg(void *conf, char *subcmd) {
+    XConf *xconf = conf;
+
+    if (!xconf->probe || !probe_has_param(xconf->probe, "subprobe")) {
+        LOG(LEVEL_ERROR,
+            "the selected probe has no subprobe; `set-subprobe-arg` only "
+            "applies when a probe with a subprobe is selected (for example "
+            "tls-state).\n");
+        return;
+    }
+    if (subcmd[0] == 0) {
+        LOG(LEVEL_ERROR, "set-subprobe-arg requires a non-empty argument list.\n");
+        return;
+    }
+
+    char *quoted = single_quote(subcmd);
+    size_t len   = strlen(quoted) + 16;
+    char  *args  = MALLOC(len);
+    snprintf(args, len, "-subprobe-arg %s", quoted);
+    append_probe_args(xconf, args);
+    FREE(args);
+    FREE(quoted);
+
+    LOG(LEVEL_HINT,
+        "nested subprobe arguments set. They only apply while the selected "
+        "probe has a subprobe.\n");
 }
 
 static void HDL_set_out(void *conf, char *subcmd) {
@@ -1007,6 +1236,9 @@ static const XPrefix config_prefix[] = {
     {PRE_SET_PROBE, HDL_set_probe, CPL_probe_module},
     {PRE_SET_OUT, HDL_set_out, CPL_output_module},
     {PRE_SET_GEN, HDL_set_gen, CPL_generate_module},
+    {PRE_SET_SUBPROBE, HDL_set_subprobe, CPL_probe_module},
+    {PRE_SET_SUBPROBE_ARG, HDL_set_subprobe_arg, NULL},
+    {PRE_HISTORY, HDL_history, NULL},
     {PRE_HELP_PARAM, HDL_help_param, CPL_global_conf},
     {PRE_HELP_SCAN, HDL_help_scan, CPL_scan_module},
     {PRE_HELP_PROBE, HDL_help_probe, CPL_probe_module},
@@ -1179,6 +1411,22 @@ static void xcmd_history_path(char *buf, size_t size) {
 #endif
 }
 
+static void HDL_history(void *conf, char *subcmd) {
+    (void)conf;
+
+    if (strcasecmp(subcmd, "clear") != 0) {
+        LOG(LEVEL_ERROR, "unknown history command `%s`; use `history clear`.\n",
+            subcmd);
+        return;
+    }
+
+    char path[512];
+    xcmd_history_path(path, sizeof(path));
+    crossline_history_clear();
+    remove(path);
+    LOG(LEVEL_HINT, "command history cleared.\n");
+}
+
 void xcmd_interactive_readline(XConf *xconf, const char *exe_path) {
     _interactive_xconf = xconf;
     _interactive_tty = false;
@@ -1259,7 +1507,10 @@ void xcmd_interactive_readline(XConf *xconf, const char *exe_path) {
 int xcmd_reboot_for_interact(const char *path, const char *conf) {
 
 #ifdef _WIN32
-    return 0;
+    LOG(LEVEL_HINT,
+        "automatic return to interactive mode is not supported on Windows; "
+        "start `xtate -interactive` again to configure another scan.\n");
+    return 1;
 #else
 
     if (path == NULL || path[0] == 0) {

@@ -139,7 +139,7 @@ MCP server 是一个 stdio 进程（用 `--mcp` 启动），对本地 agent 讲 
 MCP 加了自己的边界：
 
 - **`start_scan` 要求 `authorized: true`** —— agent 必须声明其目标已获授权。
-- **内联目标有上限**（20000 条），速率有上限（10000 pps）；端口会被校验；`result_path` 在 job 启动前会探测可写性。
+- **内联目标有上限**（20000 条）；`rate` 接受任意正浮点值，引擎侧没有上限（浏览器 GUI 为界面安全限制 10000）；端口会被校验；`result_path` 在 job 启动前会探测可写性。
 - **大输入使用 `include_file`**，跨越多个路由的目标集会拒绝，而不是静默拆分。
 - **资源在白名单内** —— 三个固定 URI（`docs/overview`、`docs/firewall`、`schemas/scan-request`），依次相对固定文件名、`$XTATE_MCP_DOCS_DIR`、可执行文件目录，最后是工作目录解析。绝对路径、带盘符路径和 `..` 在触碰文件系统之前就被拒绝。
 - **没有任意文件系统读取**（从 URI 或工具参数）；缺失资源返回 `-32002 resource not found`，不扫描磁盘。

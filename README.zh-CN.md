@@ -170,6 +170,10 @@ xtate [options] -ip TARGETS [-p PORTS] -scan SCANMODULE [-probe PROBEMODULE]
 | `-scan` | 如何发包、保留什么状态 | `tcp-syn`、`zbanner`、`tcp-state`、`udp`、`icmp-echo` |
 | `-probe` | L5+ 载荷与解析器，scan 需要时使用 | `http`、`tls-state`、`dns`、`ssh`、`jarm` |
 | `-rate` | 所有发送线程合计的每秒报文数 | `100`、`0.1`、`100000` |
+
+CLI、控制面和 MCP 接受任意正速率，包括 `0.1` 这样的小数（十秒一个包）和每秒
+数百万包的速率。浏览器 GUI 为了界面稳定性把输入限制在 10000，这不是 Xtate
+引擎的限制。持续高速测量请使用 CLI。
 | `-show` | 要打印的结果级别 | `success`、`info`、`fail` |
 | `-o` | 输出模块与文件 | `-o ndjson -output-file run.ndjson` |
 | `-scan-arg` / `-probe-arg` | 模块专用参数 | `-scan-arg "-banner"` |

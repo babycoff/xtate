@@ -100,7 +100,9 @@ The GUI is scan-first: the default page is **New scan**, not a job table.
   engine needs one, and hides ports for ICMP/ARP/NDP scans. Probe lists follow
   the engine's `probe_type`; `tls-state` is not offered for `quic-state`, and
   `http3-state` is not offered for `tcp-state`. Rate, timeout and an
-  optional interface are set here.
+  optional interface are set here. The GUI rate field is capped at 10000 for
+  interface stability only; it is not an Xtate limit. The CLI, control plane
+  and MCP accept fractional rates such as `0.5` and multi-million rates.
 - The server-side **preflight** (`POST /api/preflight`) parses the same request
   as `job.start`, verifies target syntax and counts, resolves route, source,
   gateway, link type and raw-IP capability, and rejects unknown scans/probes,

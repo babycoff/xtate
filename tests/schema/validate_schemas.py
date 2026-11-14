@@ -43,9 +43,11 @@ def main():
     base = {"scan": "tcp-syn", "targets": ["127.0.0.1"]}
     if sr.schema["properties"]["dry_run"].get("default") is not False:
         raise AssertionError("scan-request: dry_run default must be false")
-    sr.validate({**base, "rate": 0})
+    sr.validate({**base, "rate": 0.5})
+    sr.validate({**base, "rate": 1000000})
     for bad in (
-        {**base, "rate": 10001},
+        {**base, "rate": 0},
+        {**base, "rate": -1},
         {**base, "chunk_size": 0},
         {**base, "compression": "gzip"},
     ):

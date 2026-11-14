@@ -272,7 +272,7 @@ typedef struct I18nParamEntry {
 
 static const I18nParamEntry i18n_global_help[] = {
     {"seed", "设置目标/端口随机化和 cookie 生成的全局随机种子。可填整数；不同种子改变发送顺序。填 time 使用本地时间自动生成新顺序；不设置时默认 time。--echo 可保存配置以复现实验。"},
-    {"rate", "设置所有发送线程共享的总发包速率（packets/second），支持小数（如 0.1）和很大值。实际可达速率取决于操作系统、抓包后端、网卡、CPU 和报文大小；该值是总速率，不是每线程速率。默认 100 包/秒。"},
+    {"rate", "设置所有发送线程共享的总发包速率（packets/second），支持小数（如 0.1，约每十秒一个包）和百万级高速率。CLI、MCP 和控制面不设上限；桌面 GUI 为了界面稳定性，仅把输入限制在 1–10000。实际可达速率取决于操作系统、抓包后端、网卡、CPU 和报文大小；该值是总速率，不是每线程速率。默认 100 包/秒。"},
     {"wait", "所有发送线程结束后，继续接收和处理回包的秒数；默认 10 秒。调大可等待慢响应，但会延长进程退出时间。"},
     {"forever", "把 --wait 设为很大的值，用于持续接收/长期运行。"},
     {"shard", "用 x/y 把扫描空间分给多个实例：x 是当前实例编号（从 1 开始），y 是实例总数；例如 1/2 从索引 0 开始每隔一个发送，2/2 从索引 1 开始。仅默认 GenerateModule 实现该功能。"},
@@ -932,11 +932,17 @@ typedef struct I18nInteractiveCmdEntry {
 
 static const I18nInteractiveCmdEntry i18n_interactive_cmds[] = {
     {"run", "使用当前配置执行扫描。"},
+    {"check", "检查当前扫描/探针/速率/超时配置，不发送数据包。"},
     {"set", "设置全局参数，例如 `set key = value`。"},
     {"set-scan", "选择扫描模块。"},
     {"set-probe", "选择探测模块。"},
     {"set-out", "选择输出模块。"},
     {"set-gen", "选择生成模块。"},
+    {"set-subprobe",
+     "选择嵌套子探针（仅当所选探针有子探针时有效，例如 tls-state）。"},
+    {"set-subprobe-arg",
+     "设置嵌套子探针的全部参数（仅当所选探针有子探针时有效）。"},
+    {"history", "清除已保存的命令历史：`history clear`。"},
     {"echo", "打印当前配置。"},
     {"echo-all", "打印包含默认值的全部配置。"},
     {"show", "打印当前配置（echo 的别名）。"},

@@ -185,6 +185,11 @@ xtate [options] -ip TARGETS [-p PORTS] -scan SCANMODULE [-probe PROBEMODULE]
 | `-scan` | How packets are sent and what state is kept | `tcp-syn`, `zbanner`, `tcp-state`, `udp`, `icmp-echo` |
 | `-probe` | L5+ payload and parser, when the scan requires one | `http`, `tls-state`, `dns`, `ssh`, `jarm` |
 | `-rate` | Total packets per second across all TX threads | `100`, `0.1`, `100000` |
+
+The CLI, control plane and MCP accept any positive rate, including fractional
+values such as `0.1` (one packet every ten seconds) and multi-million rates.
+The browser GUI caps its input at 10000 for interface stability; that is not an
+Xtate engine limit. Use the CLI for sustained high-rate measurement.
 | `-show` | Result levels to print | `success`, `info`, `fail` |
 | `-o` | Output module and file | `-o ndjson -output-file run.ndjson` |
 | `-scan-arg` / `-probe-arg` | Module-specific parameters | `-scan-arg "-banner"` |

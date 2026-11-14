@@ -7,7 +7,9 @@
 #include "probe-modules/probe-modules.h"
 
 #include <ctype.h>
+#include <errno.h>
 #include <limits.h>
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -2474,9 +2476,8 @@ static ConfRes SET_fake_router_mac(void *conf, const char *name,
 
 static ConfRes SET_rate(void *conf, const char *name, const char *value) {
     XConf   *xconf = (XConf *)conf;
-    double   rate  = 0.0;
-    double   point = 10.0;
-    unsigned i;
+    char    *end   = NULL;
+    double   rate;
 
     if (xconf->echo) {
         if ((unsigned)(xconf->max_rate * 100000) % 100000) {
@@ -2490,29 +2491,15 @@ static ConfRes SET_rate(void *conf, const char *name, const char *value) {
         return 0;
     }
 
-    for (i = 0; value[i] && value[i] != '.'; i++) {
-        char c = value[i];
-        if (c < '0' || '9' < c) {
-            LOG(LEVEL_ERROR, "(CONF) non-digit in rate spec: %s=%s\n", name,
-                value);
-            return Conf_ERR;
-        }
-        rate = rate * 10.0 + (c - '0');
-    }
-
-    if (value[i] == '.') {
-        i++;
-        while (value[i]) {
-            char c = value[i];
-            if (c < '0' || '9' < c) {
-                LOG(LEVEL_ERROR, "(CONF) non-digit in rate spec: %s=%s\n", name,
-                    value);
-                return Conf_ERR;
-            }
-            rate += (c - '0') / point;
-            point *= 10.0;
-            value++;
-        }
+    errno = 0;
+    rate  = strtod(value, &end);
+    if (value[0] == '\0' || end == value || *end != '\0' || errno == ERANGE ||
+        !isfinite(rate) || rate <= 0.0) {
+        LOG(LEVEL_ERROR,
+            "(CONF) invalid rate spec: %s=%s (expected a finite number "
+            "greater than 0, e.g. 0.5, 100, or 1000000)\n",
+            name, value);
+        return Conf_ERR;
     }
 
     xconf->max_rate = rate;
@@ -3045,9 +3032,11 @@ ConfParam config_parameters[] = {
      {"max-rate", 0},
      "Specifies the desired total transmit rate in packets per second. Small "
      "values such as 0.1 send about one packet every ten seconds; large values "
-     "such as 10000000 request ten million packets per second. The achievable "
-     "rate depends on the operating system, capture backend, NIC, CPU and "
-     "packet size. This is a shared total across all transmit threads, not a "
+     "such as 10000000 request ten million packets per second. There is no "
+     "upper limit in the CLI, MCP or control plane; the desktop GUI deliberately "
+     "caps its rate input at 10000 for interface stability. The achievable rate "
+     "depends on the operating system, capture backend, NIC, CPU and packet "
+     "size. This is a shared total across all transmit threads, not a "
      "per-thread rate. The default is 100 packets per second.",
      "Specifies the desired rate for transmitting packets."},
     {"wait",

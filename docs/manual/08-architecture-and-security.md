@@ -273,9 +273,10 @@ MCP adds its own boundaries:
 
 - **`authorized: true` is required** by `start_scan` — the agent must assert
   that its targets are authorized.
-- **Inline targets are capped** (20000 entries) and rates capped (10000 pps);
-  ports are validated; `result_path` is probed for writability before the job
-  starts.
+- **Inline targets are capped** (20000 entries); `rate` accepts any positive
+  floating-point value with no engine-side cap (the browser GUI applies a
+  10000 UI safety limit); ports are validated; `result_path` is probed for
+  writability before the job starts.
 - **Large inputs use `include_file`**, and a target set spanning multiple
   routes is refused rather than silently split.
 - **Resources are allowlisted** — three fixed URIs (`docs/overview`,

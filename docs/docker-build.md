@@ -148,18 +148,87 @@ docker run --rm -it --cap-add=NET_RAW --cap-add=NET_ADMIN \
 
 Never run the firewall script as a permanent host change.
 
+For link-layer scans on a Linux host, add `--network host` so the container
+sees the host interfaces; otherwise Docker's NAT namespace cannot reach the
+host LAN at layer 2. Docker Desktop on Windows/macOS does not support this mode;
+use the published-port GUI workflow and scan from the container's routed
+network instead.
+
 ## MCP inside the container
 
-Stdio MCP works directly; the image starts a private control plane when
-`--control-connect` is omitted:
+MCP is a stdio protocol; there is no TCP listener to connect to. The agent host
+starts the container with `-i` and speaks JSON-RPC over the attached stdin/stdout.
+The image starts a private control plane when `--mcp` has no
+`--control-connect`:
 
 ```bash
-docker run --rm -i xtate:ubuntu24-full --mcp
+docker run --rm -i --name xtate-mcp \
+  --cap-add=NET_RAW --cap-add=NET_ADMIN \
+  -v "$PWD/xtate-data:/data" \
+  xtate:ubuntu24-full --mcp
 ```
 
-For an agent host, keep the container stdin/stdout attached and pass the same
-`XTATE_CONTROL_TOKEN` if the host sets one. The image ships the docs and
-schemas under `/usr/local/share/xtate` and sets `XTATE_MCP_DOCS_DIR`.
+An MCP client configuration on the host therefore uses `docker` as the command:
+
+```json
+{
+  "command": "docker",
+  "args": ["run", "--rm", "-i", "--cap-add=NET_RAW",
+           "--cap-add=NET_ADMIN", "-v",
+           "/absolute/xtate-data:/data", "xtate:ubuntu24-full", "--mcp"]
+}
+```
+
+Send `initialize` and then normal MCP JSON-RPC messages; for example, pipe a
+single request into the container:
+
+```bash
+printf '%s\n' \
+  '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"host","version":"1"}}}' \
+  | docker run --rm -i xtate:ubuntu24-full --mcp
+```
+
+The server prints the response on stdout; logs go to stderr. Do not add `-t`
+when an agent is driving stdio.
+
+### Shared control plane for MCP and GUI
+
+To run one scanner container and attach both clients, start a named container
+with a control-plane socket in the mounted state directory and with the GUI port
+published at container start:
+
+```bash
+docker run -d --name xtate-core \
+  --cap-add=NET_RAW --cap-add=NET_ADMIN \
+  -e XTATE_CONTROL_TOKEN=change-me \
+  -e XTATE_GUI_ALLOW_REMOTE=1 \
+  -e XTATE_GUI_PUBLIC_URL=http://127.0.0.1:8787/ \
+  -p 127.0.0.1:8787:8787 \
+  -v "$PWD/xtate-data:/data" \
+  xtate:ubuntu24-full --control-plane=/data/control.sock
+```
+
+Attach MCP over stdio from the host:
+
+```bash
+docker exec -i xtate-core xtate --mcp --control-connect=/data/control.sock
+```
+
+Attach the GUI in the same container; the published port already exists. Docker
+does not copy `docker exec` output into `docker logs`, so write the GUI log to
+the mounted state directory:
+
+```bash
+docker exec -d xtate-core sh -lc \
+  'xtate --gui --gui-listen=0.0.0.0:8787 --gui-no-open \
+   --control-connect=/data/control.sock > /data/gui.log 2>&1'
+docker exec xtate-core cat /data/gui.log
+```
+
+Read the `GUI http://...?...token=...` line from `/data/gui.log`, then open the
+`127.0.0.1:8787` URL on the host with that query token. `XTATE_CONTROL_TOKEN`
+is inherited by `docker exec`, so MCP and GUI authenticate to the same control
+plane. Jobs, results and logs stay under `/data`.
 
 ## Known limitations
 

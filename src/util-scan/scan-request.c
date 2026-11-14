@@ -346,12 +346,15 @@ int scan_request_build_argv(const char *filename, int *argc_out,
     JsonNode *rate=json_find_member(root,"rate");
     if (rate && rate->tag==JSON_NUMBER) {
         double rv = rate->number_;
-        if (!isfinite(rv) || rv < 0 || rv > 10000) {
-            req_error(ERR_INVALID_ARGUMENT, "rate must be finite and in 0..10000");
+        if (!isfinite(rv) || rv <= 0.0) {
+            req_error(ERR_INVALID_ARGUMENT, "rate must be a finite number greater than 0");
             json_delete(root); return -1;
         }
-        char t[32]; snprintf(t,sizeof(t),"%d",(int)rv);
+        char t[64]; snprintf(t,sizeof(t),"%.17g",rv);
         argv[ac++]=STRDUP("-rate"); argv[ac++]=STRDUP(t);
+    } else if (rate && rate->tag != JSON_NULL) {
+        req_error(ERR_INVALID_ARGUMENT, "rate must be a number");
+        json_delete(root); return -1;
     }
     JsonNode *pa=json_find_member(root,"probe_args"); char *pas=args_string(pa);
     if (pas) { argv[ac++]=STRDUP("-probe-arg"); argv[ac++]=pas; }

@@ -44,6 +44,22 @@ try:
         if state in ("completed","failed","cancelled","timed_out"): break
         time.sleep(0.1)
     assert state=="completed", o
+    # Rates are positive doubles: fractional and multi-million values must
+    # survive JSON -> control request -> worker argv.  dry_run keeps this
+    # packet-free and privilege-free.
+    for rid, rate in ((60, 0.5), (61, 1000000)):
+        rrate=req+".rate%d.ndjson"%rid
+        rc,o=rpc({"id":rid,"method":"job.start","params":{
+            "scan":"tcp-syn","targets":["127.0.0.1"],"ports":[1],
+            "rate":rate,"dry_run":True,"timeout_sec":20,"result_path":rrate}})
+        assert "job_id" in o.get("result",{}), o
+        rjid=o["result"]["job_id"]; rstate=""
+        for _ in range(100):
+            rc,o=rpc({"id":rid+1,"method":"job.status","job_id":rjid})
+            rstate=o["result"]["state"]
+            if rstate in ("completed","failed","cancelled","timed_out"): break
+            time.sleep(0.1)
+        assert rstate=="completed", o
     print("control plane: PASS")
 finally:
     shutil.rmtree(state_dir,ignore_errors=True)

@@ -77,7 +77,7 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 `quic-state` 不会提供 `tls-state`（后者只适用于 TCP/TLS）；`tcp-state` 不会
 提供 `http3-state`（后者只用于 QUIC）。后端会拒绝这两种组合。
 
-速率单位是包/秒（1–10000，默认 100）。超时是总的墙钟时限，单位秒（1–86400，默认 300）。输出固定为带结果 manifest 的 NDJSON；控制台不选择输出模块。
+速率单位是包/秒（GUI 输入框 1–10000，默认 100）。10000 只是 GUI 的输入安全限制，不是 Xtate 的限制：CLI、控制面和 MCP 接受 `0.5` 这类小数和每秒数百万包的速率。持续高速扫描请使用 CLI。超时是总的墙钟时限，单位秒（1–86400，默认 300）。输出固定为带结果 manifest 的 NDJSON；控制台不选择输出模块。
 
 **模块参数。** 方法卡片下方的 *Module parameters* 列出当前扫描引擎和探测暴露的开关与文本参数。开关是复选框，取值参数是文本框；留空即不发送。这些值会作为 `scan_args` 和 `probe_args` 随 `job.start` 发送，与 CLI 的 `--scan-arg`/`--probe-arg` 同名。切换扫描或探测时会重建列表。预检不校验模块参数名或取值；如果 worker 拒绝某个参数，job 会失败，`stderr_tail`/日志中会显示参数错误。
 

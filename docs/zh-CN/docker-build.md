@@ -145,17 +145,81 @@ docker run --rm -it --cap-add=NET_RAW --cap-add=NET_ADMIN \
 
 不要把防火墙脚本作为永久主机改动。
 
+在 Linux 宿主机上做链路层扫描时加 `--network host`，让容器看到宿主机网卡；
+否则 Docker 的 NAT 命名空间无法在二层到达宿主局域网。Windows/macOS 的
+Docker Desktop 不支持该模式，请使用发布端口的 GUI 方式，并从容器可路由的
+网络发起扫描。
+
 ## 容器内 MCP
 
-Stdio MCP 可直接使用；省略 `--control-connect` 时镜像会启动私有控制面：
+MCP 是 stdio 协议，没有可直连的 TCP 端口。Agent 宿主用 `-i` 启动容器，通过
+连接的 stdin/stdout 收发 JSON-RPC。`--mcp` 省略 `--control-connect` 时，镜像会
+启动私有控制面：
 
 ```bash
-docker run --rm -i xtate:ubuntu24-full --mcp
+docker run --rm -i --name xtate-mcp \
+  --cap-add=NET_RAW --cap-add=NET_ADMIN \
+  -v "$PWD/xtate-data:/data" \
+  xtate:ubuntu24-full --mcp
 ```
 
-Agent 宿主需要保持容器 stdin/stdout 连接；若宿主设置了
-`XTATE_CONTROL_TOKEN`，容器也要传同一个值。镜像把 docs/schemas 放在
-`/usr/local/share/xtate`，并设置 `XTATE_MCP_DOCS_DIR`。
+因此宿主上的 MCP 客户端把 `docker` 当作命令：
+
+```json
+{
+  "command": "docker",
+  "args": ["run", "--rm", "-i", "--cap-add=NET_RAW",
+           "--cap-add=NET_ADMIN", "-v",
+           "/absolute/xtate-data:/data", "xtate:ubuntu24-full", "--mcp"]
+}
+```
+
+先发 `initialize`，再发普通 MCP JSON-RPC 消息。示例：
+
+```bash
+printf '%s\n' \
+  '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"host","version":"1"}}}' \
+  | docker run --rm -i xtate:ubuntu24-full --mcp
+```
+
+响应写到 stdout，日志写到 stderr。Agent 驱动 stdio 时不要加 `-t`。
+
+### 让 MCP 与 GUI 共用控制面
+
+要运行一个扫描容器并让两个客户端共用 job，先启动带控制面 socket 的命名容器，
+并在启动时发布 GUI 端口：
+
+```bash
+docker run -d --name xtate-core \
+  --cap-add=NET_RAW --cap-add=NET_ADMIN \
+  -e XTATE_CONTROL_TOKEN=change-me \
+  -e XTATE_GUI_ALLOW_REMOTE=1 \
+  -e XTATE_GUI_PUBLIC_URL=http://127.0.0.1:8787/ \
+  -p 127.0.0.1:8787:8787 \
+  -v "$PWD/xtate-data:/data" \
+  xtate:ubuntu24-full --control-plane=/data/control.sock
+```
+
+从宿主机通过 stdio 连接 MCP：
+
+```bash
+docker exec -i xtate-core xtate --mcp --control-connect=/data/control.sock
+```
+
+在同一个容器里启动 GUI；端口已在启动时发布。Docker 不会把 `docker exec` 的
+输出并入 `docker logs`，所以把 GUI 日志写到挂载目录：
+
+```bash
+docker exec -d xtate-core sh -lc \
+  'xtate --gui --gui-listen=0.0.0.0:8787 --gui-no-open \
+   --control-connect=/data/control.sock > /data/gui.log 2>&1'
+docker exec xtate-core cat /data/gui.log
+```
+
+从 `/data/gui.log` 读取 `GUI http://...?...token=...` 行，然后在宿主机浏览器
+打开 `127.0.0.1:8787` 并带上该 token。`docker exec` 会继承容器的
+`XTATE_CONTROL_TOKEN`，所以 MCP 与 GUI 使用同一个控制面。job、结果和日志都
+保存在 `/data` 下。
 
 ## 已知限制
 

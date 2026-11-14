@@ -208,6 +208,7 @@ input.invalid, textarea.invalid { border-color: rgba(180,35,24,.7); }
 .subprobe-field .subprobe-note { color: var(--faint); font-size: 10.5px; line-height: 1.45; margin: 7px 0 0; }
 .subprobe-field .arg-grid { margin-top: 12px; }
 .subprobe-field .arg-empty { margin-top: 10px; }
+.rate-note { color: var(--faint); font-size: 10.5px; line-height: 1.45; margin: 7px 0 0; }
 .iface-line {
   display: flex; align-items: center; gap: 10px; border: 1px solid var(--line-soft);
   border-radius: 9px; background: var(--input); padding: 10px 11px;
@@ -517,6 +518,7 @@ textarea { font-size: 13.5px; line-height: 1.5; }
               <div>
                 <div class="field-label"><span>Rate</span><span class="field-hint mono">packets / sec</span></div>
                 <input id="rate" type="number" min="1" max="10000" value="100">
+                <p class="rate-note">The GUI caps rate at 10,000 packets/sec for interface stability. The CLI, MCP and control plane accept higher rates and fractional values such as 0.5.</p>
               </div>
               <div>
                 <div class="field-label"><span>Timeout</span><span class="field-hint mono">seconds</span></div>
@@ -739,6 +741,7 @@ Object.assign(ZH, {
   "Scan, probe, output and generate modules, grouped by role. Open a module for its full description and parameters.": "扫描、探针、输出与生成模块，按角色分组。展开模块可查看完整说明和参数。",
   "Appearance, runtime capabilities and the local security model of this console.": "本控制台的外观、运行时能力和本地安全模型。",
   "Rate must be between 1 and 10000 packets per second.": "速率必须是 1–10000 包/秒之间的整数。",
+  "The GUI caps rate at 10,000 packets/sec for interface stability. The CLI, MCP and control plane accept higher rates and fractional values such as 0.5.": "GUI 为了界面稳定性，把速率限制在 10,000 包/秒。CLI、MCP 和控制面接受更高速率和小数值（如 0.5）。",
   "Timeout must be a whole number between 1 and 86400 seconds.": "超时必须是 1–86400 秒之间的整数。",
   "Enter at least one port.": "请至少输入一个端口。",
   "Too many ports for one browser request ({n}); narrow the range to 4096 or fewer.": "单次浏览器请求的端口过多（{n} 个）；请缩小到 4096 个以内。",
