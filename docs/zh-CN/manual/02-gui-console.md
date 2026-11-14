@@ -78,7 +78,7 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 
 **模块参数。** 方法卡片下方的 *Module parameters* 列出当前扫描引擎和探测暴露的开关与文本参数。开关是复选框，取值参数是文本框；留空即不发送。这些值会作为 `scan_args` 和 `probe_args` 随 `job.start` 发送，与 CLI 的 `--scan-arg`/`--probe-arg` 同名。切换扫描或探测时会重建列表。预检不校验模块参数名或取值；如果 worker 拒绝某个参数，job 会失败，`stderr_tail`/日志中会显示参数错误。
 
-**子探针。** `tls-state` 这类探针可以在握手完成后继续运行一层探针。选中这类探针时，Method 行下方会出现 **子探针 / Subprobe** 选择器。选择内层探针（例如 `http-state`、`h2` 或 `close-state`），其开关和参数会显示在选择器下方。选择器默认不启用子探针，因此普通 TLS 扫描的行为不变；只有需要在 TLS 会话内继续探测时才选择。GUI 将名称发送为 `probe_args.subprobe`，并将嵌套参数序列化为一个带单引号的 `probe_args.subprobe-arg` 字符串，等价于 CLI 的 `-probe-arg "-subprobe http-state -subprobe-arg '...'"`。子探针参数不会在 *Module parameters* 中重复出现。
+**子探针。** `tls-state` 这类探针可以在握手完成后继续运行一层探针。选中这类探针时，Method 行下方会出现 **子探针 / Subprobe** 选择器。选择器只列出 state 类型探针，TCP/UDP 探针和 `tls-state` 本身会被排除。选择内层探针（例如 `http-state`、`h2` 或 `close-state`），其开关和参数会显示在选择器下方。选择器默认不启用子探针，因此普通 TLS 扫描的行为不变；只有需要在 TLS 会话内继续探测时才选择。GUI 将名称发送为 `probe_args.subprobe`，并将嵌套参数序列化为一个带单引号的 `probe_args.subprobe-arg` 字符串，等价于 CLI 的 `-probe-arg "-subprobe http-state -subprobe-arg '...'"`。子探针参数不会在 *Module parameters* 中重复出现。
 
 **全局参数。** *Global parameters* 是一份受控的 23 项安全扫描级选项（seed、报文 TTL、TCP window/MSS、缓冲区大小、去重等），支持搜索。每行都有说明：开关显示为复选框，带值选项显示为文本框。取值作为 `global_args` 发送；预检会拒绝未知名称、错误类型以及越界或不安全的值。会破坏 job 契约的选项——进程/文件/脚本模式、控制面或 job 内部选项，以及目标/端口/速率/接口/模块参数——不会出现在这里。
 

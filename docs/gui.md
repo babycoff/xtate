@@ -115,8 +115,9 @@ The GUI is scan-first: the default page is **New scan**, not a job table.
 - **Module parameters** exposes the selected scan engine and probe flags and text
   arguments. Values are sent as `scan_args`/`probe_args`; empty fields are omitted.
   When the selected probe supports a nested probe (`tls-state` does), a
-  **Subprobe** selector appears with that probe's own arguments below it. It
-  starts empty, so a plain TLS scan is unchanged; choose a subprobe only when
+  **Subprobe** selector appears with that probe's own arguments below it. Only
+  state probes are offered; TCP/UDP probes and `tls-state` itself are excluded.
+  It starts empty, so a plain TLS scan is unchanged; choose a subprobe only when
   the scan should continue inside TLS. The GUI sends the chosen name as
   `probe_args.subprobe` and the nested arguments as a
   single-quoted `probe_args.subprobe-arg` command-line string; MCP and

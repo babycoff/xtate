@@ -41,7 +41,7 @@ and must not create a second help entry.
 | Help | Module description and every parameter description; verify with `--help-scan|probe|out|gen <name>`. |
 | Counts | Windows and full-Linux counts in `README.md`, `docs/modules.md`, and any page that quotes them. |
 | MCP | `list_modules`, `describe_probe`, and `start_scan` work from the registry; no second hard-coded list. Update `docs/mcp-server.md` only if the tool contract changes. |
-| GUI | The module catalog is served by `/api/modules`; update `docs/gui.md` only if the rendering contract changes. |
+| GUI | The module catalog is served by `/api/modules`; scan→probe choices come from `probe_type` and must not be hard-coded. `tls-state` only accepts state subprobes. Update `docs/gui.md` only if the rendering contract changes. |
 | Docker | The Ubuntu image builds optional modules from source; check `docker/ubuntu24-build/Dockerfile` and capability output if the module adds a dependency. |
 | Tests | Add the module to the relevant schema/module validator expectation and a minimal behavioral test. |
 

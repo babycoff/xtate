@@ -20,7 +20,7 @@ if (!match) throw new Error("GUI script not found in web/gui.html");
 let script = match[1];
 script = script.replace(
   /\ninit\(\);\s*$/,
-  "\nglobalThis.__guiTest = { serializeSubprobeArgs, quoteSubprobeValue, collectProbeArgs, state };\n",
+  "\nglobalThis.__guiTest = { serializeSubprobeArgs, quoteSubprobeValue, collectProbeArgs, subprobeCandidates, scanInfo, state };\n",
 );
 
 const probeEl = { value: "tls-state" };
@@ -60,6 +60,10 @@ vm.runInContext(script, context);
 const gui = context.__guiTest;
 
 gui.state.modules = [
+  { kind: "scan", name: "zbanner", probe_type: "tcp" },
+  { kind: "scan", name: "tcp-state", probe_type: "state" },
+  { kind: "scan", name: "udp", probe_type: "udp" },
+  { kind: "scan", name: "icmp-echo", probe_type: "none" },
   {
     kind: "probe",
     name: "tls-state",
@@ -72,7 +76,23 @@ gui.state.modules = [
     probe_type: "state",
     parameters: [{ name: "all-banner", type: "flag" }],
   },
+  { kind: "probe", name: "http", probe_type: "tcp", parameters: [] },
+  { kind: "probe", name: "dns", probe_type: "udp", parameters: [] },
 ];
+
+gui.state.probes = gui.state.modules.filter((m) => m.kind === "probe");
+
+assert.deepStrictEqual(
+  gui.subprobeCandidates().map((m) => m.name),
+  ["http-state"],
+  "only state probes are valid TLS subprobes",
+);
+assert.strictEqual(gui.scanInfo("zbanner").probe, "tcp");
+assert.strictEqual(gui.scanInfo("tcp-state").probe, "state");
+assert.strictEqual(gui.scanInfo("udp").probe, "udp");
+assert.strictEqual(gui.scanInfo("icmp-echo").probe, null);
+assert.strictEqual(gui.scanInfo("icmp-echo").ports, false);
+assert.strictEqual(gui.scanInfo("tcp-state").ports, true);
 
 const args = JSON.parse(JSON.stringify(gui.collectProbeArgs()));
 assert.deepStrictEqual(args, {

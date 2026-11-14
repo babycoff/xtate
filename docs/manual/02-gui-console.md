@@ -122,7 +122,8 @@ the argument error.
 
 **Subprobe.** A probe such as `tls-state` can run one further probe after the
 handshake. When that probe is selected, a **Subprobe** field appears below the
-Method row. Choose the inner probe (for example `http-state`, `h2` or
+Method row. Only state probes are listed; TCP/UDP probes and `tls-state`
+itself are rejected. Choose the inner probe (for example `http-state`, `h2` or
 `close-state`); its own flags and arguments are shown below the selector. The
 selector starts with no subprobe selected, so a plain TLS scan is unchanged;
 choose one only when the scan should continue inside the TLS session. The

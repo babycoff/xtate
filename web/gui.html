@@ -1268,13 +1268,12 @@ async function loadModules() {
   } catch (err) { toast("Cannot list modules: " + err.message, true); }
 }
 function scanInfo(name) {
-  if (name === "zbanner") return {ports: true, probe: "tcp"};
-  if (name === "tcp-state") return {ports: true, probe: "state"};
-  if (name === "udp") return {ports: true, probe: "udp"};
-  if (name === "quic-state") return {ports: true, probe: "state"};
-  if (name === "tcp-syn" || name === "yarrp-udp" || name === "sctp-init")
-    return {ports: true, probe: null};
-  return {ports: false, probe: null};
+  // Portless scanners are layer-3 probes; every other scanner takes ports.
+  const portless = new Set(["icmp-echo", "icmp-time", "arp-req", "ndp-ns", "yarrp-echo"]);
+  const mod = selectedModule("scan", name);
+  const raw = mod && mod.probe_type;
+  const probe = raw && raw !== "none" ? raw : null;
+  return {ports: !portless.has(name), probe};
 }
 function selectedModule(kind, name) {
   return (state.modules || []).find((m) => m.kind === kind && m.name === name) || null;
@@ -1301,8 +1300,9 @@ function probeHasSubprobe(mod) {
 }
 function subprobeCandidates() {
   const current = $("probe").value;
+  // A TLS/STARTTLS subprobe runs on an already-established stateful stream.
   return (state.probes || []).filter((m) =>
-    m.name !== current && m.name !== "tls-state" && m.name !== "null");
+    m.probe_type === "state" && m.name !== current && m.name !== "tls-state" && m.name !== "null");
 }
 function updateSubprobeVisibility() {
   const field = $("subprobe-field");

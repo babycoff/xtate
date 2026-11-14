@@ -157,6 +157,21 @@ static ConfRes SET_subprobe(void *conf, const char *name, const char *value) {
         LOG(LEVEL_ERROR, "invalid name of subprobe: %s.\n", value);
         return Conf_ERR;
     }
+    if (tlsstate_conf.subprobe->type != ProbeType_STATE) {
+        LOG(LEVEL_ERROR,
+            "invalid subprobe '%s': tls-state needs a state probe inside the "
+            "TLS stream.\n",
+            value);
+        tlsstate_conf.subprobe = NULL;
+        return Conf_ERR;
+    }
+    if (strcmp(value, "tls-state") == 0) {
+        LOG(LEVEL_ERROR,
+            "invalid subprobe 'tls-state': a probe cannot run itself as a "
+            "subprobe.\n");
+        tlsstate_conf.subprobe = NULL;
+        return Conf_ERR;
+    }
 
     return Conf_OK;
 }
@@ -324,9 +339,11 @@ static ConfParam tlsstate_parameters[] = {
      SET_subprobe,
      Type_ARG,
      {"sub-probe-module", 0},
-     "Required state subprobe. It is initialized only after TLS handshake "
-     "success (and after STARTTLS upgrade, when enabled), then runs inside the "
-     "encrypted stream. Use close-state for certificate-only scans."},
+     "Required state subprobe. Only probe modules with probe_type=state are "
+     "accepted; TCP and UDP probes are rejected. It is initialized only after "
+     "TLS handshake success (and after STARTTLS upgrade, when enabled), then "
+     "runs inside the encrypted stream. Use close-state for certificate-only "
+     "scans."},
     {"subprobe-arg",
      SET_subprobe_args,
      Type_ARG,
