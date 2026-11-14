@@ -42,6 +42,7 @@ Applies to v3.0.0-rc.10, `tcp-syn`, `udp`, the ICMP scans, `arp-req`, `ndp-ns`, 
 - **ICMP identification is short.** `icmp-echo`/`icmp-time` put only 8 bits of cookie in the ICMP id (and 8 more in the sequence field), so false attribution is far more likely than for TCP's 32-bit cookie.
 - **Yarrp deduplication can merge targets.** Per-hop results are deduplicated on the outer source and the TTL; different destinations behind the same router at the same distance can be treated as repeats and dropped. Impact: multi-target topology measurement loses paths. Workaround: smaller batches, or accept the loss and post-process.
 - **Fragmented IP packets are discarded** before validation — IPv4 with MF/fragment offset set, and IPv6 with a Fragment header. Enabling `--no-bpf` does not change this.
+- **Linux loopback is not a raw-scan target.** A target of `127.0.0.1` resolves to the `lo` interface, which has no Ethernet address; startup stops with `failed to detect MAC address of interface: "lo"`. Use an on-link gateway or host, or test a local service through a non-loopback address. `icmp-echo` also needs an on-link target; it is not a workaround for `lo`.
 
 ## HLTCP / `tcp-state` (hybrid-state TCP)
 

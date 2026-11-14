@@ -42,6 +42,7 @@ Xtate v3.0.0-rc.10 围绕一个刻意的取舍构建：极高的报文速率与�
 - **ICMP 标识位太短。** `icmp-echo`/`icmp-time` 只在 ICMP id 里放了 8 位 cookie（sequence 字段里再放 8 位），因此误归属的概率远高于 TCP 的 32 位 cookie。
 - **Yarrp 去重可能把不同目标合并。** 逐跳结果按外层源地址和 TTL 去重；同一路由器后、距离相同的不同目的地址可能被判为重复而丢弃。影响：多目标拓扑测量会丢路径。规避方式：缩小批次，或接受损失再做后处理。
 - **分片 IP 报文在校验之前就被丢弃**——IPv4 带 MF/分片偏移的，以及 IPv6 带分片头的。启用 `--no-bpf` 也不会改变这一点。
+- **Linux 的 loopback 不能作为 raw 扫描目标。** 目标 `127.0.0.1` 会解析到 `lo` 接口，而 `lo` 没有 Ethernet 地址；启动会以 `failed to detect MAC address of interface: "lo"` 停止。请改用 on-link 网关/主机，或通过非 loopback 地址测试本地服务；`icmp-echo` 也需要 on-link 目标，并不是 `lo` 的替代方案。
 
 ## HLTCP / `tcp-state`（混合状态 TCP）
 

@@ -31,6 +31,23 @@ the checkout. Verify it first:
 found (OpenSSL, PCRE2, LibXml2, libbson, libmongoc). `--selftest` runs the
 built-in regression suite and exits non-zero if a test fails.
 
+### Prebuilt Linux archive
+
+The release `linux-x86_64.tar.gz` is dynamically linked and is not a static
+bundle. On Ubuntu 24.04 install the runtime libraries first:
+
+```bash
+sudo apt update
+sudo apt install libssl3 libpcre2-8-0 libxml2 libbson-1.0-0 \
+  libmongoc-1.0-0 zlib1g libzstd1 libngtcp2-9 \
+  libngtcp2-crypto-gnutls2 libgnutls30t64 libpcap0.8
+./xtate --version
+./xtate --selftest
+```
+
+The Docker image is the self-contained option when the host must not install
+these packages.
+
 ### Build on Linux
 
 ```bash

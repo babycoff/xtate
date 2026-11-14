@@ -19,6 +19,7 @@ rejected request means nothing was scanned.
 | `include_file must be a regular file` | directory, device, FIFO, or `-` | point at a readable target list |
 | `cannot determine route groups` | target has no route, or route lookup failed | check host networking; a no-route target is a stop condition |
 | `route preflight failed; targets were not accepted by explain_target` | route/interface preflight failed | run `explain_target`, fix the route or split the set |
+| `failed to detect MAC address of interface: "lo"` | target routes through Linux loopback, which has no Ethernet MAC | use an on-link gateway/host; do not force `lo` for raw scans |
 
 ## Control plane
 

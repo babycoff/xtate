@@ -140,6 +140,10 @@ xtate --explain-target=198.51.100.10 --check
 - Source address/port ranges must have a power-of-two size.
 - On Windows, tunnels and VPN adapters often appear as a separate adapter; make
   sure the scan leaves through the interface you think it does.
+- **Linux loopback is not a raw-scan target.** `127.0.0.1` resolves to `lo`,
+  which has no Ethernet MAC; startup stops with `failed to detect MAC address
+  of interface: "lo"`. Use an on-link gateway/host or a non-loopback address,
+  and do not try to force `--interface lo` for raw modules.
 
 ## 5. Packet filter (BPF)
 

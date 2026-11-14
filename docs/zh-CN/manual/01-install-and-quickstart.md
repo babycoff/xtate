@@ -27,6 +27,21 @@
 
 `--version` 打印发布版本、编译器、操作系统以及找到的可选库（OpenSSL、PCRE2、LibXml2、libbson、libmongoc）。`--selftest` 运行内置回归套件，有测试失败时以非零码退出。
 
+### 预编译 Linux 压缩包
+
+发布页的 `linux-x86_64.tar.gz` 是动态链接的，不是静态打包。Ubuntu 24.04 上先安装运行库：
+
+```bash
+sudo apt update
+sudo apt install libssl3 libpcre2-8-0 libxml2 libbson-1.0-0 \
+  libmongoc-1.0-0 zlib1g libzstd1 libngtcp2-9 \
+  libngtcp2-crypto-gnutls2 libgnutls30t64 libpcap0.8
+./xtate --version
+./xtate --selftest
+```
+
+如果宿主机不能安装这些包，请使用自包含的 Docker 镜像。
+
 ### 在 Linux 上构建
 
 ```bash

@@ -110,6 +110,7 @@ xtate --explain-target=198.51.100.10 --check
 - `-src-ip` 或 `-src-port` 配错会静默丢掉所有回复。
 - 源地址/端口范围的大小必须是 2 的幂。
 - Windows 上，隧道和 VPN 网卡常常表现为另一个独立网卡；确认扫描确实从你以为的那个网卡出去。
+- **Linux 的 loopback 不能作为 raw 扫描目标。** `127.0.0.1` 会解析到 `lo`，而 `lo` 没有 Ethernet MAC；启动会以 `failed to detect MAC address of interface: "lo"` 停止。请改用 on-link 网关/主机或非 loopback 地址，不要为 raw 模块强行指定 `--interface lo`。
 
 ## 5. 包过滤器（BPF）
 
