@@ -234,7 +234,8 @@ static int add_group(JsonNode *routes, const char *ifname,
         json_append_member(group, "link_type", json_mknull());
         json_append_member(group, "link_type_name",
                            json_mkstring("unavailable"));
-        json_append_member(group, "raw_capable", json_mkbool(0));
+        /* Unknown without CAP_NET_RAW; startup performs the authoritative check. */
+        json_append_member(group, "raw_capable", json_mknull());
     }
     json_append_element(routes, group);
     return 1;
@@ -540,9 +541,8 @@ char *gui_preflight_json(const char *body) {
                         json_append_member(selected, "link_type", json_mknull());
                         json_append_member(selected, "link_type_name",
                                            json_mkstring("unavailable"));
-                        json_append_member(selected, "raw_capable", json_mkbool(0));
-                        add_error(root, "cannot inspect the selected interface link type; check permissions and adapter");
-                        ok = 0;
+                        json_append_member(selected, "raw_capable", json_mknull());
+                        add_warning(root, "cannot inspect the selected interface link type; scan startup will validate it");
                     }
                     iface_json = selected;
                 }
