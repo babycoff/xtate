@@ -352,7 +352,8 @@ static const XCmd config_cmd[] = {
      "Set all arguments for the nested subprobe as one value (only useful "
      "when the selected probe has a subprobe).",
      ACT_prefix},
-    {PRE_HISTORY, "Clear saved command history with `history clear`.",
+    {PRE_HISTORY,
+     "Show saved command history, or clear it with `history clear`.",
      ACT_prefix},
     {"echo", "Print current configuration.", ACT_echo},
     {"show", "Print current configuration (alias of echo).", ACT_echo},
@@ -1380,9 +1381,13 @@ static bool xcmd_handle_line(XConf *xconf, char *line) {
         if (line_len > prefix_len + 1 && line[prefix_len] == ' ') {
             config_prefix[prefix_idx].handle(xconf, line + prefix_len + 1);
         } else if (line_len == prefix_len) {
-            LOG(LEVEL_ERROR,
-                "(" XTATE_NAME
-                ") need to specify a param for the command.\n");
+            if (strcmp(config_prefix[prefix_idx].prefix, PRE_HISTORY) == 0) {
+                config_prefix[prefix_idx].handle(xconf, "");
+            } else {
+                LOG(LEVEL_ERROR,
+                    "(" XTATE_NAME
+                    ") need to specify a param for the command.\n");
+            }
         }
         return true;
     }
@@ -1413,6 +1418,14 @@ static void xcmd_history_path(char *buf, size_t size) {
 
 static void HDL_history(void *conf, char *subcmd) {
     (void)conf;
+
+    if (!subcmd || !subcmd[0]) {
+        if (_interactive_tty)
+            crossline_history_show();
+        else
+            LOG(LEVEL_HINT, "usage: history clear\n");
+        return;
+    }
 
     if (strcasecmp(subcmd, "clear") != 0) {
         LOG(LEVEL_ERROR, "unknown history command `%s`; use `history clear`.\n",

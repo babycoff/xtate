@@ -942,7 +942,7 @@ static const I18nInteractiveCmdEntry i18n_interactive_cmds[] = {
      "选择嵌套子探针（仅当所选探针有子探针时有效，例如 tls-state）。"},
     {"set-subprobe-arg",
      "设置嵌套子探针的全部参数（仅当所选探针有子探针时有效）。"},
-    {"history", "清除已保存的命令历史：`history clear`。"},
+    {"history", "显示已保存的命令历史，或使用 `history clear` 清除。"},
     {"echo", "打印当前配置。"},
     {"echo-all", "打印包含默认值的全部配置。"},
     {"show", "打印当前配置（echo 的别名）。"},

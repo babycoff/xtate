@@ -37,6 +37,7 @@ set-scan <module>    选择扫描模块
 set-probe <module>   选择探测模块
 set-subprobe <module> 选择内层探测（仅适用于支持子探针的探测）
 set-subprobe-arg <args> 设置内层探测参数（整体作为一个单引号字符串）
+history              显示最近的命令历史（TTY 模式）
 history clear        删除已保存的命令历史
 set-out <module>     选择输出模块
 set-gen <module>     选择生成模块

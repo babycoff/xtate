@@ -39,6 +39,7 @@ set-scan <module>    choose a scan module
 set-probe <module>   choose a probe module
 set-subprobe <module> choose the nested probe (only with a subprobe-capable probe)
 set-subprobe-arg <args> set the nested probe's arguments (single-quoted as one value)
+history              show recent command history (TTY mode)
 history clear        delete the saved command history
 set-out <module>     choose an output module
 set-gen <module>     choose a generate module

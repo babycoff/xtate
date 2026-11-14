@@ -49,6 +49,9 @@ run_session "subprobe rejects tcp" \
 run_session "fractional rate" \
     'set-scan tcp-syn\nset rate = 0.5\ncheck\nexit\n' \
     'rate:    0.5 packets/sec'
+run_session "history usage" \
+    'history\nexit\n' \
+    'usage: history clear'
 run_session "history clear" \
     'history clear\nexit\n' \
     'history cleared'
