@@ -203,6 +203,26 @@ static int _main_scan(XConf *xconf) {
             exit(1);
         }
     }
+    /* Protocol-specific probe compatibility beyond the generic type check. */
+    if (xconf->probe) {
+        if (strcmp(xconf->scanner->name, "quic-state") == 0 &&
+            strcmp(xconf->probe->name, "tls-state") == 0) {
+            LOG(LEVEL_ERROR,
+                "invalid probe combination: ScanModule quic-state cannot use "
+                "probe tls-state; tls-state expects a TCP/TLS stream. Use "
+                "http3-state or close-state.\n");
+            xcmd_try_reboot();
+            exit(1);
+        }
+        if (strcmp(xconf->scanner->name, "tcp-state") == 0 &&
+            strcmp(xconf->probe->name, "http3-state") == 0) {
+            LOG(LEVEL_ERROR,
+                "invalid probe combination: ScanModule tcp-state cannot use "
+                "probe http3-state; http3-state requires quic-state.\n");
+            xcmd_try_reboot();
+            exit(1);
+        }
+    }
 
     /*
      * Config params & Do global init for GenerateModule

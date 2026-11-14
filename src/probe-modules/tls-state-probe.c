@@ -165,6 +165,13 @@ static ConfRes SET_subprobe(void *conf, const char *name, const char *value) {
         tlsstate_conf.subprobe = NULL;
         return Conf_ERR;
     }
+    if (strcmp(value, "http3-state") == 0) {
+        LOG(LEVEL_ERROR,
+            "invalid subprobe 'http3-state': it requires quic-state, not a "
+            "TLS stream.\n");
+        tlsstate_conf.subprobe = NULL;
+        return Conf_ERR;
+    }
     if (strcmp(value, "tls-state") == 0) {
         LOG(LEVEL_ERROR,
             "invalid subprobe 'tls-state': a probe cannot run itself as a "
@@ -340,8 +347,9 @@ static ConfParam tlsstate_parameters[] = {
      Type_ARG,
      {"sub-probe-module", 0},
      "Required state subprobe. Only probe modules with probe_type=state are "
-     "accepted; TCP and UDP probes are rejected. It is initialized only after "
-     "TLS handshake success (and after STARTTLS upgrade, when enabled), then "
+     "accepted; TCP/UDP probes and QUIC-only http3-state are rejected. It is "
+     "initialized only after TLS handshake success (and after STARTTLS "
+     "upgrade, when enabled), then "
      "runs inside the encrypted stream. Use close-state for certificate-only "
      "scans."},
     {"subprobe-arg",

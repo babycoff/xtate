@@ -113,7 +113,9 @@ GUI 以扫描为中心：默认页是 **New scan**，不是 job 表格。
 输出路径由服务端管理。include 文件、分块和配额等设置请直接使用 MCP server 或
 JSON 控制 API。scan/probe 参数可在 Method 面板中编辑。选中的探针支持嵌套探针时
 （`tls-state` 支持），会出现 **子探针 / Subprobe** 选择器，其参数显示在选择器下方。
-选择器只列出 state 类型探针，TCP/UDP 探针和 `tls-state` 本身都会被排除。
+选择器只列出 state 类型探针，TCP/UDP 探针、`tls-state` 本身以及仅用于
+QUIC 的 `http3-state` 都会被排除。`quic-state` 的探针列表同样不会出现
+`tls-state`；`tcp-state` 不会出现 `http3-state`。
 选择器默认不启用子探针，因此普通 TLS 扫描的行为不变；只有需要在 TLS 内继续探测时才选择。
 GUI 将所选名称发送为 `probe_args.subprobe`，将嵌套参数序列化为带单引号的
 `probe_args.subprobe-arg` 命令行字符串；MCP 和控制面客户端可以直接设置这两个字段。

@@ -97,7 +97,9 @@ The GUI is scan-first: the default page is **New scan**, not a job table.
 - **New scan** accepts IPv4/IPv6 targets in comma, range or CIDR form, picks one
   of the available scan engines (11 on a Windows or reduced-dependency build, 12
   with `quic-state` on a full Linux build), shows probe choices only when the
-  engine needs one, and hides ports for ICMP/ARP/NDP scans. Rate, timeout and an
+  engine needs one, and hides ports for ICMP/ARP/NDP scans. Probe lists follow
+  the engine's `probe_type`; `tls-state` is not offered for `quic-state`, and
+  `http3-state` is not offered for `tcp-state`. Rate, timeout and an
   optional interface are set here.
 - The server-side **preflight** (`POST /api/preflight`) parses the same request
   as `job.start`, verifies target syntax and counts, resolves route, source,
@@ -116,8 +118,9 @@ The GUI is scan-first: the default page is **New scan**, not a job table.
   arguments. Values are sent as `scan_args`/`probe_args`; empty fields are omitted.
   When the selected probe supports a nested probe (`tls-state` does), a
   **Subprobe** selector appears with that probe's own arguments below it. Only
-  state probes are offered; TCP/UDP probes and `tls-state` itself are excluded.
-  It starts empty, so a plain TLS scan is unchanged; choose a subprobe only when
+  state probes are offered; TCP/UDP probes, `tls-state` itself and QUIC-only
+  `http3-state` are excluded. It starts empty, so a plain TLS scan is unchanged;
+  choose a subprobe only when
   the scan should continue inside TLS. The GUI sends the chosen name as
   `probe_args.subprobe` and the nested arguments as a
   single-quoted `probe_args.subprobe-arg` command-line string; MCP and

@@ -72,7 +72,9 @@ xtate -ip 192.0.2.10 -p U:443 -scan quic-state -probe close-state \
 xtate --list-scan | grep quic-state
 ```
 
-探测必须是 `state` 类型；`close-state` 是只取证书的模式。
+探测必须是 `state` 类型；`close-state` 是只取证书的模式。`tls-state` 是
+TCP/TLS 探针，不能与 `quic-state` 搭配；HTTP/3 使用 `http3-state`，只取证书
+使用 `close-state`。
 
 ## 参数
 

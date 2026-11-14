@@ -107,6 +107,9 @@ the engine's probe type:
 | `quic-state` (optional, Linux) | state | `http3-state` (optional) |
 | `tcp-syn`, `sctp-init`, `yarrp-udp` | none | — |
 
+`quic-state` never offers `tls-state` (TCP/TLS only); `tcp-state` never offers
+`http3-state` (QUIC only). The backend rejects both combinations.
+
 Rate is in packets per second (1–10000, default 1000). Timeout is the total
 wall-clock limit in seconds (1–86400, default 300). Output is fixed to NDJSON
 with a result manifest; the console does not choose output modules.

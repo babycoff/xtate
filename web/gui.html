@@ -1298,11 +1298,25 @@ function collectModuleArgs(kind) {
 function probeHasSubprobe(mod) {
   return !!(mod && (mod.parameters || []).some((p) => p.name === "subprobe"));
 }
+function probeCandidatesForScan(scanName) {
+  const info = scanInfo(scanName);
+  if (!info.probe) return [];
+  let probes = (state.probes || []).filter((m) => m.probe_type === info.probe);
+  // tls-state expects a TCP/TLS byte stream; it cannot run inside QUIC.
+  if (scanName === "quic-state")
+    probes = probes.filter((m) => m.name !== "tls-state");
+  // http3-state is a QUIC application probe and only runs on quic-state.
+  if (scanName === "tcp-state")
+    probes = probes.filter((m) => m.name !== "http3-state");
+  return probes;
+}
 function subprobeCandidates() {
   const current = $("probe").value;
   // A TLS/STARTTLS subprobe runs on an already-established stateful stream.
+  // http3-state is QUIC-only, so it cannot be nested inside TLS.
   return (state.probes || []).filter((m) =>
-    m.probe_type === "state" && m.name !== current && m.name !== "tls-state" && m.name !== "null");
+    m.probe_type === "state" && m.name !== current && m.name !== "tls-state" &&
+    m.name !== "http3-state" && m.name !== "null");
 }
 function updateSubprobeVisibility() {
   const field = $("subprobe-field");
@@ -1447,7 +1461,7 @@ function updateProbeVisibility() {
   $("ports-field").classList.toggle("hidden", !info.ports);
   $("probe-field").classList.toggle("hidden", !info.probe);
   if (!info.probe) { $("probe").value = ""; renderModuleArgs(); return; }
-  const probes = (state.probes || []).filter((m) => m.probe_type === info.probe);
+  const probes = probeCandidatesForScan(state.scan);
   const current = $("probe").value;
   $("probe").innerHTML = '<option value="">— choose probe —</option>' + probes.map((m) =>
     '<option value="' + esc(m.name) + '">' + esc(m.name + (m.short_description ? " — " + m.short_description : "")) + "</option>").join("");

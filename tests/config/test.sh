@@ -74,6 +74,15 @@ run_fail "nested probe rejects recursive tls-state" --offline -ip 127.0.0.1 -p 4
 run_ok "probe help" --help-probe ssh
 run_ok "scan help" --help-scan zbanner
 
+# QUIC/TCP probe compatibility is enforced by the backend, not only the GUI.
+if "$BIN" --list-scan 2>/dev/null | grep -q "quic-state"; then
+    run_fail "quic-state rejects tls-state" --offline -ip 127.0.0.1 -p U:443 -scan quic-state -probe tls-state --wait 1
+fi
+if "$BIN" --list-probe 2>/dev/null | grep -q "http3-state"; then
+    run_fail "tcp-state rejects http3-state" --offline -ip 127.0.0.1 -p 443 -scan tcp-state -probe http3-state --wait 1
+    run_fail "nested probe rejects http3-state" --offline -ip 127.0.0.1 -p 443 -scan tcp-state -probe tls-state -probe-arg "-subprobe http3-state" --wait 1
+fi
+
 # Language validation.
 run_fail "invalid language" --lang nope --version
 

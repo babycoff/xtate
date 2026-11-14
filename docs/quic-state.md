@@ -77,6 +77,8 @@ xtate --list-scan | grep quic-state
 ```
 
 The probe must be a `state` probe; `close-state` is the certificate-only probe.
+`tls-state` is a TCP/TLS probe and is rejected with `quic-state`; use
+`http3-state` for HTTP/3 or `close-state` for certificate-only evidence.
 
 ## Options
 

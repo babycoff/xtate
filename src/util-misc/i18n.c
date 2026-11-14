@@ -524,7 +524,7 @@ static const I18nModuleParamEntry i18n_module_param_help[] = {
     {"probe-index", "只发送指定的一个 JARM 探针（1..10）。这是调试用途：结果只有一个 part，不是完整 JARM 指纹。"},
     {"first-probe", "轮换十个 JARM 探针，使标准探针 N（1..10）最先发送；仍发送全部十个。首个 SYN 是 N，收到可接受回复后其余九个按 N+1..10,1..N-1 批量发送。jarm_slot 保留标准编号，因此聚合与发送顺序无关。默认 1；例如 --first-probe 7 的发送顺序是 7,8,9,10,1,2,3,4,5,6。"},
     {"starttls", "在 TLS 前完成明文 STARTTLS 升级：smtp（EHLO/STARTTLS）、imap（a001 STARTTLS）、pop3（STLS）、ftp（AUTH TLS）或 managesieve（STARTTLS）。探针处理服务器问候、发送升级命令，升级成功后才开始 TLS；证书/cipher/版本和子探测都在升级后的 TLS 内运行。失败输出 starttls error。示例：-subprobe close-state --starttls smtp --dump-cert-details。"},
-    {"subprobe", "必需的 state 子探测；只接受 probe_type=state 的探针，TCP/UDP 探针会被拒绝。只有 TLS 握手成功（以及 STARTTLS 升级成功）后才初始化，并在加密流内运行。只取证书时使用 close-state。"},
+    {"subprobe", "必需的 state 子探测；只接受 probe_type=state 的探针，TCP/UDP 和仅用于 QUIC 的 http3-state 会被拒绝。只有 TLS 握手成功（以及 STARTTLS 升级成功）后才初始化，并在加密流内运行。只取证书时使用 close-state。"},
     {"explain-target", "只读诊断：输出目标、按目标路由选择的接口、源 IP、网关和链路类型，不发送任何探测包。"},
     {"check", "只读预检：检查接口、源 IP、网关和链路类型；Linux 防火墙规则需单独检查。"},
     {"doh-h2", "DNS over HTTPS over HTTP/2：在 tls-state 内发送 HTTP/2 POST application/dns-message 并解析 DNS 响应；需要 -alpn h2。"},

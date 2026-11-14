@@ -20,7 +20,7 @@ if (!match) throw new Error("GUI script not found in web/gui.html");
 let script = match[1];
 script = script.replace(
   /\ninit\(\);\s*$/,
-  "\nglobalThis.__guiTest = { serializeSubprobeArgs, quoteSubprobeValue, collectProbeArgs, subprobeCandidates, scanInfo, state };\n",
+  "\nglobalThis.__guiTest = { serializeSubprobeArgs, quoteSubprobeValue, collectProbeArgs, subprobeCandidates, probeCandidatesForScan, scanInfo, state };\n",
 );
 
 const probeEl = { value: "tls-state" };
@@ -63,6 +63,7 @@ gui.state.modules = [
   { kind: "scan", name: "zbanner", probe_type: "tcp" },
   { kind: "scan", name: "tcp-state", probe_type: "state" },
   { kind: "scan", name: "udp", probe_type: "udp" },
+  { kind: "scan", name: "quic-state", probe_type: "state" },
   { kind: "scan", name: "icmp-echo", probe_type: "none" },
   {
     kind: "probe",
@@ -76,6 +77,8 @@ gui.state.modules = [
     probe_type: "state",
     parameters: [{ name: "all-banner", type: "flag" }],
   },
+  { kind: "probe", name: "close-state", probe_type: "state", parameters: [] },
+  { kind: "probe", name: "http3-state", probe_type: "state", parameters: [] },
   { kind: "probe", name: "http", probe_type: "tcp", parameters: [] },
   { kind: "probe", name: "dns", probe_type: "udp", parameters: [] },
 ];
@@ -84,8 +87,18 @@ gui.state.probes = gui.state.modules.filter((m) => m.kind === "probe");
 
 assert.deepStrictEqual(
   gui.subprobeCandidates().map((m) => m.name),
-  ["http-state"],
-  "only state probes are valid TLS subprobes",
+  ["http-state", "close-state"],
+  "only non-QUIC state probes are valid TLS subprobes",
+);
+assert.deepStrictEqual(
+  gui.probeCandidatesForScan("quic-state").map((m) => m.name),
+  ["http-state", "close-state", "http3-state"],
+  "quic-state offers state probes but not TCP/TLS",
+);
+assert.deepStrictEqual(
+  gui.probeCandidatesForScan("tcp-state").map((m) => m.name),
+  ["tls-state", "http-state", "close-state"],
+  "tcp-state offers state probes but not HTTP/3",
 );
 assert.strictEqual(gui.scanInfo("zbanner").probe, "tcp");
 assert.strictEqual(gui.scanInfo("tcp-state").probe, "state");
