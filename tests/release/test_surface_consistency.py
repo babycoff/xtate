@@ -232,6 +232,23 @@ def check_gui_routes():
     assert not missing, "GUI routes not documented in docs/gui.md: %s" % ", ".join(missing)
 
 
+def check_default_rate():
+    """The browser default is a user-visible copy of the CLI default."""
+    m = re.search(r"#define\s+XCONF_DFT_MAX_RATE\s+([0-9.]+)", read("src/xconf.h"))
+    assert m, "XCONF_DFT_MAX_RATE not found in src/xconf.h"
+    cli_default = float(m.group(1))
+    html = read("web/gui.html")
+    g = re.search(
+        r'<input id="rate"[^>]*\bvalue="([0-9.]+)"', html
+    )
+    assert g, "GUI rate input not found in web/gui.html"
+    gui_default = float(g.group(1))
+    assert gui_default == cli_default, (
+        "GUI default rate %s does not match CLI default %s"
+        % (gui_default, cli_default)
+    )
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument(
@@ -247,6 +264,7 @@ def main():
         return 0
 
     check_generated_version()
+    check_default_rate()
     data, caps = capability_counts(binary)
     check_module_counts(binary, caps)
     names = module_names(binary)

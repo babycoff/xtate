@@ -83,7 +83,7 @@ GUI preflight and the job worker both reject it.
 ### Stateless SYN scan
 
 ```bash
-sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
+sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 100
 ```
 
 Results stream to stdout, one line per reply:
@@ -96,7 +96,7 @@ Only `success` results are shown by default; closed ports are `failed`:
 
 ```bash
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn \
-  -rate 1000 -show failed
+  -rate 100 -show failed
 ```
 
 The status bar is drawn on stderr. Redirecting stdout to a file therefore keeps
@@ -123,7 +123,7 @@ These rules are host-wide; remove them immediately afterwards:
 ```bash
 ./firewall/add_rules.sh
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80 -scan zbanner -probe http \
-  -scan-arg "-banner" -rate 1000 -show info
+  -scan-arg "-banner" -rate 100 -show info
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 443 -scan tcp-state -probe tls-state \
   -rate 200 -show info
 ./firewall/rm_rules.sh
@@ -189,7 +189,7 @@ GUI.
   "scan": "tcp-syn",
   "targets": ["192.168.1.0/24"],
   "ports": [80, 443],
-  "rate": 1000,
+  "rate": 100,
   "timeout_sec": 300
 }
 ```
@@ -252,7 +252,7 @@ Start a job:
 xtate --control-connect=/tmp/xtate-ctl.sock --control-request='{
   "id":2,"method":"job.start",
   "params":{"scan":"tcp-syn","targets":["192.168.1.0/24"],
-            "ports":[80,443],"rate":1000,"timeout_sec":300}
+            "ports":[80,443],"rate":100,"timeout_sec":300}
 }'
 ```
 
@@ -285,7 +285,7 @@ request:
   "id": 2,
   "method": "job.start",
   "params": {"scan": "tcp-syn", "targets": ["192.168.1.0/24"],
-             "ports": [80, 443], "rate": 1000, "timeout_sec": 300},
+             "ports": [80, 443], "rate": 100, "timeout_sec": 300},
   "chunk_size": 67108864,
   "index": true,
   "compression": "none"

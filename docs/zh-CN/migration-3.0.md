@@ -31,7 +31,7 @@ Xtate 3.0 是面向使用体验的候选发布线：扫描优先的 GUI、单命
   "scan":"tcp-syn",
   "targets":["203.0.113.0/24"],
   "ports":[80,443],
-  "rate":1000,
+  "rate":100,
   "timeout_sec":300,
   "authorized":true
 }}

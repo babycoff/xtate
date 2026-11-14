@@ -103,7 +103,7 @@ sudo apt install build-essential cmake pkg-config libpcap-dev \
   libssl-dev libpcre2-dev libxml2-dev libbson-dev libmongoc-dev \
   libngtcp2-dev libngtcp2-crypto-gnutls-dev libgnutls28-dev libzstd-dev
 ./build.sh
-sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
+sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 100
 ```
 
 The first command is a stateless SYN scan and needs no firewall changes. For a
@@ -126,7 +126,7 @@ sudo ./firewall/rm_rules.sh
 > machine while active.
 
 > [!TIP]
-> Start at `-rate 1000`, not `-rate 1000000`. A lab subnet is not the Internet,
+> Start at `-rate 100`, not `-rate 100000`. A lab subnet is not the Internet,
 > and your switch will thank you.
 
 On Windows, install [Npcap](https://npcap.com/), build with CMake, and run
@@ -184,7 +184,7 @@ xtate [options] -ip TARGETS [-p PORTS] -scan SCANMODULE [-probe PROBEMODULE]
 | `-p` | Ports; prefixes select the transport | `80,443`, `20-25`, `u:53`, `s:38412` |
 | `-scan` | How packets are sent and what state is kept | `tcp-syn`, `zbanner`, `tcp-state`, `udp`, `icmp-echo` |
 | `-probe` | L5+ payload and parser, when the scan requires one | `http`, `tls-state`, `dns`, `ssh`, `jarm` |
-| `-rate` | Total packets per second across all TX threads | `1000`, `0.1`, `100000` |
+| `-rate` | Total packets per second across all TX threads | `100`, `0.1`, `100000` |
 | `-show` | Result levels to print | `success`, `info`, `fail` |
 | `-o` | Output module and file | `-o ndjson -output-file run.ndjson` |
 | `-scan-arg` / `-probe-arg` | Module-specific parameters | `-scan-arg "-banner"` |
@@ -216,7 +216,7 @@ result levels and formats are in [Output](docs/output.md).
 ### Make the run reproducible
 
 ```bash
-./bin/xtate -ip 203.0.113.0/24 -p 443 -scan tcp-syn -rate 1000 \
+./bin/xtate -ip 203.0.113.0/24 -p 443 -scan tcp-syn -rate 100 \
   --echo > experiment.conf
 ./bin/xtate --config-file experiment.conf
 ```

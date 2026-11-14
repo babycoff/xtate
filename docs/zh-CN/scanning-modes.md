@@ -5,7 +5,7 @@
 在 Xtate 中，一次扫描是一个**组合**：用 `-scan` 选择扫描模块，需要时再用 `-probe` 选择探测模块。扫描模块负责数据包与接收校验；探测模块负责载荷及其解析器。探测模块的*类型*必须与扫描模块声明的要求完全一致，否则扫描会拒绝启动。
 
 ```bash
-sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
+sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 100
 ```
 
 `-scan` 是必需的；只有当模块声明“不需要探测”时 `-probe` 才是可选的。模块参数分别通过 `-scan-arg` 和 `-probe-arg` 传入，每个都是一整条带引号的字符串（见 `--help-scan <module>`、`--help-probe <module>`）。
@@ -67,7 +67,7 @@ ZBanner 默认情况在 CPU/网络饱和前大约接近 `rate / 3`，这只是 *
 开放端口是 `success`（`"open" because "syn-ack"`）；关闭端口是 `failure`（`"closed" because "rst"`），默认隐藏，需要加 `-show failed` 才能看到。`--send-rst` 会用 RST 回复 SYN-ACK，而不是把半开连接留给目标。在 Windows 上，本机协议栈不会对未知半开连接发 RST，所以 `tcp-syn` 需要 `-scan-arg "--send-rst"`；`zbanner` 本来就会自己发 RST。
 
 ```bash
-sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000 -show failed
+sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 100 -show failed
 ```
 
 ### ZBanner + HTTP——抓取真实 banner
@@ -75,7 +75,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000 -show fai
 ```bash
 ./firewall/add_rules.sh
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http \
-  -rate 1000 -show info
+  -rate 100 -show info
 ./firewall/rm_rules.sh
 ```
 
@@ -86,7 +86,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http \
 ```bash
 ./firewall/add_rules.sh
 sudo ./bin/xtate -ip 10.0.0.0/24 -p 443 -scan zbanner -probe tls-hello \
-  -rate 1000 -show info
+  -rate 100 -show info
 ./firewall/rm_rules.sh
 ```
 
@@ -112,7 +112,7 @@ sudo ./bin/xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
 
 ```bash
 sudo ./bin/xtate -ip 192.168.1.0/24 -p u:7,u:19 -scan udp -probe echo \
-  -rate 1000 -show info
+  -rate 100 -show info
 ```
 
 `echo` 会发送四个由连接 cookie 派生的字节，并接受包含这些字节的响应。收到 UDP 响应记为 `responsed`；收到 ICMP 端口不可达记为 `closed`（只有加 `-scan-arg "--port-failure"` 才是 `failure` 级别）。这里防火墙规则很重要，否则内核会为那些无人监听的端口自行向对端发送不可达消息。
@@ -120,8 +120,8 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p u:7,u:19 -scan udp -probe echo \
 ### 用 ICMP 做主机发现
 
 ```bash
-sudo ./bin/xtate -ip 192.168.1.0/24 -scan icmp-echo -rate 1000
-sudo ./bin/xtate -ip 192.168.1.0/24 -scan icmp-time -rate 1000   # IPv4 only
+sudo ./bin/xtate -ip 192.168.1.0/24 -scan icmp-echo -rate 100
+sudo ./bin/xtate -ip 192.168.1.0/24 -scan icmp-time -rate 100   # IPv4 only
 ```
 
 它们不是端口扫描：不要传 `-p`。它们会输出 `success` 结果，分类为 `"alive"` / `"echo reply"`（或 `"timestamp reply"`）。
@@ -131,7 +131,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -scan icmp-time -rate 1000   # IPv4 only
 ARP 是二层协议，只在本网段有效；`-lan-mode` 把目的 MAC 设为广播地址，`arp-req` 仅支持 IPv4 且不读取端口。
 
 ```bash
-sudo ./bin/xtate -ip 192.168.1.0/24 -scan arp-req -lan-mode -rate 1000
+sudo ./bin/xtate -ip 192.168.1.0/24 -scan arp-req -lan-mode -rate 100
 ```
 
 `-lan-mode` 只是把路由器/目的 MAC 改成广播地址，**不会**解析每个目标的 MAC。它只适合 ARP/NDP 以及明确需要二层广播的扫描。普通 TCP/UDP 扫描请先不要加：默认的网关/单播路径通常是对的，而广播目的地址在路由、Docker/bridge 或过滤链路上可能直接失败。

@@ -262,7 +262,7 @@ sudo setcap cap_net_raw,cap_net_admin=eip ./bin/xtate
 经典的**无状态** SYN 扫描不需要任何防火墙技巧：
 
 ```bash
-sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
+sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 100
 ```
 
 预期现象：
@@ -289,7 +289,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 ```bash
 ./firewall/add_rules.sh
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http \
-  -scan-arg "-banner" -rate 1000 -show info
+  -scan-arg "-banner" -rate 100 -show info
 ./firewall/rm_rules.sh
 ```
 

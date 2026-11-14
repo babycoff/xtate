@@ -308,7 +308,7 @@ Re-apply this after every rebuild: the capability belongs to the executable file
 A classic stateless SYN scan needs no firewall tricks:
 
 ```bash
-sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
+sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 100
 ```
 
 What to expect:
@@ -335,7 +335,7 @@ Suppress the kernel RST for the duration of the scan:
 ```bash
 ./firewall/add_rules.sh
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http \
-  -scan-arg "-banner" -rate 1000 -show info
+  -scan-arg "-banner" -rate 100 -show info
 ./firewall/rm_rules.sh
 ```
 

@@ -255,7 +255,7 @@ transmitter flushes counts, including follow-up packets the receive path
 creates. There is no universal "targets per second = rate / N" formula.
 
 - Default is 100 packets/s, split across transmit threads.
-- On a lab subnet start at `-rate 1000`, not `-rate 1000000`.
+- On a lab subnet start at `-rate 100`, not `-rate 100000`.
 - Too-high rates show up as missing results on every module, not as errors.
   Halve the rate and compare.
 - Watch the live status bar's queue levels and hit rate, or use

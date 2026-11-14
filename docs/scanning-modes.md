@@ -8,7 +8,7 @@ the probe module owns the payload and its parser. The probe *type* must match ex
 scanner declares, or the scan refuses to start.
 
 ```bash
-sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
+sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 100
 ```
 
 `-scan` is mandatory; `-probe` is optional only for modules that declare "no probe". Module
@@ -93,7 +93,7 @@ where the local stack does not RST unknown half-open connections, use
 `-scan-arg "--send-rst"` for `tcp-syn`; `zbanner` already sends its own RST.
 
 ```bash
-sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000 -show failed
+sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 100 -show failed
 ```
 
 ### ZBanner + HTTP - real banners
@@ -101,7 +101,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000 -show fai
 ```bash
 ./firewall/add_rules.sh
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http \
-  -rate 1000 -show info
+  -rate 100 -show info
 ./firewall/rm_rules.sh
 ```
 
@@ -114,7 +114,7 @@ state with `-scan-arg "--port-success --port-failure"` if you want it in the def
 ```bash
 ./firewall/add_rules.sh
 sudo ./bin/xtate -ip 10.0.0.0/24 -p 443 -scan zbanner -probe tls-hello \
-  -rate 1000 -show info
+  -rate 100 -show info
 ./firewall/rm_rules.sh
 ```
 
@@ -143,7 +143,7 @@ to see those rows. Repeated RSTs are deduplicated by the receive-side table.
 
 ```bash
 sudo ./bin/xtate -ip 192.168.1.0/24 -p u:7,u:19 -scan udp -probe echo \
-  -rate 1000 -show info
+  -rate 100 -show info
 ```
 
 `echo` sends four bytes derived from the connection cookie and accepts a reply containing
@@ -154,8 +154,8 @@ the kernel would otherwise emit its own unreachable for replies to ports no proc
 ### Host discovery with ICMP
 
 ```bash
-sudo ./bin/xtate -ip 192.168.1.0/24 -scan icmp-echo -rate 1000
-sudo ./bin/xtate -ip 192.168.1.0/24 -scan icmp-time -rate 1000   # IPv4 only
+sudo ./bin/xtate -ip 192.168.1.0/24 -scan icmp-echo -rate 100
+sudo ./bin/xtate -ip 192.168.1.0/24 -scan icmp-time -rate 100   # IPv4 only
 ```
 
 These are not port scans: do not pass `-p`. They emit `success` results with
@@ -167,7 +167,7 @@ ARP is layer 2 and only works on the local segment; `-lan-mode` sets the destina
 broadcast, and `arp-req` is IPv4-only and reads no port.
 
 ```bash
-sudo ./bin/xtate -ip 192.168.1.0/24 -scan arp-req -lan-mode -rate 1000
+sudo ./bin/xtate -ip 192.168.1.0/24 -scan arp-req -lan-mode -rate 100
 ```
 
 `-lan-mode` only changes the router/destination MAC to the broadcast address; it does **not**

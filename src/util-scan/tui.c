@@ -576,7 +576,7 @@ static void tui_start_wizard(void) {
             "`xtate --explain-target=<target>` and paste -if here.\n");
     tui_out("-----------------------------------------------------\n");
     snprintf(scan, sizeof(scan), "tcp-syn");
-    snprintf(rate_text, sizeof(rate_text), "1000");
+    snprintf(rate_text, sizeof(rate_text), "100");
     snprintf(timeout_text, sizeof(timeout_text), "300");
     snprintf(path, sizeof(path), "xtate-tui-%lld.ndjson", (long long)time(NULL));
 
@@ -597,7 +597,7 @@ static void tui_start_wizard(void) {
     if (tui_read_line("interface (optional; blank = auto): ", iface,
                       sizeof(iface)) < 0)
         goto done;
-    if (tui_read_default("rate [1000]: ", rate_text, sizeof(rate_text)) < 0)
+    if (tui_read_default("rate [100]: ", rate_text, sizeof(rate_text)) < 0)
         goto done;
     if (tui_read_default("timeout seconds [300]: ", timeout_text,
                          sizeof(timeout_text)) < 0)

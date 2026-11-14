@@ -94,7 +94,7 @@ The wizard asks for:
 3. ports, comma-separated integers `0..65535`; blank lets the scan module use
    its default;
 4. optional interface name;
-5. rate, default `1000` packets/second;
+5. rate, default `100` packets/second;
 6. timeout, default `300` seconds;
 7. result path, default `xtate-tui-<epoch>.ndjson` (relative paths are relative
    to the control-plane process, not the TUI);

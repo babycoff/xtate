@@ -121,7 +121,7 @@ IPv6 has its own traps: a link-local source address must be given explicitly (`-
 
 ## Rate too high, packet loss, or an unhappy network
 
-- The default rate is **100 packets/s**; the total is split across Tx threads. Start at `-rate 1000` for a lab subnet, not `-rate 1000000`.
+- The default rate is **100 packets/s**; the total is split across Tx threads. Start at `-rate 100` for a lab subnet, not `-rate 100000`.
 - Watch the status bar: queue levels and hit rate show whether the Tx/Rx pipeline is saturated. `--print-status queue` makes queue occupancy explicit.
 - Too-high rates show up as missing results on every module, not as errors. Halve the rate and compare; also test with a single host and a single port to remove scope effects.
 - For late replies, `--wait <seconds>` (default 10) keeps receive/handle threads alive after transmission ends.

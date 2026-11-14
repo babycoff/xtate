@@ -8,7 +8,7 @@ order in which the resulting `(address, port)` pairs are visited. The default ge
 `blackrock`, which permutes that space in a stateless, evenly dispersed way.
 
 ```bash
-sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
+sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 100
 ```
 
 > Documented against Xtate v3.0.0-rc.10. The CLI is authoritative: `--help`,

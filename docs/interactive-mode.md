@@ -21,7 +21,7 @@ The same command parser is used in both modes.
 Example:
 
 ```bash
-printf 'set rate = 1000\nset-scan tcp-syn\nset-probe null\nquit\n' |
+printf 'set rate = 100\nset-scan tcp-syn\nset-probe null\nquit\n' |
   xtate -interactive
 ```
 

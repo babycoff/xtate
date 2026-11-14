@@ -111,7 +111,7 @@ sudo setcap cap_net_raw,cap_net_admin=eip ./bin/xtate
 无状态 TCP SYN 扫描不需要改防火墙：
 
 ```bash
-sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
+sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 100
 ```
 
 你应该看到：
@@ -143,7 +143,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 ```bash
 ./firewall/add_rules.sh
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80 -scan zbanner -probe http \
-  -scan-arg "-banner" -rate 1000 -show info
+  -scan-arg "-banner" -rate 100 -show info
 ./firewall/rm_rules.sh
 ```
 

@@ -127,6 +127,9 @@ def main():
         if 'id="module-params"' not in text or "scan_args" not in text:
             print("GUI module parameter editor is missing", file=sys.stderr)
             return 1
+        if 'id="rate" type="number" min="1" max="10000" value="100"' not in text:
+            print("GUI rate default is not 100 pps", file=sys.stderr)
+            return 1
         if ('id="subprobe"' not in text or "collectProbeArgs" not in text
                 or "probeHasSubprobe" not in text
                 or 'option value=""' not in text
@@ -531,14 +534,14 @@ def main():
 
         node = shutil.which("node")
         if node:
-            js_test = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                   "nested_probe_js_test.js")
-            checked = subprocess.run([node, js_test], capture_output=True,
-                                     text=True, timeout=30)
-            if checked.returncode != 0:
-                print("nested-probe JS test failed:", checked.stdout,
-                      checked.stderr, file=sys.stderr)
-                return 1
+            for name in ("nested_probe_js_test.js", "input_validation_js_test.js"):
+                js_test = os.path.join(os.path.dirname(os.path.abspath(__file__)), name)
+                checked = subprocess.run([node, js_test], capture_output=True,
+                                         text=True, timeout=30)
+                if checked.returncode != 0:
+                    print(name + " failed:", checked.stdout,
+                          checked.stderr, file=sys.stderr)
+                    return 1
         print("GUI tests: PASS")
         return 0
     finally:

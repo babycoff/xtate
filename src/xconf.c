@@ -3048,7 +3048,7 @@ ConfParam config_parameters[] = {
      "such as 10000000 request ten million packets per second. The achievable "
      "rate depends on the operating system, capture backend, NIC, CPU and "
      "packet size. This is a shared total across all transmit threads, not a "
-     "per-thread rate.",
+     "per-thread rate. The default is 100 packets per second.",
      "Specifies the desired rate for transmitting packets."},
     {"wait",
      SET_wait,
@@ -4382,7 +4382,7 @@ void xconf_print_usage() {
     printf("%s", i18n_tr("basic use examples of " XTATE_NAME ":\n"));
     printf("\n");
     printf("  " XTATE_NAME
-           " -p 80,8000-8100 -ip 10.0.0.0/8 -scan tcp-syn -rate 10000\n");
+           " -p 80,8000-8100 -ip 10.0.0.0/8 -scan tcp-syn -rate 100\n");
     xprint(
         i18n_tr(
             "use TcpSyn ScanModule to scan web ports on 10.x.x.x at 10kpps.\n"),

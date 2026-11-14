@@ -5,7 +5,7 @@
 Xtate 扫描的是一个**乘积空间**：每个目标地址都会与每个目标端口组合。`-ip` 提供地址，`-p` 提供端口，生成模块（GenerateModule）决定最终 `(address, port)` 对的访问顺序。默认生成模块是 `blackrock`，它以无状态、均匀分散的方式置换这个空间。
 
 ```bash
-sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
+sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 100
 ```
 
 > 本文档对应 Xtate v3.0.0-rc.10。命令行才是最终依据：`--help`、`--help-scan <module>` 和 `--help-probe <module>` 会给出你所构建版本的准确参数。

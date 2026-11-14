@@ -92,7 +92,7 @@ sudo apt install build-essential cmake pkg-config libpcap-dev \
   libssl-dev libpcre2-dev libxml2-dev libbson-dev libmongoc-dev \
   libngtcp2-dev libngtcp2-crypto-gnutls-dev libgnutls28-dev libzstd-dev
 ./build.sh
-sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
+sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 100
 ```
 
 第一条命令是无状态 SYN 扫描，不需要修改防火墙。若要真正抓取 banner，需要阻止
@@ -112,7 +112,7 @@ sudo ./firewall/rm_rules.sh
 > 规则是主机级的，生效期间会丢弃本机所有出站 RST/ICMP unreachable。
 
 > [!TIP]
-> 从 `-rate 1000` 开始，不要一上来就用 `-rate 1000000`。实验网不是互联网，
+> 从 `-rate 100` 开始，不要一上来就用 `-rate 100000`。实验网不是互联网，
 > 交换机也会感谢你。
 
 Windows 上请安装 [Npcap](https://npcap.com/)，用 CMake 构建，并在管理员终端
@@ -169,7 +169,7 @@ xtate [options] -ip TARGETS [-p PORTS] -scan SCANMODULE [-probe PROBEMODULE]
 | `-p` | 端口；前缀选择传输层 | `80,443`、`20-25`、`u:53`、`s:38412` |
 | `-scan` | 如何发包、保留什么状态 | `tcp-syn`、`zbanner`、`tcp-state`、`udp`、`icmp-echo` |
 | `-probe` | L5+ 载荷与解析器，scan 需要时使用 | `http`、`tls-state`、`dns`、`ssh`、`jarm` |
-| `-rate` | 所有发送线程合计的每秒报文数 | `1000`、`0.1`、`100000` |
+| `-rate` | 所有发送线程合计的每秒报文数 | `100`、`0.1`、`100000` |
 | `-show` | 要打印的结果级别 | `success`、`info`、`fail` |
 | `-o` | 输出模块与文件 | `-o ndjson -output-file run.ndjson` |
 | `-scan-arg` / `-probe-arg` | 模块专用参数 | `-scan-arg "-banner"` |
@@ -200,7 +200,7 @@ xtate [options] -ip TARGETS [-p PORTS] -scan SCANMODULE [-probe PROBEMODULE]
 ### 让实验可复现
 
 ```bash
-./bin/xtate -ip 203.0.113.0/24 -p 443 -scan tcp-syn -rate 1000 \
+./bin/xtate -ip 203.0.113.0/24 -p 443 -scan tcp-syn -rate 100 \
   --echo > experiment.conf
 ./bin/xtate --config-file experiment.conf
 ```

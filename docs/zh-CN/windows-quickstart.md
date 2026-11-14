@@ -154,14 +154,14 @@ cd C:\path\to\xtate
 
 ```powershell
 .\bin\xtate.exe -if "Ethernet" -ip 192.168.1.0/24 -p 80 `
-  -scan tcp-syn -rate 1000 -show failed
+  -scan tcp-syn -rate 100 -show failed
 ```
 
 说明：
 
 - 网卡名带空格时要加引号；
 - `-show failed` 才会显示 closed 端口；
-- 先用 `-rate 1000` 这种低速率；
+- 先用 `-rate 100` 这种低速率；
 - **不要**扫描公网或未授权网络；
 - Windows 上 `tcp-syn` 可加 `-scan-arg "--send-rst"` 主动关闭半开连接。
 

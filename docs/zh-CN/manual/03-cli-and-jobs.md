@@ -71,7 +71,7 @@ xtate --help-probe http
 ### 无状态 SYN 扫描
 
 ```bash
-sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
+sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 100
 ```
 
 结果流向 stdout，每个回包一行：
@@ -84,7 +84,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 
 ```bash
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn \
-  -rate 1000 -show failed
+  -rate 100 -show failed
 ```
 
 状态栏画在 stderr 上。因此把 stdout 重定向到文件时文件保持干净，而 `--no-status` 会彻底去掉状态栏。
@@ -109,7 +109,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -scan icmp-echo -rate 500
 ```bash
 ./firewall/add_rules.sh
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80 -scan zbanner -probe http \
-  -scan-arg "-banner" -rate 1000 -show info
+  -scan-arg "-banner" -rate 100 -show info
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 443 -scan tcp-state -probe tls-state \
   -rate 200 -show info
 ./firewall/rm_rules.sh
@@ -158,7 +158,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80 -scan tcp-syn \
   "scan": "tcp-syn",
   "targets": ["192.168.1.0/24"],
   "ports": [80, 443],
-  "rate": 1000,
+  "rate": 100,
   "timeout_sec": 300
 }
 ```
@@ -208,7 +208,7 @@ xtate --control-connect=/tmp/xtate-ctl.sock \
 xtate --control-connect=/tmp/xtate-ctl.sock --control-request='{
   "id":2,"method":"job.start",
   "params":{"scan":"tcp-syn","targets":["192.168.1.0/24"],
-            "ports":[80,443],"rate":1000,"timeout_sec":300}
+            "ports":[80,443],"rate":100,"timeout_sec":300}
 }'
 ```
 
@@ -234,7 +234,7 @@ job 拥有自己的结果路径；控制响应从不携带结果字节。对于�
   "id": 2,
   "method": "job.start",
   "params": {"scan": "tcp-syn", "targets": ["192.168.1.0/24"],
-             "ports": [80, 443], "rate": 1000, "timeout_sec": 300},
+             "ports": [80, 443], "rate": 100, "timeout_sec": 300},
   "chunk_size": 67108864,
   "index": true,
   "compression": "none"

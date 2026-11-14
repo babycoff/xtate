@@ -516,7 +516,7 @@ textarea { font-size: 13.5px; line-height: 1.5; }
             <div class="grid-3">
               <div>
                 <div class="field-label"><span>Rate</span><span class="field-hint mono">packets / sec</span></div>
-                <input id="rate" type="number" min="1" max="10000" value="1000">
+                <input id="rate" type="number" min="1" max="10000" value="100">
               </div>
               <div>
                 <div class="field-label"><span>Timeout</span><span class="field-hint mono">seconds</span></div>
@@ -738,6 +738,10 @@ Object.assign(ZH, {
   "Scan engines, protocol probes, output writers and target generators, grouped by role.": "扫描引擎、协议探针、输出写入器和目标生成器，按角色分组。",
   "Scan, probe, output and generate modules, grouped by role. Open a module for its full description and parameters.": "扫描、探针、输出与生成模块，按角色分组。展开模块可查看完整说明和参数。",
   "Appearance, runtime capabilities and the local security model of this console.": "本控制台的外观、运行时能力和本地安全模型。",
+  "Rate must be between 1 and 10000 packets per second.": "速率必须是 1–10000 包/秒之间的整数。",
+  "Timeout must be a whole number between 1 and 86400 seconds.": "超时必须是 1–86400 秒之间的整数。",
+  "Enter at least one port.": "请至少输入一个端口。",
+  "Too many ports for one browser request ({n}); narrow the range to 4096 or fewer.": "单次浏览器请求的端口过多（{n} 个）；请缩小到 4096 个以内。",
 
   "Scan modules": "扫描模块",
   "Probe modules": "探针模块",
@@ -935,17 +939,59 @@ function setConn(ok, text) {
 function splitTargets(value) {
   return value.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean);
 }
+function portTransport() {
+  if (["udp", "yarrp-udp", "quic-state"].includes(state.scan)) return "u";
+  if (state.scan === "sctp-init") return "s";
+  return "t";
+}
+function portInputError(value) {
+  const expected = portTransport();
+  for (const part of value.split(",").map((s) => s.trim()).filter(Boolean)) {
+    const m = part.match(/^(?:([ust]):)?(\d+)(?:\s*-\s*(\d+))?$/);
+    if (!m) return 'Invalid port "' + part + '". Use 80, 80-90, or a matching protocol prefix.';
+    const prefix = m[1];
+    const a = +m[2], b = m[3] ? +m[3] : +m[2];
+    if (prefix && prefix !== expected) {
+      return 'Port prefix "' + prefix + ':" does not match scan engine "' + state.scan + '"; use "' + expected + ':" or plain ports.';
+    }
+    if (a < 0 || b < 0 || a > 65535 || b > 65535) {
+      return 'Port "' + part + '" is outside 0-65535.';
+    }
+  }
+  return "";
+}
+function formInputError() {
+  const rate = +$("rate").value;
+  if (!Number.isFinite(rate) || rate < 1 || rate > 10000) {
+    return t("Rate must be between 1 and 10000 packets per second.");
+  }
+  const timeout = +$("timeout").value;
+  if (!Number.isInteger(timeout) || timeout < 1 || timeout > 86400) {
+    return t("Timeout must be a whole number between 1 and 86400 seconds.");
+  }
+  const info = scanInfo(state.scan);
+  if (info.ports) {
+    const perr = portInputError($("ports").value);
+    if (perr) return perr;
+    const count = expandPorts($("ports").value).length;
+    if (!count) return t("Enter at least one port.");
+    if (count > 4096) {
+      return tf("Too many ports for one browser request ({n}); narrow the range to 4096 or fewer.", {n: count});
+    }
+  }
+  return "";
+}
 function expandPorts(value) {
   const out = [];
   const seen = new Set();
   for (const part of value.split(",").map((s) => s.trim()).filter(Boolean)) {
-    const m = part.match(/^(\d+)\s*-\s*(\d+)$/);
+    const m = part.match(/^(?:[ust]:)?(\d+)\s*-\s*(\d+)$/);
     if (m) {
       let a = +m[1], b = +m[2];
       if (a > b) [a, b] = [b, a];
-      for (let p = a; p <= b && p <= 65535; p++) if (!seen.has(p)) { seen.add(p); out.push(p); }
+      for (let p = a; p <= b; p++) if (!seen.has(p)) { seen.add(p); out.push(p); }
     } else {
-      const p = +part;
+      const p = +(part.replace(/^[ust]:/, ""));
       if (Number.isInteger(p) && p >= 0 && p <= 65535 && !seen.has(p)) { seen.add(p); out.push(p); }
     }
   }
@@ -1053,6 +1099,23 @@ async function runPreflight() {
     $("start-hint").textContent = "Waiting for a valid preflight.";
     $("preflight-badge").className = "badge";
     $("preflight-badge").innerHTML = '<span class="dot"></span><span>waiting for target</span>';
+    return;
+  }
+  const inputError = formInputError();
+  if (inputError) {
+    state.preflight = null;
+    state.dirty = true;
+    $("pf-state").className = "pf-state bad";
+    $("pf-state").innerHTML = '<span class="dot"></span><span>' + t("PREFLIGHT · BLOCKED") + "</span>";
+    $("pf-summary").textContent = inputError;
+    $("pf-targets").textContent = "—"; $("pf-ports").textContent = "—";
+    $("pf-iface").textContent = "—"; $("pf-source").textContent = "—";
+    $("pf-gateway").textContent = "—"; $("pf-link").textContent = "—";
+    $("pf-checks").innerHTML = "";
+    $("btn-start").disabled = true;
+    $("start-hint").textContent = t("Fix the preflight errors above.");
+    $("preflight-badge").className = "badge red";
+    $("preflight-badge").innerHTML = '<span class="dot"></span><span>blocked</span>';
     return;
   }
   try {
@@ -1473,6 +1536,8 @@ function updateProbeVisibility() {
 
 async function startScan() {
   if (!state.preflight || !state.preflight.ok || !$("auth").checked || state.dirty) return;
+  const inputError = formInputError();
+  if (inputError) { toast(inputError, true); return; }
   const info = scanInfo(state.scan);
   const params = {
     scan: state.scan,
@@ -1482,9 +1547,15 @@ async function startScan() {
     authorized: true,
   };
   if (info.ports) {
+    const portError = portInputError($("ports").value);
+    if (portError) { toast(portError, true); return; }
     const ports = expandPorts($("ports").value);
     if (!ports.length) { toast("Enter at least one port.", true); return; }
-    params.ports = ports.slice(0, 4096);
+    if (ports.length > 4096) {
+      toast("Too many ports for one browser request (" + ports.length + "); narrow the port range to 4096 or fewer.", true);
+      return;
+    }
+    params.ports = ports;
   }
   if (info.probe && $("probe").value) params.probe = $("probe").value;
   const scanArgs = collectModuleArgs("scan");

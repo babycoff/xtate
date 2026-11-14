@@ -29,7 +29,7 @@
       "type": "object",
       "additionalProperties": {"type": ["string", "number", "boolean"]}
     },
-    "rate": {"type": "integer", "minimum": 0, "maximum": 10000},
+    "rate": {"type": "integer", "minimum": 0, "maximum": 10000, "description": "Total packets per second. When omitted, the worker uses the default of 100."},
     "timeout_sec": {"type": "integer", "minimum": 1, "maximum": 86400},
     "dry_run": {
       "type": "boolean",

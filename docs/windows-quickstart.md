@@ -170,14 +170,14 @@ subnet** you own or are authorized to test:
 
 ```powershell
 .\bin\xtate.exe -if "Ethernet" -ip 192.168.1.0/24 -p 80 `
-  -scan tcp-syn -rate 1000 -show failed
+  -scan tcp-syn -rate 100 -show failed
 ```
 
 Notes:
 
 - Quote an adapter name that contains spaces.
 - `-show failed` shows closed ports; without it only successes are visible.
-- Start with a low rate such as `-rate 1000`.
+- Start with a low rate such as `-rate 100`.
 - Do **not** scan public IP ranges or networks without permission.
 - On Windows, `tcp-syn` can optionally close half-open connections with
   `-scan-arg "--send-rst"`.

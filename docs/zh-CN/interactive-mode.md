@@ -20,7 +20,7 @@ xtate -interact
 示例：
 
 ```bash
-printf 'set rate = 1000\nset-scan tcp-syn\nset-probe null\nquit\n' |
+printf 'set rate = 100\nset-scan tcp-syn\nset-probe null\nquit\n' |
   xtate -interactive
 ```
 
