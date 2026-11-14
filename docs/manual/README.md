@@ -10,7 +10,7 @@ The manual is written against the code in this tree: the browser console in
 `web/gui.html`, the local GUI server in `src/util-scan/gui.c` and the scan
 engine, control plane and job manager it uses.
 
-This manual describes the **3.0.0-rc.10 release candidate**. It documents what
+This manual describes the **3.0.0 release**. It documents what
 exists in this tree and is exercised by the tests; where behavior is still
 limited, it says so instead of promising a future feature.
 
@@ -29,7 +29,7 @@ limited, it says so instead of promising a future feature.
 - **People migrating from 2.44.x.** Scan engines and result formats are
   unchanged; the new part is the scan-first console, server-side preflight and
   one-command GUI/MCP startup. See the
-  [3.0.0-rc.10 release notes](../release-notes/3.0.0-rc.10.md).
+  [3.0.0 release notes](../release-notes/3.0.0.md).
 
 ## Chapters
 

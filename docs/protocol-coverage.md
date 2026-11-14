@@ -9,7 +9,7 @@ test reference, not copy its code or promise output compatibility.
 
 ## Current Xtate coverage
 
-Status verified against the 3.0.0-rc.10 catalog: 11 scan modules and 59 probe
+Status verified against the 3.0.0 catalog: 11 scan modules and 59 probe
 modules on Windows. A Linux build with ngtcp2/GnuTLS adds `quic-state` and
 `http3-state`; `--list-capabilities` reports whether those modules exist in the
 current build.

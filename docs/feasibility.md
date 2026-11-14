@@ -1,4 +1,4 @@
-# P3 / P4 feasibility
+# Advanced directions: feasibility
 
 **English** · [中文](zh-CN/feasibility.md)
 
@@ -6,7 +6,7 @@ This is an engineering feasibility assessment, not an implementation promise.
 It assumes the 2.42.0 architecture: stateless ZBanner/UDP, HLTCP for stateful
 TCP, and output-side aggregation.
 
-> **Status note (3.0.0-rc.10).** The assessment below is historical. The
+> **Status note (3.0.0).** The assessment below is historical. The
 > stateless `quic` probe and the optional Linux-only `quic-state`/`http3-state`
 > transport are implemented (ngtcp2 + GnuTLS; Windows builds do not ship them
 > and `--list-capabilities` reports `http3: false`). The transport data plane
@@ -110,7 +110,7 @@ See [Protocol coverage plan](./protocol-coverage.md) for the zgrab2-referenced
 protocol matrix and tiered implementation plan. It is a separate workstream from
 QUIC and does not require new transport machinery for most protocols.
 
-## P3 — scan control
+## Scan control
 
 ### Limited target-aware probe selection
 
@@ -184,7 +184,7 @@ HLTCP runs stateful TLS/application probes on those targets. This needs a
 handoff format and scheduler, plus TCB cost control. It overlaps with the
 deferred HLTCP slot work.
 
-## P4 — templates and traffic
+## Templates and traffic
 
 ### Xtate-native YAML templates
 

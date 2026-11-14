@@ -29,6 +29,72 @@ xtate --mcp --control-connect=/tmp/xtate-ctl.sock
 Windows 的 endpoint 形如 `\\.\pipe\xtate-control`。`--control-connect` 只建立
 本地连接，不会监听 TCP。
 
+## 常用 harness 配置
+
+MCP 是 stdio 协议。应让宿主直接启动 `xtate --mcp`，不要经过 shell，也不要把命令
+粘贴到提示词里。请使用绝对路径；Windows 上可以写成 `C:\\Tools\\xtate.exe`，也可以
+使用正斜杠。修改宿主配置后需要重启宿主。
+
+### Claude Desktop 与 Cursor
+
+两者都使用 `mcpServers` 对象。Claude Desktop 的配置文件是
+`claude_desktop_config.json`；Cursor 使用 `~/.cursor/mcp.json` 或项目级
+`.cursor/mcp.json`。
+
+```json
+{
+  "mcpServers": {
+    "xtate": {
+      "command": "C:\\Tools\\xtate.exe",
+      "args": ["--mcp"],
+      "env": {
+        "XTATE_MCP_DOCS_DIR": "C:\\Tools\\xtate"
+      }
+    }
+  }
+}
+```
+
+Linux/macOS 上改成实际安装路径，例如 `"command": "/usr/local/bin/xtate"`。若
+`docs/`、`schemas/` 不在可执行文件旁边，把 `XTATE_MCP_DOCS_DIR` 指向包含它们的目录。
+
+### VS Code / GitHub Copilot
+
+VS Code 在 `.vscode/mcp.json` 中使用 `servers` 对象：
+
+```json
+{
+  "servers": {
+    "xtate": {
+      "type": "stdio",
+      "command": "C:\\Tools\\xtate.exe",
+      "args": ["--mcp"],
+      "env": {
+        "XTATE_MCP_DOCS_DIR": "C:\\Tools\\xtate"
+      }
+    }
+  }
+}
+```
+
+### 通用 stdio 宿主
+
+如果宿主只让填写 command 和 args：
+
+```text
+command: C:\Tools\xtate.exe
+args:    --mcp
+transport: stdio
+```
+
+除非你确实要和另一个进程共享控制面，否则不要加 `--control-connect`。`--mcp` 会
+自建私有控制面，并在会话结束时关闭。若要共享，先自行启动
+`xtate --control-plane=<path>`，然后在宿主的 `args`/`env` 中传入同一个路径和
+`XTATE_CONTROL_TOKEN`。
+
+MCP server 不会监听 TCP。若宿主只支持远程 MCP，请在本机用 stdio 桥接
+`xtate --mcp`，不要把控制面 socket 暴露到网络。
+
 ## 工具
 
 | 工具 | 用途 |

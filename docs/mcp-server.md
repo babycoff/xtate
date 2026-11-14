@@ -33,6 +33,77 @@ On Windows the endpoint is a Named Pipe such as
 `\\.\pipe\xtate-control`. `--control-connect` only establishes a local
 connection; it does not listen on TCP.
 
+## Common harness configurations
+
+MCP is a stdio protocol. Configure the host to launch `xtate --mcp` directly, not
+through a shell and not by pasting commands into a prompt. Use absolute paths;
+on Windows either escape backslashes (`C:\\Tools\\xtate.exe`) or use forward
+slashes. Restart the host after changing its MCP configuration.
+
+### Claude Desktop and Cursor
+
+Both use an `mcpServers` object. Claude Desktop keeps it in
+`claude_desktop_config.json`; Cursor uses `~/.cursor/mcp.json` or a
+project-level `.cursor/mcp.json`.
+
+```json
+{
+  "mcpServers": {
+    "xtate": {
+      "command": "C:\\Tools\\xtate.exe",
+      "args": ["--mcp"],
+      "env": {
+        "XTATE_MCP_DOCS_DIR": "C:\\Tools\\xtate"
+      }
+    }
+  }
+}
+```
+
+On Linux or macOS, use the installed path, for example
+`"command": "/usr/local/bin/xtate"`, and set `XTATE_MCP_DOCS_DIR` to the
+directory that contains `docs/` and `schemas/` when it is not next to the
+executable.
+
+### VS Code / GitHub Copilot
+
+VS Code uses a `servers` object in `.vscode/mcp.json`:
+
+```json
+{
+  "servers": {
+    "xtate": {
+      "type": "stdio",
+      "command": "C:\\Tools\\xtate.exe",
+      "args": ["--mcp"],
+      "env": {
+        "XTATE_MCP_DOCS_DIR": "C:\\Tools\\xtate"
+      }
+    }
+  }
+}
+```
+
+### Generic stdio host
+
+If the host asks for a command and arguments, use:
+
+```text
+command: C:\Tools\xtate.exe
+args:    --mcp
+transport: stdio
+```
+
+Do not add `--control-connect` unless you deliberately share a control plane
+with another process. `--mcp` starts a private control plane and stops it when
+the session ends. To share, start `xtate --control-plane=<path>` yourself and
+pass the same path plus `XTATE_CONTROL_TOKEN` to both sides in the host's
+`args`/`env`.
+
+The server never opens a TCP listener. If a host only supports remote MCP
+servers, run `xtate --mcp` under a stdio bridge on the same machine; do not
+expose the control-plane socket on the network.
+
 ## Tools
 
 | Tool | Purpose |

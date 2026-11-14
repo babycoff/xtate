@@ -9,6 +9,15 @@ The skill lives in the repository at
 control plane still enforce authorization, target counts, rates, routes and
 result paths.
 
+## Scope: MCP only
+
+This skill teaches an external agent to use **the Xtate MCP server**, not the
+Xtate command line. It contains no CLI command syntax and deliberately tells the
+agent not to bypass MCP validation with a shell. For direct CLI use, follow the
+[manual](./manual/README.md) and `--help` instead. The same Xtate engine and
+safety model apply, but the CLI is the expert-facing interface and has no MCP
+tool-call wrapper.
+
 ## What it contains
 
 | File | Purpose |

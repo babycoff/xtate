@@ -15,7 +15,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0--rc.10-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -46,9 +46,9 @@ Xtate 面向以互联网测量为职业的人：网络与安全研究者、测�
 > Xtate 发送原始报文。只扫描你拥有或获得明确书面授权的网络。未经授权的扫描
 > 在部分国家和地区可能违法。你对自己发送的速率和目标选择负责。
 
-> **3.0 候选版。** 3.0 系列增加了以扫描为中心的浏览器控制台、一条命令启动的
-> MCP 服务、双语文档、明确的协议能力报告，并强化了命令行。它仍是候选版，
-> 完成实地试用前不会发布正式 3.0；2.44.2 是当前最新稳定版。
+> **3.0 已正式发布。** 3.0 系列增加了以扫描为中心的浏览器控制台、一条命令启动的
+> MCP 服务、双语文档、明确的协议能力报告，并强化了命令行。命令行仍是测量专家
+> 的主要接口；2.44.2 是上一个稳定版本。
 
 ## 目录
 

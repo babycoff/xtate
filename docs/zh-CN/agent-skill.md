@@ -6,6 +6,13 @@ Xtate MCP server。它不是 Xtate agent，不是独立二进制，也不是权�
 Skill 位于仓库的 [`skills/xtate/`](../../skills/xtate/SKILL.md)。它只提供指导；
 授权、目标数量、速率、路由和结果路径仍由 MCP server 与控制面强制执行。
 
+## 范围：仅限 MCP
+
+这份 Skill 教外部 agent 使用 **Xtate MCP server**，不教 Xtate 命令行。它不包含
+CLI 命令语法，并明确要求 agent 不要用 shell 绕过 MCP 校验。直接使用 CLI 时，请阅读
+[使用手册](./manual/README.md) 和 `--help`。两者使用同一个 Xtate 引擎和同一套安全
+模型，但 CLI 是面向专家的接口，没有 MCP 工具调用包装。
+
 ## 内容
 
 | 文件 | 作用 |

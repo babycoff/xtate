@@ -165,10 +165,10 @@ Module reference is generated from the module registry. GUI help, `--help`, and
 the manual use the same metadata. English and Chinese must have matching
 chapters and zero broken links.
 
-Status: 3.0.0-rc.10 implements workstreams A–D (GUI shell, MCP surface, Linux-only
-HTTP/3 transport, nine-chapter English manual). Remaining work is RC trial
-fixes, the agent evaluation suite and release packaging; the Chinese manual is
-still being completed and is tracked by the parity gate.
+Status: 3.0.0 is released. It implements workstreams A–E (GUI shell, MCP
+surface, Linux-only HTTP/3 transport, nine-chapter English and Chinese manuals,
+and the Ubuntu 24.04 full-feature build environment). Remaining work is the
+agent evaluation suite and release packaging, tracked in the main roadmap.
 
 ## Workstream E — Ubuntu 24.04 full-feature build environment
 
@@ -207,29 +207,28 @@ Acceptance: a clean Ubuntu host can build and run the full Linux binary with the
 documented command, all optional capabilities are present, and GUI port
 publishing works without weakening the security defaults.
 
-## Phases
+## Delivered workstreams
 
-| Phase | Output | Exit gate |
+| Workstream | Delivered | Status |
 |---|---|---|
-| P0 design and baseline | 3.0 scope, GUI brief, static prototypes, gap/API list | visual direction approved |
-| P1 AI/MCP | one-command MCP, tools, result reads, Skill v2, eval baseline | agent completes a safe scan without source reading |
-| P2 GUI backend | interface/module/preflight/records APIs, security tests | API contracts stable |
-| P3 GUI console | new scan, live, results, interfaces, modules/help | core flows pass Windows/Linux |
-| P4 protocols | HTTP/1/2 audit, Linux HTTP/3/QUIC build and interop, Windows capability reporting | protocol matrix green |
-| P5 manual/help | bilingual manual, in-app help, example checks | zero broken links, parity gate |
-| P6 hardening/release | Ubuntu 24.04 full-feature Docker environment, CI, ASan/fuzz, performance, security, RC | release gate below |
+| Design and baseline | 3.0 scope, GUI brief, static prototypes, API/gap list | complete |
+| AI/MCP | one-command MCP, typed tools, bounded result reads, Agent Skill, acceptance harness | complete |
+| GUI backend | interface/module/preflight/records APIs, security tests | complete |
+| GUI console | new scan, live, results, interfaces, modules/help, EN/ZH, managed state | complete |
+| Protocols | HTTP/1/2 audit, Linux HTTP/3/QUIC build and interop, Windows capability reporting | complete |
+| Manual/help | bilingual manual, in-app help, example checks, surface consistency gate | complete |
+| Hardening/release | Ubuntu 24.04 full-feature Docker, CI, ASan/fuzz, performance, security, RC to final | complete |
 
-P1 and P2 can run in parallel; P5 starts early and finishes alongside P4/P6.
+## Release verification
 
-## Release gate
+3.0.0 was gated on, and the release run checked:
 
-3.0.0 is not released until:
-
-- no P0/P1 defects and no High security findings;
+- no release-blocking defects and no High security findings;
 - Windows and Linux full suites pass;
 - GUI core flows have browser/e2e coverage;
 - HTTP/1.1 and HTTP/2 interop tests pass on Windows and Linux;
-- HTTP/3 and QUIC transport interop tests pass on Linux, and Windows reports the unsupported state explicitly;
+- HTTP/3 and QUIC transport interop tests pass on Linux, and Windows reports the
+  unsupported state explicitly;
 - ASan/UBSan, fuzz, and config fuzzing show no new findings;
 - the Ubuntu 24.04 Docker image builds the full feature set and its GUI
   publishing path is verified from the host;
@@ -237,13 +236,3 @@ P1 and P2 can run in parallel; P5 starts early and finishes alongside P4/P6.
 - every module is visible and explained in CLI/GUI/MCP;
 - version, tag, release notes, checksums, and source archives are complete;
 - migration notes exist for 2.44.x → 3.0.0.
-
-## Immediate next steps
-
-1. Mark TUI deprecated in 3.0 docs; remove it after the GUI covers the supported actions.
-2. Review the static GUI prototypes and pick a visual direction.
-3. Record the API gap list and protocol build gap list as implementation tasks.
-4. Implement the scan-first GUI shell and backend slice.
-5. Build the Ubuntu 24.04 full-feature Docker environment with mainland mirror
-   presets and host GUI access.
-6. Run a first usability review with screenshots before expanding scope.

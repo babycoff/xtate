@@ -2,7 +2,7 @@
 
 [English](../migration-3.0.md) · **中文**
 
-Xtate 3.0 是面向使用体验的候选发布线：扫描优先的 GUI、单命令 MCP 服务、双语文档、
+Xtate 3.0 是面向使用体验的正式发布线：扫描优先的 GUI、单命令 MCP 服务、双语文档、
 显式协议能力报告和统一的结果目录。报文引擎和四类模块没有改变，但若干接口和默认
 行为发生变化。升级前请先阅读本页，尤其是封装了 Xtate 的自动化脚本。
 
@@ -16,7 +16,7 @@ Xtate 3.0 是面向使用体验的候选发布线：扫描优先的 GUI、单命
    `XTATE_STATE_DIR` 或显式 `result_path`。
 4. 如果使用 `--tui`，请迁移到 `--gui`；TUI 在 3.0 中已弃用。
 5. 重新确认 HTTP/3、QUIC 预期：仅 Linux，且构建时必须找到 ngtcp2/GnuTLS。
-6. 阅读 [3.0 发布说明](./release-notes/3.0.0-rc.10.md) 和
+6. 阅读 [3.0 发布说明](./release-notes/3.0.0.md) 和
    [已知限制](./known-limitations.md)。
 
 ## 破坏性/行为变化

@@ -115,7 +115,7 @@ heartbeat, and `phase=draining` exemption. Windows:
 contents. The current worker phases are `tx` and `draining`; no separate
 `waiting` phase exists yet.
 
-## Large result handling (P0a)
+## Large result handling
 
 - `job_read_results` uses `uint64_t` offsets and 64-bit seeks, returning only
   complete lines and a `next_offset`/`truncated` pair.

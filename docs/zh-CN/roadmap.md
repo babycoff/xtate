@@ -34,19 +34,23 @@
 
 ## 当前优先级调整
 
-当前优先级：
+截至 3.0.0，QUIC 探测、Linux 专属 `quic-state`/`http3-state` 传输、扫描控制台
+GUI、MCP 接口，以及九章英文和中文手册均已交付。3.0.0 已正式发布；交付内容见
+[Xtate 3.0 路线图](./roadmap-3.0.md)。当前优先级：
 
-1. **QUIC/HTTP3 下一步**——能力探测和可选的 `quic-state` 握手传输已完成；
-   下一层是 HTTP/3/QPACK 与 DoQ 应用探测；见
-   [QUIC state](./quic-state.md)。
-2. **Xtate 原生 YAML 模板**——先做只读 matcher/schema，不复制 Nuclei。
-3. **协议覆盖扩展**——按[协议覆盖计划](./protocol-coverage.md)的 zgrab2
-   矩阵，先做 Batch A。
-4. **流量随机化研究**——opt-in、固定 seed、只在 lab；与默认扫描器分离。
+1. **Agent 评测套件与打包**——用真实 agent 宿主验证 MCP/Skill 路径，并发布可复现
+   的软件包。
+2. **MCP generate/stream 输入**——目前只支持静态 `targets` 和 `include_file`。
+3. **扫描期间的每 job 磁盘配额强制**——目前只在完成后检查并告警。
+4. **HTTP/3 深度**——Linux 专属传输中的动态 QPACK 与 DoQ；传输扫描器和应用探针
+   保持分离。
+5. **协议覆盖扩展**——按[协议覆盖计划](./protocol-coverage.md)的 zgrab2 矩阵继续。
+6. **Xtate 原生 YAML 模板与流量随机化研究**——opt-in、固定 seed、只在 lab；
+   与默认扫描器分离，不复制 Nuclei。
 
 下面的旧计划仍然有效，但除非有具体测量需求，优先级较低。
 
-## P1 — 模块示例（已完成）
+## 模块示例（已完成）
 
 - [`examples/modules/`](../../examples/modules/) 每种模块类型一个编译检查模板。
 - `tests/module-examples/test.sh` 已接入 Linux CI。
@@ -62,7 +66,7 @@
 
 HTTP/1 探针按当前方向冻结在结构化响应解析阶段。
 
-## P2 — JARM 正确性
+## JARM 正确性
 
 JARM fuzzy hash 已改为 Salesforce JARM 1.0 语义：
 
@@ -86,7 +90,7 @@ JARM fuzzy hash 已改为 Salesforce JARM 1.0 语义：
 - complete/incomplete/retry fixture 通过；
 - 文档说明 `targets_with_parts` 的限制。
 
-## P2 — 协议探针
+## 协议探针
 
 状态：JARM 哈希/参考向量的工作、SSH banner/KEX、cleartext `h2c` 与 `h2` 状态探针（通过 HLTCP 的 TLS/ALPN h2）均已实现。`h2` 只有最小的静态/字面量 HPACK 请求以及 frame/HEADERS/DATA 解析；Huffman/动态 HPACK、完整流管理、STARTTLS、HTTP/3/QUIC 与 TLS 变体指纹仍待做。TLS 证书/subject 细节已存在于 `tls-state`；HTTP 状态行为已存在于 `http-state`。
 
@@ -109,21 +113,21 @@ JARM fuzzy hash 已改为 Salesforce JARM 1.0 语义：
 - 需要真实服务的路径进 `tests/lab/`，保持确定性；
 - 可选依赖仍然保持可选。
 
-P3/P4 可行性见[P3/P4 可行性](./feasibility.md)。
+进阶方向可行性见[进阶方向可行性](./feasibility.md)。
 
 ## HTTP 探针审计/重写（冻结）
 
 第一轮结构化响应解析已实现。按当前方向 HTTP/1 工作到此为止；共享请求构造器
 抽取和跨段 chunked 状态暂缓。详见 [HTTP 探针审计](./http-probes-audit.md)。
 
-## P3 — 扫描控制
+## 扫描控制
 
 - 基于端口/banner/TLS 证据的有限目标相关探针选择。
 - 未知网络的自适应包速率，明确 min/max 和可复现反馈。
 - 跨层指纹：IP/TCP/TLS/应用层组合。
 - stateless → stateful 两阶段 handoff。
 
-## P3 — 模板与流量
+## 模板与流量
 
 - Xtate 原生 YAML 模板，借鉴 Nuclei 但不兼容。
 - 扫描流量指纹随机化与研究开关。
@@ -237,7 +241,7 @@ CLI 仍是事实来源；控制面拥有 job，MCP 是类型化客户端。
   `--explain-target`/`--list-if`。
 - 扫描启动横幅和元信息文件显示实际 `Rate:`（默认值或 `--rate`）。
 
-3.0.0-rc.10 已交付（候选版本）：
+3.0.0 已交付：
 
 - 重新设计的扫描优先浏览器控制台：可读的 Paper/Graphite 主题、英文/中文切换、按 Xtate 统一命名分组的模块目录（可展开完整说明与参数表）、23 个经校验的全局参数、真正的 System 偏好设置、大号实时状态标题、结果分页和用默认程序打开任务文件；
 - 每次扫描按运行时间命名独立结果目录，受管的状态目录，任务结束后清理请求与心跳文件；
@@ -260,7 +264,7 @@ CLI 仍是事实来源；控制面拥有 job，MCP 是类型化客户端。
 - MCP generate/流式输入（目前只有静态 `targets` 和 `include_file`）；
 - 扫描期间的单 job 磁盘配额强制（目前只在完成后报告）。
 
-阶段：
+发布历史：
 
 ```text
 2.42.0  JSON 契约 + job + 控制面 + MCP server（已完成）
@@ -269,7 +273,7 @@ CLI 仍是事实来源；控制面拥有 job，MCP 是类型化客户端。
 2.44.0  控制面浏览器 GUI（已完成，已发布）
 2.44.1  TUI/GUI 一条命令启动私有控制面（已完成，已发布）
 2.44.2  RAW/TUN 链路预检 + 启动速率显示（已完成）
-3.0.0-rc.10  重新设计的 GUI + AI/MCP 工具 + 能力报告（候选）
+3.0.0  正式版：重新设计的 GUI + AI/MCP 工具 + 能力报告
 下一步  RC 试用修复、评测套件与打包
 以后    MCP generate/流式输入
 ```

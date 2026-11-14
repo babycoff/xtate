@@ -39,14 +39,13 @@ Completed work is noted so the next change does not silently regress it.
 
 ## Priority reset (current direction)
 
-As of 3.0.0-rc.10, the QUIC probe, Linux-only `quic-state`/`http3-state`
-transport, the scan console GUI, the MCP surface and the nine-chapter English
-manual are delivered; the Chinese manual is still being completed. The current
-priorities are:
+As of 3.0.0, the QUIC probe, Linux-only `quic-state`/`http3-state`
+transport, the scan console GUI, the MCP surface, and the nine-chapter English
+and Chinese manuals are delivered. 3.0.0 is released; what shipped is recorded
+in the [Xtate 3.0 roadmap](./roadmap-3.0.md). The current priorities are:
 
-1. **Finish 3.0.0** — fix RC trial feedback, then the agent evaluation suite and
-   packaging. The release gate is in
-   [Xtate 3.0 roadmap](./roadmap-3.0.md).
+1. **Agent evaluation suite and packaging** — exercise the MCP/Skill path with
+   real agent hosts and publish reproducible packages.
 2. **MCP generate/stream input** — only static `targets` and `include_file` are
    supported today.
 3. **Per-job disk quota enforcement during scanning** — quota is currently
@@ -62,7 +61,7 @@ priorities are:
 The older backlog below remains valid but is lower priority unless a concrete
 measurement requirement changes it.
 
-## P1 — module examples (completed)
+## Module examples (completed)
 
 - [`examples/modules/`](../examples/modules/) has one compile-checked template
   per module type.
@@ -81,7 +80,7 @@ measurement requirement changes it.
 HTTP/1 probe work is intentionally frozen at the current structured response
 parser/pass; no further HTTP rewrite is planned unless requirements change.
 
-## P2 — JARM correctness
+## JARM correctness
 
 The fuzzy hash was corrected to Salesforce JARM 1.0 semantics:
 
@@ -110,7 +109,7 @@ Acceptance:
 - complete/incomplete/retry fixtures pass;
 - docs explain the `targets_with_parts` limitation.
 
-## P2 — protocol probes
+## Protocol probes
 
 Status: the JARM hash/reference work, SSH banner/KEX, cleartext `h2c` and the
 `h2` state probe (TLS/ALPN h2 via HLTCP) are implemented. `h2` decodes the HPACK
@@ -152,7 +151,7 @@ Constraints:
 - deterministic tests in `tests/lab/` where a real service is required;
 - optional dependencies stay optional.
 
-For P3/P4 feasibility, see [P3/P4 feasibility](./feasibility.md).
+For Advanced directions feasibility, see [Advanced directions feasibility](./feasibility.md).
 
 ## HTTP probe audit/rewrite (frozen)
 
@@ -160,7 +159,7 @@ The first response-parser pass is implemented. Per current direction, HTTP/1
 work stops here; shared request-builder extraction and cross-segment chunked
 state are deferred. See [HTTP probe audit](./http-probes-audit.md).
 
-## P3 — scan control
+## Scan control
 
 - Limited target-aware probe selection based on port/banner/TLS evidence.
 - Adaptive packet-rate discovery for unknown networks, with explicit
@@ -168,7 +167,7 @@ state are deferred. See [HTTP probe audit](./http-probes-audit.md).
 - Cross-layer fingerprints combining IP/TCP/TLS/application evidence.
 - Two-stage stateless → stateful handoff.
 
-## P3 — templates and traffic
+## Templates and traffic
 
 - Xtate-native YAML templates, inspired by Nuclei but not compatible with it.
 - Scanner-traffic fingerprint randomization and research controls.
@@ -193,7 +192,7 @@ state are deferred. See [HTTP probe audit](./http-probes-audit.md).
 6. SSH deep KEX/host-key, full HTTP/2 HPACK/streams.
 7. HLTCP slot planning (connection-local AfterFirstReply, then parallel flows).
 8. TLS variant fingerprints.
-9. P3 external two-pass target selection, opt-in adaptive rate.
+9. External two-pass target selection and opt-in adaptive rate.
 10. HLTCP stateless -> stateful handoff.
 
 ## ZBanner audit and simplification
@@ -292,7 +291,7 @@ Delivered in 2.44.2:
   multiple-default-interface error points at `--explain-target`/`--list-if`.
 - scan startup and the meta file show the effective `Rate:` (default or `--rate`).
 
-Delivered in 3.0.0-rc.10 (release candidate):
+Delivered in 3.0.0:
 
 - redesigned scan-first browser console: readable Paper/Graphite themes,
   English/Chinese switch, Xtate module taxonomy with expandable descriptions and
@@ -318,15 +317,14 @@ Delivered in 3.0.0-rc.10 (release candidate):
 - bilingual 10-chapter manual under `docs/manual/` and
   `docs/zh-CN/manual/`.
 
-Remaining:
+Remaining after 3.0.0:
 
-- final 3.0.0 only after RC trial feedback is fixed;
 - agent evaluation suite and packaging;
 - MCP generate/stream input (static `targets` and `include_file` only for now);
 - per-job disk quota enforcement during scanning (currently reported after
   completion).
 
-Phases:
+Release history:
 
 ```text
 2.42.0  JSON contracts + jobs + control plane + MCP server (done)
@@ -335,9 +333,8 @@ Phases:
 2.44.0  browser GUI for the control plane (done, released)
 2.44.1  one-command local TUI/GUI startup (done, released)
 2.44.2  RAW/TUN link preflight + startup rate display (done)
-3.0.0-rc.10  redesigned GUI + AI/MCP tools + capability reporting (candidate)
-next    RC trial fixes, evaluation suite and packaging
-later   MCP generate/stream input
+3.0.0  final: redesigned GUI + AI/MCP tools + capability reporting
+future  evaluation suite, packaging and MCP generate/stream input
 ```
 
 See [AI integration design](./ai-integration.md) and [MCP server](./mcp-server.md).

@@ -15,7 +15,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0--rc.10-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -51,10 +51,10 @@ the CLI.
 > permission to test. Unauthorized scanning may be illegal where you live.
 > You are responsible for the rate you send and for the targets you choose.
 
-> **3.0 release candidate.** The 3.0 line adds a scan-first browser console, a
+> **3.0 is released.** The 3.0 line adds a scan-first browser console, a
 > one-command MCP server, a bilingual manual, explicit protocol capability
-> reporting, and a stronger CLI. It remains an RC until field trial is complete;
-> 2.44.2 is the latest stable tag.
+> reporting, and a stronger CLI. The CLI remains the primary interface for
+> expert measurement work; 2.44.2 is the previous stable line.
 
 ## Contents
 

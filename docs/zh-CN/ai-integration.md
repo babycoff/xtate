@@ -42,7 +42,7 @@ CLI 仍是事实来源；控制面拥有 job，MCP server 只是控制面的轻�
   预检输出；扫描启动时以可操作的提示拒绝不支持的链路类型。
 - 扫描启动横幅和元信息输出实际 `Rate:`（默认值或 `--rate`）。
 
-3.0.0-rc.10 已交付（候选版本）：
+3.0.0 已交付：
 
 - `xtate --mcp` 一条命令启动带令牌保护的私有控制面；
 - `capabilities` 与 `iface.list` MCP 工具，以及 `--list-capabilities` JSON；
@@ -177,15 +177,14 @@ resource 路径限制为固定白名单
 参见 [MCP server](./mcp-server.md)、[控制面](./control-plane.md) 和
 [job 模型](./job-model.md)。
 
-## 阶段
+## 3.0.0 已交付
 
 ```text
-2.42.0  job + 控制面 + MCP server（已完成）
-2.42.1  Agent Skill（已完成，已发布）
-2.43.0  TUI 控制面任务面板（已完成，已发布）
-2.44.0  控制面浏览器 GUI（已完成，已发布）
-2.44.1  TUI/GUI 一条命令启动私有控制面（已完成，已发布）
-2.44.2  RAW/TUN 链路预检 + 启动速率显示（已完成）
-下一步  评测套件与打包
-以后    MCP generate/流式输入
+2.42.0  jobs + 控制面 + MCP server
+2.42.1  Agent Skill（仅面向 MCP 的外部 agent 指南）
+2.44.x  浏览器 GUI、私有控制面、RAW/TUN 链路预检
+3.0.0   扫描优先 GUI、扁平 start_scan 契约、类型化 MCP 工具、
+        有界结果读取、Docker 镜像、发布门禁与带校验和的资产
 ```
+
+后续工作见[路线图](./roadmap.md)，不属于 3.0.0 发布范围。

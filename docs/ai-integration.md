@@ -48,7 +48,7 @@ Delivered for 2.44.2:
 - scan startup and meta output include the effective `Rate:` (default or
   `--rate`).
 
-Delivered for 3.0.0-rc.10 (candidate):
+Delivered for 3.0.0 (candidate):
 
 - one-command `xtate --mcp` with a token-protected private control plane;
 - `capabilities` and `iface.list` MCP tools, plus `--list-capabilities` JSON;
@@ -190,15 +190,15 @@ agent evaluation for prompt-injection and target-scope violations
 See [MCP server](./mcp-server.md), [control plane](./control-plane.md) and
 [job model](./job-model.md).
 
-## Phases
+## Delivered in 3.0.0
 
 ```text
-2.42.0  jobs + control plane + MCP server (done)
-2.42.1  Agent Skill (done, released)
-2.43.0  TUI control-plane dashboard (done, released)
-2.44.0  browser GUI for the control plane (done, released)
-2.44.1  one-command local TUI/GUI startup (done, released)
-2.44.2  RAW/TUN link preflight + startup rate display (done)
-next    evaluation suite and packaging
-later   MCP generate/stream input
+2.42.0  jobs + control plane + MCP server
+2.42.1  Agent Skill, MCP-only guidance for external agents
+2.44.x  browser GUI, private control plane, RAW/TUN link preflight
+3.0.0   scan-first GUI, flat start_scan contract, typed MCP tools,
+        bounded result reads, Docker image, release gates and checksummed assets
 ```
+
+Remaining work is tracked in the [roadmap](./roadmap.md); it is not part of the
+3.0.0 release.

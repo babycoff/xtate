@@ -111,7 +111,7 @@ Linux：`tests/job/test_heartbeat.c` 覆盖 heartbeat 新鲜/进展、过期 hea
 检查 completed 和 heartbeat 内容。当前 worker phase 只有 `tx` 和 `draining`，
 尚未引入单独的 `waiting` 阶段。
 
-## 大结果处理（P0a）
+## 大结果处理
 
 - `job_read_results` 使用 `uint64_t` offset 和 64 位 seek，只返回完整行，并给出
   `next_offset`/`truncated`。

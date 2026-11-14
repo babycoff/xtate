@@ -2,11 +2,11 @@
 
 [English](../README.md) · **中文**
 
-本目录是 **Xtate v3.0.0-rc.10** 的用户手册——一款面向互联网级测量的模块化全栈网络扫描器。
+本目录是 **Xtate v3.0.0** 的用户手册——一款面向互联网级测量的模块化全栈网络扫描器。
 
 项目 [README](../../README.zh-CN.md) 是落地页。如果你想上手使用 Xtate，而不是只扫一眼功能列表，就从这里开始。
 
-**发布说明：** [3.0.0-rc.10](./release-notes/3.0.0-rc.10.md)——发布工程（标签触发的 CI 构建、带校验和的 Windows/Linux 资产、Docker 溯源）、标签发布打包修复、版本一致性检查、帮助换行与文档修复、GUI 会话 token 加固，以及 2.44.x → 3.0 迁移指南。这是供实际试用的发布候选版本，不是最终 3.0.0。
+**发布说明：** [3.0.0](./release-notes/3.0.0.md)——3.0 首个正式版：扫描优先 GUI、一条命令 MCP/Skill 集成、双语手册、明确的协议能力报告、Linux Docker 镜像、发布门禁、带校验和的 Windows/Linux 资产，以及 2.44.x → 3.0 迁移指南。
 
 ## 从哪里开始
 
@@ -18,7 +18,7 @@
 | 要把结果接入流水线 | [输出](./output.md) → [聚合](./aggregation.md) |
 | 在挑选模块 | [模块](./modules.md) |
 | 编写模块 | [模块开发](./module-development.md) |
-| 计划中的工作 | [路线图](./roadmap.md) → [P3/P4 可行性](./feasibility.md) |
+| 后续工作 | [路线图](./roadmap.md) → [进阶方向可行性](./feasibility.md) |
 | HTTP 探针质量 | [HTTP 探针审计](./http-probes-audit.md) |
 | 参数解析测试 | [参数解析器计划](./parser-test-plan.md) |
 | 协议扩展 | [协议覆盖计划](./protocol-coverage.md) |
@@ -55,11 +55,11 @@
 - [聚合](./aggregation.md)——结束后 NDJSON 聚合、schema 与规模
 - [模块](./modules.md)——四种模块类型以及 Xtate 自带的模块
 - [模块开发](./module-development.md)——C 接口、注册和 ProbeSlotPlan 示例
-- [路线图](./roadmap.md)——已完成工作与 P2/P3 计划
+- [路线图](./roadmap.md)——已完成工作与后续工作
 - [HTTP 探针审计](./http-probes-audit.md)——现状问题与重写计划
 - [参数解析器计划](./parser-test-plan.md)——覆盖范围与测试框架
 - [协议覆盖计划](./protocol-coverage.md)——zgrab2 参考协议矩阵与批次
-- [P3/P4 可行性](./feasibility.md)——目标选择、自适应速率、模板与流量随机化
+- [进阶方向可行性](./feasibility.md)——目标选择、自适应速率、模板与流量随机化
 - [中文帮助与 i18n](./help-i18n.md)——`--lang`、catalog 回退与 UTF-8 帮助排版
 - [Windows 快速上手](./windows-quickstart.md)——新手安装、Npcap、构建、首次扫描与排查
 - [Windows 可选依赖](./windows-dependencies.md)——PCRE2/LibXml2/bson/mongoc 与 MinGW 注意事项
@@ -109,7 +109,7 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-本文档基于 v3.0.0-rc.10 的代码树编写。如果你在更新的 commit 上发现内容有出入，请以二进制为准，也欢迎提 issue。
+本文档基于 v3.0.0 的代码树编写。如果你在更新的 commit 上发现内容有出入，请以二进制为准，也欢迎提 issue。
 
 ## 生成参考
 
