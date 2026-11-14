@@ -47,6 +47,7 @@ echo "==> building target_parse_fuzz"
     "$ROOT/tests/fuzz/target_parse_fuzz.c" \
     "$ROOT/src/target/target-parse.c" \
     "$ROOT/src/target/target-ipaddress.c" \
+    "$ROOT/src/util-data/file-open.c" \
     -o "$BUILD/target_parse_fuzz"
 
 TARGET_SRC=(
@@ -57,6 +58,7 @@ TARGET_SRC=(
     "$ROOT/src/target/target-rangev6.c"
     "$ROOT/src/target/target-rangeport.c"
     "$ROOT/src/util-data/fine-malloc.c"
+    "$ROOT/src/util-data/file-open.c"
 )
 echo "==> building h3_qpack_fuzz"
 "$CC" "${COMMON[@]}" -ffunction-sections -fdata-sections \
