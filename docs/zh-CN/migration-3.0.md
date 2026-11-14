@@ -16,7 +16,7 @@ Xtate 3.0 是面向使用体验的候选发布线：扫描优先的 GUI、单命
    `XTATE_STATE_DIR` 或显式 `result_path`。
 4. 如果使用 `--tui`，请迁移到 `--gui`；TUI 在 3.0 中已弃用。
 5. 重新确认 HTTP/3、QUIC 预期：仅 Linux，且构建时必须找到 ngtcp2/GnuTLS。
-6. 阅读 [3.0 发布说明](./release-notes/3.0.0-rc.7.md) 和
+6. 阅读 [3.0 发布说明](./release-notes/3.0.0-rc.8.md) 和
    [已知限制](./known-limitations.md)。
 
 ## 破坏性/行为变化

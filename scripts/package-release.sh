@@ -2,7 +2,7 @@
 # Package a Linux release tree and emit SHA256SUMS + build provenance.
 #
 # Usage: scripts/package-release.sh --binary reports/docker-out/xtate-linux \
-#          --version 3.0.0-rc.7 [--out dist] [--docker-image xtate:ubuntu24-full]
+#          --version 3.0.0-rc.8 [--out dist] [--docker-image xtate:ubuntu24-full]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
