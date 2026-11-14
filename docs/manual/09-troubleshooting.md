@@ -67,8 +67,8 @@ they change unrelated connections' behavior. Xtate warns at startup when a scan
 that needs the rules runs without them:
 
 ```text
-[WRN] firewall RST/ICMP suppression rules are not fully installed
-[HIN] run: sudo ./firewall/add_rules.sh
+[WRN] firewall RST/ICMP suppression rules are missing
+[HIN] run: sudo ./firewall/add_rules.sh   (Linux scanner host; never leave it installed)
 ```
 
 `tcp-syn` and stateless TCP port scans do not need these rules. UDP scans do not
@@ -187,7 +187,7 @@ kernel RST problem from section 1. It affects `zbanner`, `tcp-state`,
 
 Second most common: the probe is stateless and the server needs more of the
 conversation than one segment (`http` sees one segment; long banners and
-multi-segment TLS records need `-all-banner` in ZBanner or a stateful probe).
+multi-segment TLS records need `--all-banner` in ZBanner or a stateful probe).
 
 Third: the server answered with a zero-window SYN-ACK. ZBanner classifies that
 as `fake-open` (reason contains `zerowin`) and does not send the probe payload —
@@ -274,13 +274,13 @@ Work through these in order:
 1. **Level filter.** The default shows only `success`. `tcp-syn` reports closed
    ports as `failed`; `zbanner` and `udp` report port open/closed at `info`.
    Add `-show failed` or `-show info`, or promote with module parameters
-   (`-port-failure` for UDP, `-port-success`/`-port-failure` for ZBanner).
+   (`--port-failure` for UDP, `--port-success`/`--port-failure` for ZBanner).
 2. **Output module.** With `-output-module csv -o results.csv` results go to the
    file only. Add `--output-screen` or write to `-o -` where supported.
 3. **Deduplication.** Duplicate SYN-ACK/RST/banner packets are dropped by
    default. `--no-dedup`, a larger `-dedup-win`, or ZBanner's repeat flags
-   (`-scan-arg "-repeat-banner"`, `-repeat-synack`, `-repeat-ack`,
-   `-repeat-rst`) make repeats visible.
+   (`-scan-arg "--repeat-banner"`, `--repeat-synack`, `--repeat-ack`,
+   `--repeat-rst`) make repeats visible.
 4. **Module-level suppression.** ZBanner suppresses repeated packets before
    output; regex-based probes mark non-matching banners as `failed`.
 5. **Stateful scans never report closed ports.** A RST for an unknown
@@ -292,10 +292,10 @@ Work through these in order:
   retransmit. Re-run with `--repeat 1` or lower the rate.
 - **`tcp-state` latency and packet counts look odd.** HLTCP uses a fixed
   one-second RTO and a 1024-byte default window, so large transfers become many
-  small packets. `-tcp-win 8192` (with a matching `--max-packet-len`) is faster.
+  small packets. `--tcp-win 8192` (with a matching `--max-packet-len`) is faster.
 - **ZBanner grabs only the first banner segment** and then sends RST. Long
   banners, multi-segment TLS ServerHellos and large HTTP headers need
-  `-scan-arg "-all-banner"` (optionally `-all-banner-limit <n>`).
+  `-scan-arg "--all-banner"` (optionally `--all-banner-limit <n>`).
 - **TLS probes appear empty.** `tls-state` reports a failed handshake at `info`;
   it sends no SNI and no ALPN by default, so virtual hosts and CDNs may answer
   with a default certificate/site. Use `-show info`, `-probe-arg "-sni host
@@ -313,7 +313,7 @@ module instead of failing at runtime:
 | Missing dependency | Modules absent |
 |:---|:---|
 | OpenSSL | `tls-state`, `jarm`, `ssh-kex`, `quic` |
-| PCRE2 | `recog`, `recog-udp`, `recog-state`, `nmap`, `nmap-udp` |
+| PCRE2 | `hello-udp`, `recog`, `recog-udp`, `recog-state`, `nmap`, `nmap-udp` |
 | libngtcp2 + GnuTLS | `quic-state`, `http3-state` |
 | libbson / libmongoc | `bson`, `mongodb` output |
 | Lua | Lua probes are listed but fail at startup |
@@ -337,7 +337,7 @@ a packaging bug:
 
 ```bash
 xtate --list-capabilities      # http3 / quic_transport / http3_reason
-xtate --list-scan | grep quic-state
+xtate --list-scan              # quic-state appears only with ngtcp2/GnuTLS
 ```
 
 - On Linux: install `libngtcp2-dev`, `libngtcp2-crypto-gnutls-dev` and
@@ -401,7 +401,7 @@ token) and the job status.
 
 See also:
 
-- [05 · Scan modes](../scanning-modes.md) for what each engine is supposed to do
+- [Scanning modes](../scanning-modes.md) for what each engine is supposed to do
 - [Firewall](../firewall.md), [TUN/VPN and link types](../platform-support.md)
 - [Known limitations](../known-limitations.md)
 - [07 · Protocols and HTTP/3](./07-protocols-and-http3.md) for probe-level limits

@@ -4,7 +4,9 @@ Status: initial audit, 2026-11-12. Resolution status below.
 
 ## Resolution (post-2.42.0)
 
-Fixed and covered by tests:
+Fixed and covered by tests (the section later in this document, now headed
+"Findings (pre-fix baseline)", records the original issues; the resolution list
+here supersedes it):
 
 - all four line-based generators use `src/generate-modules/stream-reader.h`:
   one physical line is one record, overlong lines are consumed and counted,
@@ -30,7 +32,9 @@ all-invalid exit 1, strict exit 1). Remaining coverage is listed below.
 `--include-file` is not a generate module. It parses a static file into
 `TargetSet`; `--generate ip-stream` reads a file during the scan.
 
-## Findings
+## Findings (pre-fix baseline)
+
+These are the issues that were found before the fixes listed under Resolution.
 
 ### High
 

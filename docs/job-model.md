@@ -3,7 +3,7 @@
 **English** · [中文](zh-CN/job-model.md)
 
 Long scans need a control-plane job, not a blocking tool call. The job manager
-is the shared backend for MCP, TUI and (later) GUI.
+is the shared backend for MCP and the browser GUI.
 
 ## API
 
@@ -42,7 +42,7 @@ No shell is used. `argv` is passed directly.
 - One result file per job; partial results survive timeout/cancel.
 - Timeout is total wall-clock time, not a per-connection timeout.
 - The local control API (`job.start/status/results/cancel`) reuses this manager;
-  MCP/TUI/GUI are clients of that API.
+  MCP and GUI are clients of that API.
 - Job ids are stable strings; lifecycle errors are `SCAN_TIMEOUT`,
   `SCAN_CANCELLED`, `JOB_NOT_FOUND`, `JOB_LIMIT_REACHED`.
 - Single-threaded control plane for now; callers serialize manager access.

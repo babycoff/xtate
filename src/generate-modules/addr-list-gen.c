@@ -303,7 +303,7 @@ Generator AddrListGen = {
     .desc = "AddrList module generates target from stdin or file stream. The "
             "stream contains IP/Port pair in every line. Default splitter of "
             "ip and port is a space.\n"
-            "NOTE: AddrList will blocking the tx thread while waiting the "
+            "NOTE: AddrList will block the tx thread while waiting the "
             "stream to be readable, this would break the rule of scan rate. "
             "However, the scan rate won't exceed the configured value.",
 

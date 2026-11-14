@@ -9,9 +9,20 @@ test reference, not copy its code or promise output compatibility.
 
 ## Current Xtate coverage
 
+Status verified against the 3.0.0-rc.10 catalog: 11 scan modules and 59 probe
+modules on Windows. A Linux build with ngtcp2/GnuTLS adds `quic-state` and
+`http3-state`; `--list-capabilities` reports whether those modules exist in the
+current build.
+
 | Protocol | Xtate status | Notes |
 |:---|:---|:---|
 | HTTP | `http`, `http-state` | HTTP/1 work is frozen at the structured response parser pass. |
+| HTTP/2 | `h2c`, `h2` | `h2c` is cleartext prior knowledge; `h2` is TLS/ALPN h2 through HLTCP, with HPACK static-table, literal and Huffman string decoding. |
+| DNS | `dns` | One UDP DNS query with structured response fields. |
+| DoT | `dot` | `tls-state` state sub-probe (ALPN `dot`) that sends one DNS query inside TLS. |
+| DoH | `doh`, `doh-h2` | `tls-state` state sub-probes: DNS over HTTP/1.1 and over HTTP/2. |
+| QUIC | `quic`, `quic-state` | `quic` is a stateless capability probe; `quic-state` is the optional Linux ngtcp2/GnuTLS transport (absent from Windows builds). |
+| HTTP/3 | `http3-state` | State sub-probe over `quic-state`; Linux builds with ngtcp2 only. |
 | JARM | `jarm` | Salesforce 1.0 hash, official-reference comparison, `--first-probe`. |
 | SSH | `ssh`, `ssh-kex` | Banner/software and KEXINIT lists; `ssh-kex` performs an unauthenticated curve25519 KEX and reports the host-key type and SHA256 fingerprint. |
 | TLS | `tls-state`, `tls-hello` | Certificates/details, ALPN, SNI and JARM; STARTTLS adapters exist. |
@@ -22,7 +33,7 @@ test reference, not copy its code or promise output compatibility.
 | SOCKS5 | `socks5` | Greeting/method selection. |
 | Telnet | `telnet` | Banner and initial IAC options. |
 | SMTP | `smtp`, `smtp-state` | Banner / EHLO capabilities. |
-| MongoDB | `mongodb` | OP_MSG hello/BSON identification. |
+| MongoDB | `mongodb`, `mongodb-state` | OP_MSG hello/BSON identification. |
 | MySQL | `mysql`, `mysql-state` | Greeting identification; no auth. |
 | PostgreSQL | `postgres`, `postgres-state` | SSLRequest and auth-boundary probe. |
 | IMAP | `imap`, `imap-state` | Banner / CAPABILITY. |
@@ -32,8 +43,11 @@ test reference, not copy its code or promise output compatibility.
 | IPP | `ipp`, `ipp-state` | Get-Printer-Attributes. |
 | AMQP | `amqp`, `amqp-state` | Protocol header/Connection.Start. |
 | PPTP | `pptp`, `pptp-state` | Start-Control-Connection. |
+| SNMP | `snmp` | SNMPv1 request with community `public`. |
+| Recog | `recog`, `recog-udp`, `recog-state` | User-supplied hello data matched against Recog fingerprints (proof-of-concept version detection). |
+| Nmap probes | `nmap`, `nmap-udp` | Named Nmap probes from the loaded probe file. |
 | Banner | `null` / `hello` | Generic capture, not protocol-aware. |
-| Everything else | absent | See the matrix below. |
+| Everything else | absent | Covered by the `lua-tcp`/`lua-udp` scripting probes when needed; see the matrix below. |
 
 ## zgrab2 reference matrix
 
@@ -47,16 +61,18 @@ test reference, not copy its code or promise output compatibility.
 | BACnet | yes | absent | 3 | UDP/state |
 | Banner | yes | generic only | 1 | tcp/udp |
 | DNP3 | yes | absent | 3 | state |
+| DNS | yes | `dns` | 1 | UDP |
 | Fox | yes | absent | 3 | state |
 | FTP | yes | `ftp`/`ftp-state` | 1/2 | tcp/state |
-| HTTP | yes | partial/frozen | - | tcp/state |
+| HTTP | yes | `http`/`http-state` (HTTP/1 frozen) | - | tcp/state |
+| HTTP/2 | yes | `h2c`/`h2` | - | tcp/state |
 | IMAP | yes | `imap`/`imap-state` | 1/2 | tcp/state |
 | IPP | yes | `ipp`/`ipp-state` | 1/2 | tcp/state |
 | JARM | yes | done | - | tcp slots |
 | ManageSieve | yes | `managesieve`/`managesieve-state` | 1/2 | tcp/state |
 | Memcached | yes | `memcached` | 1 | tcp |
 | Modbus | yes | absent | 3 | state |
-| MongoDB | yes | `mongodb` | 1 | tcp |
+| MongoDB | yes | `mongodb`/`mongodb-state` | 1 | tcp |
 | MQTT | yes | `mqtt` | 1 | tcp |
 | MSSQL | yes | absent | 2 | state |
 | MySQL | yes | `mysql`/`mysql-state` | 1/2 | tcp/state |
@@ -70,9 +86,9 @@ test reference, not copy its code or promise output compatibility.
 | SMB | yes | absent | 2 | state |
 | SMTP | yes | `smtp`/`smtp-state` | 1/2 | tcp/state |
 | SOCKS5 | yes | `socks5` | 1 | state |
-| SSH | yes | partial | 2 | state |
+| SSH | yes | `ssh`/`ssh-kex` | 2 | state |
 | Telnet | yes | `telnet` | 1 | state |
-| TLS | yes | done/partial | - | state/tcp |
+| TLS | yes | `tls-state`/`tls-hello` | - | state/tcp |
 
 ## Implementation rules
 
@@ -80,8 +96,8 @@ test reference, not copy its code or promise output compatibility.
   selected method/algorithm, server identity and bounded error reason.
 - Single-packet protocols use `tcp`/`udp`; multi-step handshakes use `state`
   probes on `tcp-state`. Do not add per-target state to ZBanner.
-- Reuse the existing TLS layer for implicit TLS and the four STARTTLS adapters
-  where the protocol supports an upgrade.
+- Reuse the existing TLS layer for implicit TLS and the five STARTTLS adapters
+  (SMTP, IMAP, POP3, FTP, ManageSieve) where the protocol supports an upgrade.
 - Every payload is bounded; no unbounded reads, regex backtracking or
   decompression.
 - Optional protocol libraries stay optional and must not change the default
@@ -90,6 +106,9 @@ test reference, not copy its code or promise output compatibility.
   Internet target is not a test fixture.
 
 ## Suggested batches
+
+Batches A–C are largely implemented (see the coverage table); this section
+remains the ordering for the protocols that are still absent.
 
 ### Batch A — high-value, low complexity
 

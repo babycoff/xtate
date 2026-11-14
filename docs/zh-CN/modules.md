@@ -2,7 +2,7 @@
 
 [English](../modules.md) · **中文**
 
-Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上以 `NULL` 结尾的注册表里的一行；没有运行期插件加载。完整构建会注册 **11 个基础扫描 + 59 个探测 + 7 个输出 + 5 个生成**模块；另有可选的 `quic-state` 和 `http3-state`（需要 ngtcp2/GnuTLS）。缺少可选库的模块会直接从构建中消失（也从 `--list-*` 中消失）。
+Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上以 `NULL` 结尾的注册表里的一行；没有运行期插件加载。完整构建会注册 **12 个扫描 + 60 个探测 + 7 个输出 + 5 个生成**模块（共 84 个）；没有 ngtcp2/GnuTLS 时注册 11/59/7/5（共 82 个），因为 `quic-state` 和 `http3-state` 会随之消失。缺少可选库的模块会直接从构建中消失（也从 `--list-*` 中消失）。
 
 | 类别 | 职责 | 参数 | 注册表 |
 |:---|:---|:---|:---|
@@ -15,7 +15,7 @@ Xtate 由四类模块拼装而成。每一类都是一个 C 结构体，加上�
 
 ```bash
 xtate --list-scan      # 11，若有 quic-state 则为 12
-xtate --list-probe     # 59 个探测模块
+xtate --list-probe     # 59，若有 http3-state 则为 60
 xtate --list-out       # 7 个输出模块
 xtate --list-gen       # 5 个生成模块
 
@@ -34,7 +34,6 @@ xtate --help-gen blackrock
 | `tcp-state` | state | HLTCP 用户态 TCP；为 TLS/HTTP 状态探测模块提供完整会话。 |
 | `udp` | udp | 携带探测载荷的单包 UDP 扫描；ICMP port-unreachable 表示 closed。 |
 | `quic-state` | state | 原始 UDP + ngtcp2/GnuTLS 的有状态 QUIC 握手；输出版本、TLS/ALPN、证书字段并运行 state 子探测。可选构建。 |
-| `http3-state` | state | `quic-state` 之上的 HTTP/3 请求；方法/header/body、Huffman QPACK 字符串、完整 static table、结构化响应 header。可选构建。 |
 | `icmp-echo` | - | ICMP echo 主机发现；可记录 TTL 和 IPID。 |
 | `icmp-time` | - | ICMP 时间戳发现，仅 IPv4。 |
 | `sctp-init` | - | SCTP INIT 扫描；INIT-ACK 为 open，ABORT 为 closed。 |
@@ -169,7 +168,7 @@ STARTTLS 失败输出 `starttls error`。`--dump-cert-details` 输出
 `cert_serial`、`cert_signature_algorithm`、`cert_public_key`、
 `cert_public_key_bits`、`cert_san`、`tls_version`、`tls_cipher` 和 `tls_alpn`。
 
-### 通用（21）
+### 通用（25，另有可选 `http3-state`）
 
 | 探测 | 类型 | 功能 |
 |:---|:---:|:---|
@@ -181,6 +180,7 @@ STARTTLS 失败输出 `starttls error`。`--dump-cert-details` 输出
 | `tls-hello` | tcp | 固定 ClientHello；读取 ServerHello 的版本/记录层线索，但不完成握手。 |
 | `tls-state` | state | OpenSSL 驱动的 TLS 握手；`--starttls smtp|imap|pop3|ftp` 先完成明文升级；导出证书/密码套件/版本；`--dump-cert-details` 增加结构化 X.509/SAN/公钥/有效期/ALPN；可在 TLS 之上跑子探测。 |
 | `ssh` | tcp | 可配置 SSH banner，以及 KEX/host-key、cipher/MAC/压缩算法列表。 |
+| `ssh-kex` | state | 未认证的 SSH curve25519 KEX；报告 host-key 类型及其 SHA256 指纹。 |
 | `h2c` | tcp | cleartext h2c preface、可配置 SETTINGS/PING 指纹、帧/settings 解析；不是 TLS 上的 HTTP/2。 |
 | `h2` | state | 通过 HLTCP + TLS ALPN h2 的 HTTP/2：preface、SETTINGS、最小 HPACK 请求、帧/HEADERS/DATA。 |
 | `redis` | tcp | 只读 `INFO server` 识别 Redis，输出 version/mode/os/role。 |
@@ -190,6 +190,7 @@ STARTTLS 失败输出 `starttls error`。`--dump-cert-details` 输出
 | `socks5` | state | SOCKS5 greeting 和方法选择。 |
 | `telnet` | state | 初始 Telnet banner 和 IAC 选项解析。 |
 | `quic` | udp | QUIC v1 Initial 能力探测；分类 Version Negotiation/Retry/Initial/Handshake；不声称 QUIC 握手或 HTTP/3。 |
+| `http3-state` | state | 在 `quic-state` 之上发送 HTTP/3 请求；方法/header/body、Huffman QPACK 字符串、完整 static table、结构化响应 header。可选：仅出现在 ngtcp2/GnuTLS 构建中。 |
 | `jarm` | tcp | 通过 10 个 ClientHello slot 做 JARM；`--first-probe 1..10` 轮换哪个标准探针先发，`jarm_slot` 保留标准编号；`--probe-index` 只发一个；`jarm_part` 由 `tools/jarm_aggregate.py` 聚合。 |
 | `doh-h2` | state | `tls-state` 内的 DoH over HTTP/2（`-alpn h2`）；支持 HPACK literal/Huffman。 |
 | `doh` | state | `tls-state` 内的 DNS over HTTPS（HTTP/1.1 POST）。 |
@@ -198,7 +199,7 @@ STARTTLS 失败输出 `starttls error`。`--dump-cert-details` 输出
 | `snmp` | udp | SNMP（v1/v2c）请求，并按 MIB 提取主机信息。 |
 | `echo` | udp | 四个由 cookie 派生的字节；接受包含它们的回包。 |
 
-### Batch B 协议（15）
+### Batch B 协议（16）
 
 | Probe | Type | What it does |
 |:---|:---:|:---|
@@ -207,6 +208,7 @@ STARTTLS 失败输出 `starttls error`。`--dump-cert-details` 输出
 | `postgres` | tcp | PostgreSQL SSLRequest 能力检查。 |
 | `postgres-state` | state | SSLRequest + 认证边界 StartupMessage。 |
 | `mongodb` | tcp | OP_MSG `hello`/BSON 识别。 |
+| `mongodb-state` | state | 供 `tls-state` 组合使用的 MongoDB `hello`/BSON 探测。 |
 | `smtp` | tcp | 读取 SMTP 220 banner。 |
 | `smtp-state` | state | SMTP greeting + EHLO 能力/STARTTLS。 |
 | `imap` | tcp | 读取 IMAP greeting。 |
@@ -252,6 +254,13 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80 -scan zbanner -probe lua-tcp \
 ```
 
 Lua 在运行期加载；如果没有可用的 Lua 共享库，这些探测仍会出现在列表里，但会在启动时因加载错误而失败（请安装 Lua 5.3 或 5.4）。Lua 探测使用分离的 tx/rx/handler Lua state；选中 `lua-tcp`/`lua-udp` 时当前会强制 `--tx-thread-count 1` 和 `--rx-handler-count 1`。`lua-probes/` 里的示例脚本在脚本头部声明 `ProbeName`、`ProbeType` 和 `ProbeDesc`。
+
+### 开发示例（2）
+
+| 探测模块 | 类型 | 说明 |
+|:---|:---:|:---|
+| `slot-test` | tcp | 三 slot 的 `ProbeSlot_Always` 示例；可直接当作模板阅读。 |
+| `slot-test-udp` | udp | 三 slot `ProbeSlot_Always` 示例的 UDP 版本。 |
 
 ### 辅助（3）
 

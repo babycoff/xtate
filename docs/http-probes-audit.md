@@ -15,16 +15,17 @@ still duplicated; extracting them remains follow-up work.
 
 | Probe | Type | Lines (approx.) | Main role |
 |:---|:---:|---:|:---|
-| `http` | tcp | 700 | Stateless request/response banner |
-| `http-state` | state | 895 | HLTCP request/response banner |
-| `get-state` | state | 112 | Minimal debug GET |
+| `http` | tcp | 759 | Stateless request/response banner |
+| `http-state` | state | 950 | HLTCP request/response banner |
+| `get-state` | state | 113 | Minimal debug GET |
 | `h2c` | tcp | 329 | Cleartext HTTP/2 framing |
-| `h2` | state | 646 | TLS/ALPN h2 via HLTCP |
+| `h2` | state | 978 | TLS/ALPN h2 via HLTCP |
 
 `http` and `http-state` contain nearly duplicate configuration tables, request
 construction, header replacement and response reporting. `http-state` is a
-request sender, but its response path is still regex/banner-oriented rather
-than an HTTP response parser.
+request sender whose response path wraps `proto-http-result` (status/version,
+headers, Content-Length, bounded body/chunked metadata) and still adds
+regex/banner-oriented fields.
 
 ## Findings
 
@@ -40,27 +41,27 @@ Both probes independently maintain:
 
 A change in one probe can drift from the other.
 
-### 2. Response parsing is not HTTP-aware
+### 2. Response parsing is only partly HTTP-aware
 
-The response path mostly does:
-
-- optional PCRE2 match;
-- optional raw banner/UTF-8/data fields;
-- `all-banner` segment handling.
-
-It does not provide a structured view of:
+Since the first rewrite pass, the response path calls `proto-http-result` and
+reports:
 
 - status code and reason phrase;
 - HTTP version;
 - response headers;
 - Content-Length;
-- chunked transfer encoding;
-- trailers;
-- body boundaries;
-- redirects.
+- bounded chunked metadata.
 
-For a research scanner, raw bytes must remain available, but a structured
-parser is needed to make HTTP results comparable and testable.
+It still does not provide:
+
+- trailers;
+- body boundaries across segments;
+- redirects (no follow-up request);
+- chunked body reassembly in the stateless `http` probe.
+
+The raw/banner/`all-banner` fields also remain. For a research scanner, raw
+bytes must stay available; trailers, redirects and a complete body model need
+more parser work to make HTTP results comparable.
 
 ### 3. `http-state` is not a true stateful HTTP parser
 
@@ -99,13 +100,13 @@ and partial-chunk tests. This is acceptable for HLTCP but not justified for
 1. Add characterization tests for the current `http` and `http-state` output
    (raw bytes, regex match, all-banner, `--header`, cookies, dynamic Host).
 2. Extract a shared HTTP/1 request builder used by both probes.
-3. Add a bounded HTTP/1 response parser:
-   - status line and headers;
-   - Content-Length and chunked body;
-   - headers/body size limits;
-   - raw mode retained.
+3. Add a bounded HTTP/1 response parser: status line and headers,
+   Content-Length and chunked body, headers/body size limits, raw mode retained.
+   Partly implemented via `proto-http-result`; trailers, redirects and a
+   complete cross-segment body model remain.
 4. Integrate it into `http-state` first; `http` then reuses the same parser for
-   stateless responses.
+   stateless responses. Implemented for status/version/headers/Content-Length
+   and bounded chunked metadata in both probes.
 5. Keep `get-state` as a minimal debug probe unless it can reuse the parser
    without losing its simplicity.
 6. Add local lab servers for normal, chunked, truncated, malformed, redirect,

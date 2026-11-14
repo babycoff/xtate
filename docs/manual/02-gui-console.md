@@ -1,9 +1,13 @@
 # 02 · GUI console
 
 The 3.0 console is a local web page served by the Xtate binary. It is a client
-of the local control plane, exactly like the TUI and the MCP server: scans run
+of the local control plane, exactly like the MCP server: scans run
 in the daemon, not in the browser, and the console lists and controls the jobs
 that daemon owns.
+
+The CLI in [03 · CLI and jobs](./03-cli-and-jobs.md) is the reference interface;
+this console is an optional convenience layer over the same control plane and
+covers a smaller part of the feature set.
 
 The page binds loopback by default. It is not a remote dashboard, it has no
 user accounts, and remote binding is only an explicit container opt-in
@@ -53,8 +57,7 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 ```
 
 In this mode the console is only a client. Closing it leaves the daemon and its
-jobs running, and another console, the TUI or MCP can attach to the same
-endpoint. On Windows the endpoint is a named pipe such as
+jobs running, and another console or MCP can attach to the same endpoint. On Windows the endpoint is a named pipe such as
 `\\.\pipe\xtate-control`.
 
 ### Options
@@ -62,7 +65,7 @@ endpoint. On Windows the endpoint is a named pipe such as
 | Option | Effect |
 |:---|:---|
 | `--gui` | Serve the console (starts a private control plane unless `--control-connect` is given) |
-| `--gui-listen=<addr>` | Bind address; only `127.0.0.1` or `localhost`, optionally with a port. Default `127.0.0.1:8787`; `:0` asks the OS for a free port |
+| `--gui-listen=<addr>` | Bind address; `127.0.0.1`/`localhost` is the default, optionally with a port. Default `127.0.0.1:8787`; `:0` asks the OS for a free port. A non-loopback bind requires `XTATE_GUI_ALLOW_REMOTE=1` |
 | `--control-connect=<endpoint>` | Attach to an existing daemon instead of starting a private one |
 
 ## Page tour
@@ -242,13 +245,17 @@ Host validation, session token, control-token handling and the allowlist.
 
 The console is designed for a single local user:
 
-- **Loopback only.** `--gui-listen` rejects anything that is not `127.0.0.1` or
-  `localhost`. The server also rejects requests whose `Host` header is not
-  loopback, which blocks DNS-rebinding attacks.
-- **Per-session token.** A 128-bit random token is generated at startup, printed
-  once, and embedded in the page. Every `/api/*` request must send it as
-  `X-Xtate-GUI-Token`; comparison is constant-time. The token is never accepted
-  from a request body.
+- **Loopback by default.** `--gui-listen` requires an explicit `host:port`;
+  `127.0.0.1` and `localhost` are the normal choice. A non-loopback bind
+  (`0.0.0.0`) is rejected unless `XTATE_GUI_ALLOW_REMOTE=1` (`true`/`yes`) is
+  set for containers or a reverse proxy. The `Host` header is still validated
+  against loopback, which blocks DNS-rebinding attacks.
+- **Per-session token.** A 128-bit random token is generated at startup and
+  printed. Opening the printed URL (`.../?token=...`) sets an `HttpOnly`,
+  `SameSite=Strict` session cookie; the page and every `/api/*` request then
+  authenticate with that cookie or with an `X-Xtate-GUI-Token` header.
+  Comparison is constant-time, and the token is never accepted from a request
+  body.
 - **Private-mode control token.** If the GUI starts its own control plane and
   `XTATE_CONTROL_TOKEN` is not already set, it generates an ephemeral 128-bit
   token for that child, so another local account cannot connect to the pipe or
@@ -272,8 +279,9 @@ The console is designed for a single local user:
   larger because it is generated directly. Sockets time out after 8 seconds.
   The page sets a strict Content-Security-Policy, `X-Frame-Options: DENY` and
   `no-store`.
-- **No TLS.** Traffic never leaves the host; plain HTTP on loopback is the
-  design. Do not expose the port through a proxy or tunnel.
+- **No TLS in the GUI.** By default traffic never leaves the host; plain HTTP
+  on loopback is the design. A non-loopback bind is opt-in and must sit behind
+  a trusted reverse proxy and firewall; do not expose the port directly.
 
 The console is not a security boundary for scanning itself: rate limits, target
 limits, route preflight and result-path rules are enforced by the daemon and the
@@ -318,5 +326,5 @@ Host checking, private-mode startup and a dry-run managed job.
 - [GUI reference](../gui.md)
 - [Control plane](../control-plane.md) and [job model](../job-model.md)
 - [MCP server](../mcp-server.md) and [Agent Skill](../agent-skill.md)
-- [TUI](../tui.md) (2.44.x interface, deprecated in 3.0)
+- [MCP server](../mcp-server.md) for automation and AI clients
 - [Troubleshooting](../troubleshooting.md)

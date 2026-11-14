@@ -63,13 +63,13 @@ xtate -ip 203.0.113.10 -p 443 -scan zbanner -probe tls-hello \
   -probe-arg "--support-tls13"
 ```
 
-- `-scan-arg` (full form `--scan-module-arg`, also `--scanner-arg`) applies to
-  the scan module.
-- `-probe-arg` (full form `--probe-module-arg`, also `--probe-args`) applies to
-  the probe module.
-- `-output-arg` (full forms `--output-module-arg`/`--output-module-args`,
-  `--out-arg`) applies to the output module.
-- `-gen-arg` (full forms `--generate-module-arg`/`--generate-module-args`,
+- `-scan-arg` (`--scan-module-args`, `--scan-module-arg`, `--scanner-arg`)
+  applies to the scan module.
+- `-probe-arg` (`--probe-module-args`, `--probe-module-arg`, `--probe-args`)
+  applies to the probe module.
+- `-output-arg` (`--output-module-args`, `--output-module-arg`, `--out-arg`)
+  applies to the output module.
+- `-gen-arg` (`--generate-module-args`, `--generate-module-arg`,
   `--generator-arg`) applies to the generator.
 
 Each string is split by Xtate, not by your shell, so the whole argument list
@@ -416,7 +416,7 @@ configured rate).
 
 | Feature | Requires |
 |:---|:---|
-| `tls-state`, `tls-hello`, `jarm`, TLS handshakes, SSH key exchange | OpenSSL |
+| `tls-state`, `jarm`, TLS handshakes, SSH key exchange | OpenSSL |
 | `quic-state`, QUIC probes, HTTP/3 | ngtcp2 + GnuTLS |
 | `http` regex, `hello` regex, `nmap`, `recog` | PCRE2 |
 | `recog` XML parsing | libxml2 |

@@ -170,7 +170,7 @@ The table must be loaded at startup, otherwise Xtate refuses to run.
 
 ## Managed jobs: heartbeat, chunks and manifest
 
-A job started through the control plane (GUI, TUI, MCP, or
+A job started through the control plane (GUI, MCP, or
 `--job-run`) writes its results to a file owned by the job manager:
 
 ```bash
@@ -233,11 +233,11 @@ xtate --job-run=request.json --job-result=out.ndjson \
   builds them for any terminal state, so a cancelled or timed-out job can
   produce chunked partial results.
 
-`--result-quota N` is different: it is enforced **during** the scan. When the
-output file grows beyond `N` bytes, Xtate logs "result file exceeds quota;
-stopping scan", marks the output fatal and stops transmission. The job manager
-also reports a post-run warning if a result file exceeds its quota. A quota is
-a safety valve, not a precise record limit.
+`--result-quota N` is a post-run check, not a mid-scan limit. After the job
+reaches a terminal state the job manager compares the result size with `N` and
+logs a warning if the file is larger; a later chunking pass still runs, so the
+chunks may be incomplete. A quota is a reporting guardrail, not a precise
+record limit, and it does not stop or truncate a running scan.
 
 A timeout or cancel does not delete the result file: whatever was written
 before the stop remains readable.
@@ -303,6 +303,9 @@ zgrep -c '"level":"success"' out.ndjson.00003.ndjson.zst
 
 If you need a different transport, filter or aggregate, do it on the NDJSON
 stream; it is the only format that preserves every field without ambiguity.
+The recipes above use Unix tools (`jq`, `wc`, `zgrep`); on Windows run them in
+WSL or Git Bash, or read the same records through the GUI Results card or a
+small script.
 
 ## Limits and risks
 
@@ -318,8 +321,8 @@ stream; it is the only format that preserves every field without ambiguity.
 - Result files are not cleaned up automatically. Copy what you need before
   the job manager prunes old jobs, and treat result paths as sensitive: they
   contain every scanned address and any banner/certificate data.
-- `--result-quota` stops the scan; it does not repair or truncate an
-  over-quota file.
+- `--result-quota` is checked after the job ends and only logs a warning; it
+  does not repair or truncate an over-quota file.
 
 ## See also
 

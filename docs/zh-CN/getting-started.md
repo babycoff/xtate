@@ -14,7 +14,7 @@ Xtate 是一款面向大规模主动测量的模块化全栈网络扫描器。�
 |:---|:---|
 | 操作系统 | Linux（Ubuntu 22.04/24.04 为参考环境）或 Windows 10/11 |
 | CPU | 仅支持 64 位**小端**；不满足时 CMake 会提前终止 |
-| 构建系统 | CMake ≥ 3.20 与 C99 编译器（GCC、Clang、MSVC、MinGW-w64） |
+| 构建系统 | CMake ≥ 3.13 与 C99 编译器（GCC、Clang、MSVC、MinGW-w64） |
 | 报文 I/O | Linux 用 libpcap，Windows 用 Npcap（运行时依赖） |
 | 权限 | root，或 `CAP_NET_RAW`+`CAP_NET_ADMIN`；Windows 上为管理员 |
 
@@ -24,13 +24,13 @@ Xtate 是一款面向大规模主动测量的模块化全栈网络扫描器。�
 
 | 平台 | 编译器 | 状态 | 可选依赖 |
 |:---|:---|:---|:---|
-| Ubuntu 24.04 | GCC 13.3 | 构建 + `--selftest` 通过，模块 12/59/7/5 | OpenSSL、PCRE2、LibXml2、BSON、mongoc、ngtcp2/GnuTLS |
-| Ubuntu 24.04 | Clang 18.1 | 构建 + `--selftest` 通过，模块 12/59/7/5 | OpenSSL、PCRE2、LibXml2、BSON、mongoc、ngtcp2/GnuTLS |
+| Ubuntu 24.04 | GCC 13.3 | 构建 + `--selftest` 通过，模块 12/60/7/5 | OpenSSL、PCRE2、LibXml2、BSON、mongoc、ngtcp2/GnuTLS |
+| Ubuntu 24.04 | Clang 18.1 | 构建 + `--selftest` 通过，模块 12/60/7/5 | OpenSSL、PCRE2、LibXml2、BSON、mongoc、ngtcp2/GnuTLS |
 | Windows 10/11 | MSVC 19.5x（Visual Studio 2022/2026） | 构建 + `--selftest` 通过；探测模块数量取决于可选库 | 通过 Scoop 装 OpenSSL；未装 PCRE2/BSON/mongoc/zstd |
 | Windows 10/11 | Clang 23（clang-cl） | 构建 + `--selftest` 通过；探测模块数量取决于可选库 | 通过 Scoop 装 OpenSSL；未装 PCRE2/BSON/mongoc/zstd |
 | Windows 10/11 | MinGW-w64 GCC 16 | 构建 + `--selftest` 通过；探测模块数量取决于可选库 | 无 OpenSSL（Scoop 包是 MSVC ABI） |
 
-模块数量是最快的自检方式：**59 个探测 + 7 个输出 + 12 个扫描（含 `quic-state`）** 表示依赖齐全；Windows 上未启用 ngtcp2/GnuTLS 时扫描模块为 11 个。数量变少说明至少有一个可选库没有被找到。
+模块数量是最快的自检方式：60 个探测、7 个输出、12 个扫描和 5 个生成模块表示依赖齐全（`quic-state` 属于扫描，`http3-state` 属于探测）。没有 ngtcp2/GnuTLS 时预期 59 个探测和 11 个扫描；少于这个数说明至少有一个可选库没有被找到。
 
 ## 在 Linux 上构建
 
@@ -102,7 +102,7 @@ Lua 5.3/5.4 与 PF_RING 在运行时加载，而不是链接期依赖：`lua-tcp
 ### 前置条件
 
 1. **Visual Studio 2022 或 2026**，安装“使用 C++ 的桌面开发”工作负载；或者安装 **MinGW-w64**（`scoop install mingw`）。
-2. **CMake ≥ 3.20**（`scoop install cmake`）。
+2. **CMake ≥ 3.13**（`scoop install cmake`）。
 3. **Npcap**，安装时启用 WinPcap 兼容模式，用于报文收发。`wpcap.dll` 是运行时依赖，编译时不需要，但没有它无法真正扫描。
 4. 64 位小端主机。以下命令在普通 PowerShell 或 `cmd.exe` 中执行；真正扫描时使用管理员终端。
 
@@ -135,7 +135,7 @@ cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
   -DCMAKE_TOOLCHAIN_FILE="$env:USERPROFILE\scoop\apps\vcpkg\current\scripts\buildsystems\vcpkg.cmake"
 ```
 
-没有 PCRE2 时，Windows 构建得到 15 个 probe 而不是 21 个；没有 libbson/mongoc 时，得到 5 个 output 而不是 7 个。没有 zstd 时，`--result-compress=zstd` 会回退为未压缩分片，`--list-capabilities` 显示 `zstd:false`。这是依赖缺失的预期结果，不是构建失败。
+没有 PCRE2 时，完整构建得到 54 个 probe 而不是 60 个（Windows 上无 ngtcp2 的构建为 53 而不是 59）；没有 libbson/mongoc 时，得到 5 个 output 而不是 7 个。没有 zstd 时，`--result-compress=zstd` 会回退为未压缩分片，`--list-capabilities` 显示 `zstd:false`。这是依赖缺失的预期结果，不是构建失败。
 
 ### MSVC
 
@@ -238,7 +238,7 @@ pwsh -File .\scripts\build-windows.ps1 -Toolchain all -Yes
 | `CMake Error: Not a file: .../CMakeFiles/VerifyGlobs.cmake` | 源码路径含非 ASCII 字符，MinGW Makefiles 编码错乱。使用 ASCII 中转路径或 `scripts/build-windows.ps1`。 |
 | MinGW 报 `Could NOT find OpenSSL ... missing OPENSSL_CRYPTO_LIBRARY` | Scoop 的 OpenSSL 是 MSVC 包。改用 MSVC/clang-cl，或提供 MinGW 版本的 OpenSSL。 |
 | `--version` 显示 `PCRE2 (null)` | 没找到 PCRE2 头文件/库。Debian/Ubuntu 安装 `libpcre2-dev` 和 `pkg-config`；Windows 用 vcpkg（Scoop 没有 PCRE2 开发包）。 |
-| `OpenSSL (null)`，probe 只剩 52 个 | OpenSSL 被跳过。Windows 用 MSVC/clang-cl + Scoop OpenSSL；Linux 安装 `libssl-dev`。 |
+| `OpenSSL (null)`，四个 probe 缺失 | OpenSSL 被跳过，因此没有 `jarm`、`tls-state`、`quic` 和 `ssh-kex`（完整构建为 56 个 probe 而不是 60 个）。Windows 用 MSVC/clang-cl + Scoop OpenSSL；Linux 安装 `libssl-dev`。 |
 | 缺少 `bson`/`mongodb` 输出模块 | 没找到 libbson/libmongoc；安装它们，或接受较少的 output 集合。 |
 | `--selftest` 报 `timing error` | 2.27.2 已修复 Windows 上过严的 1% 计时容差；旧版本请更新到当前代码。 |
 | `--selftest` 返回非零 | 现在会把它当作真实失败；输出会打印 `Regression test: failed`，进程退出码非零。 |

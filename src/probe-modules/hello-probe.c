@@ -228,7 +228,7 @@ static ConfParam hello_parameters[] = {
      SET_regex,
      Type_ARG,
      {0},
-     "Specifies a regex and sets matched response data as successed instead of"
+     "Specifies a regex and marks matched response data as success instead of"
      " reporting all results."},
     {"case-insensitive",
      SET_insensitive,
@@ -342,10 +342,11 @@ Probe HelloProbe = {
     .short_desc =
         "Send user-specified payload and get response in stateless TCP scan.",
     .desc =
-        "HelloProbe use static content set by user as hello data and reports "
-        "banner. We can set hello data in different format and set a regex to "
-        "match the response as successed. It is used to test POC immediatly.\n"
-        "NOTE: If no hello data was specified, HelloProbe would just wait "
+        "HelloProbe sends user-supplied static content as hello data and "
+        "reports the banner. Hello data can be supplied in different formats, "
+        "and a regex can match the response as success. It is intended for "
+        "immediate PoC validation.\n"
+        "NOTE: If no hello data is specified, HelloProbe just waits for a "
         "response.\n"
         "Dependencies: PCRE2 for regex.",
 

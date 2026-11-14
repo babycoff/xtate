@@ -337,7 +337,7 @@ static ConfParam hellostate_parameters[] = {
      SET_regex,
      Type_ARG,
      {0},
-     "Specifies a regex and sets matched response data as successed instead of"
+     "Specifies a regex and marks matched response data as success instead of"
      " reporting all results."},
     {"case-insensitive",
      SET_insensitive,
@@ -362,7 +362,7 @@ static ConfParam hellostate_parameters[] = {
      SET_all_banner,
      Type_FLAG,
      {"banner-all", 0},
-     "Get the whole responsed banner before connection timeout, not just the "
+     "Get the whole response before the connection timeout, not just the "
      "banner in the first segment."},
     {"all-banner-limit",
      SET_all_banner_limit,
@@ -523,14 +523,14 @@ Probe HelloStateProbe = {
     .short_desc =
         "Send user-specified payload and get response in stateful TCP scan.",
     .desc =
-        "HelloStateProbe is the stateful version of HelloPorbe, it uses static"
-        " content set by user as hello data and reports banner. It is used to "
-        "test POC immediatly under stateful TCP connection and can work with "
-        "services over TLS. We can set hello data in different format and set"
-        " a regex to match the the first response(banner) or whole response "
-        " as successed.\n"
-        "NOTE: If no hello data was specified, HelloStateProbe would just wait "
-        "banner (first packet with response).\n"
+        "HelloStateProbe is the stateful version of HelloProbe. It sends "
+        "user-supplied hello data and reports the banner. It is intended for "
+        "immediate PoC validation over a stateful TCP connection and can work "
+        "with services over TLS. Hello data can be supplied in different "
+        "formats, and a regex can match the first response (banner) or the "
+        "whole response as success.\n"
+        "NOTE: If no hello data is specified, HelloStateProbe waits for a "
+        "banner (the first response packet).\n"
         "Dependencies: PCRE2 for regex.",
 
     .init_cb           = &hellostate_init,

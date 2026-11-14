@@ -17,6 +17,11 @@ tests, documentation, and careful performance work.
 - User-facing behavior changes need tests and documentation. The docs are
   maintained in English and Chinese; update both trees when the change is
   user-visible.
+- A new parameter, module, version or GUI/MCP surface must be synchronized
+  across the CLI help, MCP schema, GUI catalog, Docker build, README and both
+  documentation trees. Follow
+  [docs/release-checklist.md](docs/release-checklist.md) and run
+  `python3 tests/release/test_surface_consistency.py` after rebuilding.
 - By contributing you agree that your contribution is licensed under the
   repository's **AGPL-3.0** license.
 

@@ -64,6 +64,7 @@ jobs:
           $env:XTATE_MCP_DOCS_DIR = (Get-Location).Path
           New-Item -ItemType Directory -Force -Path $env:XTATE_STATE_DIR | Out-Null
           python tests/release/test_version_consistency.py --skip-docs
+          python tests/release/test_surface_consistency.py
           python tests/mcp/test_mcp_contract.py
           python tests/skill/test_skill_contract.py
           python tests/schema/test_scan_request_runtime.py

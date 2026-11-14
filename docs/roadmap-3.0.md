@@ -149,22 +149,26 @@ real-endpoint sample form the interop matrix.
 
 ## Workstream D — manual and help
 
-Create `docs/manual/` with:
+The delivered manual (`docs/manual/`) has one README and nine chapters:
 
-1. install and quick start
-2. GUI guide (every page and field)
-3. targets, ports, interfaces
-4. scan modes
-5. probe reference, including separate HTTP/1, HTTP/2, HTTP/3, QUIC chapters
-6. output and results
-7. MCP, Agent Skill, automation
-8. troubleshooting (fake-IP, TUN, firewall, permissions)
-9. security and authorization
-10. full parameter reference
+1. `01-install-and-quickstart`
+2. `02-gui-console`
+3. `03-cli-and-jobs`
+4. `04-targets-and-scanning`
+5. `05-modules-and-parameters`
+6. `06-results-and-files`
+7. `07-protocols-and-http3`
+8. `08-architecture-and-security`
+9. `09-troubleshooting`
 
 Module reference is generated from the module registry. GUI help, `--help`, and
 the manual use the same metadata. English and Chinese must have matching
 chapters and zero broken links.
+
+Status: 3.0.0-rc.10 implements workstreams A–D (GUI shell, MCP surface, Linux-only
+HTTP/3 transport, nine-chapter English manual). Remaining work is RC trial
+fixes, the agent evaluation suite and release packaging; the Chinese manual is
+still being completed and is tracked by the parity gate.
 
 ## Workstream E — Ubuntu 24.04 full-feature build environment
 

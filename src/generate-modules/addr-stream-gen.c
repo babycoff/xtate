@@ -444,7 +444,7 @@ Generator AddrStreamGen = {
             "stream contains IP/Port range pair in lines. Default splitter of "
             "ip and port range is a space. For every IP/Port range pair(line), "
             "AddrStream will do random picking by blackrock algorithm.\n"
-            "NOTE: AddrStream will blocking the tx thread while waiting the "
+            "NOTE: AddrStream will block the tx thread while waiting the "
             "stream to be readable, this would break the rule of scan rate. "
             "However, the scan rate won't exceed the configured value.",
 

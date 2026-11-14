@@ -221,7 +221,7 @@ static ConfParam helloudp_parameters[] = {
      SET_regex,
      Type_ARG,
      {0},
-     "Specifies a regex and sets matched response data as successed instead of"
+     "Specifies a regex and marks matched response data as success instead of"
      " reporting all results."},
     {"case-insensitive",
      SET_insensitive,
@@ -329,11 +329,11 @@ Probe HelloUdpProbe = {
     .type       = ProbeType_UDP,
     .params     = helloudp_parameters,
     .short_desc = "Send user-specified payload and get response in UDP scan.",
-    .desc = "HelloUdpProbe is the udp version of HelloPorbe, it uses static"
-            " content set by user as hello data and reports banner if it "
-            "matches regex that user set. It is used to test POC immediatly "
-            "under udp.\n"
-            "NOTE: We must specify hello data and regex for HelloUdpProbe.\n"
+    .desc = "HelloUdpProbe is the UDP version of HelloProbe. It sends "
+            "user-supplied static content as hello data and reports the banner "
+            "if it matches the configured regex. It is intended for immediate "
+            "PoC validation over UDP.\n"
+            "NOTE: Hello data and a regex are required for HelloUdpProbe.\n"
             "Dependencies: PCRE2.",
 
     .init_cb              = &helloudp_init,

@@ -54,7 +54,9 @@ a failed match remains diagnosable.
 - HTTP/3 header matching is bounded by `--max-headers`; the response header
   count is always reported, but headers beyond the retained limit are not
   matchable.
-- HTTP/2 header matching is bounded by the probe's header buffer; H2 currently
-  supports static/literal HPACK only.
+- HTTP/2 header matching is bounded by the probe's header buffer. `h2` decodes
+  the HPACK static table, literal header fields and Huffman-coded string
+  literals; dynamic-table insertions and a full stream state machine are not
+  implemented.
 - HTTP/1 regex historically matched the raw response; `all` preserves that
   behavior. Use `--match-scope headers|body` for precise matching.

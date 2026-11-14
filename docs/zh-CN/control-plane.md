@@ -2,7 +2,7 @@
 
 [English](../control-plane.md) · **中文**
 
-MCP、TUI、GUI 共用的本地 JSON-lines 契约。一行一个 JSON 对象；服务端不执行
+MCP、GUI 共用的本地 JSON-lines 契约。一行一个 JSON 对象；服务端不执行
 shell，也不是网络监听器。
 
 ## 传输
@@ -120,6 +120,6 @@ manifest 和分片。
 ## 规则
 
 - 控制面单线程；manager 调用串行。
-- daemon 拥有 worker；MCP/TUI/GUI 只是客户端。
+- daemon 拥有 worker；MCP/GUI 只是客户端。
 - server 重启终止 job，不声称持久化或恢复。
 - 本地 token 鉴权；不监听网络。

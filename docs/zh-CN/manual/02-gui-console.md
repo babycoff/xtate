@@ -2,9 +2,9 @@
 
 [English](../../manual/02-gui-console.md) · **中文**
 
-3.0 控制台是由 Xtate 二进制提供的本地网页。它和 TUI、MCP server 一样，是本地控制面的客户端：扫描在守护进程里运行，不在浏览器里；控制台列出并控制该守护进程拥有的 job。
+3.0 控制台是由 Xtate 二进制提供的本地网页。它和 MCP server 一样，是本地控制面的客户端：扫描在守护进程里运行，不在浏览器里；控制台列出并控制该守护进程拥有的 job。
 
-页面只在回环上可用。它不是远程看板，不监听网络接口，也没有用户账户。扫描授权是一个独立的、显式的步骤。
+页面默认只在回环上可用。它不是远程看板；只有显式设置 `XTATE_GUI_ALLOW_REMOTE=1` 时才允许非环回绑定，而且始终做 Host 校验。它没有用户账户。扫描授权是一个独立的、显式的步骤。
 
 ## 启动控制台
 
@@ -42,14 +42,14 @@ sudo xtate --control-plane=/tmp/xtate-ctl.sock
 xtate --control-connect=/tmp/xtate-ctl.sock --gui
 ```
 
-此模式下控制台只是客户端。关闭它不会影响守护进程及其 job，另一个控制台、TUI 或 MCP 都可以接入同一个端点。Windows 上的端点是命名管道，例如 `\\.\pipe\xtate-control`。
+此模式下控制台只是客户端。关闭它不会影响守护进程及其 job，另一个控制台或 MCP 都可以接入同一个端点。Windows 上的端点是命名管道，例如 `\\.\pipe\xtate-control`。
 
 ### 选项
 
 | 选项 | 作用 |
 |:---|:---|
 | `--gui` | 提供控制台（除非给了 `--control-connect`，否则启动私有控制面） |
-| `--gui-listen=<addr>` | 绑定地址；只允许 `127.0.0.1` 或 `localhost`，可带端口。默认 `127.0.0.1:8787`；`:0` 让操作系统分配空闲端口 |
+| `--gui-listen=<addr>` | 绑定地址；通常为 `127.0.0.1` 或 `localhost`，可带端口。默认 `127.0.0.1:8787`；`:0` 让操作系统分配空闲端口。非环回绑定需 `XTATE_GUI_ALLOW_REMOTE=1` |
 | `--control-connect=<endpoint>` | 接入已有守护进程，而不是启动私有的 |
 
 ## 页面导览
@@ -135,14 +135,17 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 
 控制台是为单个本地用户设计的：
 
-- **仅回环。** `--gui-listen` 拒绝除 `127.0.0.1` 或 `localhost` 以外的任何值。服务器还会拒绝 `Host` 头不是回环的请求，从而阻断 DNS rebinding 攻击。
+- **默认仅环回。** `--gui-listen` 需要显式 `host:port`；通常使用 `127.0.0.1` 或
+  `localhost`。只有为容器或反向代理设置 `XTATE_GUI_ALLOW_REMOTE=1`
+  （或 `true`/`yes`）时才允许非环回绑定（`0.0.0.0`）。服务端仍会校验 `Host`
+  头是否指向环回地址，以阻止 DNS rebinding 攻击。
 - **每会话 token。** 启动时生成一个 128 位随机 token，只打印一次，并嵌入页面。每个 `/api/*` 请求都必须把它放在 `X-Xtate-GUI-Token` 中；比较是常数时间的。绝不从请求体接受该 token。
-- **私有模式控制 token。** 如果 GUI 自行启动控制平面且环境中未设置 `XTATE_CONTROL_TOKEN`，它会为该子进程生成一个临时 128 位 token，使本机其他账户无法连接管道或 socket。该 token 在 GUI 退出时清除，且不会打印。
+- **私有模式控制 token。** 如果 GUI 自行启动控制面且环境中未设置 `XTATE_CONTROL_TOKEN`，它会为该子进程生成一个临时 128 位 token，使本机其他账户无法连接管道或 socket。该 token 在 GUI 退出时清除，且不会打印。
 - **方法白名单。** 浏览器桥只转发 `job.list`、`job.status`、`job.cancel`、`job.result_manifest` 和 `job.start`。`/api/results` 是独立的只读处理器，只接受 job id，并分页读取该 job manifest 指向的结果文件；这两条路径都不能调用任意控制方法。`/api/options`、`/api/modules` 和 `/api/preflight` 是服务端生成的只读处理器。`/api/open` 只接受 job id 加 `kind`（`log`/`result`/`manifest`），从 job status/manifest 解析路径，绝不打开客户端提供的路径。
 - **服务端授权。** 除非请求带有 `params.authorized: true`，否则 `job.start` 会被拒绝。浏览器复选框只是便利，不是强制点。
 - **无 shell、无任意路径。** GUI 服务器不执行命令，也不读取任意文件。结果通过守护进程的 manifest 读取，页面只渲染服务器数据。
 - **有界请求。** 头部上限 128 KiB，正文 64 KiB，桥接回复使用 64 KiB 缓冲；服务端直接构建的模块目录可能更大。socket 超时 8 秒。页面设置严格的 Content-Security-Policy、`X-Frame-Options: DENY` 和 `no-store`。
-- **无 TLS。** 流量从不离开主机；回环上的明文 HTTP 就是设计。不要通过代理或隧道暴露该端口。
+- **GUI 本身不提供 TLS。** 默认流量不离开主机；回环上的明文 HTTP 就是设计。非环回绑定必须显式开启，并且应放在可信反向代理与防火墙之后；不要直接暴露该端口。
 
 控制台不是扫描本身的安全边界：速率限制、目标限制、路由预检和结果路径规则由守护进程与 job worker 强制执行，MCP 还有自己的限制（见 [MCP server](../mcp-server.md)）。
 
@@ -178,5 +181,5 @@ GUI 测试套件是 `python tests/gui/test_gui.py`；它覆盖页面/token 握�
 - [GUI 参考](../gui.md)
 - [控制面](../control-plane.md)与 [job 模型](../job-model.md)
 - [MCP server](../mcp-server.md)与 [Agent Skill](../agent-skill.md)
-- [TUI](../tui.md)（2.44.x 界面，3.0 中已弃用）
+- [MCP server](../mcp-server.md)（自动化与 AI 客户端）
 - [故障排查](../troubleshooting.md)

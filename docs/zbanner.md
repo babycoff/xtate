@@ -264,9 +264,10 @@ without a table.
   dropped banner segment is a missing banner. `--repeat-synack`, `--repeat-banner`,
   `--repeat-ack` and `--repeat-rst` re-emit results that arrive more than once, but nothing
   re-sends a packet that never arrived.
-- **Deduplication is approximate.** It is a 4-way bucket table with random eviction, sized
-  by `--dedup-win`. Under high fan-out from one address block, entries are evicted and the
-  repeat counter becomes unreliable — which also degrades `--all-banner` bookkeeping.
+- **Deduplication is approximate.** It is a 4-way bucket table that evicts the oldest
+  entry in the bucket, sized by `--dedup-win`. Under high fan-out from one address block,
+  entries are evicted and the repeat counter becomes unreliable — which also degrades
+  `--all-banner` bookkeeping.
 - **Zero window is `fake-open` by default.** A real service whose accept queue is full also
   advertises a zero window; such a target is classified `fake-open` and its banner is not
   requested. `-scan-arg "--probe-zerowin"` is a research switch that still classifies it as

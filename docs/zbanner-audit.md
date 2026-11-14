@@ -3,7 +3,7 @@
 **English** · [中文](zh-CN/zbanner-audit.md)
 
 `zbanner` is the stateless TCP banner path and the largest scan-module file
-(`src/scan-modules/zbanner-scan.c`, about 1200 lines). This is an audit plan, not
+(`src/scan-modules/zbanner-scan.c`, about 1100 lines). This is an audit plan, not
 a claim that the current behavior is broken in every case. The goal is to make
 the state machine explicit and testable without losing the stateless model.
 
@@ -130,20 +130,24 @@ startup.
 
 ## Suggested refactor
 
-1. Extract a small response classifier returning an enum
-   (`SYNACK`, `RST`, `BANNER`, `ACK`, `IGNORE`) plus a normalized result.
-2. Put all-banner limit/floor/truncated/RST decisions in one helper with
-   boundary tests.
-3. Add a one-shot `AfterFirstReply` guard and test a multi-segment banner.
-4. Keep `banner seqno` as the ordering field; demote `banner idx` to an
-   approximate dedup counter in docs and output.
-5. Add a regression matrix:
+The first four candidates from the original list are already implemented
+(`zb_classify()`, `zb_all_banner_decide()`, the `repeats == 0` one-shot guard,
+and documenting `banner idx` as a dedup counter). The remaining candidates are:
+
+1. Make a probe `payload_len` mismatch a hard startup error instead of a
+   per-SYN-ACK diagnostic, so an inconsistent payload contract cannot run.
+2. Add a bounded one-shot table for `-nodedup`/`--no-dedup-banner` mode, where
+   the dedup `repeats` counter stays 0 and `AfterFirstReply` can still fan out
+   more than once.
+3. Extend the regression matrix:
    - limit 1, 2, 8; floor 1, 2;
    - duplicate/retransmitted banners;
    - ACK-only and RST first responses;
    - payload-length mismatch;
    - IPv4 and IPv6;
    - `with-ack` with zero and non-zero payload.
+4. Keep `banner seqno` as the ordering field and `banner idx` as an approximate
+   dedup counter; add a boundary test for dedup eviction on a small window.
 
 ## Non-goals
 

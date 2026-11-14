@@ -2,7 +2,7 @@
 
 [English](../../manual/03-cli-and-jobs.md) · **中文**
 
-CLI 是参考接口：GUI、TUI 和 MCP 都驱动同一个扫描引擎和同一个 job 管理器。本章介绍扫描命令、输出、本地控制面和托管 job。
+CLI 是参考接口：GUI 和 MCP 都驱动同一个扫描引擎和同一个 job 管理器。本章介绍扫描命令、输出、本地控制面和托管 job。
 
 下面的示例中，`xtate` 在 Linux/macOS 上指 `./bin/xtate`，在 Windows 上指 `.\bin\xtate.exe`。原始套接字扫描需要 `sudo` 或提权的 shell。
 
@@ -77,7 +77,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 结果流向 stdout，每个回包一行：
 
 ```text
-[+] host: 192.168.1.10 port: 80 "open" because "syn-ack"
+[+] host: 192.168.1.10 port: 80 in tcp is "open" because "syn-ack"
 ```
 
 默认只显示 `success` 结果；关闭的端口是 `failed`：
@@ -143,7 +143,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80 -scan tcp-syn \
 
 ## 托管 job
 
-长时间扫描应当做成 job：由本地守护进程拥有的子进程，带有超时、取消和结果文件。同一个 job 管理器支撑 MCP、TUI 和 GUI。
+长时间扫描应当做成 job：由本地守护进程拥有的子进程，带有超时、取消和结果文件。同一个 job 管理器支撑 MCP 和 GUI。
 
 ### 运行一个 job 并等待
 
@@ -251,7 +251,7 @@ job 拥有自己的结果路径；控制响应从不携带结果字节。对于�
 xtate --control-connect=/tmp/xtate-ctl.sock --gui
 ```
 
-TUI 使用同一套端点模型（`--tui`；见 [TUI](../tui.md)）。MCP 是自动化接口，把同一套 job 生命周期暴露为工具；见 [MCP server](../mcp-server.md)和 [Agent Skill](../agent-skill.md)。由于所有客户端共享一个守护进程，GUI 启动的 job 可以被控制面请求取消，也可以被 MCP 列出。
+MCP 是自动化接口，把同一套 job 生命周期暴露为工具；见 [MCP server](../mcp-server.md)和 [Agent Skill](../agent-skill.md)。由于所有客户端共享一个守护进程，GUI 启动的 job 可以被控制面请求取消，也可以被 MCP 列出。
 
 ## 故障排查
 
@@ -276,5 +276,5 @@ TUI 使用同一套端点模型（`--tui`；见 [TUI](../tui.md)）。MCP 是自
   [JSON 契约](../json-contracts.md)、[错误码](../error-codes.md)
 - [扫描模式](../scanning-modes.md)、[模块](../modules.md)、
   [目标与端口](../targets-and-ports.md)
-- [MCP server](../mcp-server.md)、[TUI](../tui.md)
+- [MCP server](../mcp-server.md)、[Agent Skill](../agent-skill.md)
 - [故障排查](../troubleshooting.md)

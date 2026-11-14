@@ -35,7 +35,7 @@ static ConfParam list_parameters[] = {
      SET_no_port,
      Type_FLAG,
      {0},
-     "Just output IP list in any time.\n"
+     "Just output the IP list.\n"
      "NOTE: No deduplicating will be used for IP."},
     {0}};
 

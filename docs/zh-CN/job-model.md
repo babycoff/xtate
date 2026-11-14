@@ -2,7 +2,7 @@
 
 [English](../job-model.md) · **中文**
 
-长时间扫描需要受管 job，而不是阻塞式工具调用。job manager 是 MCP、TUI 和后续
+长时间扫描需要受管 job，而不是阻塞式工具调用。job manager 是 MCP 和浏览器
 GUI 共用的后端。
 
 ## API
@@ -41,7 +41,7 @@ bool job_wait(Job *, unsigned timeout_ms);
 - 每个 job 独立结果文件；超时/取消保留部分结果。
 - timeout 是总墙钟时间，不是单连接超时。
 - 本地控制 API（`job.start/status/results/cancel`）复用该 manager；
-  MCP/TUI/GUI 都是客户端。
+  MCP/GUI 都是客户端。
 - job id 稳定；生命周期错误码为 `SCAN_TIMEOUT`、`SCAN_CANCELLED`、
   `JOB_NOT_FOUND`、`JOB_LIMIT_REACHED`。
 - 当前控制面单线程，调用方串行访问。

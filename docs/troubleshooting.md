@@ -36,7 +36,7 @@ Check in this order:
 1. **Module pairing.** Xtate refuses to start with `ScanModule <x> needs probe of <type> type.`; `tcp-syn` uses no probe, `zbanner` needs a TCP probe, `udp` a UDP probe, `tcp-state` a STATE probe. Confirm names with `--list-scan` / `--list-probe` and parameters with `--help-scan <module>`.
 2. **Targets and ports are non-empty.** No targets gives `target IP address list empty.` No ports gives a warning and a fake `o:0` endpoint, so a TCP scan quietly probes nothing. Always pass `-p`.
 3. **Interface and source address.** `sudo ./bin/xtate --list-if` lists adapters; auto-detection picks the first interface with a default gateway. Force one with `-if eth0` (on Windows, adapters also accept the numeric index from `--list-if`, e.g. `-if 3`). A wrong `-src-ip`/`-src-port` makes replies fail the `is_my_ip`/`is_my_port` check and they are dropped silently; source ranges must have a power-of-two size.
-4. **Packet filter.** Each scan module installs its own BPF filter; `--bpf-filter` *replaces* it, and a filter that is too narrow hides valid replies. Re-run the same scan with `--no-bpf` — if results appear, the filter (yours or the module's) is the problem. One known case: the built-in `tcp-syn` filter matches a bare RST exactly, so closed ports answered with RST+ACK can be filtered before Xtate sees them; `--no-bpf` confirms it.
+4. **Packet filter.** Each scan module installs its own BPF filter; `--bpf-filter` *replaces* it, and a filter that is too narrow hides valid replies. Re-run the same scan with `--no-bpf` — if results appear, the filter (yours or the module's) is the problem. The built-in `tcp-syn` and `zbanner` filters test TCP flags with masks, so SYN-ACK and RST|ACK replies match even when extra bits such as ECE or PSH are set; a hand-written `--bpf-filter` that compares flags for exact equality is the usual culprit.
 5. **Router MAC / ARP.** Startup can fail with `arp timed-out resolving MAC address for router ...`. Use `--router-ip <gw>` if discovery picked the wrong gateway, or bypass ARP with `--router-mac 66-55-44-33-22-11` (a router MAC on a different L2 segment only makes sense with `--lan`). Note that `--lan` does **not** resolve per-target MACs; it only sets the router MAC to broadcast. Do not use it as a generic fix for normal TCP/UDP scans — try the default unicast/gateway path first.
 6. **The path itself.** Check from a normal client whether the target answers at all; then mirror the same ports/rate with `tcpdump` or Xtate's `--pcap`. A firewall or NAT device in front of the target can drop probes while SYN-ACKs never return.
 
@@ -87,10 +87,14 @@ gives no results:
    `--list-if` (the route-selected interface shown above is the first choice);
 4. if the link type is `UNSUPPORTED`, choose an Ethernet/Wi-Fi adapter.
 
-Scan startup rejects unsupported link types and prints a hint. A `RAW`/TUN
-interface is accepted, but if it cannot carry the scan, select the physical
-adapter explicitly. Do not force a TUN adapter just because it appears first;
-its route may be a fake-IP overlay rather than the path to the target.
+An unsupported link type is only logged at startup as `if(<name>): unknown data
+link type: <n>(<name>)`; Xtate's packet templates cover Ethernet, NULL and RAW
+links, so a scan on such an adapter is not expected to produce usable replies.
+`--check --explain-target` flags the route before a scan; prefer an
+Ethernet/Wi-Fi adapter. A `RAW`/TUN interface is
+accepted, but if it cannot carry the scan, select the physical adapter
+explicitly. Do not force a TUN adapter just because it appears first; its route
+may be a fake-IP overlay rather than the path to the target.
 
 ## Permission, adapter and platform errors
 
@@ -146,7 +150,7 @@ These are design trade-offs in v3.0.0-rc.10, not bugs; the full list with workar
 ## Modules are missing or refuse to start
 
 - Compile-time optional dependencies remove modules entirely: without OpenSSL there is no `tls-state`/`jarm`, without PCRE2 no `recog`/`nmap`, without libbson/libmongoc no `bson`/`mongodb` output. Check `--list-probe` / `--list-out` against the dependency table in [Getting started](./getting-started.md), install the dev packages and rebuild.
-- Lua probes are always listed but fail at startup when the runtime library is absent: `(liblua) failed to load Lua shared library` / `you must install Lua library`. Install Lua 5.3 or 5.4 (`liblua5.3`/`liblua5.4` on Debian/Ubuntu) or use a non-Lua probe.
+- Lua probes are always listed but fail at startup when the runtime library is absent: `failed to init lua library dynamicly.` followed by the hint `make sure lua library 5.3/5.4 was installed.` Install Lua 5.3 or 5.4 (`liblua5.3`/`liblua5.4` on Debian/Ubuntu) or use a non-Lua probe.
 - `--version` prints the build type, compiler and build date — include it in any bug report.
 
 ## JSON or CSV output is corrupt

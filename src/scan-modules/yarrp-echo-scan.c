@@ -313,18 +313,18 @@ Scanner YarrpEchoScan = {
     .short_desc = "ICMP Ping to trace the route path statelessly.",
     .desc =
         "YarrpEcho sends ICMP ECHO Request packets with different TTL values "
-        "to target hosts and expects ICMP Echo Rely or ICMP TTL/Hop Limit "
+        "to target hosts and expects ICMP Echo Reply or ICMP TTL/Hop Limit "
         "Exceeded message for tracing the route path. This scanner uses the "
         "core idea of the stateless traceroute tool Yarrp, so it sends all "
-        "target/ttl combinations in random. We need to reconstruct the paths "
-        "off-linely with the discrete results of because of stateless.\n"
+        "target/ttl combinations in random order. We need to reconstruct the "
+        "paths offline from the discrete, stateless results.\n"
         "NOTE1: We need to specify TTL ranges manually by \"Other\" "
         "port type. E.g. `--port o:1-20` means TTL range from 1 to 20.\n"
-        "NOTE2: We should care the network pressure of hosts in the path. "
-        "Yarrp's completely stateless route tracing method would make close "
-        "hop hosts being hit a lot.\n"
-        "NOTE3: Proper TTL range is import both for efficiency and network "
-        "pressure of target hosts. A big range may hit target hosts a lot.",
+        "NOTE2: Consider the network pressure on hosts along the path. "
+        "Yarrp's completely stateless route-tracing method can hit nearby "
+        "hop hosts many times.\n"
+        "NOTE3: A proper TTL range matters for both efficiency and network "
+        "load on target hosts. A large range can hit target hosts repeatedly.",
 
     .init_cb     = &yarrpecho_init,
     .transmit_cb = &yarrpecho_transmit,

@@ -29,10 +29,10 @@ Delivered for 2.43.0:
 
 Delivered for 2.44.0:
 
-- a loopback-only browser GUI (`xtate --gui`) that is another control-plane
-  client: dashboard, start wizard, cancel, status and result manifest. It binds
-  loopback, uses a per-run session token and a Host check, and forwards only an
-  allowlist of job methods.
+- a browser GUI (`xtate --gui`) that is another control-plane client: dashboard,
+  start wizard, cancel, status and result manifest. It binds loopback by default,
+  uses a per-run session token and a Host check, and forwards only an allowlist
+  of job methods. A non-loopback bind is opt-in via `XTATE_GUI_ALLOW_REMOTE=1`.
 
 Delivered for 2.44.1:
 

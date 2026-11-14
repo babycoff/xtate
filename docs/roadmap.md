@@ -2,9 +2,9 @@
 
 **English** · [中文](zh-CN/roadmap.md)
 
-This page records the planned work after Xtate 2.33.0. It is not a promise of
-dates; it is a priority and acceptance-criteria list. Completed work is noted so
-the next change does not silently regress it.
+This page records the planned work after Xtate 2.33.0, updated for the 3.0 line.
+It is not a promise of dates; it is a priority and acceptance-criteria list.
+Completed work is noted so the next change does not silently regress it.
 
 ## Done in 2.33.0
 
@@ -16,7 +16,8 @@ the next change does not silently regress it.
 
 - QUIC capability probe (`quic`): valid QUIC v1 Initial, Version
   Negotiation/Retry/Initial/Handshake classification, local aioquic lab.
-- Module count: 27 probes.
+- Module count at the 2.33.0 release: 27 probes (59 on Windows and 60 on a full
+  Linux build in the current 3.0 line).
 - Salesforce JARM 1.0 comparison on a local target; fixed TLS 1.3 extension
   offset in `jarm`.
 - `jarm --first-probe N` rotation and standard-slot-preserving aggregation.
@@ -38,18 +39,25 @@ the next change does not silently regress it.
 
 ## Priority reset (current direction)
 
-The current priorities are:
+As of 3.0.0-rc.10, the QUIC probe, Linux-only `quic-state`/`http3-state`
+transport, the scan console GUI, the MCP surface and the nine-chapter English
+manual are delivered; the Chinese manual is still being completed. The current
+priorities are:
 
-1. **QUIC/HTTP3 next step** — the capability probe and the optional
-   `quic-state` handshake transport are done; HTTP/3/QPACK and DoQ application
-   probes are the next layer. See
-   [QUIC state](./quic-state.md).
-2. **Xtate-native YAML templates** — read-only matcher/schema first; do not
-   copy Nuclei.
-3. **Protocol coverage expansion** — use the zgrab2 matrix in
-   [Protocol coverage plan](./protocol-coverage.md); start with Batch A.
-4. **Traffic randomization research** — opt-in, fixed seed, lab-only; keep it
-   separate from the default scanner.
+1. **Finish 3.0.0** — fix RC trial feedback, then the agent evaluation suite and
+   packaging. The release gate is in
+   [Xtate 3.0 roadmap](./roadmap-3.0.md).
+2. **MCP generate/stream input** — only static `targets` and `include_file` are
+   supported today.
+3. **Per-job disk quota enforcement during scanning** — quota is currently
+   checked after completion and reported as a warning.
+4. **HTTP/3 depth** — dynamic QPACK and DoQ inside the Linux-only transport;
+   keep the transport scanner and the application probe separate.
+5. **Protocol coverage expansion** — use the zgrab2 matrix in
+   [Protocol coverage plan](./protocol-coverage.md); Batches A–C are largely
+   delivered, so continue with the remaining rows.
+6. **Xtate-native YAML templates and traffic randomization research** — both
+   remain opt-in, lab-only workstreams; do not copy Nuclei.
 
 The older backlog below remains valid but is lower priority unless a concrete
 measurement requirement changes it.
@@ -105,11 +113,13 @@ Acceptance:
 ## P2 — protocol probes
 
 Status: the JARM hash/reference work, SSH banner/KEX, cleartext `h2c` and the
-`h2` state probe (TLS/ALPN h2 via HLTCP) are implemented. `h2` has a minimal
-static/literal HPACK request and frame/HEADERS/DATA parsing; Huffman/dynamic
-HPACK, full stream management, STARTTLS, HTTP/3/QUIC and TLS-variant
-fingerprints remain. TLS certificate/subject details already exist in
-`tls-state`; HTTP state behavior already exists in `http-state`.
+`h2` state probe (TLS/ALPN h2 via HLTCP) are implemented. `h2` decodes the HPACK
+static table, literal fields and Huffman string literals; dynamic-table
+insertions and a full stream state machine are the remaining HPACK work.
+STARTTLS now covers SMTP, IMAP, POP3, FTP and ManageSieve, and the Linux-only
+QUIC/HTTP/3 transport is implemented; TLS-variant fingerprints remain. TLS
+certificate/subject details exist in `tls-state`; HTTP state behavior exists in
+`http-state`.
 
 Add protocol-specific detail probes without creating scanner-side per-target
 state. Each probe reuses single-slot or `ProbeSlot_Always` where it makes sense.
@@ -123,16 +133,17 @@ Planned order:
    algorithm lists. Full KEX packet exchange remains future work.
 3. HTTP/1 work is frozen after the structured response parser pass; no further
    HTTP rewrite is planned.
-4. STARTTLS adapters for SMTP, IMAP, POP3 and FTP are implemented in
-   `tls-state --starttls`, including certificate details after the upgrade.
-5. HTTP/2 remains minimal (`h2`): static/literal HPACK, no Huffman/dynamic
-   table, no full stream management. HTTP/3/QUIC remain separate research.
+4. STARTTLS adapters for SMTP, IMAP, POP3, FTP and ManageSieve are implemented
+   in `tls-state --starttls`, including certificate details after the upgrade.
+5. HTTP/2 (`h2`) decodes the HPACK static table, literals and Huffman string
+   literals; dynamic-table insertions and full stream management remain. The
+   Linux-only HTTP/3/QUIC transport (`quic-state`/`http3-state`) is shipped;
+   dynamic QPACK and DoQ remain.
 6. TLS variant fingerprint research: ClientHello variants, extension order,
    GREASE, ALPN ordering.
-7. QUIC probe and HTTP/3 exploration: a separate UDP/QUIC transport path,
-   ALPN `h3`, QUIC Initial/Handshake packets and optional QUIC library
-   evaluation. Do not call a UDP datagram an HTTP/3 probe without a QUIC
-   handshake.
+7. QUIC was delivered as a two-layer feature: the stateless `quic` capability
+   probe and the optional `quic-state` transport (Linux, ngtcp2/GnuTLS). Do not
+   call a UDP datagram an HTTP/3 probe without a QUIC handshake.
 
 Constraints:
 
@@ -210,7 +221,7 @@ after the current protocol work, before new ZBanner features.
 
 ## Release policy
 
-Functional changes take a minor version (`2.29.x` → `2.33.0`); fixes take a
+Functional changes take a minor version (`2.44.x` → `3.0.0`); fixes take a
 patch version. A release is not complete until the tag is pushed, the GitHub
 release exists, and the build/test evidence is recorded.
 

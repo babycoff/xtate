@@ -155,28 +155,26 @@ static ConfParam yarrpudp_parameters[] = {
      SET_init_port_them,
      Type_ARG,
      {"target-port", 0},
-     "Set initial UDP target port for packets we send with TTL of 1. The actual"
-     " UDP target port we send packets to would increase by the TTL which we "
-     "set in packets. In other word, we set TTL to destination port field of "
-     "UDP"
-     " packet. Default initial UDP target port is 33434.\n"
-     "NOTE: Be careful to the backwind of sum of initial target port and TTL."},
+     "Set the initial UDP target port for packets sent with TTL 1. The actual "
+     "UDP target port increases by the TTL carried in the packet; in other "
+     "words, the TTL is encoded in the destination port field. Default initial "
+     "UDP target port is 33434.\n"
+     "NOTE: The initial target port plus the TTL must stay within 0-65535."},
     {"init-source-port",
      SET_init_port_me,
      Type_ARG,
      {"init-src-port", 0},
-     "Set initial UDP source port for packets we send with TTL of 1. The actual"
-     " UDP source port we send packets to would decrease by the TTL which we "
-     "set in packets. Source port is for identifying if the packet is ours. "
-     "Default initial UDP source port is random from 40000 to 60000.\n"
-     "NOTE: Be careful to the backwind of difference between initial target "
-     "port and TTL."},
+     "Set the initial UDP source port for packets sent with TTL 1. The actual "
+     "UDP source port decreases by the TTL carried in the packet. The source "
+     "port identifies packets that belong to this scan. Default initial UDP "
+     "source port is random from 40000 to 60000.\n"
+     "NOTE: The initial source port minus the TTL must stay within 0-65535."},
     {"fixed-source-port",
      SET_port_me,
      Type_ARG,
      {"source-port", "src-port", 0},
      "Set fixed UDP source port for packets we send. Source port is for "
-     "identifying if the packet is ours. Default UDP source port varias with "
+     "identifying if the packet is ours. Default UDP source port varies with "
      "TTL and its initial value is random from 40000 to 60000."},
     {"record-ttl",
      SET_record_ttl,
@@ -384,16 +382,16 @@ Scanner YarrpUdpScan = {
         "and expects ICMP Port Unreachable or TTL/Hop Limit Exceeded message "
         "for tracing the route path. This scanner uses the core idea of the "
         "stateless traceroute tool Yarrp, so it sends all target/ttl "
-        "combinations in random. We need to reconstruct the paths off-linely "
-        "with the discrete results of because of stateless.\n"
+        "combinations in random order. We need to reconstruct the paths "
+        "offline from the discrete, stateless results.\n"
         "NOTE1: We need to specify TTL ranges manually by \"Other\" "
         "port type. E.g. `--port o:1-20` means TTL range from 1 to 20. The "
         "actual target UDP port is specified by subparam.\n"
-        "NOTE2: We should care the network pressure of hosts in the path. "
-        "Yarrp's completely stateless route tracing method would make close "
-        "hop hosts being hit a lot.\n"
-        "NOTE3: Proper TTL range is import both for efficiency and network "
-        "pressure of target hosts. A big range may hit target hosts a lot.",
+        "NOTE2: Consider the network pressure on hosts along the path. "
+        "Yarrp's completely stateless route-tracing method can hit nearby hop "
+        "hosts many times.\n"
+        "NOTE3: A proper TTL range matters for both efficiency and network "
+        "load on target hosts. A large range can hit target hosts repeatedly.",
 
     .init_cb     = &yarrpudp_init,
     .transmit_cb = &yarrpudp_transmit,

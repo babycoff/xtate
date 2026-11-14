@@ -50,8 +50,8 @@ and classify the response, nothing more.
 
 ## Coverage at a glance
 
-The table lists the protocols with a dedicated probe in this tree. The full
-generated module reference is chapter 06; the deep protocol matrix lives in
+The table lists the protocols with a dedicated probe in this tree. The full module reference is
+[05 · Modules and parameters](./05-modules-and-parameters.md); the deep protocol matrix lives in
 [Protocol coverage plan](../protocol-coverage.md).
 
 | Protocol | Probe(s) | Type | Notes |
@@ -106,7 +106,7 @@ Useful request parameters (see `--help-probe http` for the full list):
 | `--dynamic-host` | Set `Host` to the target IP per target |
 | `--user-agent` | Replace the `User-Agent` header |
 | `--header Name:value` | Add or replace a header |
-| `--remove-header Name` | Remove a default header |
+| `--remove Name` | Remove the first matching default header |
 | `--cookie` | Add a `Cookie` header |
 | `--payload` | Append a request body (adds `Content-Length`) |
 | `--no-record-status`, `--no-record-headers` | Suppress parsed fields |
@@ -223,7 +223,7 @@ does not register `quic-state`/`http3-state`.
 Check that the module exists:
 
 ```bash
-xtate --list-scan | grep quic-state
+xtate --list-scan      # quic-state appears only in an ngtcp2/GnuTLS build
 ```
 
 A certificate-only probe of a QUIC endpoint:
@@ -324,12 +324,11 @@ build-specific):
   "http3": true,
   "quic_transport": true,
   "http3_reason": null,
-  "modules": "<scan/probe/output/generate counts>"
+  "modules": {"scan": 12, "probe": 60, "output": 7, "generate": 5}
 }
 ```
 
-(The real object has a `modules` object with four numeric members; it is
-abridged here because the counts change as modules are added.)
+(Counts are build-specific; the values above are a full Linux build.)
 
 When the transport is not compiled in, both booleans are `false` and
 `http3_reason` is a string:
@@ -483,8 +482,8 @@ may silently fail: no MAC/ARP means no L2 resolution, and some tunnel drivers
 rewrite or drop packets. When you see an `UNSUPPORTED` link type, select the
 physical Ethernet/Wi-Fi adapter explicitly with `-if`.
 
-The release notes for the current binary describe the `RAW` link-type reporting
-in more detail; see [release notes 2.44.2](../release-notes/2.44.2.md).
+The `RAW` link-type reporting was introduced in 2.44.2; see
+[release notes 2.44.2](../release-notes/2.44.2.md) for the details.
 
 ## What this chapter does not promise
 
@@ -504,7 +503,7 @@ build:
 
 See also:
 
-- [05 · Scan modes](../scanning-modes.md) (deep reference for engines and probes)
+- [Scanning modes](../scanning-modes.md) (deep reference for engines and probes)
 - [Protocol coverage plan](../protocol-coverage.md)
 - [QUIC state](../quic-state.md), [DoT](../dns-over-tls.md),
   [DoH](../dns-over-https.md), [TLS composition](../tls-composition.md)

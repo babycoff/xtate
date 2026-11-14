@@ -7,7 +7,7 @@
 两个想法组织了其余一切：
 
 1. **一条流水线，由模块结构体实现。** 目标变成报文，报文变成回复，回复变成记录。每个阶段都是可插拔的模块类型；运行时什么都不加载。
-2. **一个特权本地守护进程，加一层薄本地客户端。** 扫描引擎、job 管理器与控制面运行在一个进程里。GUI、TUI 和 MCP 是该进程的客户端，不是替代的扫描器。
+2. **一个特权本地守护进程，加一层薄本地客户端。** 扫描引擎、job 管理器与控制面运行在一个进程里。GUI 和 MCP 是该进程的客户端，不是替代的扫描器。
 
 ## 流水线
 
@@ -76,7 +76,7 @@ CPU 亲和性按固定顺序分配 —— 先 tx 线程，再 rx，最后处理�
 
 ## 守护进程与控制面
 
-同一个可执行文件既可以作为扫描命令运行，也可以作为承载本地控制面的守护进程运行。控制面是 MCP、TUI 和 GUI 共享的**本地 JSON-lines 契约**：
+同一个可执行文件既可以作为扫描命令运行，也可以作为承载本地控制面的守护进程运行。控制面是 MCP 和 GUI 共享的**本地 JSON-lines 契约**：
 
 - 每行一个 JSON 对象；每个请求一个响应。
 - 服务器从不执行 shell。
@@ -114,13 +114,13 @@ job 经过 `queued`、`running`、`completed`、`failed`、`cancelled`、`timed_
 
 运营后果：一个控制面线程、串行化的管理器调用；守护进程拥有 worker；守护进程重启会终止它的 job（没有持久化或恢复）；客户端轮询 `job.status`/`job.list`，因为没有服务器推送事件流。
 
-## GUI：回环控制台
+## GUI：本地控制台
 
-GUI 是由同一进程提供的本地扫描控制台。浏览器页面、其资源和 API 都是本地的：服务器只绑定回环（`--gui-listen` 必须是 `127.0.0.1:PORT`），从二进制提供页面，并暴露一个小型 JSON API —— `/api/info`、`/api/system`、`/api/interfaces`、`/api/modules`、`/api/preflight`、`/api/results`，以及用于 job 白名单的 `/api/rpc`。GUI 从不执行外部命令，也从不把任意方法转发到控制面。
+GUI 是由同一进程提供的本地扫描控制台。浏览器页面、其资源和 API 都是本地的：服务器默认只绑定回环（`--gui-listen` 通常为 `127.0.0.1:PORT`；非环回绑定需要显式设置 `XTATE_GUI_ALLOW_REMOTE=1`），从二进制提供页面，并暴露一个小型 JSON API —— `/api/info`、`/api/system`、`/api/interfaces`、`/api/modules`、`/api/preflight`、`/api/results`，以及用于 job 白名单的 `/api/rpc`。GUI 从不执行外部命令，也从不把任意方法转发到控制面。
 
 回环 API 的安全契约才是重点：
 
-- **回环绑定与 Host 校验** —— 监听器仅回环，每个请求必须带回环 `Host`（`127.0.0.1:PORT` 或 `localhost:PORT`）；其他一律拒绝，从而阻断 DNS-rebinding 攻击。
+- **默认回环绑定与 Host 校验** —— 默认只监听环回；只有为容器/反向代理显式设置 `XTATE_GUI_ALLOW_REMOTE=1` 时才允许非环回绑定。无论绑定地址如何，每个请求仍必须带回环 `Host`（`127.0.0.1:PORT` 或 `localhost:PORT`），其他一律拒绝，从而阻断 DNS-rebinding 攻击。
 - **每次运行一个 token** —— `/api/*` 请求必须带 `X-Xtate-GUI-Token`，这是启动时生成并注入所服务页面的随机 token。没有它请求得到 `403 GUI_TOKEN_REQUIRED`，且 token 值从不显示在 System 中；只显示其存在/缺失。
 - **浏览器无法提供控制面 token。** 含 `token` 成员的 `/api/rpc` 正文会被 `400 TOKEN_NOT_ALLOWED` 拒绝；转发到控制面时，GUI 注入服务器进程自己的 `XTATE_CONTROL_TOKEN`。因此页面 JavaScript 无法选择或泄露任意控制 token。
 - **有界正文与响应** —— 请求正文上限 64 KiB（超出为 `413`），转发的控制响应上限相同。
@@ -154,7 +154,7 @@ Agent Skill 是文档/剧本，不是强制机制。它告诉 agent 如何规划
 
 ### 什么隔离了守护进程
 
-- **没有网络监听器。** 控制面 = Unix 套接字/命名管道；GUI = 回环 HTTP；MCP = stdio。这些都不是远程服务，也都不应通过 TCP 代理暴露并声称受支持。
+- **没有远程控制面。** 控制面 = Unix 套接字/命名管道；GUI 默认只提供回环 HTTP（非环回绑定必须显式设置 `XTATE_GUI_ALLOW_REMOTE=1`，且仍做 Host 校验）；MCP = stdio。控制面不应通过 TCP 代理暴露并声称受支持。
 - **本地认证。** 设置 `XTATE_CONTROL_TOKEN` 时，每个控制请求必须带同样的 token，缺失或错误返回 `UNAUTHORIZED`。未设置时，服务器接受每个本地客户端 —— 在单用户主机上可接受，在其他本地用户或进程不可信的地方不可接受。
 - **GUI token + Host 校验**阻断对回环 HTTP API 的跨站与 DNS-rebinding 访问；token 每次运行一个并注入所服务页面。
 - **启动与 job 启动时的失败关闭校验**：模块/探测类型不匹配、不支持的链路类型、无效目标/端口、不可写的结果路径、缺失授权和多路由的内联目标集都会被拒绝，而不是"尽力而为"地执行。
@@ -179,7 +179,7 @@ Xtate 不内嵌 LLM、云账号、遥测或托管扫描服务，GUI/MCP 也不�
                 |                                      |
   GUI browser --loopback HTTP-->  xtate daemon        |
   MCP agent  --stdio-------->     + control plane      |
-  TUI/CLI    --socket/pipe-->     + job manager        |
+  CLI        --socket/pipe-->     + job manager        |
                 |                 + scan engine        |
                 |                                      |
                 |   results <-- filesystem manifest    |

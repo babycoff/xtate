@@ -57,8 +57,7 @@ docker run --rm --cap-add=NET_RAW --cap-add=NET_ADMIN \
 - `/api/info`、`/api/system` 接受日志中的 GUI token；
 - `/api/preflight` 能返回容器内网卡；
 - `tcp-syn` 任务完成，结果写入 `/data/runs/`；
-- `docker run --rm -i ... --mcp` 能响应 `initialize`，且不传
-  `--control-connect` 也能接受 `start_scan`。
+- `docker run --rm -i ... --mcp` 能响应 `initialize`，且不连接控制端点也能接受 `start_scan`。
 
 报告镜像 ID 和 Docker 版本。容器内原始扫描还需要
 `--cap-add=NET_RAW --cap-add=NET_ADMIN`。
@@ -159,6 +158,8 @@ Windows 构建在 `.github/workflows/windows.yml` 中运行，覆盖 MSVC、Clan
 |:---|:---|:---|
 | 头文件自包含 | `tests/include/check_headers.sh` | 每个头文件可单独编译 |
 | selftest | `xtate --selftest` | 内置回归 |
+| 版本一致性 | `python tests/release/test_version_consistency.py` | CMake、版本头、README、文档与发布说明一致 |
+| 表面一致性 | `python tests/release/test_surface_consistency.py` | 模块、usage 示例、帮助条目数、MCP 工具与 GUI 路由和二进制/文档一致；执行发布检查清单中的同步点 |
 | i18n | `tests/i18n/test.sh` | 中文帮助覆盖率 |
 | 目标语法 | `tests/target/test.sh` | address/CIDR/explicit/component ranges |
 | interactive | `tests/interactive/test.sh` | 非 TTY 命令/帮助/状态 |

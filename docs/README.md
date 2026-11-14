@@ -41,6 +41,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 | Interactive mode | [Interactive mode](./interactive-mode.md) |
 | Platform / build compatibility | [Platform support](./platform-support.md) |
 | Testing and compatibility policy | [Testing policy](./testing.md) |
+| Surface sync for parameters/modules/versions | [Release checklist](./release-checklist.md) |
 | Plugin protocol (Go sidecar) | [Plugin protocol](./plugin-protocol.md) |
 
 ## Contents
@@ -67,6 +68,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 - [Interactive mode](./interactive-mode.md) — commands, TTY/script mode, history and completion
 - [Platform support](./platform-support.md) — old CMake/distro baseline, Ninja and musl builds
 - [Testing policy](./testing.md) — Tier 0/1/2 checks, matrix and evidence rules
+- [Release checklist](./release-checklist.md) — keep CLI help, MCP, GUI, Docker and both doc trees in sync
 - [Plugin protocol](./plugin-protocol.md) — Go sidecar boundary, result envelope and non-goals
 
 ### Automation and integration

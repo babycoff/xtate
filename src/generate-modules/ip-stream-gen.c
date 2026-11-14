@@ -405,7 +405,7 @@ Generator IpStreamGen = {
             "need specify a  port range for all targets or use 'o:0' as "
             "default. For every IP range(line), IpStream will do random "
             "picking with port by blackrock algorithm.\n"
-            "NOTE: IpStream will blocking the tx thread while waiting the "
+            "NOTE: IpStream will block the tx thread while waiting the "
             "stream to be readable, this would break the rule of scan rate. "
             "However, the scan rate won't exceed the configured value.",
 

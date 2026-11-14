@@ -1,8 +1,9 @@
 # 01 · Install and quick start
 
-This chapter takes you from a source checkout to a verified binary, a first
-command-line scan and a first session in the 3.0 console. It assumes a shell,
-`sudo` on Linux, and an elevated PowerShell on Windows.
+This chapter takes you from a source checkout to a verified binary and a first
+command-line scan, the primary interface for the rest of this manual. A first
+session in the optional browser console is covered at the end. It assumes a
+shell, `sudo` on Linux, and an elevated PowerShell on Windows.
 
 Use only on networks you own or have written permission to test. Xtate sends
 real packets; there is no harmless "test mode" for a real scan.
@@ -222,8 +223,8 @@ use `--control-connect` to attach to a daemon that outlives the console (see
 
 | Goal | Read |
 |:---|:---|
-| Tour every console page and field | [02 · GUI console](./02-gui-console.md) |
-| Scan/probe examples, control plane, managed jobs | [03 · CLI and jobs](./03-cli-and-jobs.md) |
+| Scan/probe examples, control plane, managed jobs | [03 · CLI and jobs](./03-cli-and-jobs.md) — the reference chapter |
+| Tour the optional console page by page | [02 · GUI console](./02-gui-console.md) |
 | Target and port syntax | [Targets and ports](../targets-and-ports.md) |
 | Choose scan engines and probes | [Scanning modes](../scanning-modes.md) |
 | Save, chunk or convert results | [Output](../output.md) |

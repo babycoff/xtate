@@ -470,8 +470,8 @@ static ConfParam zbanner_parameters[] = {
      SET_ack_success,
      Type_FLAG,
      {"success-ack", 0},
-     "Let ACK semgents without payload for our probe results as success level."
-     "(Default is info level)"},
+     "Treat ACK segments without payload as a successful probe result. "
+     "(Default is info level.)"},
     {"with-ack",
      SET_with_ack,
      Type_FLAG,
@@ -1285,7 +1285,7 @@ Scanner ZBannerScan = {
         "ip6 proto 60 || ip6 proto 51))",
     .short_desc = "Stateless TCP scan with specified ProbeModule.",
     .desc =
-        "ZBannerScan tries to contruct TCP conn with target port and send data "
+        "ZBannerScan tries to construct TCP conn with target port and send data "
         "from specified ProbeModule. Data in first response packet will be "
         "handled by specified ProbeModule.\n"
         "What important is the whole process was done in completely stateless. "
@@ -1296,9 +1296,9 @@ Scanner ZBannerScan = {
         "NOTE1: Must specify a TcpType ProbeModule for ZBannerScan like:\n"
         "    `--probe-module xxx`\n"
         "NOTE2: ZBannerScan will construct complete TCP conns. So must avoid "
-        "Linux system sending RST automatically by adding iptable rules "
+        "Linux system sending RST automatically by adding iptables rules "
         "displayed in `firewall` directory.\n"
-        "NOTE3: Slow send rate may cause target host's retransmition.",
+        "NOTE3: Slow send rate may cause target host's retransmission.",
 
     .init_cb     = &zbanner_init,
     .transmit_cb = &zbanner_transmit,

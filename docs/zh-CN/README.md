@@ -41,6 +41,7 @@
 | 交互式模式 | [交互式模式](./interactive-mode.md) |
 | 平台与构建兼容性 | [平台支持](./platform-support.md) |
 | 测试与兼容性规范 | [测试规范](./testing.md) |
+| 参数/模块/版本同步 | [发布检查清单](./release-checklist.md) |
 | 插件协议（Go sidecar） | [插件协议](./plugin-protocol.md) |
 
 ## 目录
@@ -67,6 +68,7 @@
 - [交互式模式](./interactive-mode.md)——命令、TTY/脚本模式、历史与补全
 - [平台支持](./platform-support.md)——旧 CMake/发行版基线、Ninja 与 musl 构建
 - [测试规范](./testing.md)——Tier 0/1/2 检查、矩阵与证据规则
+- [发布检查清单](./release-checklist.md)——保持 CLI 帮助、MCP、GUI、Docker 与中英文文档同步
 - [插件协议](./plugin-protocol.md)——Go sidecar 边界、结果 envelope 与非目标
 
 ### 自动化与集成
@@ -75,7 +77,7 @@
 - [迁移到 3.0](./migration-3.0.md)——2.44.x 到 3.0 的破坏性变化、结果路径、MCP 形状与回滚
 - [MCP server](./mcp-server.md)——stdio 工具、resource、prompt、路由规划与限制
 - [GUI 控制台](./gui.md)——扫描优先的环回控制台，含预检、实时视图、网卡与模块
-- [TUI 任务面板](./tui.md)——旧版全屏控制平面客户端；3.0 中已弃用
+- [TUI 任务面板](./tui.md)——旧版全屏控制面客户端；3.0 中已弃用
 - [控制面](./control-plane.md)——MCP/TUI/GUI 共用的本地 JSON-lines API
 - [Job 模型](./job-model.md)——托管 job、超时、心跳、取消与结果
 - [输入模块](./input-modules.md)——静态目标与 generate 流、错误策略

@@ -184,8 +184,8 @@ for the duration of the scan.
 | Packet buffer pool (global) | 16384 buffers of 2048 bytes, about 32 MiB |
 | TLS session | OpenSSL `SSL`, session and peer chain: several KB to tens of KB |
 
-The last row dominates: pure TCP state is cheap, a TLS connection is not, and more than 85%
-of the per-connection cost is OpenSSL. This engine is for targeted evidence on interesting
+The last row dominates: pure TCP state is cheap, a TLS connection is not, and most of the
+per-connection cost is OpenSSL. This engine is for targeted evidence on interesting
 hosts, not for a TLS census of the Internet.
 
 The per-connection TLS scratch buffer doubles on demand but is capped at **1 MiB**; if a
@@ -219,13 +219,14 @@ resident, but cannot exceed the table/global budget.
 
 ## STARTTLS
 
-`tls-state --starttls smtp|imap|pop3|ftp` performs the plaintext greeting and
-upgrade command before the TLS handshake:
+`tls-state --starttls smtp|imap|pop3|ftp|managesieve` performs the plaintext
+greeting and upgrade command before the TLS handshake:
 
 - SMTP: `220` greeting, `EHLO`, `STARTTLS`, `220`;
 - IMAP: `* OK`, `a001 STARTTLS`, `a001 OK`;
 - POP3: `+OK`, `STLS`, `+OK`;
-- FTP: `220`, `AUTH TLS`, `234`.
+- FTP: `220`, `AUTH TLS`, `234`;
+- ManageSieve (`managesieve` or `sieve`): quoted capability greeting, `STARTTLS`, `OK`.
 
 After the upgrade, `--dump-cert-details` and subprobes work as on a direct TLS
 port. The subprobe is initialized **after** the TLS handshake and only sees the

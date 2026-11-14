@@ -533,7 +533,7 @@ static ConfParam httpstate_parameters[] = {
      SET_all_banner,
      Type_FLAG,
      {"banner-all", 0},
-     "Get the whole responsed banner before connection timeout, not just the "
+     "Get the whole response before the connection timeout, not just the "
      "banner in the first segment."},
     {"all-banner-limit",
      SET_all_banner_limit,

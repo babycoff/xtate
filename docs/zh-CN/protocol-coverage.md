@@ -12,7 +12,7 @@
 |:---|:---|:---|
 | HTTP | `http`、`http-state` | HTTP/1 冻结在结构化响应解析阶段。 |
 | JARM | `jarm` | Salesforce 1.0、官方实现对比、`--first-probe`。 |
-| SSH | `ssh` | banner/software/KEXINIT 列表；真实 KEX 交换待做。 |
+| SSH | `ssh`、`ssh-kex` | banner/software 与 KEXINIT 列表；`ssh-kex` 执行未认证的 curve25519 KEX，并报告 host-key 类型和 SHA256 指纹。 |
 | TLS | `tls-state`、`tls-hello` | 证书/细节、ALPN、SNI、JARM；有 STARTTLS 适配。 |
 | Redis | `redis` | 只读 INFO server 识别。 |
 | Memcached | `memcached` | 版本行识别。 |
@@ -20,14 +20,10 @@
 | MQTT | `mqtt` | CONNECT/CONNACK。 |
 | SOCKS5 | `socks5` | greeting/方法选择。 |
 | Telnet | `telnet` | banner 和初始 IAC 选项。 |
-| SMTP | 仅 STARTTLS | `tls-state --starttls smtp`；还没有完整 SMTP 命令探针。 |
-| IMAP | 仅 STARTTLS | `tls-state --starttls imap`；还没有完整 IMAP 探针。 |
-| POP3 | 仅 STARTTLS | `tls-state --starttls pop3`；还没有完整 POP3 探针。 |
-| FTP | 仅 STARTTLS | `tls-state --starttls ftp`；还没有完整 FTP 探针。 |
+| SMTP | `smtp`、`smtp-state` | banner / EHLO 能力。 |
 | MongoDB | `mongodb` | OP_MSG hello/BSON 识别。 |
 | MySQL | `mysql`、`mysql-state` | greeting 识别；不认证。 |
 | PostgreSQL | `postgres`、`postgres-state` | SSLRequest 和认证边界。 |
-| SMTP | `smtp`、`smtp-state` | banner / EHLO 能力。 |
 | IMAP | `imap`、`imap-state` | banner / CAPABILITY。 |
 | POP3 | `pop3`、`pop3-state` | banner / CAPA。 |
 | FTP | `ftp`、`ftp-state` | banner / FEAT。 |

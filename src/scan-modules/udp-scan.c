@@ -604,7 +604,7 @@ Scanner UdpScan = {
     .short_desc = "Single-packet UDP scan with specified ProbeModule.",
     .desc = "UdpScan sends a udp packet with ProbeModule data to target port "
             "and expects a udp response to believe the port is open or an icmp "
-            "port unreachable message if closed. Responsed data will be "
+            "port unreachable message if closed. Response data will be "
             "processed and formed a report by ProbeModule.\n"
             "NOTE1: Our host may send an ICMP Port Unreachable message to "
             "target after received udp response because we send udp packets "

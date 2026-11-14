@@ -17,8 +17,8 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80 -scan tcp-syn > results.txt
 ## The result line
 
 ```
-[+] host: 192.168.1.10 port: 80 is "open" because "syn-ack",  ttl: 64,  win: 64240
-[*] host: 192.168.1.11 port: 80 is "closed" because "rst"
+[+] host: 192.168.1.10 port: 80 "open" because "syn-ack",  ttl: 64,  win: 64240
+[*] host: 192.168.1.11 port: 80 "closed" because "rst"
 ```
 
 The prefix encodes the level: `[+]` success, `[x]` failure, `[*]` information. Then come the
@@ -97,8 +97,8 @@ sudo ./bin/xtate -ip 10.0.0.0/24 -p 80 -scan zbanner -probe http -show info \
 
 ### text and csv
 
-`text` mirrors the stdout line with an extra `in tcp` protocol word, no colour and no status
-bar. `csv` starts with this header:
+`text` mirrors the stdout line but inserts the protocol word (`in tcp`) after the port and an
+explicit `is` before the classification, with no colour and no status bar. `csv` starts with this header:
 
 ```text
 time,level,ip_proto,ip_them,port_them,ip_me,port_me,classification,reason,scan report,probe report,output report
@@ -119,7 +119,7 @@ One compact object per line:
 The `scan report` / `probe report` / `output report` sub-objects are omitted when empty, as
 are `port_them`/`port_me` for port-less results.
 
-### JARM parts, order and aggregation
+### JARM probe order
 
 Ten probes are sent. The default first request is standard probe 1; after its
 accepted TLS reply the remaining probes are transmitted as a burst. Use
@@ -129,7 +129,7 @@ standard probe id, so `tools/jarm_aggregate.py` is order-independent.
 `--probe-index N` sends only one probe and is a debugging aid, not a complete
 fingerprint.
 
-### JARM parts and aggregation
+### JARM parts, verification and aggregation
 
 `jarm` deliberately keeps ZBanner stateless: every one of its ten slots emits
 its own row instead of holding a per-target group in the scanner. The probe

@@ -84,7 +84,7 @@ static char tls1_3_hello_payload[] =
 
 /**
  * A fixed TLS ClientHello that supports TLS version from 1.0
- * to 1.2. It can get domain and cert info from responsed ServerHello but cannot
+ * to 1.2. It can get domain and cert info from the response ServerHello but cannot
  * test if the server supports TLSv1.3. This is the default payload of
  * TlsHelloProbe.
  * */
@@ -236,7 +236,7 @@ static ConfParam tlshello_parameters[] = {
      "TlsHelloProbe supports TLS version from 1.0 to 1.2 and can match regex "
      "from cert and domain of response. But it cannot test if the server "
      "supports TLSv1.3. However, if we use payload which supports TLSv1.3, we "
-     "could just get encrypted cert and domain info from responsed "
+     "could just get encrypted cert and domain info from the response "
      "ServerHello.\n"
      "NOTE: I suggest using default payload as probe if we don't care if the "
      "server supports TLSv1.3. However, most of the servers which support "
@@ -248,7 +248,7 @@ static ConfParam tlshello_parameters[] = {
      SET_regex,
      Type_ARG,
      {0},
-     "Specifies a regex and sets matched response data as successed instead of"
+     "Specifies a regex and marks matched response data as success instead of"
      " reporting all results matched in protocol.\n"
      "NOTE1: TlsHello only match the regex while it gets a ServerHello in type "
      "of HANDSHAKE. We just want to match regex with cert and domain info but "

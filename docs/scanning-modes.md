@@ -25,6 +25,7 @@ parameters go through `-scan-arg` and `-probe-arg`, one quoted string each (`--h
 | `zbanner` | `tcp` | `http`, `hello`, `tls-hello` | real TCP handshake + first banner | **yes** |
 | `tcp-state` | `state` | `tls-state`, `http-state`, `hello-state` | full TCP conversation, TLS, HTTP | **yes** |
 | `udp` | `udp` | `echo`, `dns`, `snmp`, `hello-udp` | UDP response or ICMP port-unreachable | **yes** |
+| `quic-state` | `state` | `quic` (plus `http3-state` in HTTP/3 builds) | QUIC/TLS handshake and certificate evidence; full Linux build with ngtcp2/GnuTLS only | **yes** |
 | `icmp-echo` | none | - | alive hosts | no |
 | `icmp-time` | none | - | alive hosts, IPv4 only | no |
 | `sctp-init` | none | - | open/closed SCTP ports | no |
@@ -220,8 +221,8 @@ each slot emits its own `jarm_part` row, and an output-side helper joins them.
 
 ## Firewall rules
 
-The same three rules cover every handshake-based mode: DROP outgoing TCP RST (v4 and v6) and
-DROP outgoing ICMP port-unreachable (ICMP 3/3, ICMPv6 1/4).
+The same rule set covers every handshake-based mode: DROP outgoing TCP RST (IPv4 and IPv6)
+and DROP outgoing ICMP port-unreachable (ICMP 3/3, ICMPv6 1/4).
 
 ```bash
 ./firewall/add_rules.sh     # append the rules

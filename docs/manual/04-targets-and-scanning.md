@@ -191,7 +191,8 @@ xtate -ip 203.0.113.10 -p 443 -scan tcp-syn -probe tls-state
   the most common choice for version detection.
 - **Anything that needs a real connection** — `tcp-state` with a `state`
   probe (`tls-state`, `http-state`, `get-state`, …). It keeps TCBs, so budget
-  `--tcb-mem` and `--conn-expire`.
+  the module options `--tcb-mem` and `--conn-expire` (pass them with
+  `-scan-arg`).
 - **UDP services** — `udp` with a UDP probe; UDP replies are `responsed`,
   ICMP unreachable is `closed`/`port unreachable`.
 - **Host liveness** — `icmp-echo` or `icmp-time`.

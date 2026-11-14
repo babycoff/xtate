@@ -2,7 +2,7 @@
 
 **English** · [中文](zh-CN/control-plane.md)
 
-Local JSON-lines contract shared by MCP, TUI and GUI. One JSON object per line;
+Local JSON-lines contract shared by MCP and GUI. One JSON object per line;
 the server never runs a shell. It is not a network listener.
 
 ## Transport
@@ -135,6 +135,6 @@ IPv4/IPv6 sets can produce multiple groups and a split warning.
 ## Rules
 
 - One control-plane thread; manager calls are serialized.
-- The daemon owns workers; MCP/TUI/GUI are clients.
+- The daemon owns workers; MCP and GUI are clients.
 - A server restart terminates jobs; there is no persistence or recovery claim.
 - Local token authentication; no network listener.

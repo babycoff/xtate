@@ -6,10 +6,20 @@ This is an engineering feasibility assessment, not an implementation promise.
 It assumes the 2.42.0 architecture: stateless ZBanner/UDP, HLTCP for stateful
 TCP, and output-side aggregation.
 
+> **Status note (3.0.0-rc.10).** The assessment below is historical. The
+> stateless `quic` probe and the optional Linux-only `quic-state`/`http3-state`
+> transport are implemented (ngtcp2 + GnuTLS; Windows builds do not ship them
+> and `--list-capabilities` reports `http3: false`). The transport data plane
+> uses ngtcp2, not OpenSSL's QUIC API, and TLS is provided by GnuTLS. Option A/B
+> analysis and the library decision gate therefore apply only to extending the
+> transport (for example dynamic QPACK or DoQ), not to whether to build it.
+
 ## QUIC probe and HTTP/3 exploration
 
-**Verdict: the capability probe is implemented; a real HTTP/3 scanner is a
-separate transport project and should be gated behind a library decision.**
+**Verdict (historical, 2.42.0 baseline): the capability probe is implemented; a
+real HTTP/3 scanner is a separate transport project and should be gated behind a
+library decision.** See the status note above: the transport was subsequently
+built as `quic-state`/`http3-state` on Linux with ngtcp2 + GnuTLS.
 
 QUIC is not HTTP/2 over UDP. The protocol combines TLS 1.3, loss recovery,
 packet-number spaces, connection IDs and a 1200-byte padded Initial packet.

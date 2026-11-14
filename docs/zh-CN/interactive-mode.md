@@ -29,22 +29,42 @@ printf 'set rate = 1000\nset-scan tcp-syn\nset-probe null\nquit\n' |
 ## 命令
 
 ```text
-help                 帮助概览和命令列表
+help                 概览和命令列表
+run                  执行已配置的扫描
 set key = value      设置全局参数
 set-scan <module>    选择扫描模块
 set-probe <module>   选择探测模块
 set-out <module>     选择输出模块
 set-gen <module>     选择生成模块
-list-param [过滤词]  列出全局参数，可按名称 token 过滤
-list-scan/probe/out/gen  列出模块
-echo / show          打印当前配置
+echo                 打印当前配置
+show                 echo 的别名
 show diff            只显示非默认配置
-show all             显示包含默认值的全部配置
+show all             包含默认值（等同于 echo-all）
+echo-all             打印包含默认值的全部配置
+clear                重置为默认配置（保留 `seed`）
+update-seed          用新的随机值替换全局 seed
+unset-scan           取消扫描模块及其参数
+unset-probe          取消探测模块及其参数
+unset-out            取消输出模块及其参数
+unset-gen            取消生成模块及其参数
+list-param [filter]  列出全局参数，可按名称 token 过滤
+list-scan            列出扫描模块
+list-probe           列出探测模块
+list-out             列出输出模块
+list-gen             列出生成模块
 help <command>       查看单条交互命令帮助
 help-param <name>    全局参数详细帮助
-help-scan <module>   模块帮助
-run                  执行当前配置的扫描
-quit                 保存并退出
+help-scan <module>   扫描模块帮助
+help-probe <module>  探测模块帮助
+help-out <module>    输出模块帮助
+help-gen <module>    生成模块帮助
+search-param <text>  模糊搜索全局参数
+search-module <text> 模糊搜索所有模块注册表
+conf-save <file>     保存当前配置
+conf-read <file>     读取配置文件
+conf-recover         载入 `recover.conf`
+version              打印 Xtate 版本
+quit                 保存到 `recover.conf` 并退出
 exit                 不保存直接退出
 ```
 

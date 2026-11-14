@@ -149,6 +149,13 @@ jobs:
           XTATE_MCP_DOCS_DIR: ${{ github.workspace }}
         run: python3 tests/release/test_version_consistency.py --skip-docs
 
+      - name: CLI, MCP, GUI and docs surface consistency
+        env:
+          XTATE_BIN: ./bin/xtate
+          XTATE_STATE_DIR: ${{ runner.temp }}/xtate-state
+          XTATE_MCP_DOCS_DIR: ${{ github.workspace }}
+        run: python3 tests/release/test_surface_consistency.py
+
       - name: MCP contract
         env:
           XTATE_BIN: ./bin/xtate

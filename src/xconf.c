@@ -113,14 +113,14 @@ static const char work_flow[] =
 "|                                                                                            |\n"
 "|      New Targets Generation     Tx Threads           Packet  Transmit         Tx Threads   |\n"
 "|     +----------------------+  ------------->  +---------------------------+  ----------->  |\n"
-"|     | 1.GenerateModule     |  ------------->  | 1.ProbeModule Hello Making|  ----------->  |\n"
-"|     | 2.Scan Rate Control  |  ------------->  | 2.ScanModule Transmiting  |  ----------->  |\n"
+"|     | 1.GenerateModule     |  ------------->  | 1.ProbeModule Payload Build|  ----------->  |\n"
+"|     | 2.Scan Rate Control  |  ------------->  | 2.ScanModule Transmitting |  ----------->  |\n"
 "|     +----------------------+                  +---------------------------+                |\n"
 "|                                                                                            |\n"
 "|                                                                            ^               |\n"
 "|                                                                            |               |\n"
-"|     Packets need to be send   +-----------------------+  Send in priority  |               |\n"
-"|  +--------------------------->| Pakcets Sending Queue +--------------------+               |\n"
+"|     Packets to be sent         +-----------------------+  Send in priority  |               |\n"
+"|  +--------------------------->| Packets Sending Queue +--------------------+               |\n"
 "|  |                            +-----------------------+                                    |\n"
 "|  |                                                                                         |\n"
 "|  |                                                                                         |\n"
@@ -3032,37 +3032,31 @@ ConfParam config_parameters[] = {
      SET_seed,
      Type_ARG,
      {0},
-     "Set a global seed for randomizing of target addresses(ports), and to "
-     "generate cookies in some ScanModules & ProbeModules."
-     "Specify an integer that seeds the random number generator for randomizing"
-     " targets and cookie(for ScanModules & ProbeModules) generation. Using a"
-     " different seed will cause packets to be sent in a different random "
-     "order. Instead of an integer, the string time can be specified, which "
-     "seeds using the local timestamp, automatically generating a different "
-     "random order of scans. If no seed specified, time is the default.",
+     "Set a global seed for target/port randomization and for cookie "
+     "generation in some ScanModules and ProbeModules. Specify an integer to "
+     "seed the random number generator; a different seed changes the random "
+     "order in which targets are sent. Instead of an integer, the string time "
+     "seeds from the local timestamp, producing a different scan order on each "
+     "run. If no seed is specified, time is the default.",
      "Set a global seed for randomizing target and generate cookies."},
     {"rate",
      SET_rate,
      Type_ARG,
      {"max-rate", 0},
-     "Specifies the desired rate for transmitting packets. This can be very "
-     "small numbers, like 0.1 for transmitting packets at rates of one every "
-     "10 seconds, for very large numbers like 10000000, which attempts to "
-     "transmit at 10 million packets/second. In usual experience, Windows can"
-     " do 250 thousand packets per second, and latest versions of Linux can "
-     "do 2.5 million packets per second. The PF_RING driver is needed to get "
-     "to 25 million packets/second. This rate(packets per second) is for total"
-     " speed of all transmit threads.",
+     "Specifies the desired total transmit rate in packets per second. Small "
+     "values such as 0.1 send about one packet every ten seconds; large values "
+     "such as 10000000 request ten million packets per second. The achievable "
+     "rate depends on the operating system, capture backend, NIC, CPU and "
+     "packet size. This is a shared total across all transmit threads, not a "
+     "per-thread rate.",
      "Specifies the desired rate for transmitting packets."},
     {"wait",
      SET_wait,
      Type_ARG,
      {0},
-     "How many seconds should " XTATE_NAME_TITLE_CASE " waiting and handling "
-     "incoming packets after all transmit threads finished. Default is 10s."
-     "Specifies the number of seconds after transmit is done to wait for "
-     "receiving packets before exiting the program. The default is 10 "
-     "seconds.",
+     "How many seconds to keep receiving and handling packets after all "
+     "transmit threads have finished. The default is 10 seconds. Increase it "
+     "to wait for slower responses, at the cost of a longer shutdown.",
      "Seconds of time to wait packets after tx threads finished."},
     {"forever",
      SET_forever,
@@ -3078,7 +3072,7 @@ ConfParam config_parameters[] = {
      " --shard 1/2 tells an instance to send every other packet, starting with"
      " index 0. Likewise, --shard 2/2 sends every other packet, but starting "
      "with index 1, so that it doesn't overlap with the first example.\n"
-     "NOTE: This effective for default Generate Module. Others may not "
+     "NOTE: This is effective for the default Generate Module. Others may not "
      "implement this feature.",
      "Set a string like \"x/y\" to splits the scan among instances."},
     {"tx-thread-count",
@@ -3087,8 +3081,8 @@ ConfParam config_parameters[] = {
      {"tx-count", "tx-num", 0},
      "Specify the number of transmit threads. " XTATE_NAME_TITLE_CASE " could"
      " has multiple transmit threads but only one receive thread. Every "
-     "thread will be lock on a CPU kernel if the number of all threads is no"
-     " more than kernel's.\n"
+     "thread will be locked to a CPU core if the number of all threads is no"
+     " more than the number of cores.\n"
      "NOTE: Default value is 1. More transmit threads can improve the send "
      "rate on some systems, but also increase CPU usage.",
      "Specify the number of transmit threads."},
@@ -3126,7 +3120,7 @@ ConfParam config_parameters[] = {
      Type_FLAG,
      {"interactive", "interact", 0},
      "Start " XTATE_NAME_TITLE_CASE " in an interactive mode.\n"
-     "NOTE1: Interactive mode need a modern terminal that supports controlling "
+     "NOTE1: Interactive mode needs a modern terminal that supports control "
      "chars.\n"
      "NOTE2: " XTATE_NAME_TITLE_CASE
      " will save conf to " XCONF_DFT_RECOVER_FILENAME " automatically.\n"
@@ -3184,7 +3178,7 @@ ConfParam config_parameters[] = {
      " ports/ranges can be specified, like -p 80,20-25. UDP ports can be"
      " specified, like --ports U:161,u:1024-1100. SCTP ports can be specified"
      " like --ports S:36412,s:38412, too.\n"
-     "NOTE: We also support `--ports O:16` to present non-port number in range"
+     "NOTE: `--ports O:16` represents a non-port number in the range"
      " [0..65535] for some ScanModules.",
      "Specifies ports or ranges to scan."},
     {"top-port",
@@ -3201,11 +3195,10 @@ ConfParam config_parameters[] = {
      SET_include_file,
      Type_ARG,
      {"iL", 0},
-     "Read a list of ranges from specified file in the same target format "
-     "described above for IP addresses and ranges. These range lists is for "
-     "some GenerateModules and this file can contain millions of addresses and "
-     "ranges.\n"
-     "NOTE: we can use `-` to read range lists from stdin.",
+     "Read targets from the specified file using the same address and range "
+     "format as -ip. The file may contain millions of addresses and ranges. "
+     "Use this option when the target list is too large for the command line.\n"
+     "NOTE: use `-` to read the list from stdin.",
      "Read a list of IP ranges as targets from specified file."},
     {"exclude",
      SET_exclude_ip,
@@ -3284,7 +3277,7 @@ ConfParam config_parameters[] = {
      "1, 2, 4, 8, 16, 1024 etc.\n"
      "NOTE2: " XTATE_NAME_TITLE_CASE
      " could get source ipv6 address with global"
-     " scope include NAT6 network. But we need to specified manually if use "
+     " scope include NAT6 network. Specify it manually when using an "
      "ipv6 address in local link scope.",
      "Specifies source IP addresses for scanning."},
     {"source-port",
@@ -3292,7 +3285,7 @@ ConfParam config_parameters[] = {
      Type_ARG,
      {"src-port", 0},
      "Send packets using this port number as the source. If not specified, a"
-     " random port will be chosen in the range 40000 through 59999. This port"
+     " random 256-port window starting within 40000 through 59999 is chosen. This port"
      " should be filtered by the host firewall (like iptables) to prevent the"
      " host network stack from interfering with arriving packets. Instead of "
      "a single port, a range can be specified, like 40000-40003.\n"
@@ -3317,7 +3310,7 @@ ConfParam config_parameters[] = {
      Type_ARG,
      {"gateway-mac", "router-mac-ipv4", "router-mac-ipv6", 0},
      "Send packets to this MAC address as the destination. If not specified, "
-     "then the gateway address of the network interface will be get by ARP "
+     "then the gateway address of the network interface is obtained with ARP "
      "and used.\n"
      "NOTE: We could specify different router MAC address for IPv4 and "
      "IPv6 by adding a suffix to the flag.",
@@ -3332,8 +3325,8 @@ ConfParam config_parameters[] = {
      Type_ARG,
      {"snaplen", 0},
      "Set the maximum packet capture len of pcap or pfring. It means we can "
-     "just got snaplen size at most for any packet even just like a kind of "
-     "truncation. This is a non-commonly used switch for some special "
+     "capture at most this many bytes of any packet, truncating larger packets. "
+     "This is an uncommon switch for special "
      "experimental tests. Default snaplen is 65535; values above 65535 are "
      "rejected.\n"
      "NOTE: Be cared to the interaction with --tcp-win and --max-packet-len.",
@@ -3345,7 +3338,7 @@ ConfParam config_parameters[] = {
      "Set the router MAC address to a broadcast address(ff-ff-ff-ff-ff-ff). "
      "This can make " XTATE_NAME_TITLE_CASE
      " be able to scan in a local network.\n"
-     "NOTE: This flag must set while we do some layer-2 protocol scan "
+     "NOTE: This flag must be set for some layer-2 protocol scans "
      "like ARP.\n"
      "NOTE: It does not resolve a per-target MAC. Use it only for deliberate "
      "layer-2/broadcast scans; for normal TCP/UDP scans leave it off first, "
@@ -3356,13 +3349,13 @@ ConfParam config_parameters[] = {
      SET_fake_router_mac,
      Type_FLAG,
      {"no-router-mac", "fake-gateway-mac", 0},
-     "Set the router MAC address to a invalid address(01-02-03-04-05-06). "
-     "This can stop " XTATE_NAME_TITLE_CASE " to resolve router MAC address."
-     "It's useful when the ScanModule will specify destination MAC address "
-     "dynamicly for different target. e.g. NdpNsScan.\n"
-     "HINT: If we want to test the highest sending rate and not bother anyone"
-     ", this param would be helpful with `--infinite`.",
-     "Set the router MAC address to a invalid address."},
+     "Set the router MAC address to the invalid address 01-02-03-04-05-06. "
+     "This prevents " XTATE_NAME_TITLE_CASE " from resolving the router MAC. "
+     "It is useful when a ScanModule sets the destination MAC dynamically for "
+     "different targets, for example NdpNsScan.\n"
+     "HINT: combine with `--infinite` when testing maximum send rate without "
+     "involving other hosts.",
+     "Set the router MAC address to an invalid address."},
     {"bypass-os",
      SET_bypass_os,
      Type_FLAG,
@@ -3375,7 +3368,7 @@ ConfParam config_parameters[] = {
      "subnet.\n"
      "NOTE1: There's no need to set some firewall rules for Linux while we are"
      " in bypassing mode. And we can't use the feature of OS protocol stack "
-     "like responsing TCP RST or ICMP Port Unreachable.\n"
+     "like responding with TCP RST or ICMP Port Unreachable.\n"
      "NOTE2: This function may need to receive different type of packets from "
      "ScanModule so that the BPF filter needs to be configured properly.",
      "Completely bypass the OS protocol stack."},
@@ -3436,16 +3429,17 @@ ConfParam config_parameters[] = {
      SET_list_target,
      Type_FLAG,
      {"list-targets", "list-ip", "list-ip-port", 0},
-     "Do not run, but print every unique targets in random. We can got ordered "
-     "targets with `--list-target[order]` or `--list-target[norandom]`. Also "
-     "can print relative AS info if `--out-as-info` is on.",
-     "Print every unique targets in random or not."},
+     "Do not run. Print each unique target in randomized order. Append "
+     "`[order]` or `[norandom]` to the option name to print targets in "
+     "deterministic order instead. AS information is included when "
+     "`--output-as-info` is enabled.",
+     "Print each unique target in randomized or deterministic order."},
     {"explain-target",
      SET_explain_target,
      Type_ARG,
      {"explain", "route-to", 0},
-     "Read-only: target, route-selected interface, source IP/MAC, gateway. "
-     "No packets are sent.",
+     "Read-only: target, route-selected interface, source IP, gateway and link "
+     "type. No packets are sent.",
      "Explain target interface route."},
     {"check",
      SET_check_network,
@@ -3493,19 +3487,20 @@ ConfParam config_parameters[] = {
      SET_tui_mode,
      Type_FLAG,
      {0},
-     "Run the TUI dashboard; starts a private control plane unless --control-connect is given.",
-     "Run TUI dashboard."},
+     "Run the legacy TUI dashboard (deprecated in 3.0; prefer --gui). Starts a "
+     "private control plane unless --control-connect is given.",
+     "Run legacy TUI dashboard."},
     {"gui",
      SET_gui_mode,
      Type_FLAG,
      {0},
-     "Run the loopback-only browser GUI; starts a private control plane unless --control-connect is given.",
+     "Run the browser GUI; listens on loopback by default and starts a private control plane unless --control-connect is given.",
      "Run browser GUI."},
     {"gui-listen",
      SET_gui_listen,
      Type_ARG,
      {0},
-     "GUI listen address (loopback only), default 127.0.0.1:8787.",
+     "GUI listen address, default 127.0.0.1:8787. A non-loopback bind requires XTATE_GUI_ALLOW_REMOTE=1.",
      "GUI listen address."},
     {"gui-no-open",
      SET_gui_no_open,
@@ -3529,7 +3524,9 @@ ConfParam config_parameters[] = {
      SET_control_connect,
      Type_ARG,
      {0},
-     "Control endpoint for a raw request.",
+     "Shared endpoint for client modes and raw control requests: used by "
+     "--mcp, --gui, --control-ping, and --control-request. When omitted by "
+     "--mcp or --gui, a private control plane is started automatically.",
      "Control endpoint."},
     {"control-request",
      SET_control_request,
@@ -3591,7 +3588,7 @@ ConfParam config_parameters[] = {
      {"list-interface", "list-adapter", 0},
      "Do not run. Print one aligned row per adapter: IPv4, MAC, gateway, "
      "state.",
-     "Print informations of all adapters"},
+     "Print information about all network adapters."},
     {"help-parameter",
      SET_help_param,
      Type_ARG,
@@ -3679,8 +3676,8 @@ ConfParam config_parameters[] = {
      SET_scan_module,
      Type_ARG,
      {"scan", "scanner", 0},
-     "Specifies a ScanModule to perform scanning. Use --list-scan to get "
-     "informations of all ScanModules.\nNOTE: A ScanModule must be specified "
+     "Specifies a ScanModule to perform scanning. Use --list-scan to list "
+     "all ScanModules.\nNOTE: A ScanModule must be specified "
      "for every scan. Without it, " XTATE_NAME " prints usage instead of "
      "starting a scan.",
      "Specifies a ScanModule to perform scanning."},
@@ -3688,7 +3685,7 @@ ConfParam config_parameters[] = {
      SET_list_scan_modules,
      Type_FLAG,
      {"list-scan-module", "list-scan", "list-scanner", 0},
-     "List informations of all ScanModules."},
+     "List all ScanModules."},
     {"help-scan-module",
      SET_help_scan_module,
      Type_ARG,
@@ -3698,8 +3695,8 @@ ConfParam config_parameters[] = {
      SET_scan_module_args,
      Type_ARG,
      {"scan-module-arg", "scan-arg", "scanner-arg", 0},
-     "Specifies module-specific parameters for used ScanModule. Information "
-     "of parameters for each ScanModule could be found in --list-scan.",
+     "Specifies module-specific parameters for used ScanModule. Parameter "
+     "information for each ScanModule is available in --help-scan.",
      "Specifies module-specific parameters for used ScanModule."},
 
     {"PROBE MODULES CONFIG", SET_nothing, 0, {0}, NULL},
@@ -3709,7 +3706,7 @@ ConfParam config_parameters[] = {
      Type_ARG,
      {"probe", 0},
      "Specifies a ProbeModule for used ScanModule to perform scanning. Use "
-     "--list-probe to get informations of all ProbeModules.\nNOTE: ProbeModule"
+     "--list-probe to list all ProbeModules.\nNOTE: ProbeModule"
      " is not required for all ScanModules and different ScanModule expects "
      "different type of ProbeModule.",
      "Specifies a ProbeModule for used ScanModule to perform scanning."},
@@ -3717,7 +3714,7 @@ ConfParam config_parameters[] = {
      SET_list_probe_modules,
      Type_FLAG,
      {"list-probe-module", "list-probe", "list-probes", 0},
-     "List informations of all ProbeModules."},
+     "List all ProbeModules."},
     {"help-probe-module",
      SET_help_probe_module,
      Type_ARG,
@@ -3727,8 +3724,8 @@ ConfParam config_parameters[] = {
      SET_probe_module_args,
      Type_ARG,
      {"probe-module-arg", "probe-args", "probe-arg", 0},
-     "Specifies module-specific parameters for used ProbeModule. Information "
-     "of parameters for each ProbeModule could be found in --list-probe.",
+     "Specifies module-specific parameters for used ProbeModule. Parameter "
+     "information for each ProbeModule is available in --help-probe.",
      "Specifies module-specific parameters for used ProbeModule."},
 
     {"OUTPUT MODULES CONFIG", SET_nothing, 0, {0}, NULL},
@@ -3737,18 +3734,18 @@ ConfParam config_parameters[] = {
      SET_output_module,
      Type_ARG,
      {"output", "out", 0},
-     "Specifies an OutputModule for outputing results in special way. Use "
-     "--list-output to get informations of all OutputModules. OutputModule"
-     " is non-essential because " XTATE_NAME_TITLE_CASE " output results to "
-     "stdout in default.\n"
+     "Specifies an OutputModule for writing results in a custom format. Use "
+     "--list-output to list all OutputModules. OutputModule"
+     " is optional because " XTATE_NAME_TITLE_CASE " writes results to "
+     "stdout by default.\n"
      "NOTE: " XTATE_NAME_TITLE_CASE " won't output to stdout if we specified "
      "an OutputModule unless we use `-out-screen` switch.",
-     "Specifies an OutputModule for outputing results in special way."},
+     "Specifies an OutputModule for writing results in a custom format."},
     {"list-output-modules",
      SET_list_output_modules,
      Type_FLAG,
      {"list-output-module", "list-output", "list-out", 0},
-     "List informations of all OutputModules."},
+     "List all OutputModules."},
     {"help-output-module",
      SET_help_output_module,
      Type_ARG,
@@ -3758,8 +3755,8 @@ ConfParam config_parameters[] = {
      SET_output_module_args,
      Type_ARG,
      {"output-module-arg", "output-arg", "out-arg", 0},
-     "Specifies module-specific parameters for used OutputModule. Information "
-     "of parameters for each OutputModule could be found in --list-output.",
+     "Specifies module-specific parameters for used OutputModule. Parameter "
+     "information for each OutputModule is available in --help-output.",
      "Specifies module-specific parameters for used OutputModule."},
     {"output-file",
      SET_output_filename,
@@ -3788,29 +3785,28 @@ ConfParam config_parameters[] = {
      SET_show_output,
      Type_ARG,
      {"show-out", "show", 0},
-     "Tells which type of results should be showed explicitly, such as:\n"
-     "'success', 'failed' or 'info'.",
-     "Tells which type of results should be showed explicitly."},
+     "Select which result types to display in addition to the output stream: "
+     "all, success (successed), fail (failed, failure) or info (information).",
+     "Select which result types to display."},
     {"no-show-output",
      SET_no_show_output,
      Type_ARG,
      {"no-show-out", "no-show", 0},
-     "Tells which type of results should not be showed explicitly, such as:\n"
-     "'success', 'failed' or 'info'.",
-     "Tells which type of results should not be showed explicitly."},
+     "Select which result types not to display: all, success (successed), "
+     "fail (failed, failure) or info (information).",
+     "Select which result types not to display."},
     {"no-escape-char",
      SET_no_escape,
      Type_FLAG,
      {"no-escape", 0},
-     "Use no escaped chars for unprintable chars while normalizing in data "
-     "chains of result outputing. This will get valid JSON compatible string "
-     "values.\n"
-     "NOTE1: use no escaped chars means to escape the escaped chars like "
-     "'\\x00\\x01' to '\\\\x00\\\\x01'\n"
-     "NOTE2: Some output modules could accept escaped chars and will escape "
-     "unprinted chars automaticlly(e.g. Bson Output Module). So don't use the "
-     "flag for those modules or we'll get weired string results.",
-     "Use no escaped chars for unprintable chars while normalizing result."},
+     "Double-escape unprintable bytes in result strings. By default an "
+     "unprintable byte is normalized to `\\xNN`; with this flag it becomes "
+     "`\\\\xNN`, so a downstream JSON consumer sees the escape sequence "
+     "literally instead of interpreting it.\n"
+     "NOTE: do not use this for output modules that already escape "
+     "unprintable bytes themselves, such as BSON; doing so produces "
+     "double-escaped, unexpected strings.",
+     "Write unprintable bytes as literal backslash escapes instead of JSON escapes."},
     {"output-as-info",
      SET_output_as_info,
      Type_FLAG,
@@ -3827,15 +3823,15 @@ ConfParam config_parameters[] = {
      Type_ARG,
      {"generate", "gen", "generator", 0},
      "Specifies a GenerateModule to generate targets for scanning. Use "
-     "--list-gen to get informations of all GenerateModules.\n"
+     "--list-gen to list all GenerateModules.\n"
      "NOTE: A GenerateModule must be used in every time we scan. BlackRock "
      " module will be default if we did not specify.",
      "Specifies a GenerateModule to generate targets for scanning."},
     {"list-generate-modules",
      SET_list_generate_modules,
      Type_FLAG,
-     {"list-generate-module", "list-generator", "list-gen", 0},
-     "List informations of all GenerateModules."},
+     {"list-generate-module", "list-generate", "list-generator", "list-gen", 0},
+     "List all GenerateModules."},
     {"help-generate-module",
      SET_help_generate_module,
      Type_ARG,
@@ -3846,7 +3842,7 @@ ConfParam config_parameters[] = {
      Type_ARG,
      {"generate-module-arg", "generator-arg", "gen-arg", 0},
      "Specifies module-specific parameters for used GenerateModule. "
-     "Information of parameters for each GenerateModule could be found in "
+     "Parameter information for each GenerateModule is available in "
      "--help-gen.",
      "Specifies module-specific parameters for used GenerateModule."},
 
@@ -3929,14 +3925,12 @@ ConfParam config_parameters[] = {
      SET_tcp_tsecho,
      Type_ARG,
      {0},
-     "Specifies whether or what value of timestamp in TCP Timestamp option"
-     " should TCP SYN packets use for timestamp echoing. e.g. --tcp-tsecho "
-     "true, --tcp-tsecho <value>. The default timestamp value is 0x12345678 "
-     " and is not be used in template of TCP SYN packet. The value in packet "
-     "templates will be used if not set.\n"
-     "NOTE: Some router would delete timestamp option. So we cannot received "
-     "an SYN-ACK segment with 4 NOP in a row instead of expected timestamp "
-     "option.",
+     "Specifies whether or which timestamp value TCP SYN packets should use "
+     "for timestamp echoing, e.g. --tcp-tsecho true or --tcp-tsecho <value>. "
+     "The default timestamp value is 0x12345678 and is not used in TCP SYN "
+     "templates; a value in the template is used unless overridden.\n"
+     "NOTE: Some routers remove the TCP Timestamp option, so the SYN-ACK may "
+     "contain four NOPs instead of the expected timestamp option.",
      "Specifies whether or what value of Timestamp option should SYN packets "
      "use."},
     {"packet-trace",
@@ -3951,11 +3945,10 @@ ConfParam config_parameters[] = {
      SET_bpf_filter,
      Type_ARG,
      {"bpf", 0},
-     "Specifies a string as BPF filter for pcap to replace the default BPF "
-     "filter string in ScanModule.\n"
-     "NOTE: Every ScanModule has its own BPF filter and we can check them "
-     "with --help-scan <module>. The BPF filter we set with --bpf-filter will"
-     " constrain the packets we received with ScanModules.",
+     "Replace the default BPF filter of the selected ScanModule with the "
+     "given expression. Use `--help-scan <module>` to inspect the default "
+     "filter. The replacement is used directly for capture; the module filter "
+     "is not also applied.",
      "Specifies a string as BPF filter for pcap."},
     {"no-bpf-filter",
      SET_no_bpf,
@@ -3994,7 +3987,7 @@ ConfParam config_parameters[] = {
      "Use sendmmsg syscall to send packets in batch on Linux if raw socket can "
      "be used. This may break the bottle-neck of sending one by one.\n"
      "NOTE: Use sendmmsg in slow send rate is not recommended because of the "
-     "latency and packet lossing.",
+     "latency and packet loss.",
      "Use sendmmsg syscall to send packets in batch on Linux."},
     {"sendmmsg-batch",
      SET_sendmmsg_batch,
@@ -4007,16 +4000,15 @@ ConfParam config_parameters[] = {
      SET_sendmmsg_retries,
      Type_ARG,
      {"sendmmsg-retry", 0},
-     "Max number of times to try to do sendmmsg syscall if failed. Default "
-     "is 64.",
+     "Max number of times to retry a failed sendmmsg syscall. Default is 10.",
      "Max number of times to try to do sendmmsg syscall if failed."},
     {"send-queue",
      SET_send_queue,
      Type_FLAG,
      {"sendq", 0},
-     "Use sendqueue feature of Npcap/Winpcap on Windows to transmit packets. "
-     "The transmit rate on Windows is really slow, like 40-kpps. The speed "
-     "can be increased by using the sendqueue feature to roughly 300-kpps.\n"
+     "Use the sendqueue feature of Npcap/Winpcap on Windows to batch packet "
+     "transmission. Actual throughput depends on the adapter and driver; "
+     "measure it on your system.\n"
      "NOTE: It's not recommended to use sendqueue feature in low send rate, "
      "because this may cause a lot latency for every single packet and affect"
      " some scan modules working with connections.",
@@ -4042,10 +4034,9 @@ ConfParam config_parameters[] = {
      Type_FLAG,
      {"dry-run", 0},
      "Do not actually transmit packets. This is useful with a low rate and "
-     "--packet-trace to look at what packets might've been transmitted. Or, "
-     "it's useful with --rate 100000000 in order to benchmark how fast "
-     "transmit would work (assuming a zero-overhead driver). PF_RING is about"
-     " 20% slower than the benchmark result from offline mode.",
+     "--packet-trace to inspect what would have been sent, or with a very "
+     "high --rate to benchmark the transmit path without expecting a "
+     "zero-overhead NIC. Results depend on the driver and workload.",
      "Do not actually transmit packets."},
 
     {"MISCELLANEOUS", SET_nothing, 0, {0}, NULL},
@@ -4054,10 +4045,9 @@ ConfParam config_parameters[] = {
      SET_read_conf,
      Type_ARG,
      {"conf-file", "conf", "resume", 0},
-     "Read configurations from specified file. On Unix-like systems, if not "
-     "specified, /etc/xtate/xtate.conf is read when present. We could specify a "
-     "configuration file generated by " XTATE_NAME_TITLE_CASE
-     " automatically after break by user to resume an unfinished scanning.",
+     "Read configurations from the specified file. The file may be one that "
+     XTATE_NAME_TITLE_CASE " writes automatically after the user interrupts an "
+     "unfinished scan, so the scan can be resumed.",
      "Read configurations from specified file."},
     {"resume-index",
      SET_resume_index,
@@ -4091,7 +4081,7 @@ ConfParam config_parameters[] = {
      {"no-ansi", "no-color", 0},
      "Print result and status to the screen without ANSI controlling(escape) "
      "characters. Some old terminals do not support those characters.\n"
-     "NOTE: displaying maybe not that good if no ansi escape chars.",
+     "NOTE: output may look poor on terminals without ANSI escape support.",
      "Print result and status to screen without controlling chars."},
     {"no-dedup",
      SET_nodedup,
@@ -4102,14 +4092,10 @@ ConfParam config_parameters[] = {
      SET_dedup_win,
      Type_ARG,
      {0},
-     "Set the window size of deduplication table. Default size if 1000000.\n"
-     "NOTE: " XTATE_NAME_TITLE_CASE
-     " uses two different types of deduplication. The"
-     " default one is hash buckets with LRU mechanism and window size means the"
-     " whole count of entries. The other one is judy array which will be used "
-     "automaticly if built with libjudy. In this condition, window size means"
-     " the actual size of slide window. I didn't identify the performance and "
-     "advantages between them and left the choice to users.",
+     "Set the window size of the deduplication table. The default is "
+     "1000000.\n"
+     "NOTE: The deduplication table is a hash table with LRU eviction; the "
+     "window size is the number of entries.",
      "Set the window size of deduplication table."},
     {"stack-buf-count",
      SET_stack_buf_count,
@@ -4131,15 +4117,15 @@ ConfParam config_parameters[] = {
      SET_infinite,
      Type_FLAG,
      {0},
-     "Scan the target again and again. Not stop until we hit <Ctrl-C>. This "
-     "is useful for us to test the some performance of " XTATE_NAME_TITLE_CASE
-     ". The seed will update in every loop while setting infinite mode.\n"
-     "HINT: If we just want to test the highest sending rate, try to set an "
-     "invalid router mac like `--router-mac 11:22:33:44:55:66` or use `--fake"
-     "-router-mac` to send packets in local network.\n"
-     "NOTE1: We should be careful to the deduplication in the infinite mode.\n"
-     "NOTE2: This switch is useful for default and some generators which "
-     "implemented the feature.",
+     "Scan the same targets repeatedly until interrupted with Ctrl-C. This is "
+     "useful for sustained performance testing. The seed is updated on each "
+     "iteration while infinite mode is active.\n"
+     "HINT: to test maximum send rate without involving other hosts, set an "
+     "unused router MAC such as `--router-mac 11:22:33:44:55:66` or use "
+     "`--fake-router-mac` to send packets only on the local network.\n"
+     "NOTE1: deduplication requires care in infinite mode.\n"
+     "NOTE2: this switch is useful for the default generator and the "
+     "generators that implement repeat support.",
      "Scan the target again and again."},
     {"repeat",
      SET_repeat,
@@ -4156,47 +4142,44 @@ ConfParam config_parameters[] = {
      SET_static_seed,
      Type_FLAG,
      {"keep-seed", 0},
-     "Use same seed to pick up addresses in infinite mode while listing targets"
-     ". " XTATE_NAME_TITLE_CASE
-     " changes seed for every round to make a different"
-     " scan order while repeating. We can use static-seed to keep order of "
-     "all rounds.",
-     "Use same seed to pick up addresses in infinite mode while listing "
-     "targets."},
+     "Keep the same seed while listing targets in infinite mode. Normally "
+     XTATE_NAME_TITLE_CASE " changes the seed each round to vary the scan "
+     "order while repeating; this flag keeps the same order for all rounds.",
+     "Keep the same seed across repeated rounds."},
     {"no-cpu-bind",
      SET_no_cpu_bind,
      Type_FLAG,
      {0},
-     "In default, " XTATE_NAME_TITLE_CASE " bind its threads to CPU kernels for"
-     " better performance if the number of kernels is great than 1. This "
-     "switch allows no CPU binding for all threads and is useful for computers"
-     " with outdated hardware.\n"
+     "Do not bind threads to CPU cores. By default " XTATE_NAME_TITLE_CASE
+     " binds threads to CPU cores for better performance when more than one "
+     "core is available. Disable binding for debugging, for constrained "
+     "containers, or when binding conflicts with other workloads.\n"
      "NOTE1: The default CPU-binding order is:\n"
      "    1.Tx Threads\n"
      "    2.Rx Threads\n"
      "    3.Rx Handle Threads\n"
-     "NOTE2: As you can see, 3 threads need to be binded at least. (1 tx "
-     "thread, 1 rx thread and 1 rx handle thread)",
-     "Do not bind threads to CPU kernels."},
+     "NOTE2: At least three threads must be bound: one Tx thread, one Rx "
+     "thread and one Rx handler thread.",
+     "Do not bind threads to CPU cores."},
     {"ip2asn-v4-file",
      SET_ip2asn_v4,
      Type_ARG,
      {"ip2asn-v4", "ip2asn-4", 0},
      "Specifies a 'ip2asn-v4.tsv' file to load IPv4 ASN info for relative "
-     "features like --out-as-info.",
+     "features like --output-as-info.",
      "Specifies a 'ip2asn-v4.tsv' file to load IPv4 ASN info."},
     {"ip2asn-v6-file",
      SET_ip2asn_v6,
      Type_ARG,
      {"ip2asn-v6", "ip2asn-6", 0},
      "Specifies a 'ip2asn-v6.tsv' file to load IPv6 ASN info for relative "
-     "features like --out-as-info.",
+     "features like --output-as-info.",
      "Specifies a 'ip2asn-v6.tsv' file to load IPv6 ASN info."},
     {"no-back-trace",
      SET_nothing, /*It will be handle before commandline parsing*/
      Type_FLAG,
      {"no-bt", 0},
-     "Turn off the backtrace of call stack after segment fault used for "
+     "Turn off the call-stack backtrace after a segmentation fault; used for "
      "debugging."},
 
     /*Put it at last for better "help" output*/
@@ -4336,7 +4319,7 @@ void xconf_print_intro() {
     printf("\n");
     printf("\n");
     printf("%s", i18n_tr("This is how " XTATE_NAME_TITLE_CASE
-                         " working internally:\n"));
+                         " works internally:\n"));
     printf("\n");
     printf(work_flow);
     printf("\n");
@@ -4441,14 +4424,42 @@ void xconf_print_usage() {
     printf("  " XTATE_NAME " -list-scan\n");
     xprint(
         i18n_tr(
-            "list all ScanModules and other types of module are the same.\n"),
+            "list all ScanModules; use -list-probe, -list-out and -list-gen for "
+            "the other module types.\n"),
         6, 80);
     printf("\n");
+    printf("  " XTATE_NAME " -check -ip 10.0.0.0/8\n");
+    xprint(
+        i18n_tr("check interface, route, source address and link type without "
+                "sending packets.\n"),
+        6, 80);
+    printf("\n");
+    printf("  " XTATE_NAME " -explain-target 10.0.0.8\n");
+    xprint(i18n_tr("show the route selected for a target and the capture "
+                   "interface.\n"),
+           6, 80);
+    printf("\n");
+    printf("  " XTATE_NAME " -list-if\n");
+    xprint(i18n_tr("list capture interfaces with addresses, MAC and link "
+                   "type.\n"),
+           6, 80);
+    printf("\n");
+    printf("  " XTATE_NAME " -list-capabilities\n");
+    xprint(i18n_tr("print build and module capabilities as JSON for scripts "
+                   "and agents.\n"),
+           6, 80);
+    printf("\n");
+    printf("  " XTATE_NAME " -mcp\n");
+    xprint(i18n_tr("start the MCP stdio server for an AI agent.\n"), 6, 80);
+    printf("\n");
+    printf("  " XTATE_NAME " -gui\n");
+    xprint(i18n_tr("start the local browser console.\n"), 6, 80);
+    printf("\n");
     printf("  " XTATE_NAME " -help-scan tcp-syn\n");
-    xprint(i18n_tr("see help of TcpSyn ScanModule in detail.\n"), 6, 80);
+    xprint(i18n_tr("show detailed help for the TcpSyn ScanModule.\n"), 6, 80);
     printf("\n");
     printf("  " XTATE_NAME " -interactive\n");
-    xprint(i18n_tr("set params and do scanning in an user-friendly interactive "
+    xprint(i18n_tr("set parameters and run scans in a user-friendly interactive "
                    "mode.\n"),
            6, 80);
     printf("\n");
@@ -4461,7 +4472,7 @@ void xconf_print_usage() {
            6, 80);
     printf("\n");
     printf("  " XTATE_NAME " -usage\n");
-    xprint(i18n_tr("display this usage text of using examples.\n"), 6, 80);
+    xprint(i18n_tr("display this usage summary with examples.\n"), 6, 80);
     printf("\n");
     printf("  " XTATE_NAME " -help\n");
     xprint(i18n_tr("display detailed help text of all parameters.\n"), 6, 80);

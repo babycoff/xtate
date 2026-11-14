@@ -11,8 +11,8 @@ Two ideas organize everything else:
    packets become replies, replies become records. Each stage is a pluggable
    module type; nothing is loaded at runtime.
 2. **A privileged local daemon with thin local clients.** The scan engine, job
-   manager and control plane run in one process. GUI, TUI and MCP are clients
-   of that process, not alternative scanners.
+   manager and control plane run in one process. GUI and MCP are clients of that
+   process, not alternative scanners.
 
 ## The pipeline
 
@@ -137,8 +137,9 @@ throughput-sensitive runs should prefer local formats.
 
 Both rely on the same invariants: follow-up packets travel through the NetStack
 queue rather than being sent inline, and the host kernel must be prevented from
-resetting connections it does not know about. See chapter 05 and the deep
-documents [ZBanner](../zbanner.md) and [HLTCP](../hltcp.md).
+resetting connections it does not know about. See
+[09 · Troubleshooting](./09-troubleshooting.md) and the deep documents
+[ZBanner](../zbanner.md) and [HLTCP](../hltcp.md).
 
 The design deliberately gives up some things: one receiver thread (which caps
 receive-side throughput), no output queue, thread-affine connection state, and
@@ -149,7 +150,7 @@ not bugs.
 
 The same executable can run as a scan command, or as a daemon hosting a local
 control plane. The control plane is a **local JSON-lines contract** shared by
-MCP, the TUI and the GUI:
+MCP and the GUI:
 
 - One JSON object per line; one response per request.
 - The server never runs a shell.
@@ -197,25 +198,27 @@ and clients read the manifest and chunk files. Completed results can be split
 into `<result>.<id>.ndjson` chunks plus `<result>.manifest.json` (and an
 optional index) with `--result-chunk-size`/`--result-index`. Compression is
 opt-in zstd (default none); a build without zstd falls back to uncompressed
-chunks rather than failing the job. `quota_bytes` is enforced during the run:
-when the result file reaches the quota, the scan stops and the job reports a
-quota error — it is a hard mid-scan limit.
+chunks rather than failing the job. `quota_bytes` is a post-run check: the job
+manager compares the result size with the quota when the job reaches a terminal
+state and logs a warning if it is exceeded. It does not stop or truncate a
+running scan, and chunking may then produce incomplete chunks.
 
 The operational consequences: one control-plane thread, serialized manager
 calls; the daemon owns the workers; a daemon restart terminates its jobs (there
 is no persistence or recovery); and clients poll `job.status`/`job.list`
 because there is no server-push event stream.
 
-## GUI: loopback console
+## GUI: local console
 
 The GUI is a local scan console served by the same process. The browser page,
 its assets and the API are local by default: the server binds `127.0.0.1` and
 `--gui-listen` must be `host:port`. Binding a non-loopback address requires the
 explicit `XTATE_GUI_ALLOW_REMOTE=1` opt-in (for Docker host publishing), and
 Host-header validation still rejects non-loopback names. The page is served from
-the binary and exposes a small JSON API — `/api/info`, `/api/system`, `/api/interfaces`, `/api/modules`,
-`/api/preflight`, `/api/results` and `/api/rpc` for the job allowlist. The GUI never shells out
-and never forwards an arbitrary method to the control plane.
+the binary and exposes a small JSON API — `/api/info`, `/api/system`,
+`/api/interfaces`, `/api/modules`, `/api/options`, `/api/preflight`,
+`/api/results`, `/api/open` and `/api/rpc` for the job allowlist. The GUI never
+shells out and never forwards an arbitrary method to the control plane.
 
 The security contract for the loopback API is the important part:
 
@@ -224,10 +227,12 @@ The security contract for the loopback API is the important part:
   carry a loopback `Host` (`127.0.0.1:PORT` or
   `localhost:PORT`); anything else is rejected, which blocks DNS-rebinding
   attacks.
-- **Per-run token** — `/api/*` requests must carry `X-Xtate-GUI-Token`, a
-  random token generated at startup and injected into the served page. A
-  request without it gets `403 GUI_TOKEN_REQUIRED`, and the token value is
-  never displayed in Settings; only its presence/absence is shown.
+- **Per-run token** — a random token is generated at startup and printed with the
+  URL. Opening that URL (`?token=...`) sets an `HttpOnly`, `SameSite=Strict`
+  session cookie; `/api/*` requests must then carry either that cookie or the
+  same value in `X-Xtate-GUI-Token`. A request without it gets
+  `403 GUI_TOKEN_REQUIRED`, and the token value is never displayed in Settings;
+  only its presence/absence is shown.
 - **The browser cannot supply the control-plane token.** A `/api/rpc` body
   containing a `token` member is rejected with `400 TOKEN_NOT_ALLOWED`; when
   forwarding to the control plane the GUI injects the server process's own
@@ -282,10 +287,10 @@ MCP adds its own boundaries:
   resources return `-32002 resource not found` without scanning the disk.
 - **Argument and buffer limits** — an oversized inline argument is rejected,
   and the MCP argument buffer is 8 KiB.
-- **Audit trail** — `start_scan` appends a record (rate plus a
-  truncation-bounded config) to `xtate-mcp-audit.log` in the MCP process's
-  working directory. That path is relative, so the directory must be trusted;
-  it is not a tamper-proof audit store.
+- **Audit trail (opt-in)** — when `XTATE_MCP_AUDIT_LOG` names a file,
+  `start_scan` appends a record (rate plus a truncation-bounded config) to it.
+  If the variable is unset, no audit record is written. The file is a local
+  log, not a tamper-proof audit store.
 
 The Agent Skill is documentation/playbook, not an enforcement mechanism. It
 tells an agent how to plan an authorized scan; validation in the MCP server and
@@ -299,9 +304,11 @@ are explicitly out of scope.
 
 ### What isolates the daemon
 
-- **No network listener.** Control plane = Unix socket/Named Pipe; GUI =
-  loopback HTTP; MCP = stdio. None of these is a remote service, and none
-  should be exposed through a TCP proxy and described as supported.
+- **No remote control plane.** Control plane = Unix socket/Named Pipe; GUI =
+  HTTP on loopback by default (a non-loopback bind requires the explicit
+  `XTATE_GUI_ALLOW_REMOTE=1` opt-in and is still Host-checked); MCP = stdio.
+  Do not expose the control plane through a TCP proxy and describe it as
+  supported.
 - **Local authentication.** When `XTATE_CONTROL_TOKEN` is set, every control
   request must carry the same token, and a missing or wrong token returns
   `UNAUTHORIZED`. When it is unset, the server accepts every local client —
@@ -347,7 +354,7 @@ A normal deployment is:
                 |                                      |
   GUI browser --loopback HTTP-->  xtate daemon        |
   MCP agent  --stdio-------->     + control plane      |
-  TUI/CLI    --socket/pipe-->     + job manager        |
+  CLI        --socket/pipe-->     + job manager        |
                 |                 + scan engine        |
                 |                                      |
                 |   results <-- filesystem manifest    |

@@ -4,19 +4,19 @@
 > 扫描设置、预检、实时观察和结果请使用[浏览器 GUI](gui.md)。GUI 能力完整覆盖后，
 > TUI 代码可能被移除。
 
-TUI 是一个全屏的**控制平面客户端**。它不在进程内扫描，也不替代扫描器 CLI；
-每个动作都会转成控制平面的 JSON-lines 请求，和 MCP 使用同一套 API。任务生命周期、
-超时、结果文件、配额告警和取消仍由控制平面负责。
+TUI 是一个全屏的**控制面客户端**。它不在进程内扫描，也不替代扫描器 CLI；
+每个动作都会转成控制面的 JSON-lines 请求，和 MCP 使用同一套 API。任务生命周期、
+超时、结果文件、配额告警和取消仍由控制面负责。
 
 如果你需要同时观察多个受管任务、取消其中一个，或者不想手写 JSON 就启动一个小范围
 的已授权扫描，可以使用 TUI。
 
 ## 前提
 
-- 同一台主机上已经有一个控制平面（或使用 `xtate --tui` 自动启动的私有控制平面）：
+- 同一台主机上已经有一个控制面（或使用 `xtate --tui` 自动启动的私有控制面）：
   - Unix：`--control-plane=/tmp/xtate-ctl.sock`
   - Windows：`--control-plane=\\.\pipe\xtate-ctl`
-- 连接已有控制平面时，如果设置了控制令牌，两者必须使用相同的
+- 连接已有控制面时，如果设置了控制令牌，两者必须使用相同的
   `XTATE_CONTROL_TOKEN`。
 - 终端支持 ANSI 转义序列。Windows 10/11 Terminal 和较新的 Windows 控制台可用；
   TUI 会主动开启虚拟终端处理。
@@ -57,8 +57,8 @@ xtate --tui --control-connect=\\.\pipe\xtate-ctl
 ```
 
 私有子进程会继承 TUI 进程的 `XTATE_CONTROL_TOKEN`；如果环境未设置令牌，TUI 会为
-私有控制平面生成一个临时 128 位令牌，使本机其他账户无法连接，并在 TUI 退出时清除。
-连接已有控制平面时仍使用环境中的令牌（如果有）。
+私有控制面生成一个临时 128 位令牌，使本机其他账户无法连接，并在 TUI 退出时清除。
+连接已有控制面时仍使用环境中的令牌（如果有）。
 
 ## 按键
 
@@ -86,12 +86,12 @@ xtate --tui --control-connect=\\.\pipe\xtate-ctl
 4. 可选的接口名；
 5. 速率，默认 `1000` 包/秒；
 6. 超时，默认 `300` 秒；
-7. 结果路径，默认 `xtate-tui-<epoch>.ndjson`（相对路径相对于控制平面进程，而不是
+7. 结果路径，默认 `xtate-tui-<epoch>.ndjson`（相对路径相对于控制面进程，而不是
    TUI 进程）；
 8. 确认：必须原样输入 `YES`。
 
 只有确认之后，TUI 才会发送 `authorized: true`。这是易用性保护，不是安全边界：
-控制平面只在本机、且被信任；MCP 仍会自己校验 `authorized: true`，控制平面不接受
+控制面只在本机、且被信任；MCP 仍会自己校验 `authorized: true`，控制面不接受
 远程连接。
 
 向导不支持 `include_file`、`probe_args`、`scan_args`、zstd 和配额设置；这些请用
@@ -127,7 +127,7 @@ xtate --tui --control-connect=/tmp/xtate-ctl.sock
 
 ## 职责与限制
 
-- TUI 只是客户端，不能绕过控制平面的校验、结果路径、接口匹配或任务数量限制。
+- TUI 只是客户端，不能绕过控制面的校验、结果路径、接口匹配或任务数量限制。
 - 本地 Unix socket 和命名管道的控制令牌默认可选；共享机器上应设置
   `XTATE_CONTROL_TOKEN`。
 - TUI 不读取结果记录，只显示 manifest；请用扫描器 CLI、MCP resource 或自己的
@@ -139,7 +139,7 @@ xtate --tui --control-connect=/tmp/xtate-ctl.sock
 
 ## 相关文档
 
-- [控制平面](./control-plane.md) — 请求/响应契约
+- [控制面](./control-plane.md) — 请求/响应契约
 - [任务模型](./job-model.md) — 状态、心跳、超时、结果分块
 - [MCP 服务器](./mcp-server.md) — 通过 MCP 工具操作同一批任务
 - [Agent Skill](./agent-skill.md) — 外部 agent 的操作手册

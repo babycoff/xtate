@@ -70,10 +70,9 @@ static ConfParam bson_parameters[] = {
      {"compact", 0},
      "Record time, IP proto, IP addr and level field as compacted number type "
      "instead of string. This will reduce the size of the result file.\n"
-     "NOTE: IPv4 addr will save as an int32 number. IPv6 addr will save as two"
-     " int64 number. Level field will save to an int32 as 'information' for 0, "
-     "'failure' for 1 and 'success' for 2. Time and IP proto will save as an "
-     "int32 number,."},
+     "NOTE: IPv4 addresses are stored as int32 numbers and IPv6 addresses as "
+     "two int64 numbers. The level field is stored as int32: 0 information, "
+     "1 failure, 2 success. Time and IP protocol are stored as int32 numbers."},
     {0}};
 
 static bool bsonout_init(const XConf *xconf, const OutConf *out) {

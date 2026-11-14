@@ -25,7 +25,8 @@ printf 'set rate = 1000\nset-scan tcp-syn\nset-probe null\nquit\n' |
   xtate -interactive
 ```
 
-In script mode `quit` saves `recover.conf`; `exit` exits without saving.
+In TTY mode `quit` saves `recover.conf` (and `exit` leaves without saving). In
+script/non-TTY mode neither command writes `recover.conf`.
 
 ## Commands
 
@@ -65,7 +66,7 @@ conf-save <file>     save the current configuration
 conf-read <file>     load a configuration file
 conf-recover         load `recover.conf`
 version              print the Xtate version
-quit                 save to `recover.conf` and exit
+quit                 save to `recover.conf` (TTY mode) and exit
 exit                 exit without saving
 ```
 

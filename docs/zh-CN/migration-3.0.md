@@ -68,12 +68,12 @@ Xtate 3.0 是面向使用体验的候选发布线：扫描优先的 GUI、单命
 ### TUI 已弃用
 
 `xtate --tui` 在 3.0 中仍保留一个过渡窗口，但不再投入新功能，也不属于 3.0 的
-正式界面。请使用 `xtate --gui` 或 MCP。需要旧控制平面契约的客户端仍可启动
-控制平面并用 `--control-connect` 连接。
+正式界面。请使用 `xtate --gui` 或 MCP。需要旧控制面契约的客户端仍可启动
+控制面并用 `--control-connect` 连接。
 
 ### GUI 不再自动打开浏览器
 
-`xtate --gui` 会启动私有控制平面，打印 URL 和会话 token 后等待。它不会启动
+`xtate --gui` 会启动私有控制面，打印 URL 和会话 token 后等待。它不会启动
 Explorer、Edge 或 `xdg-open`。`--gui-no-open` 仍是兼容性 no-op。请手动打开打印的
 本机地址。Docker 中需设置 `XTATE_GUI_ALLOW_REMOTE=1` 并映射端口，参见
 [Docker 构建](./docker-build.md)。
@@ -82,7 +82,7 @@ Explorer、Edge 或 `xdg-open`。`--gui-no-open` 仍是兼容性 no-op。请手�
 
 GUI 使用 Xtate 自己的分类：**扫描模块**、**探针模块**、**输出模块**、**生成模块**。
 模块可展开查看完整说明和参数表。GUI 只暴露 23 个可与扫描字段安全组合的全局参数
-（`global_args`）；输出、结果、job 等字段由控制平面固定。其他全局参数请走 CLI 或
+（`global_args`）；输出、结果、job 等字段由控制面固定。其他全局参数请走 CLI 或
 MCP。
 
 ### HTTP/3 与 QUIC 由能力决定
@@ -146,6 +146,6 @@ python3 tests/skill/test_skill_contract.py
 - [3.0 手册](./manual/README.md)
 - [MCP 服务](./mcp-server.md)
 - [GUI 控制台](./gui.md)
-- [控制平面](./control-plane.md)
+- [控制面](./control-plane.md)
 - [Docker 构建](./docker-build.md)
 - [已知限制](./known-limitations.md)

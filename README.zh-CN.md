@@ -1,13 +1,13 @@
 <div align="center">
-  <img src="screenshots/poster.jpg" alt="Xtate——模块化全栈网络扫描器" width="820">
+  <img src="screenshots/poster.jpg" alt="Xtate — 面向互联网测量的模块化全栈网络扫描器" width="820">
   <br>
 
-  <h3>Xtate —— 面向互联网级测量的模块化全栈网络扫描器</h3>
+  <h3>Xtate — 面向专业互联网测量的模块化全栈扫描器</h3>
 
   <p>
     <b>无状态 TCP banner。</b> <b>混合状态 TCP/TLS。</b>
-    <b>Linux 满血构建 84 个模块。</b> <b>内置 GUI 与 MCP。</b><br>
-    <sub>C99 · Linux glibc/musl &amp; Windows · GCC/Clang/MSVC/MinGW · Make/Ninja · IPv4 &amp; IPv6</sub>
+    <b>完整 Linux 构建 84 个模块。</b> <b>CLI、GUI 与 MCP。</b><br>
+    <sub>C99 · Linux glibc/musl 与 Windows · GCC/Clang/MSVC/MinGW · Make/Ninja · IPv4 与 IPv6</sub>
   </p>
 
   <p>
@@ -21,288 +21,314 @@
   </p>
 </div>
 
-[English](README.md) · **中文**
+> **God is Stateless.** —— Xtate 箴言
 
-> **God is Stateless.** —— Xtate 的格言
+Xtate 面向以互联网测量为职业的人：网络与安全研究者、测量平台运营者，以及
+需要在互联网规模上获得可复现证据的工程师。它是报文引擎，不是爬虫：
+**ZBanner** 不保留逐目标连接状态，却能获得真实 TCP 响应；**HLTCP** 在无状态
+不够用时完成 TLS 握手并获取 HTTPS 响应。
 
-> **Linux 前置条件（不适用于 Windows）：** `zbanner`、`tcp-state`、`tls-state` 和所有 state 子探测
-> 在扫描端必须先执行 `sudo ./firewall/add_rules.sh`（`tcp-syn` 等无状态扫描不需要）。缺失规则会出现
-> `open` 但没有 banner/TLS/探针输出。见 [Linux 防火墙](./docs/zh-CN/firewall.md)。
+**命令行是主要接口。** 目标集合、scan/probe 组合、速率、输出格式和复现配方，
+用命令行表达最直接；GUI、MCP 和 Agent Skill 底层驱动的也是同一个引擎。它们
+适合探索和自动化，但不替代命令行。
 
-Xtate 是一款面向大规模主动测量的网络扫描器。它把扫描栈拆成四种可插拔的模块类型——**扫描**（L3/L4 数据包）、**探测**（L5 及以上载荷与解析器）、**生成**（目标）和**输出**（结果）——并自带两个原创引擎：
+> **Linux 前置条件（Windows 不适用）：** `zbanner`、`tcp-state`、`tls-state`
+> 及其所有 state 子探针，在扫描前都必须在扫描主机执行
+> `sudo ./firewall/add_rules.sh`（`tcp-syn`/无状态端口扫描不需要）。缺少规则时
+> 常见现象是显示 `open`，但没有 banner、TLS 或探针输出。参见
+> [Linux 防火墙](./docs/zh-CN/firewall.md)。
 
-- **ZBanner** 无需保存每个目标的连接状态，也能拿到真实的 TCP 响应。
-- **HLTCP** 是一个混合状态的用户态 TCP 协议栈；当无状态方式不够用时，它负责完成 TLS 握手并获取 HTTPS 响应。
+> [!WARNING]
+> Xtate 发送原始报文。只扫描你拥有或获得明确书面授权的网络。未经授权的扫描
+> 在部分国家和地区可能违法。你对自己发送的速率和目标选择负责。
 
-它不是爬虫，也从不假装是。它是一台数据包引擎，只保留刚好够用的协议状态，从而拿到多数高速扫描器拿不到的答案。
+> **3.0 候选版。** 3.0 系列增加了以扫描为中心的浏览器控制台、一条命令启动的
+> MCP 服务、双语文档、明确的协议能力报告，并强化了命令行。它仍是候选版，
+> 完成实地试用前不会发布正式 3.0；2.44.2 是当前最新稳定版。
 
-> **3.0 候选版本。** 3.0 带来扫描优先的浏览器控制台、一条命令启动的 MCP
-> server、双语手册和明确的协议能力报告。正式版发布前仍以 RC 形式提供；
-> 2.44.2 是当前最新稳定版。
+## 目录
 
-## 从这里开始
+- [为什么测量专家使用 Xtate](#为什么测量专家使用-xtate)
+- [安装与第一次扫描](#安装与第一次扫描)
+- [命令行](#命令行)
+- [Xtate 如何工作](#xtate-如何工作)
+- [扫描引擎](#扫描引擎)
+- [模块](#模块)
+- [其它客户端：GUI、MCP 与 Skill](#其它客户端gui-mcp-与-skill)
+- [构建](#构建)
+- [平台与工具链](#平台与工具链)
+- [文档](#文档)
+- [研究与引用](#研究与引用)
 
-| 我想…… | 从这里开始 |
-|:---|:---|
-| 用界面扫描，而不是堆参数 | [`xtate --gui`](#浏览器-gui) —— 新建扫描、预检、实时结果 |
-| 在终端跑一次扫描 | [快速开始](#快速开始) |
-| 让 AI 客户端驱动扫描 | [`xtate --mcp`](#ai-集成mcp--agent-skill) + [Agent Skill](skills/xtate/SKILL.md) |
-| 构建 Linux 满血扫描器 | [构建](#构建) |
-| 理解数据包路径 | [架构](#架构) |
+## 为什么测量专家使用 Xtate
 
-<p align="center">
-  <a href="#为什么选择-xtate">为什么</a> ·
-  <a href="#快速开始">快速开始</a> ·
-  <a href="#架构">架构</a> ·
-  <a href="#模块">模块</a> ·
-  <a href="#构建">构建</a> ·
-  <a href="#探索-cli">CLI</a> ·
-  <a href="docs/zh-CN/README.md">文档</a> ·
-  <a href="#论文与引用">论文</a> ·
-  <a href="#许可证与负责任使用">许可证</a>
-</p>
+- **命令行优先，可脚本化、可复现。** 一个二进制文件就能表达完整实验：目标空间、
+  模块组合、速率、输出、恢复点和元数据。`--echo` 记录有效配置，
+  `--list-capabilities` 报告当前构建真实具备的能力。
+- **ZBanner：不建逐目标表也能拿到真实 TCP 响应。** 对端 TCP 栈保存状态，
+  SipHash cookie 证明响应属于本次扫描。这是互联网级 banner 普查的引擎。
+- **HLTCP：只在值得的地方保留状态。** 收到 SYN-ACK 后才创建 TCB，随后在用户态
+  TCP/TLS 会话中收集证书、密码套件和 HTTP 证据，不把主机内核放进这条路径。
+- **协议覆盖广，能力报告诚实。** HTTP/1.0、HTTP/1.1、HTTP/2（含 Huffman 的
+  HPACK）、构建支持时的 QUIC 上的 HTTP/3、TLS 证据、DNS/DNSSEC/DoT/DoH、
+  JARM、SSH、邮件、数据库、工业与 IoT 协议。Windows 构建会明确报告 HTTP/3 和
+  QUIC transport 不可用，而不是假装支持。
+- **为大目标空间设计。** CIDR、范围、分量范围、排除、ASN 输入、流式文件、
+  BlackRock 置换、分片与可恢复运行。
+- **双语设计。** 人类可读帮助提供英文和中文；GUI 与手册保持同样的划分。
 
-## 为什么选择 Xtate
+## 安装与第一次扫描
 
-多数高速扫描器止步于“端口开放”，多数服务扫描器在互联网规模下力不从心。Xtate 就活在这两者的交集里。
-
-- ⚡ **ZBanner**——无需为每个目标维护连接表，也能拿到真实的 TCP 响应。状态由对端的 TCP 协议栈保存，一个 SipHash cookie 就能证明这条回应是给你的。
-- 🧬 **HLTCP**——按需创建的混合状态用户态 TCP 协议栈。它能完成 TLS 握手，并在握手之上直接讲 HTTP。
-- 🛰 **QUIC 能力探测（Linux + ngtcp2/GnuTLS 构建）**——发送真实 QUIC v1 Initial，识别 Version Negotiation/Retry/Initial/Handshake；不声称完成 HTTP/3 握手。Windows 构建会将 HTTP/3 与 QUIC 传输报告为不可用。
-- 🌐 **HTTP 与 DNS 协议覆盖**——HTTP/1.0/1.1、HTTP/2（HPACK，含 Huffman）、构建支持时 QUIC 上的 HTTP/3、HTTPS/TLS；UDP DNS、DNSSEC 证据（`--dnssec`）、DoT（`dot`）、DoH HTTP/1.1（`doh`）与 DoH HTTP/2（`doh-h2`）。
-- 🔐 **TLS 证据**——完整握手后可输出结构化证书细节（subject、issuer、SAN、有效期、序列号、公钥、签名、ALPN），并支持 SMTP/IMAP/POP3/FTP STARTTLS 升级。
-- 🧪 **JARM**——十个标准 Salesforce 探针，可用 `--first-probe` 轮换首个标准探针；后续探针批量发送，输出与顺序无关。
-- 🧩 **模块**——Windows 上 11 个扫描 / 59 个探测 / 7 个输出 / 5 个生成；Linux 满血构建（ngtcp2/GnuTLS）为 12/60/7/5。四套接口，一条流水线，没有运行时的插件魔法。
-- 🌐 **中文帮助**——`--lang zh` 或 `XTATE_LANG=zh` 可切换人类可读帮助；支持 UTF-8 宽度换行，未翻译内容安全回退英文。
-- 🎯 **稀疏目标模式**——支持 `132.80-88.90.15`、`2001:db8:1-5::1` 这类分量范围；单个 token 最多 4 个范围组成笛卡尔积（上限 1,048,576 个地址），大范围连续空间仍用 CIDR/区间。
-
-## 3.0 控制台
-
-<p align="center">
-  <img src="screenshots/gui-console.png" alt="Xtate GUI：新建扫描，包含目标范围、扫描方式、模块与全局参数、预检面板和授权" width="100%">
-</p>
-
-控制台是控制平面的客户端，不是第二个扫描器。一个二进制启动它，服务端在
-不发包的前提下预检路由与模块，任务在受管理的 worker 中运行。每个页面都围绕
-扫描本身：
-
-- **新建扫描**——范围、方式、端口、探针、速率、超时、抓包网卡、模块参数、
-  全局参数、服务端预检、授权；
-- **实时扫描**——状态、计数、清理后的 worker 日志、清单和有界结果记录；
-- **结果**——该控制平面中的每次扫描，各自拥有带时间戳的 `runs/<时间戳>/` 输出目录；
-- **网卡**——抓包设备、地址、MAC、网关、链路类型和原始 IP 能力；
-- **模块**——真实的 Xtate 分类、中英文说明、可展开的完整帮助和带类型的参数表；
-- **系统**——外观、刷新频率、运行时能力和本地安全模型。
-
-控制台不会启动浏览器。`xtate --gui` 打印 URL 与 token，请自行打开地址。
-详见 [GUI 控制台](docs/zh-CN/gui.md)。
-
-## 工具链、平台与交互式模式
-
-Xtate 用 C99 编写，除 libpcap/Npcap 外没有硬依赖；构建工具链和交互式 shell
-都是一等公民，而不是附加功能。
-
-### 工具链与环境
-
-| 范围 | 支持 |
-|:---|:---|
-| 构建系统 | **CMake 3.13+**，Unix Makefiles 或 **Ninja** |
-| Linux glibc | **GCC / Clang**，Release/Debug；Debian 10 级别 CMake 3.13 基线 |
-| Linux musl | **Alpine/musl**，动态构建和基础 `--static --minimal` 静态构建 |
-| Windows | **MSVC / ClangCL / MinGW UCRT64 / MinGW MINGW64**，Release/Debug，Npcap + 可选 vcpkg DLL |
-| 产物布局 | 项目内 `bin/`，别名 + 精确的按工具链命名文件 |
-
-Windows CI 覆盖上述四种工具链。详见[平台支持](docs/zh-CN/platform-support.md)、[Windows 快速上手](docs/zh-CN/windows-quickstart.md)和[构建产物](docs/zh-CN/build-artifacts.md)。
-
-### 交互式模式
-
-`xtate -interactive` 是自带实现，不依赖 ncurses、readline 包或额外运行时。
-
-- 分组 `help` / `help <command>`，支持中文帮助（`--lang zh`）；
-- `<TAB>` 补全命令、参数名、模块名、常见值和文件路径；
-- 选择 scan/probe/output/generate 模块后补全该模块的 `--options`；
-- 命令历史、`set`、`show diff`、`show all`、`list-param <filter>`；
-- 真实 TTY 模式 + 确定性的非 TTY 脚本模式，退出时恢复终端；
-- Linux 和 Windows 同一个二进制，不需要 Python/Go 启动器。
-
-详见[交互式模式](docs/zh-CN/interactive-mode.md)。
-
-## 快速开始
+### Linux：构建并运行
 
 ```bash
-# Linux: build from source (dependencies are covered under Build)
 git clone https://github.com/babycoff/xtate.git
 cd xtate
-./build.sh                 # 交互选择编译器和 Release/Debug
-./bin/xtate -interactive   # 可选：带补全的交互式 shell
-
-# A classic SYN scan — no firewall tricks needed
+sudo apt install build-essential cmake pkg-config libpcap-dev \
+  libssl-dev libpcre2-dev libxml2-dev libbson-dev libmongoc-dev \
+  libngtcp2-dev libngtcp2-crypto-gnutls-dev libgnutls28-dev libzstd-dev
+./build.sh
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 ```
 
-要做真正的 banner 抓取握手，得先让 Linux 内核不再重置它不认识的连接：
+第一条命令是无状态 SYN 扫描，不需要修改防火墙。若要真正抓取 banner，需要阻止
+Linux 内核对未知连接回 RST：
 
 ```bash
-./firewall/add_rules.sh
-sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http -show info
-./firewall/rm_rules.sh
+sudo ./firewall/add_rules.sh
+sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 \
+  -scan zbanner -probe http -show info
+sudo ./firewall/rm_rules.sh
 ```
 
 > [!WARNING]
-> **Linux 防火墙规则对 `zbanner` 以及所有 `tcp-state`/`tls-state`/state 探针都是必需的。** 不加载规则时，内核会对这些半开连接回 RST，导致“端口 open 但没有 banner / 没有 TLS 输出 / state 探针超时”。这类问题事后很难排查。扫描前运行 `./firewall/add_rules.sh`，扫描结束立即运行 `./firewall/rm_rules.sh`；规则是主机级的，会丢弃本机所有出站 RST/ICMP unreachable。
+> **`zbanner` 以及所有 `tcp-state`/`tls-state`/state 探针扫描都必须先加载
+> Linux 防火墙规则。** 规则会抑制内核 RST，否则半开连接会被立即终止。缺少规则
+> 时常见现象是端口显示 `open`，但没有 banner、没有 TLS 输出，或 state 探针超时。
+> 规则是主机级的，生效期间会丢弃本机所有出站 RST/ICMP unreachable。
 
 > [!TIP]
-> 从 `-rate 1000` 起步，而不是 `-rate 1000000`。实验室网段不是互联网，你的交换机会感谢你。
+> 从 `-rate 1000` 开始，不要一上来就用 `-rate 1000000`。实验网不是互联网，
+> 交换机也会感谢你。
 
-> [!WARNING]
-> Xtate 发送原始数据包。请只扫描你拥有、或已获得明确授权测试的网络。未经授权的扫描在你所在地区可能违法。
+Windows 上请安装 [Npcap](https://npcap.com/)，用 CMake 构建，并在管理员终端
+运行 `xtate.exe`。新手先从 [Windows 快速开始](docs/zh-CN/windows-quickstart.md)
+读起。
 
-在 Windows 上，安装 [Npcap](https://npcap.com/)，用 CMake 构建，并在管理员权限的终端中运行 `xtate.exe`。第一次用 Windows？请从 [Windows 快速上手](docs/zh-CN/windows-quickstart.md) 开始。
-
-<details>
-<summary><b>更多可尝试的命令</b></summary>
+### 发送前先检查路由
 
 ```bash
-# Stateless TLS hello: grab ServerHello hints without a full handshake
+./bin/xtate --list-if
+./bin/xtate --explain-target 203.0.113.10
+./bin/xtate --check -ip 203.0.113.0/24 -p 443
+```
+
+`--list-if` 列出抓包网卡及其地址、MAC、网关和链路类型；`--explain-target`
+显示某个目标会走哪块网卡、使用哪个源地址；`--check` 对一组目标执行同样的只读
+检查。三者都不发送探测报文。TUN/VPN 网卡的链路类型可能是 `RAW`，
+`--explain-target` 会说明是否支持原始 IP、是否有 Ethernet 头和 MAC。
+
+### 几个常用命令
+
+```bash
+# 无状态 TLS hello：不做完整握手，获取 ServerHello 线索
 sudo ./bin/xtate -ip 10.0.0.0/24 -p 443 -scan zbanner -probe tls-hello -show info
 
-# UDP with a generic echo probe
-sudo ./bin/xtate -ip 10.0.0.0/24 -p u:80 -scan udp -probe echo -show info
+# 有状态 TLS 证据：证书、签发者、SAN、ALPN
+sudo ./firewall/add_rules.sh
+sudo ./bin/xtate -ip 10.0.0.0/24 -p 443 -scan tcp-state -probe tls-state -show info
 
-# LAN ARP sweep
+# UDP DNS 探针
+sudo ./bin/xtate -ip 10.0.0.0/24 -p u:53 -scan udp -probe dns -show info
+
+# 局域网 ARP 扫描
 sudo ./bin/xtate -ip 192.168.1.0/24 -scan arp-req -lan
 
-# IPv6 neighbor discovery on a local link
+# 本地链路上的 IPv6 邻居发现
 sudo ./bin/xtate -ip fe80::1/120 -scan ndp-ns -src-ip fe80::2 -fake-router-mac
 
-# SCTP INIT scan
+# SCTP INIT 扫描
 sudo ./bin/xtate -ip 10.0.0.0/24 -p s:38412 -scan sctp-init -show info
 ```
 
-</details>
+## 命令行
 
-## 架构
+### 一条扫描命令的构成
+
+```text
+xtate [options] -ip TARGETS [-p PORTS] -scan SCANMODULE [-probe PROBEMODULE]
+```
+
+| 部分 | 含义 | 示例 |
+|:---|:---|:---|
+| `-ip` | IPv4/IPv6 目标、范围、CIDR 或分量范围 | `10.0.0.0/8`、`192.168.1.1-254`、`2001:db8:1-5::1` |
+| `-p` | 端口；前缀选择传输层 | `80,443`、`20-25`、`u:53`、`s:38412` |
+| `-scan` | 如何发包、保留什么状态 | `tcp-syn`、`zbanner`、`tcp-state`、`udp`、`icmp-echo` |
+| `-probe` | L5+ 载荷与解析器，scan 需要时使用 | `http`、`tls-state`、`dns`、`ssh`、`jarm` |
+| `-rate` | 所有发送线程合计的每秒报文数 | `1000`、`0.1`、`100000` |
+| `-show` | 要打印的结果级别 | `success`、`info`、`fail` |
+| `-o` | 输出模块与文件 | `-o ndjson -output-file run.ndjson` |
+| `-scan-arg` / `-probe-arg` | 模块专用参数 | `-scan-arg "-banner"` |
+
+`xtate --usage` 给出精简示例，`xtate --help` 列出全部全局参数，
+`xtate --help-scan <module>` / `--help-probe <module>` /
+`--help-out <module>` / `--help-gen <module>` 给出模块参数。帮助文本由解析器
+使用的同一份元数据生成，因此与当前构建一致。
+
+### 常用工作流
+
+| 任务 | 命令 |
+|:---|:---|
+| 主机发现 | `-ip 10.0.0.0/24 -scan icmp-echo` |
+| 快速端口扫描 | `-ip 10.0.0.0/24 -p 80,443 -scan tcp-syn` |
+| 无状态 banner | `-ip 10.0.0.0/24 -p 80 -scan zbanner -probe http` |
+| TLS 证据 | `-ip 10.0.0.0/24 -p 443 -scan tcp-state -probe tls-state` |
+| UDP 服务探针 | `-ip 10.0.0.0/24 -p u:53 -scan udp -probe dns` |
+| 检查目标展开 | `-ip 10.0.0.0/8 --list-target` |
+| 从文件读目标 | `-include-file targets.txt -scan tcp-syn -p 443` |
+| 恢复扫描 | `-ip 10.0.0.0/8 -p 443 -scan tcp-syn --resume-index N` |
+| 机器可读输出 | `-o ndjson -output-file run.ndjson` |
+
+目标与端口详见[目标与端口](docs/zh-CN/targets-and-ports.md)；scan/probe 组合与
+配方见[扫描模式](docs/zh-CN/scanning-modes.md)；结果级别与格式见
+[输出](docs/zh-CN/output.md)。
+
+### 让实验可复现
+
+```bash
+./bin/xtate -ip 203.0.113.0/24 -p 443 -scan tcp-syn -rate 1000 \
+  --echo > experiment.conf
+./bin/xtate --config-file experiment.conf
+```
+
+`--meta-filename` 会把实际使用的网卡、速率和版本写到结果旁边。
+`--list-capabilities` 是当前二进制的机器可读能力声明；实验日志和 CI 应读取它，
+而不是假设某个模块或协议一定存在。
+
+### 交互式 shell
+
+```bash
+./bin/xtate -interactive
+```
+
+不依赖 ncurses、readline 包或 Python/Go 启动器。提供分组 `help`、命令/参数/
+模块/取值/路径补全、历史、`set`、`show diff`、`show all`、`list-param`，
+以及确定性的非 TTY 脚本模式。它适合探索；脚本应优先使用非交互 CLI。
+
+### 查看当前构建能做什么
+
+```bash
+xtate --usage                  # 精简用法与示例
+xtate --help                   # 全部全局参数
+xtate --intro                  # 架构介绍
+xtate --list-capabilities      # JSON：模块数量、HTTP/3、QUIC、zstd
+xtate --list-scan              # Windows 11；Linux 完整构建 12
+xtate --list-probe             # Windows 59；Linux 完整构建 60
+xtate --list-out               # 7 个输出模块
+xtate --list-gen               # 5 个生成模块
+xtate --help-scan zbanner      # 模块专用参数
+xtate --lang zh --help         # 中文帮助，未翻译项回退英文
+```
+
+## Xtate 如何工作
 
 <p align="center">
-  <img src="screenshots/architecture.png" alt="Xtate 运行架构：从目标与 TX 经 Internet、RX + Dispatch、处理线程到输出的 U 形路径；ZBanner 与 HLTCP 挂在处理线程下；明确绕过主机 TCP 协议栈" width="100%">
+  <img src="screenshots/architecture.png" alt="Xtate 运行路径：目标与 TX、合并的 RX 与分发、处理器与输出；ZBanner 和 HLTCP 挂在处理器上；绕过主机 TCP 栈" width="100%">
 </p>
 
-这张总览把数据包路径折成 U 形：入口侧是目标和 TX，中间是合并的 `RX + Dispatch`，之后是处理线程和输出。ZBanner 不保留状态，HLTCP 只为用户态 TCP/TLS 会话保留状态；主机内核 TCP 协议栈不在这条路径上。
+报文路径是：入口侧进行目标生成与 TX，中间经过合并的 `RX + Dispatch`，然后是
+处理器与输出。ZBanner 保持无状态；HLTCP 只为用户态 TCP/TLS 会话保留状态。
+主机内核 TCP 栈被有意排除在这条路径之外。
 
-- **Tx：** N 个线程；目标生成、速率控制、数据包构造、raw 发送。
-- **Rx：** 1 个线程；预处理、校验、去重、可选 pcap 抓包，然后分发。
-- **处理（Handle）：** M 个线程；扫描/探测状态机、结果格式化、后续数据包。
-- **有状态扫描：** 每个处理线程一张 TCP 连接表，因此热路径无需加锁。
+- **Tx：** N 个线程；目标生成、速率控制、报文构造、原始发送。
+- **Rx：** 一个线程；预处理、校验、去重、可选 pcap 抓包、分发。
+- **Handle：** M 个线程；scan/probe 状态机、结果格式化、后续报文。
+- **有状态扫描：** 每个 handle 线程一张 TCP 连接表，热路径无需加锁。
 
-处理线程通过无锁环形队列，把后续数据包（ACK、RST、下一次探测）注回 Tx；正因如此，“无状态”的 Rx 路径依然能驱动一次真正的 TCP 会话。
+handle 线程通过无锁环把后续报文（ACK、RST、下一个探针）送回 Tx。报文模板在
+启动时预生成并按目标打补丁；目标空间展平为 `ip × port` 后用 BlackRock 置换。
+结果是带 scan/probe/output 类型化链的 `OutItem`，流式交给所选输出模块。
 
-**简单说说底层：**
-
-- 数据包模板在启动时预先生成，之后按目标逐字段打补丁，并重新计算校验和。
-- 目标空间被展平成 `ip × port`，再用 BlackRock 置换；源 IP 和源端口同样可以随机化（63 位扫描空间）。
-- 结果是一个 `OutItem`，内含三条带类型的键值链（scan、probe、output），流式交给所选的 OutputModule。
-- `--pcap`、`--resume`、`--shard` 和实时状态栏都是内置功能。
-
-## 两种扫描方式
+## 扫描引擎
 
 | | **ZBanner**（无状态） | **HLTCP**（混合状态） |
 |:---|:---|:---|
-| 每个目标的状态 | 无 | 收到 SYN-ACK 后建立 TCB |
-| 我方发送 | SYN + 携带探测载荷的 ACK | 完整的 TCP 状态机 |
-| 你能得到 | 开放/关闭 + 首条 banner | TLS 握手、证书、密码套件、TLS 之上的 HTTP |
-| 内存占用 | 仅去重表 | 小型 TCB；TLS 会话的内存开销与 OpenSSL 相当 |
-| 适用场景 | 互联网范围的 banner 普查 | 对感兴趣主机的定向取证 |
+| 逐目标状态 | 无 | SYN-ACK 后创建 TCB |
+| 本方行为 | SYN + 带探针载荷的 ACK | 完整 TCP 状态机 |
+| 获得内容 | 开放/关闭 + 首批 banner | TLS 握手、证书、密码套件、TLS 上的 HTTP |
+| 内存 | 仅去重表 | 小型 TCB；TLS 会话为 OpenSSL 量级 |
+| 适用场景 | 互联网级 banner 普查 | 对感兴趣主机做定向取证 |
 | 入口 | `-scan zbanner -probe <tcp>` | `-scan tcp-state -probe <state>` |
 
-招牌技巧，一条时序就能讲完：
-
 <p align="center">
-  <img src="screenshots/zbanner-sequence.png" alt="ZBanner 时序：无状态 SYN 携带 SipHash cookie，SYN-ACK 确认 cookie 加一，带探测载荷的 ACK，带 banner 的 ACK，内部解析为 OutItem，最后是 RST；全程没有 TCB，也没有超时表" width="100%">
+  <img src="screenshots/zbanner-sequence.png" alt="ZBanner 序列：带 SipHash cookie 的无状态 SYN、确认 cookie+1 的 SYN-ACK、携带探针载荷的 ACK、携带 banner 的 ACK、解析为 OutItem，然后 RST" width="100%">
 </p>
 
-没有 TCB，没有超时表，也没有重传记录。只有一点算术，而对端的 TCP 协议栈会帮你验证它。
+没有 TCB、没有超时表、没有重传记账——只有对端 TCP 栈帮助验证的算术。完整序列
+见 [ZBanner](docs/zh-CN/zbanner.md)。
 
-### HLTCP：无状态结束之后
-
-<p align="center">
-  <img src="screenshots/hltcp-sequence.png" alt="HLTCP 时序：先发无状态 SYN；只有收到 SYN-ACK 才创建 TCB；之后是 ACK、可选的 TLS 握手、内部证据收集和 RST" width="100%">
-</p>
-
-第一个 SYN 是无状态的；只有收到 SYN-ACK 后才建立 TCB，可选的 TLS 握手运行在这份用户态状态里。原始帧绕过主机 TCP 协议栈，最后由 RST 结束这条流。
+无状态不够时，HLTCP 先发无状态 SYN，只在收到 SYN-ACK 后创建 TCB，在用户态完成
+可选 TLS 握手，最后用 RST 结束流。详见 [HLTCP](docs/zh-CN/hltcp.md)。
 
 ## 模块
 
-下面的数量基于启用全部可选依赖的完整构建；缺少对应库的模块会直接消失。
+数量按启用全部可选依赖的完整构建计算。缺少依赖的模块会从构建和 `--list-*` 中
+消失。
 
-### 扫描模块（Windows 11；Linux + ngtcp2/GnuTLS 为 12）
+| 类型 | Windows | 完整 Linux | 用途 |
+|:---|:---:|:---:|:---|
+| Scan | 11 | 12 | L3/L4 报文引擎与状态模型 |
+| Probe | 59 | 60 | L5+ 载荷、解析器与 state 探针 |
+| Output | 7 | 7 | `text`、`csv`、`ndjson`、`bson`、`mongodb`、`list`、`null` |
+| Generate | 5 | 5 | `blackrock`、`ip-list`、`addr-list`、`ip-stream`、`addr-stream` |
 
-| 模块 | 探测 | 作用 |
-|:---|:---:|:---|
-| `tcp-syn` | — | 经典 SYN 扫描，用 SipHash cookie 作 ISN；可选 `--send-rst`。 |
-| `udp` | UDP | 发送 UDP 载荷并校验响应。 |
-| `zbanner` | TCP | 无状态 TCP 握手；载荷挂在第三个 ACK 上；抓取 banner。 |
-| `tcp-state` | STATE | HLTCP 有状态 TCP；与 TLS/HTTP 状态探测配合使用。 |
-| `icmp-echo` | — | ICMP echo 主机发现；可记录 TTL 和 IPID。 |
-| `icmp-time` | — | ICMP 时间戳扫描。 |
-| `sctp-init` | — | SCTP INIT 扫描。 |
-| `arp-req` | — | LAN 模式下的二层 ARP 扫描。 |
-| `ndp-ns` | — | IPv6 NDP 邻居请求。 |
-| `yarrp-echo` | — | 用 ICMP echo 做无状态拓扑探测。 |
-| `yarrp-udp` | — | 用 UDP + ICMP 错误包做无状态拓扑探测。 |
-| `quic-state` | STATE | 仅 Linux：QUIC v1 握手与证书探测，需要 ngtcp2 + GnuTLS。 |
+完整 Linux 构建在有 ngtcp2/GnuTLS 时额外提供 `quic-state`（QUIC v1 握手与证书
+探针）和 `http3-state`。Windows 构建会把 HTTP/3 和 QUIC transport 报告为不可用。
 
-### 探测模块（Windows 59；Linux 含 `http3-state` 为 60）
+模块元数据同时驱动 `--help-*`、参数解析、模糊搜索和交互补全。模块目录、注册点
+和扩展方法见[模块](docs/zh-CN/modules.md)与
+[模块开发](docs/zh-CN/module-development.md)。
 
-- **通用（26，含可选 `http3-state`）：** `http`（+ 状态）、`hello`（+ UDP/状态）、`tls-hello`、`tls-state`、`dns`、`snmp`、`echo`、`ssh`、`ssh-kex`、`jarm`、`h2c`、`h2`、`quic`、`redis`、`memcached`、`ntp`、`mqtt`、`socks5`、`telnet`、`doh`、`doh-h2`、`dot`，以及依赖 `quic-state` 的 `http3-state`。
-- **批量 B 协议（16）：** `mysql`（+ 状态）、`postgres`（+ 状态）、`mongodb`（+ 状态）、`smtp`（+ 状态）、`imap`（+ 状态）、`pop3`（+ 状态）、`ftp`（+ 状态）、`managesieve`（+ 状态）。
-- **批量 C 第一批（6）：** `ipp`（+ 状态）、`amqp`（+ 状态）、`pptp`（+ 状态）。
-- **指纹识别（5）：** `recog`（+ UDP/状态，Recog XML）、`nmap`（+ UDP，nmap-service-probes）。
-- **可脚本化（2）：** `lua-tcp`、`lua-udp`——丢一个 Lua 脚本进去，你就有了一个探测。
-- **开发示例（2）：** `slot-test`、`slot-test-udp`——两个 `ProbeSlot_Always` 示例，可直接当模板阅读。
-- **基础件（3）：** `null`、`get-state`、`close-state`。
+## 其它客户端：GUI、MCP 与 Skill
 
-### 输出与生成模块
+这些客户端驱动同一个控制面和扫描引擎，不增加扫描能力，也不是使用 Xtate 的
+必需方式。
 
-- **输出：** `text`、`csv`、`ndjson`、`bson`、`mongodb`、`list`、`null`。
-- **生成：** `blackrock`（默认，无状态置换）、`ip-list`、`addr-list`、`ip-stream`、`addr-stream`。
+### 浏览器控制台
 
-自己写模块刻意保持朴素：每个模块就是一个 struct，再加 NULL 结尾的注册表里的一行；同一份元数据即可驱动 `--help-*`、参数解析、模糊搜索和交互式补全。可以在 [`src/scan-modules/scan-modules.c`](src/scan-modules/scan-modules.c) 及同类文件中找 `REGISTER YOUR ... MODULE HERE` 字样。
+```bash
+xtate --gui
+```
 
-## 文档
+<p align="center">
+  <img src="screenshots/gui-console.png" alt="Xtate GUI：新建扫描的目标范围、方式卡片、模块与全局参数、预检与授权" width="100%">
+</p>
 
-README 是落地页，手册在 [`docs/`](docs/zh-CN/README.md) 目录下：
+GUI 是以扫描为中心的浏览器控制台：新建扫描、实时扫描、结果、网卡、模块、系统。
+它在不发送报文的前提下预检路由和模块组合，在受管 worker 中运行任务，并为每次
+运行建立带时间戳的独立目录。界面支持中英文切换。`xtate --gui` 会打印 URL 和
+本次会话 token，但**不会自动打开浏览器**；请自行打开地址。详见
+[GUI 控制台](docs/zh-CN/gui.md)。
 
-- [3.0 手册](docs/zh-CN/manual/README.md)——按任务组织的安装、GUI、CLI、模块、结果与协议
-- [迁移到 3.0](docs/zh-CN/migration-3.0.md)——2.44.x 的升级影响、结果路径、MCP 形状与回滚
-- [快速上手](docs/zh-CN/getting-started.md)——构建、权限、首次扫描、防火墙
-- [GUI 控制台](docs/zh-CN/gui.md)——扫描优先的环回控制台，含预检、实时视图与网卡
-- [目标与端口](docs/zh-CN/targets-and-ports.md)——IPv4/IPv6 输入、文件、ASN、排除、分片
-- [扫描模式](docs/zh-CN/scanning-modes.md)——无状态与有状态、扫描/探测配对、常用配方
-- [输出](docs/zh-CN/output.md)——结果级别、格式、MongoDB
-- [模块](docs/zh-CN/modules.md)——四种模块类型以及 Xtate 自带的模块
-- [模块开发](docs/zh-CN/module-development.md)——C 接口、注册和 slot plan 示例
-- [架构](docs/zh-CN/architecture.md) · [ZBanner](docs/zh-CN/zbanner.md) · [HLTCP](docs/zh-CN/hltcp.md)
-- [中文帮助与 i18n](docs/zh-CN/help-i18n.md)——`--lang`、catalog 回退与 UTF-8 排版
-- [QUIC state](docs/zh-CN/quic-state.md)——可选的 ngtcp2/GnuTLS 握手、证书与子探测
-- [HTTP/3 子探测](docs/zh-CN/quic-state.md#http3-子探测)——quic-state 上的方法/头部/正文与 Huffman QPACK
-- [HTTP 响应匹配](docs/zh-CN/matching.md)——HTTP/1、h2 与 http3 的关键字/正则范围
-- [ZBanner 审计](docs/zh-CN/zbanner-audit.md)——复杂度、边界问题与重构计划
-- [交互式模式](docs/zh-CN/interactive-mode.md)——TTY/脚本模式、补全、历史与中文帮助
-- [平台支持](docs/zh-CN/platform-support.md)——CMake 3.13、旧发行版、Ninja 与 musl 构建
-- [构建产物](docs/zh-CN/build-artifacts.md)——别名、按工具链命名、Debug/DLL 布局
-- [测试规范](docs/zh-CN/testing.md)——改动后的 Tier 0/1/2 检查
-- [Agent Skill](docs/zh-CN/agent-skill.md)——供外部 AI agent 通过 MCP 使用的可安装操作手册
-- [MCP server](docs/zh-CN/mcp-server.md)——stdio 工具、resource、路由规划与安全限制
-- [控制面](docs/zh-CN/control-plane.md)——GUI 与 MCP 共用的本地 JSON-lines API
-- [Job 模型](docs/zh-CN/job-model.md)——托管扫描 job、超时、心跳与结果
-- [输入模块](docs/zh-CN/input-modules.md)——静态目标集与 generate 流、错误策略
-- [故障排查](docs/zh-CN/troubleshooting.md) · [已知限制](docs/zh-CN/known-limitations.md)
+### MCP 服务与 Agent Skill
 
-英文文档：[`docs/`](docs/README.md)
+```bash
+export XTATE_CONTROL_TOKEN="$(openssl rand -hex 16)"
+xtate --mcp
+```
+
+MCP 服务提供 14 个工具：能力、网卡、模块、路由解释、预检、配置校验、任务
+启动/状态/列表/取消、结果清单和有界结果记录。`start_scan` 要求
+`authorized: true`，请求体是扁平对象。服务从不执行 shell 命令。Agent Skill 是
+给外部 AI 客户端使用的、经过审查的 Markdown 操作手册；它不是内嵌智能体，也不是
+权限边界。参见 [Agent Skill](docs/zh-CN/agent-skill.md)、
+[MCP 服务](docs/zh-CN/mcp-server.md)、
+[控制面](docs/zh-CN/control-plane.md)与[任务模型](docs/zh-CN/job-model.md)。
 
 ## 构建
 
-修改代码后的构建/测试矩阵见[测试规范](docs/zh-CN/testing.md)。
+构建就是普通 CMake。`./build.sh` 是选择编译器、配置和生成器的交互式包装；
+Windows 对应脚本是 `scripts\build-windows.ps1`。
 
 ### Linux
 
@@ -310,182 +336,122 @@ README 是落地页，手册在 [`docs/`](docs/zh-CN/README.md) 目录下：
 sudo apt install build-essential cmake pkg-config libpcap-dev \
   libssl-dev libpcre2-dev libxml2-dev libbson-dev libmongoc-dev \
   libngtcp2-dev libngtcp2-crypto-gnutls-dev libgnutls28-dev libzstd-dev
-./build.sh                                  # 交互：选择编译器和配置
+
+./build.sh                                  # 交互选择编译器与配置
 ./build.sh --compiler gcc --config release  # 显式指定
 ./build.sh --compiler clang --config debug  # 显式 Debug
 ./build.sh --generator ninja                # 使用 Ninja
 ./build.sh --static --minimal               # 基础 musl 静态构建
 ```
 
-输出：`bin/xtate`（Release 别名）、`bin/xtate_debug`（Debug 别名），以及
-`bin/xtate-<compiler>-<config>` 按工具链命名的文件。`--generator ninja|make`
-选择 CMake 生成器；见[平台支持](docs/zh-CN/platform-support.md)。别名规则见[构建产物](docs/zh-CN/build-artifacts.md)。构建目录为
-`build-<compiler>-<config>-<generator>`；`./clean.sh` 清理它们和 `bin/xtate*`，保留
-`bin/.gitignore`。
+产物：`bin/xtate`（Release 别名）、`bin/xtate_debug`（Debug 别名），以及
+`bin/xtate-<compiler>-<config>` 工具链专用文件。Ubuntu 22.04/24.04 是参考环境；
+Fedora/Arch 安装对应开发包即可。参见
+[平台支持](docs/zh-CN/platform-support.md)与
+[构建产物](docs/zh-CN/build-artifacts.md)。
 
-Ubuntu 22.04/24.04 是参考环境。在 Fedora/Arch 上，请安装对应的开发包（`libpcap`、`openssl`、`pcre2`、`libxml2`、`libbson`、`mongo-c-driver`、`zstd`）。
-
-### Ubuntu 24.04 全功能 Docker 镜像
-
-参考 Linux 构建可以完全在容器中复现，宿主机无需安装依赖：
+可复现的完整 Linux 构建（含 HTTP/3、QUIC、zstd 和 GUI）使用 Ubuntu 24.04
+Docker 镜像：
 
 ```bash
 docker/ubuntu24-build/build.sh
 docker run --rm xtate:ubuntu24-full --list-capabilities
 ```
 
-镜像自带 HTTP/3、QUIC 传输、zstd 和全部 12 个扫描模块，也是从 Docker 宿主机
-运行 GUI 的支持方式。中国大陆镜像源、宿主机 GUI 端口发布和能力检查见
-[Ubuntu 24.04 Docker 构建](docs/zh-CN/docker-build.md)。
+参见 [Ubuntu 24.04 Docker 构建](docs/zh-CN/docker-build.md)。
 
-PCRE2 的发现优先使用 CMake 包配置；在 Debian/Ubuntu 上会回退到 `pkg-config`，因此需要同时安装 `libpcre2-dev` 和 `pkg-config`。
+### Windows
 
-推荐的编译器：GCC、Clang、MSVC 和 MinGW-w64。Xtate 要求 64 位小端主机；不满足时 CMake 会提前终止。
-
-<details>
-<summary><b>Windows 构建</b></summary>
-
-安装 **Npcap**（运行时）、CMake，以及 Visual Studio 2022/2026 或 MinGW-w64。新手分步说明见 [Windows 快速上手](docs/zh-CN/windows-quickstart.md)；完整平台/工具链矩阵和问题排查见[快速上手](docs/zh-CN/getting-started.md#在-windows-上构建)。
-
-可选依赖可以用 Scoop 安装（MSVC/clang-cl）：
+安装 **Npcap**（运行时）、CMake，以及 Visual Studio 2022/2026 或 MinGW-w64。
+逐步说明见 [Windows 快速开始](docs/zh-CN/windows-quickstart.md)。
 
 ```powershell
-scoop install openssl-lts lua54
-```
-
-Scoop 没有 PCRE2、libbson 或 libmongoc；需要完整 probe/output 集合时用 vcpkg，或接受较少的模块。
-
-MSVC：
-
-```powershell
+# MSVC
 cmake -S . -B build-msvc -G "Visual Studio 17 2022" -A x64 `
   -DOPENSSL_ROOT_DIR="$env:USERPROFILE\scoop\apps\openssl-lts\current"
 cmake --build build-msvc --config Release -j 8
-```
 
-MinGW：
-
-```powershell
+# MinGW
 cmake -S . -B build-mingw -G "MinGW Makefiles" `
   -DCMAKE_C_COMPILER=gcc -DCMAKE_BUILD_TYPE=Release
 cmake --build build-mingw -j 8
 ```
 
-不带参数运行 `scripts\build-windows.ps1` 时，会交互选择**一种编译器和一种配置**；脚本会在复制源码到 ASCII 中转目录前询问，并在构建后清理中转目录。主二进制写入 `bin\xtate.exe`（Debug 为 `bin\xtate_debug.exe`），各工具链副本写入 `bin\xtate-<toolchain>-<config>.exe`（对应 Linux `build.sh` 的 `bin/xtate` 约定）。
+`scripts\build-windows.ps1` 不带参数运行时会询问一个编译器和一个配置。主二进制
+为 `bin\xtate.exe`；工具链专用副本为
+`bin\xtate-<toolchain>-<config>.exe`。MSVC、ClangCL、MinGW UCRT64 和
+MinGW MINGW64 均支持 Release/Debug。运行时需要 Npcap，`wpcap.dll` 动态加载。
 
-三种工具链都支持 Release/Debug：使用 `-Config Debug` 配合
-`-Toolchain msvc|clangcl|mingw`。只有显式传 `-Toolchain all` 才构建整套矩阵。
+### 可选依赖
 
-Npcap 是报文收发的必需项；`wpcap.dll` 在运行时加载。
-
-清理 Windows 构建目录和二进制（对应 Linux 的 `clean.sh`）：
-
-```powershell
-pwsh -File .\scripts\clean-windows.ps1
-pwsh -File .\scripts\clean-windows.ps1 -IncludeStage  # 同时删除 %LOCALAPPDATA%\xtate-build
-```
-</details>
-
-<details>
-<summary><b>可选依赖及其解锁的功能</b></summary>
-
-| 依赖 | 解锁 | 开关 |
+| 依赖 | 解锁能力 | 关闭开关 |
 |:---|:---|:---|
-| OpenSSL ≥ 1.1.1 | `tls-state`、`jarm`、TLS 相关探测 | `-DWITH_OPENSSL=OFF` |
-| PCRE2（8 位） | `hello`、`http`、`recog`、`nmap` 中的正则匹配 | `-DWITH_PCRE2=OFF` |
-| LibXml2 | Recog XML 指纹文件 | `-DWITH_LIBXML2=OFF` |
-| libbson / libmongoc | BSON 和 MongoDB 输出 | `-DWITH_BSON=OFF`、`-DWITH_MONGOC=OFF` |
-| zstd | 分片结果压缩（`--result-compress=zstd`） | `-DWITH_ZSTD=OFF` |
-| libpcap / Npcap | 数据包 I/O（运行时） | 动态加载 |
-| PF_RING | Linux 上的零拷贝数据包 I/O（运行时） | 可选 |
+| OpenSSL ≥ 1.1.1 | TLS/state 探针、JARM、SSH KEX、部分 QUIC 构建 | `-DWITH_OPENSSL=OFF` |
+| PCRE2（8-bit） | HTTP/recog/nmap 与协议探针的正则匹配 | `-DWITH_PCRE2=OFF` |
+| LibXml2 | Recog XML 指纹 | `-DWITH_LIBXML2=OFF` |
+| libbson / libmongoc | BSON 与 MongoDB 输出 | `-DWITH_BSON=OFF`、`-DWITH_MONGOC=OFF` |
+| zstd | 分块结果压缩 | `-DWITH_ZSTD=OFF` |
+| ngtcp2 + GnuTLS | `quic-state`、`http3-state`（Linux） | `-DWITH_NGTCP2=OFF` |
+| libpcap / Npcap | 报文 I/O（运行时） | 动态加载 |
+| PF_RING | Linux 高性能报文 I/O（运行时） | 可选 |
 | Lua 5.3/5.4 | `lua-tcp`、`lua-udp`（运行时） | 可选 |
-| ngtcp2 + GnuTLS | `quic-state` QUIC 传输扫描器 | `-DWITH_NGTCP2=OFF` |
 
-`quic-state` 与 `http3-state` 目前仅支持 Linux + ngtcp2/GnuTLS；Windows MSVC 会省略它们。OpenSSL backend 支持见 [roadmap TODO](docs/zh-CN/roadmap.md#windows-quic-state-todo)。
-
-缺少可选库只会在编译时移除相应模块——核心扫描器仍可正常构建。Windows 上 CMake 可能提示 Conda 里的 PCRE2 找到但配置不完整，或提示 LibXml2/libbson/libmongoc/zstd 未安装；这些依赖都是可选的。需要对应模块时，请安装匹配的 vcpkg triplet（例如 `vcpkg install pcre2 libxml2 mongo-c-driver zstd --triplet x64-windows`；MinGW/MSYS2 与完整安装说明见 [Windows 可选依赖](docs/zh-CN/windows-dependencies.md)）。
-</details>
+缺少可选库时对应模块消失，核心扫描器仍可构建。vcpkg/MinGW 配置见
+[Windows 可选依赖](docs/zh-CN/windows-dependencies.md)。
 
 > [!NOTE]
-> 原始套接字在 Linux 上需要 root，在 Windows 上需要管理员权限。在 Linux 上，如果你清楚自己在做什么，可以用 `sudo setcap cap_net_raw,cap_net_admin=eip ./bin/xtate` 来替代每次运行都加 `sudo`。
+> 原始套接字在 Linux 需要 root，在 Windows 需要管理员权限。Linux 上也可以在
+> 明确了解风险的前提下使用
+> `sudo setcap cap_net_raw,cap_net_admin=eip ./bin/xtate`，避免每次 `sudo`。
 
-## 探索 CLI
+## 平台与工具链
 
-```bash
-xtate --usage                 # 简短用法与示例
-xtate --help                  # 所有全局参数
-xtate --intro                 # 架构导览
-xtate --list-capabilities     # JSON：模块数量、HTTP/3 与 QUIC 可用性
-xtate --list-scan             # 11；Linux 启用 quic-state 时为 12
-xtate --list-probe            # 59 个探测模块
-xtate --list-out              # 7 个输出模块
-xtate --list-gen              # 5 个生成模块
-xtate --help-scan zbanner     # 模块专有参数
-xtate --lang zh --help        # 中文人类帮助（未翻译内容回退英文）
-xtate --interact              # 交互式 shell（TTY：补全/历史；管道：脚本）
-```
+| 范围 | 支持 |
+|:---|:---|
+| 构建系统 | **CMake 3.13+**、Unix Makefiles 或 **Ninja** |
+| Linux glibc | **GCC / Clang**，Release/Debug；Debian 10 级 CMake 3.13 基线 |
+| Linux musl | **Alpine/musl**，动态构建与基础 `--static --minimal` 构建 |
+| Windows | **MSVC / ClangCL / MinGW UCRT64 / MinGW MINGW64**，Release/Debug，Npcap + 可选 vcpkg DLL |
+| 二进制布局 | 项目内 `bin/`，别名加精确的工具链文件名 |
 
-## 浏览器 GUI
+Xtate 要求 64 位小端主机；CMake 会提前拒绝其它平台。Windows CI 覆盖全部四种
+工具链。参见[平台支持](docs/zh-CN/platform-support.md)、
+[Windows 快速开始](docs/zh-CN/windows-quickstart.md)与
+[构建产物](docs/zh-CN/build-artifacts.md)。
 
-Xtate 提供一个仅监听环回、以扫描为中心的浏览器控制台。它是又一个控制平面客户端，
-不会在进程内扫描：
+## 文档
 
-```bash
-xtate --gui
-```
+README 是入口页，手册与参考位于 [`docs/zh-CN/`](docs/zh-CN/README.md)：
 
-不指定 `--control-connect` 时，GUI 会为自身生命周期启动一个私有控制面，并在退出时
-停止它。要连接到已有控制面，则显式指定：
+- [3.0 手册](docs/zh-CN/manual/README.md) —— 以 CLI 为主线，覆盖安装、第一次
+  扫描、scan/probe、目标、输出与协议；GUI 和 MCP 作为附加客户端
+- [迁移到 3.0](docs/zh-CN/migration-3.0.md) —— 从 2.44.x 升级的破坏性变更、
+  结果路径、MCP 形状与回滚
+- [快速开始](docs/zh-CN/getting-started.md) —— 构建、权限、第一次扫描、防火墙
+- [目标与端口](docs/zh-CN/targets-and-ports.md) —— IPv4/IPv6 输入、文件、ASN、排除、分片
+- [扫描模式](docs/zh-CN/scanning-modes.md) —— 无状态与有状态、scan/probe 组合、配方
+- [输出](docs/zh-CN/output.md) —— 结果级别、格式、MongoDB
+- [模块](docs/zh-CN/modules.md) —— 四类模块与随附模块
+- [模块开发](docs/zh-CN/module-development.md) —— C 接口、注册与 slot-plan 示例
+- [架构](docs/zh-CN/architecture.md) · [ZBanner](docs/zh-CN/zbanner.md) · [HLTCP](docs/zh-CN/hltcp.md)
+- [GUI 控制台](docs/zh-CN/gui.md) · [MCP 服务](docs/zh-CN/mcp-server.md) · [Agent Skill](docs/zh-CN/agent-skill.md)
+- [控制面](docs/zh-CN/control-plane.md) · [任务模型](docs/zh-CN/job-model.md)
+- [平台支持](docs/zh-CN/platform-support.md) · [构建产物](docs/zh-CN/build-artifacts.md)
+- [测试策略](docs/zh-CN/testing.md) · [故障排查](docs/zh-CN/troubleshooting.md) · [已知限制](docs/zh-CN/known-limitations.md)
 
-```bash
-xtate --control-plane=/tmp/xtate-ctl.sock
-# 另一个终端；如果设置了 XTATE_CONTROL_TOKEN，需要相同值：
-xtate --gui --control-connect=/tmp/xtate-ctl.sock
-```
+English documentation: [`docs/`](docs/README.md)
 
-页面默认服务在 `http://127.0.0.1:8787/`。`xtate --gui` 打印 URL、每会话 token
-和控制端点，**不会**启动浏览器；请自行打开地址。入口是 New scan：设置目标、
-方法、端口、速率和接口，展开模块详情，从 23 个经校验的全局参数中选择，执行
-服务端预检，确认授权后观察实时任务并查看结果。控制台支持英文/中文切换，每次
-扫描在托管状态目录下拥有独立的时间戳文件夹。用
-`--gui-listen=127.0.0.1:PORT` 改端口；安全模型、限制与故障排查见
-[GUI 控制台](docs/zh-CN/gui.md)。
+## 研究与引用
 
-## AI 集成（MCP / Agent Skill）
+Xtate 的两个引擎来自我们的研究：
 
-Xtate 提供 MCP stdio server 和经过审查的 Agent Skill，供 AI 客户端调用。Skill 是
-Markdown 操作手册，不是内嵌 agent，也不是权限边界。`xtate --mcp` 会自动启动一个
-仅属于该 MCP 会话的私有控制面，因此一条命令即可：
-
-```bash
-export XTATE_CONTROL_TOKEN="$(openssl rand -hex 16)"
-xtate --mcp
-```
-
-如果要连接到已经运行的控制面，则两端传入同一端点和同一个 token：
-
-```bash
-xtate --control-plane=/tmp/xtate-ctl.sock
-xtate --mcp --control-connect=/tmp/xtate-ctl.sock
-```
-
-工具可报告协议能力（`capabilities`）、列出模块（`list_modules`、
-`describe_probe`）、枚举抓包网卡（`iface.list`）、执行不发包预检（`preflight`）、
-解释目标路由（`explain_target`）、校验封闭扫描请求（`validate_config`）、启动托管
-job（`start_scan`），以及查询状态和 manifest（`job_status`、
-`job_result_manifest`）。结果通过 `job.records` 有界分页；`start_scan` 要求
-`authorized: true`。服务不会执行 shell 命令。从 [`skills/xtate/`](skills/xtate/SKILL.md)
-安装 Agent Skill；契约与限制见 [Agent Skill](docs/zh-CN/agent-skill.md)、
-[MCP server](docs/zh-CN/mcp-server.md)、[控制面](docs/zh-CN/control-plane.md)、
-[job 模型](docs/zh-CN/job-model.md) 和 [输入模块](docs/zh-CN/input-modules.md)。
-
-## 论文与引用
-
-Xtate 的两个引擎源自我们的研究：
-
-- **ZBanner: Fast Stateless Scanning Capable of Obtaining Responses over TCP**——[arXiv:2405.07409](https://arxiv.org/abs/2405.07409) · [IPCCC 2024](https://doi.org/10.1109/IPCCC59868.2024.10850469)
-- **Efficient Application-Layer Scanning with Hybrid-State Lightweight TCP Stack for TLS-based Service Monitoring**——[ICCT 2024](https://doi.org/10.1109/ICCT62411.2024.10946306)
-- **硕士学位论文：** *Research on Technologies of Network Protocol and Device Identification Based on Application-Layer Scanning*（NUDT，2024）
+- **ZBanner: Fast Stateless Scanning Capable of Obtaining Responses over TCP** —
+  [arXiv:2405.07409](https://arxiv.org/abs/2405.07409) ·
+  [IPCCC 2024](https://doi.org/10.1109/IPCCC59868.2024.10850469)
+- **Efficient Application-Layer Scanning with Hybrid-State Lightweight TCP Stack
+  for TLS-based Service Monitoring** —
+  [ICCT 2024](https://doi.org/10.1109/ICCT62411.2024.10946306)
+- **硕士学位论文：**《基于应用层扫描的网络协议与设备识别技术研究》（国防科技大学，2024）
 
 <details>
 <summary><b>BibTeX</b></summary>
@@ -511,25 +477,31 @@ Xtate 的两个引擎源自我们的研究：
 ```
 </details>
 
-如果 Xtate 对你的研究有帮助，一次引用比一个 star 更让我们高兴。
+如果 Xtate 对你的研究有帮助，引用比 star 更让我们高兴。
 
-## 参与贡献
+## 贡献
 
-欢迎贡献。构建/测试矩阵、C 与模块规范、PR 检查项见
-[CONTRIBUTING.md](CONTRIBUTING.md)。安全漏洞请按 [SECURITY.md](SECURITY.md)
-私密报告，不要开公开 issue。
+欢迎贡献。构建/测试矩阵、C 与模块规范、PR 检查清单见
+[CONTRIBUTING.md](CONTRIBUTING.md)。安全问题请按 [SECURITY.md](SECURITY.md)
+私下报告，不要公开提交漏洞 issue。
 
 ## 许可证与负责任使用
 
-AGPL-3.0。见 [LICENSE](LICENSE)。如果你把修改过的 Xtate 作为网络服务运行，AGPL 的网络使用条款就会生效。
+AGPL-3.0，见 [LICENSE](LICENSE)。如果把修改后的 Xtate 作为网络服务运行，
+AGPL 的网络使用条款适用。
 
 > [!WARNING]
-> Xtate 是用于测量与安全研究的双用途工具。请只在你自己拥有、或已获得书面许可测试的网络上使用。遵守当地法律、ISP 政策以及目标网络的规则，是你的责任。
+> Xtate 是用于测量和安全研究的双用途工具。只在你拥有或获得书面授权的网络上
+> 使用。你有责任遵守当地法律、ISP 政策和目标网络的规则。
 
-Xtate 起源于 [Masscan](https://github.com/robertdavidgraham/masscan) 的代码库；感谢 Robert Graham 以及源码中提到的所有上游项目。Xtate 是 [404Starlink](https://github.com/knownsec/404StarLink) 的成员。
+Xtate 起源于 [Masscan](https://github.com/robertdavidgraham/masscan) 的代码库；
+感谢 Robert Graham 以及源码中列出的所有上游项目。Xtate 是
+[404Starlink](https://github.com/knownsec/404StarLink) 成员。
 
-作者 **Alvin Chen**（陈驰昱）· [shineccy@aliyun.com](mailto:shineccy@aliyun.com)。最初的代码写于他在国防科技大学攻读硕士期间，以及安徽省网络空间安全态势感知与评估重点实验室。
+作者：**Alvin Chen**（陈驰昱）· [shineccy@aliyun.com](mailto:shineccy@aliyun.com)。
+原始代码写于国防科技大学硕士研究期间，以及网络空间安全态势感知与评估安徽省
+重点实验室。
 
 <div align="center">
-  <sub>God is Stateless. 物理层？我们止步于网线。</sub>
+  <sub>God is Stateless. Physical layer? We stop at the wire.</sub>
 </div>

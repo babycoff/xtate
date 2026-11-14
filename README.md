@@ -1,12 +1,12 @@
 <div align="center">
-  <img src="screenshots/poster.jpg" alt="Xtate — a modular all-stack network scanner" width="820">
+  <img src="screenshots/poster.jpg" alt="Xtate — a modular all-stack network scanner for Internet measurement" width="820">
   <br>
 
-  <h3>Xtate — a modular all-stack network scanner for Internet-scale surveys</h3>
+  <h3>Xtate — a modular all-stack scanner for professional Internet measurement</h3>
 
   <p>
     <b>Stateless TCP banners.</b> <b>Hybrid-state TCP/TLS.</b>
-    <b>84 modules in a full Linux build.</b> <b>GUI and MCP built in.</b><br>
+    <b>84 modules in a full Linux build.</b> <b>CLI, GUI and MCP.</b><br>
     <sub>C99 · Linux glibc/musl &amp; Windows · GCC/Clang/MSVC/MinGW · Make/Ninja · IPv4 &amp; IPv6</sub>
   </p>
 
@@ -23,164 +23,138 @@
 
 > **God is Stateless.** — the Xtate proverb
 
+Xtate is built for people who measure the Internet for a living: network and
+security researchers, measurement-platform operators, and engineers who need
+reproducible evidence at Internet scale. It is a packet engine, not a crawler:
+**ZBanner** obtains real TCP responses without per-target connection state, and
+**HLTCP** completes TLS handshakes and fetches HTTPS responses when statelessness
+is not enough.
+
+The **command line is the primary interface**. It is the most direct way to
+express a target set, a scan/probe pairing, a rate, an output format and a
+reproduction recipe, and it is the interface every other client uses underneath.
+The browser console, MCP server and Agent Skill are additional ways to drive the
+same engine — useful for exploration and automation, but not a replacement for
+the CLI.
+
 > **Linux prerequisite (not Windows):** `zbanner`, `tcp-state`, `tls-state` and every state
 > sub-probe require `sudo ./firewall/add_rules.sh` on the scanner host before
 > scanning (not `tcp-syn`/stateless port scans). Missing rules produce `open` with no banner/TLS/probe output.
 > See [Linux firewall](./docs/firewall.md).
 
-Xtate is a network scanner for large-scale active measurement. It splits the scanning stack into four pluggable module types — **Scan** (L3/L4 packets), **Probe** (L5+ payloads and parsers), **Generate** (targets) and **Output** (results) — and ships two original engines:
-
-- **ZBanner** obtains real TCP responses without keeping per-target connection state.
-- **HLTCP** is a hybrid-state user-space TCP stack that completes TLS handshakes and fetches HTTPS responses when statelessness is not enough.
-
-It is not a crawler, and it does not pretend to be one. It is a packet engine with just enough protocol state to get answers that most fast scanners cannot.
+> [!WARNING]
+> Xtate sends raw packets. Scan only networks you own or have explicit written
+> permission to test. Unauthorized scanning may be illegal where you live.
+> You are responsible for the rate you send and for the targets you choose.
 
 > **3.0 release candidate.** The 3.0 line adds a scan-first browser console, a
-> one-command MCP server, a bilingual manual, and explicit protocol capability
-> reporting. It is an RC until field trial is complete; 2.44.2 remains the latest
-> stable tag.
+> one-command MCP server, a bilingual manual, explicit protocol capability
+> reporting, and a stronger CLI. It remains an RC until field trial is complete;
+> 2.44.2 is the latest stable tag.
 
-## Start here
+## Contents
 
-| I want to… | Start with |
-|:---|:---|
-| scan from a UI, not a wall of flags | [`xtate --gui`](#browser-gui) — New scan, preflight, live results |
-| run one scan from a terminal | [Quick start](#quick-start) |
-| let an AI client drive scans | [`xtate --mcp`](#ai-integration-mcp--agent-skill) + the [Agent Skill](skills/xtate/SKILL.md) |
-| build a fully featured Linux scanner | [Build](#build) · [Optional dependencies](#build) |
-| understand the packet path | [Architecture](#architecture) |
+- [Why measurement professionals use Xtate](#why-measurement-professionals-use-xtate)
+- [Install and first scan](#install-and-first-scan)
+- [The command line](#the-command-line)
+- [How Xtate works](#how-xtate-works)
+- [Scanning engines](#scanning-engines)
+- [Modules](#modules)
+- [Additional clients: GUI, MCP and Skill](#additional-clients-gui-mcp-and-skill)
+- [Build](#build)
+- [Platforms and toolchains](#platforms-and-toolchains)
+- [Documentation](#documentation)
+- [Research and citation](#research-and-citation)
 
-<p align="center">
-  <a href="#why-xtate">Why</a> ·
-  <a href="#quick-start">Quick start</a> ·
-  <a href="#architecture">Architecture</a> ·
-  <a href="#modules">Modules</a> ·
-  <a href="#build">Build</a> ·
-  <a href="#explore-the-cli">CLI</a> ·
-  <a href="docs/README.md">Docs</a> ·
-  <a href="#papers-and-citation">Papers</a> ·
-  <a href="#license-and-responsible-use">License</a>
-</p>
+## Why measurement professionals use Xtate
 
-<p align="center">
-  <b>English</b> · <a href="README.zh-CN.md">中文</a>
-</p>
+- **CLI-first, scriptable and reproducible.** One binary expresses the complete
+  experiment: target space, module pairing, rate, output, resume point and
+  metadata. `--echo` records the effective configuration; `--list-capabilities`
+  reports what the build can actually do.
+- **ZBanner: real TCP responses without a per-target table.** The peer's TCP
+  stack holds the state; a SipHash cookie proves the reply belongs to this scan.
+  This is the engine for Internet-wide banner censuses.
+- **HLTCP: state only where it earns its keep.** A TCB is created after a
+  SYN-ACK, then a user-space TCP/TLS conversation can collect certificates,
+  ciphers and HTTP evidence without putting the host kernel on the path.
+- **Protocol breadth with explicit capability reporting.** HTTP/1.0, HTTP/1.1,
+  HTTP/2 (HPACK including Huffman), HTTP/3 over QUIC when the build supports it,
+  TLS evidence, DNS/DNSSEC/DoT/DoH, JARM, SSH, mail, databases, industrial and
+  IoT protocols. Windows honestly reports HTTP/3 and QUIC transport as
+  unavailable instead of pretending.
+- **Designed for large target spaces.** CIDR, ranges, component ranges, excludes,
+  ASN input, streamed files, BlackRock permutation, sharding and resumable runs.
+- **Bilingual by design.** Human-facing help is available in English and Chinese;
+  the GUI and the manual follow the same split.
 
-## Why Xtate
+## Install and first scan
 
-Most fast scanners stop at "port open"; most service scanners give up at Internet scale. Xtate lives in the overlap.
-
-- ⚡ **ZBanner** — real TCP responses without a per-target connection table. The peer's TCP stack holds the state; a SipHash cookie proves the reply is yours.
-- 🧬 **HLTCP** — a hybrid-state user-space TCP stack, created only where needed. It completes TLS handshakes and speaks HTTP inside them.
-- 🛰 **QUIC capability (Linux build with ngtcp2/GnuTLS)** — sends a real QUIC v1 Initial and classifies Version Negotiation/Retry/Initial/Handshake without claiming a completed HTTP/3 handshake. Windows builds report HTTP/3 and QUIC transport as unavailable.
-- 🌐 **HTTP and DNS protocol breadth** — HTTP/1.0/1.1, HTTP/2 (HPACK including Huffman), HTTP/3 over QUIC when the build supports it, and HTTPS/TLS; DNS over UDP, DNSSEC evidence (`--dnssec`), DoT (`dot`), DoH over HTTP/1.1 (`doh`) and DoH over HTTP/2 (`doh-h2`).
-- 🔐 **TLS evidence** — a full handshake plus structured certificate details (subject, issuer, SAN, validity, serial, key, signature, ALPN), including SMTP/IMAP/POP3/FTP STARTTLS upgrades.
-- 🧪 **JARM** — the ten standard Salesforce probes, with `--first-probe` to rotate which standard probe is sent first and burst-ordered follow-ups; output stays order-independent.
-- 🧩 **Modules** — 11 scan / 59 probe / 7 output / 5 generate modules on Windows; 12/60/7/5 on a full Linux build with ngtcp2/GnuTLS. Four interfaces, one pipeline, no runtime plugin magic.
-- 🌐 **Chinese help** — `--lang zh` or `XTATE_LANG=zh` localizes human-facing help, with UTF-8-aware wrapping and safe English fallback for untranslated strings.
-- 🎯 **Sparse target patterns** — component ranges such as `132.80-88.90.15` or `2001:db8:1-5::1`; up to four ranges form a Cartesian product (1,048,576-address cap per token) while large continuous spaces still use CIDR/ranges.
-
-## The 3.0 console
-
-<p align="center">
-  <img src="screenshots/gui-console.png" alt="Xtate GUI: new scan with target scope, scan method cards, module and global parameters, preflight panel and authorization" width="100%">
-</p>
-
-The console is a control-plane client, not a second scanner. One binary starts
-it, the server preflights the route and modules without sending a packet, and
-the job runs in a managed worker. Every page is built around the scan:
-
-- **New scan** — scope, method, ports, probe, rate, timeout, capture interface,
-  module parameters, global parameters, server preflight, authorization.
-- **Live scan** — current state, counters, cleaned worker log, manifest, and
-  bounded result records.
-- **Results** — every run in this control plane, with its own timestamped
-  `runs/<timestamp>/` output folder.
-- **Interfaces** — capture devices with addresses, MAC, gateway, link type and
-  raw-IP capability.
-- **Modules** — the real Xtate taxonomy, English/Chinese descriptions,
-  expandable full help and typed parameter tables.
-- **System** — appearance, refresh rates, runtime capabilities and the local
-  security model.
-
-The console does not launch a browser. `xtate --gui` prints the URL and token;
-open the address yourself. See [GUI console](docs/gui.md).
-
-## Toolchains, platforms and interactive mode
-
-The scanner is C99 and has no hard dependency beyond libpcap/Npcap. Both build
-families and the interactive shell are first-class, not afterthoughts.
-
-### Toolchains and environments
-
-| Area | Supported |
-|:---|:---|
-| Build system | **CMake 3.13+**, Unix Makefiles or **Ninja** |
-| Linux glibc | **GCC / Clang**, Release/Debug; Debian 10-class CMake 3.13 baseline |
-| Linux musl | **Alpine/musl**, dynamic build and basic `--static --minimal` build |
-| Windows | **MSVC / ClangCL / MinGW UCRT64 / MinGW MINGW64**, Release/Debug, Npcap + optional vcpkg DLLs |
-| Binary layout | project-local `bin/`, aliases plus exact per-toolchain names |
-
-Windows CI exercises all four toolchain variants. See [Platform support](docs/platform-support.md),
-[Windows quick start](docs/windows-quickstart.md) and [Build artifacts](docs/build-artifacts.md).
-
-### Interactive mode
-
-`xtate -interactive` is a self-contained shell: no ncurses, no readline package,
-no extra runtime dependency.
-
-- Grouped `help` / `help <command>` and Chinese help (`--lang zh`);
-- `<TAB>` completion for commands, parameter names, module names, common values
-  and file paths;
-- module-argument completion after selecting a scan/probe/output/generate module;
-- command history, `set`, `show diff`, `show all`, `list-param <filter>`;
-- real TTY mode and deterministic non-TTY script mode, including clean terminal
-  restoration;
-- one binary on Linux and Windows; no Python/Go launcher required.
-
-See [Interactive mode](docs/interactive-mode.md).
-
-## Quick start
+### Linux: build and run
 
 ```bash
-# Linux: build from source (dependencies are covered under Build)
 git clone https://github.com/babycoff/xtate.git
 cd xtate
-./build.sh                 # interactive: compiler + Release/Debug
-./bin/xtate -interactive   # optional: tab-completion shell
-
-# A classic SYN scan — no firewall tricks needed
+sudo apt install build-essential cmake pkg-config libpcap-dev \
+  libssl-dev libpcre2-dev libxml2-dev libbson-dev libmongoc-dev \
+  libngtcp2-dev libngtcp2-crypto-gnutls-dev libgnutls28-dev libzstd-dev
+./build.sh
 sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 1000
 ```
 
-For a real banner-grabbing handshake, stop the Linux kernel from resetting connections it does not know about:
+The first command is a stateless SYN scan and needs no firewall changes. For a
+real banner-grabbing handshake, stop the Linux kernel from resetting connections
+it does not know about:
 
 ```bash
-./firewall/add_rules.sh
-sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 -scan zbanner -probe http -show info
-./firewall/rm_rules.sh
+sudo ./firewall/add_rules.sh
+sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,8080 \
+  -scan zbanner -probe http -show info
+sudo ./firewall/rm_rules.sh
 ```
 
 > [!WARNING]
-> **Linux firewall rules are mandatory for `zbanner` and every `tcp-state`/`tls-state`/state-probe scan.** They suppress the kernel RST that otherwise kills half-open connections. A missing rule often looks like `open` but no banner, no TLS output, or a state probe that times out — and is very hard to diagnose later. Run `./firewall/add_rules.sh` before the scan and `./firewall/rm_rules.sh` immediately afterwards. The rules are host-wide and drop every outgoing RST/ICMP-unreachable from the machine.
+> **Linux firewall rules are mandatory for `zbanner` and every
+> `tcp-state`/`tls-state`/state-probe scan.** They suppress the kernel RST that
+> otherwise kills half-open connections. A missing rule often looks like `open`
+> but produces no banner, no TLS output, or a state probe that times out. The
+> rules are host-wide and drop every outgoing RST/ICMP-unreachable from the
+> machine while active.
 
 > [!TIP]
-> Start at `-rate 1000`, not `-rate 1000000`. A lab subnet is not the Internet, and your switch will thank you.
+> Start at `-rate 1000`, not `-rate 1000000`. A lab subnet is not the Internet,
+> and your switch will thank you.
 
-> [!WARNING]
-> Xtate sends raw packets. Scan only networks you own or have explicit permission to test. Unauthorized scanning may be illegal where you live.
+On Windows, install [Npcap](https://npcap.com/), build with CMake, and run
+`xtate.exe` from an elevated shell. Start with the
+[Windows quick start](docs/windows-quickstart.md).
 
-On Windows, install [Npcap](https://npcap.com/), build with CMake, and run `xtate.exe` from an elevated shell. New to Windows? Start with the [Windows quick start](docs/windows-quickstart.md).
-
-<details>
-<summary><b>More commands to try</b></summary>
+### Check the route before you send
 
 ```bash
-# Stateless TLS hello: grab ServerHello hints without a full handshake
+./bin/xtate --list-if
+./bin/xtate --explain-target 203.0.113.10
+./bin/xtate --check -ip 203.0.113.0/24 -p 443
+```
+
+`--list-if` prints capture adapters with addresses, MAC, gateway and link type.
+`--explain-target` shows which interface and source address a target will use;
+`--check` performs the same read-only checks for a target set. Neither sends a
+probe. On TUN/VPN adapters the link type may be `RAW`; `--explain-target` says
+whether raw IP is supported and whether an Ethernet header/MAC is available.
+
+### A few commands worth knowing
+
+```bash
+# Stateless TLS hello: ServerHello hints without a full handshake
 sudo ./bin/xtate -ip 10.0.0.0/24 -p 443 -scan zbanner -probe tls-hello -show info
 
-# UDP with a generic echo probe
-sudo ./bin/xtate -ip 10.0.0.0/24 -p u:80 -scan udp -probe echo -show info
+# Stateful TLS evidence: certificate, issuer, SAN, ALPN
+sudo ./firewall/add_rules.sh
+sudo ./bin/xtate -ip 10.0.0.0/24 -p 443 -scan tcp-state -probe tls-state -show info
+
+# UDP DNS probe
+sudo ./bin/xtate -ip 10.0.0.0/24 -p u:53 -scan udp -probe dns -show info
 
 # LAN ARP sweep
 sudo ./bin/xtate -ip 192.168.1.0/24 -scan arp-req -lan
@@ -192,31 +166,113 @@ sudo ./bin/xtate -ip fe80::1/120 -scan ndp-ns -src-ip fe80::2 -fake-router-mac
 sudo ./bin/xtate -ip 10.0.0.0/24 -p s:38412 -scan sctp-init -show info
 ```
 
-</details>
+## The command line
 
-## Architecture
+### Anatomy of a scan
+
+```text
+xtate [options] -ip TARGETS [-p PORTS] -scan SCANMODULE [-probe PROBEMODULE]
+```
+
+| Part | Meaning | Examples |
+|:---|:---|:---|
+| `-ip` | IPv4/IPv6 targets, ranges, CIDR or component ranges | `10.0.0.0/8`, `192.168.1.1-254`, `2001:db8:1-5::1` |
+| `-p` | Ports; prefixes select the transport | `80,443`, `20-25`, `u:53`, `s:38412` |
+| `-scan` | How packets are sent and what state is kept | `tcp-syn`, `zbanner`, `tcp-state`, `udp`, `icmp-echo` |
+| `-probe` | L5+ payload and parser, when the scan requires one | `http`, `tls-state`, `dns`, `ssh`, `jarm` |
+| `-rate` | Total packets per second across all TX threads | `1000`, `0.1`, `100000` |
+| `-show` | Result levels to print | `success`, `info`, `fail` |
+| `-o` | Output module and file | `-o ndjson -output-file run.ndjson` |
+| `-scan-arg` / `-probe-arg` | Module-specific parameters | `-scan-arg "-banner"` |
+
+Run `xtate --usage` for a compact set of examples, `xtate --help` for every
+global parameter, and `xtate --help-scan <module>` / `--help-probe <module>` /
+`--help-out <module>` / `--help-gen <module>` for module parameters. The help
+text is generated from the same metadata the parser uses, so it reflects the
+build you are running.
+
+### Common workflows
+
+| Task | Command |
+|:---|:---|
+| Host discovery | `-ip 10.0.0.0/24 -scan icmp-echo` |
+| Fast port scan | `-ip 10.0.0.0/24 -p 80,443 -scan tcp-syn` |
+| Stateless banners | `-ip 10.0.0.0/24 -p 80 -scan zbanner -probe http` |
+| TLS evidence | `-ip 10.0.0.0/24 -p 443 -scan tcp-state -probe tls-state` |
+| UDP service probe | `-ip 10.0.0.0/24 -p u:53 -scan udp -probe dns` |
+| Target inspection | `-ip 10.0.0.0/8 --list-target` |
+| Target file | `-include-file targets.txt -scan tcp-syn -p 443` |
+| Resume a run | `-ip 10.0.0.0/8 -p 443 -scan tcp-syn --resume-index N` |
+| Machine-readable run | `-o ndjson -output-file run.ndjson` |
+
+Targets and ports are covered in [Targets and ports](docs/targets-and-ports.md);
+scan/probe pairings and recipes are in [Scanning modes](docs/scanning-modes.md);
+result levels and formats are in [Output](docs/output.md).
+
+### Make the run reproducible
+
+```bash
+./bin/xtate -ip 203.0.113.0/24 -p 443 -scan tcp-syn -rate 1000 \
+  --echo > experiment.conf
+./bin/xtate --config-file experiment.conf
+```
+
+`--meta-filename` writes the effective interface, rate and version next to the
+results. `--list-capabilities` is the machine-readable statement of what this
+binary supports; use it in experiment logs and CI rather than assuming a module
+or protocol is present.
+
+### Interactive shell
+
+```bash
+./bin/xtate -interactive
+```
+
+No ncurses, no readline package, no Python/Go launcher. The shell provides
+grouped `help`, tab completion for commands/parameters/modules/values/paths,
+history, `set`, `show diff`, `show all`, `list-param`, and a deterministic
+non-TTY script mode. It is convenient for exploration; scripts should prefer
+the non-interactive CLI.
+
+### Discover what this build can do
+
+```bash
+xtate --usage                  # short usage and examples
+xtate --help                   # every global parameter
+xtate --intro                  # architecture tour
+xtate --list-capabilities      # JSON: module counts, HTTP/3, QUIC, zstd
+xtate --list-scan              # 11, or 12 with quic-state on Linux
+xtate --list-probe             # 59, or 60 with http3-state
+xtate --list-out               # 7 output modules
+xtate --list-gen               # 5 generate modules
+xtate --help-scan zbanner      # module-specific parameters
+xtate --lang zh --help         # Chinese help, English fallback where untranslated
+```
+
+## How Xtate works
 
 <p align="center">
-  <img src="screenshots/architecture.png" alt="Xtate runtime overview: a U-shaped packet path from targets and TX through Internet, RX plus dispatch, handlers and output; ZBanner and HLTCP hang off the handler; the host TCP stack is bypassed" width="100%">
+  <img src="screenshots/architecture.png" alt="Xtate runtime overview: targets and TX, a merged RX and dispatch stage, handlers and output; ZBanner and HLTCP attach to the handler; the host TCP stack is bypassed" width="100%">
 </p>
 
-The overview folds the packet path into a U: targets and TX on the ingress side, a merged `RX + Dispatch` stage, then handlers and output. Under it, ZBanner stays stateless while HLTCP keeps state only for a user-space TCP/TLS conversation. The host kernel TCP stack is deliberately not on this path.
+The packet path is target generation and TX on the ingress side, a merged
+`RX + Dispatch` stage, then handlers and output. ZBanner remains stateless;
+HLTCP keeps state only for a user-space TCP/TLS conversation. The host kernel
+TCP stack is deliberately not on this path.
 
 - **Tx:** N threads; target generation, rate control, packet construction, raw send.
-- **Rx:** one thread; preprocess, validate, dedup, optional pcap capture, then dispatch.
+- **Rx:** one thread; preprocess, validate, dedup, optional pcap capture, dispatch.
 - **Handle:** M threads; scan/probe state machines, result formatting, follow-up packets.
-- **Stateful scans:** one TCP connection table per handle thread, so the hot path needs no locks.
+- **Stateful scans:** one TCP connection table per handle thread, so the hot path
+  needs no locks.
 
-Handle threads inject follow-up packets (ACK, RST, next probe) through a lock-free ring back to Tx, which is how a "stateless" Rx path still drives a real TCP conversation.
+Handle threads inject follow-up packets (ACK, RST, next probe) through a
+lock-free ring back to Tx. Packet templates are pre-baked at startup and patched
+per target. The target space is flattened to `ip × port` and permuted with
+BlackRock. Results are an `OutItem` with typed scan/probe/output chains, streamed
+to the selected OutputModule.
 
-**Under the hood, briefly:**
-
-- Packet templates are pre-baked at startup and patched per target; checksums are recomputed.
-- The target space is flattened to `ip × port` and permuted with BlackRock; source IP and port can be randomized too (63-bit scan space).
-- Results are an `OutItem` with three typed key-value chains (scan, probe, output), streamed to whichever OutputModule you chose.
-- `--pcap`, `--resume`, `--shard` and a live status bar are built in.
-
-## Two ways to scan
+## Scanning engines
 
 | | **ZBanner** (stateless) | **HLTCP** (hybrid-state) |
 |:---|:---|:---|
@@ -227,95 +283,82 @@ Handle threads inject follow-up packets (ACK, RST, next probe) through a lock-fr
 | Sweet spot | Internet-wide banner census | targeted evidence on interesting hosts |
 | Entry point | `-scan zbanner -probe <tcp>` | `-scan tcp-state -probe <state>` |
 
-The flagship trick, in one sequence:
-
 <p align="center">
-  <img src="screenshots/zbanner-sequence.png" alt="ZBanner sequence: stateless SYN with a SipHash cookie, SYN-ACK acknowledging cookie plus one, ACK with probe payload, ACK with banner, internal parse to OutItem, then RST; no TCB and no timeout table" width="100%">
+  <img src="screenshots/zbanner-sequence.png" alt="ZBanner sequence: stateless SYN with a SipHash cookie, SYN-ACK acknowledging cookie plus one, ACK with probe payload, ACK with banner, parse to OutItem, then RST" width="100%">
 </p>
 
-No TCB. No timeout table. No retransmission bookkeeping. Just arithmetic that the peer's TCP stack helps you verify.
+No TCB, no timeout table, no retransmission bookkeeping — just arithmetic that
+the peer's TCP stack helps verify. Read [ZBanner](docs/zbanner.md) for the full
+sequence.
 
-### HLTCP: when statelessness ends
-
-<p align="center">
-  <img src="screenshots/hltcp-sequence.png" alt="HLTCP sequence: a stateless SYN is sent first; only a SYN-ACK creates the TCB; then ACK, an optional TLS handshake, internal evidence collection, and RST" width="100%">
-</p>
-
-The first SYN is stateless. A TCB exists only after the SYN-ACK, and the optional TLS handshake runs inside that user-space state. Raw frames bypass the host TCP stack; the final RST retires the flow.
+When statelessness ends, HLTCP sends the first SYN without state, creates a TCB
+only after the SYN-ACK, completes the optional TLS handshake in user space, and
+retires the flow with a final RST. Read [HLTCP](docs/hltcp.md).
 
 ## Modules
 
-Counts below assume a full build with all optional dependencies enabled; modules whose libraries are missing simply disappear.
+Counts assume a full build with all optional dependencies. Modules whose
+libraries are missing disappear from the build and from `--list-*`.
 
-### Scan modules (11; 12 on Linux with ngtcp2/GnuTLS)
+| Type | Windows | Full Linux | Purpose |
+|:---|:---:|:---:|:---|
+| Scan | 11 | 12 | L3/L4 packet engines and state models |
+| Probe | 59 | 60 | L5+ payloads, parsers and state probes |
+| Output | 7 | 7 | `text`, `csv`, `ndjson`, `bson`, `mongodb`, `list`, `null` |
+| Generate | 5 | 5 | `blackrock`, `ip-list`, `addr-list`, `ip-stream`, `addr-stream` |
 
-| Module | Probe | What it does |
-|:---|:---:|:---|
-| `tcp-syn` | — | Classic SYN scan with a SipHash cookie as ISN; optional `--send-rst`. |
-| `udp` | UDP | Sends UDP payloads and validates responses. |
-| `zbanner` | TCP | Stateless TCP handshake; payload on the third ACK; grabs the banner. |
-| `tcp-state` | STATE | HLTCP stateful TCP; pairs with TLS/HTTP state probes. |
-| `icmp-echo` | — | ICMP echo host discovery; can record TTL and IPID. |
-| `icmp-time` | — | ICMP timestamp scan. |
-| `sctp-init` | — | SCTP INIT scan. |
-| `arp-req` | — | Layer-2 ARP scan in LAN mode. |
-| `ndp-ns` | — | IPv6 NDP neighbor solicitation. |
-| `yarrp-echo` | — | Stateless topology probing with ICMP echo. |
-| `yarrp-udp` | — | Stateless topology probing with UDP + ICMP errors. |
-| `quic-state` | STATE | Linux-only QUIC v1 handshake and certificate probe; requires ngtcp2 + GnuTLS. |
+The full Linux build adds `quic-state` (QUIC v1 handshake and certificate probe)
+and `http3-state` when ngtcp2/GnuTLS is available. Windows builds report HTTP/3
+and QUIC transport as unavailable.
 
-### Probe modules (59 on Windows; 60 on Linux with `http3-state`)
+Module metadata drives `--help-*`, parameter parsing, fuzzy search and
+interactive completion. The module catalog, registration points and extension
+guide are in [Modules](docs/modules.md) and
+[Module development](docs/module-development.md).
 
-- **General (26, including optional `http3-state`):** `http` (+ `http-state`), `hello` (+ UDP/state), `tls-hello`, `tls-state`, `dns`, `snmp`, `echo`, `ssh`, `ssh-kex`, `jarm`, `h2c`, `h2`, `quic`, `redis`, `memcached`, `ntp`, `mqtt`, `socks5`, `telnet`, `doh`, `doh-h2`, `dot`, and `http3-state` over `quic-state`.
-- **Batch B protocols (16):** `mysql` (+ state), `postgres` (+ state), `mongodb` (+ state), `smtp` (+ state), `imap` (+ state), `pop3` (+ state), `ftp` (+ state), `managesieve` (+ state).
-- **Batch C first wave (6):** `ipp` (+ state), `amqp` (+ state), `pptp` (+ state).
-- **Fingerprinting (5):** `recog` (+ UDP/state, Recog XML), `nmap` (+ UDP, nmap-service-probes).
-- **Scriptable (2):** `lua-tcp`, `lua-udp` — drop in a Lua script and you have a probe.
-- **Developer examples (2):** `slot-test`, `slot-test-udp` — the two `ProbeSlot_Always` examples used by the lab; safe to read as templates.
-- **Plumbing (3):** `null`, `get-state`, `close-state`.
+## Additional clients: GUI, MCP and Skill
 
-### Output and generate modules
+These clients drive the same control plane and scan engine. They do not add
+scanning capability, and they are not required to use Xtate.
 
-- **Output:** `text`, `csv`, `ndjson`, `bson`, `mongodb`, `list`, `null`.
-- **Generate:** `blackrock` (default, stateless permutation), `ip-list`, `addr-list`, `ip-stream`, `addr-stream`.
+### Browser console
 
-Writing your own is intentionally boring: each module is a struct plus one line in a NULL-terminated registry, and the same metadata drives `--help-*`, parameter parsing, fuzzy search and interactive completion. Look for `REGISTER YOUR ... MODULE HERE` in [`src/scan-modules/scan-modules.c`](src/scan-modules/scan-modules.c) and friends.
+```bash
+xtate --gui
+```
 
-## Documentation
+<p align="center">
+  <img src="screenshots/gui-console.png" alt="Xtate GUI: new scan with target scope, method cards, module and global parameters, preflight and authorization" width="100%">
+</p>
 
-The README is the landing page. The manual lives in [`docs/`](docs/README.md):
+The GUI is a scan-first browser console: New scan, Live scan, Results,
+Interfaces, Modules and System. It preflights the route and module set without
+sending a packet, runs the job in a managed worker, and gives each run its own
+timestamped folder. It switches between English and Chinese. `xtate --gui`
+prints the URL and a per-session token and does **not** launch a browser; open
+the address yourself. See [GUI console](docs/gui.md).
 
-- [3.0 manual](docs/manual/README.md) — task-oriented install, GUI, CLI, modules, results and protocols
-- [Migration to 3.0](docs/migration-3.0.md) — breaking changes from 2.44.x, result paths, MCP shape and rollback
-- [Getting started](docs/getting-started.md) — build, permissions, first scan, firewall
-- [GUI console](docs/gui.md) — scan-first loopback console with preflight, live view and interfaces
-- [Targets and ports](docs/targets-and-ports.md) — IPv4/IPv6 input, files, ASN, excludes, sharding
-- [Scanning modes](docs/scanning-modes.md) — stateless vs stateful, scan/probe pairings, recipes
-- [Output](docs/output.md) — result levels, formats, MongoDB
-- [Modules](docs/modules.md) — the four module types and what ships with Xtate
-- [Module development](docs/module-development.md) — C interfaces, registration and slot-plan examples
-- [Architecture](docs/architecture.md) · [ZBanner](docs/zbanner.md) · [HLTCP](docs/hltcp.md)
-- [Chinese help and i18n](docs/help-i18n.md) — `--lang`, catalog fallback and UTF-8 layout
-- [QUIC state](docs/quic-state.md) — optional ngtcp2/GnuTLS handshake, certificate and sub-probe
-- [HTTP/3 child probe](docs/quic-state.md#http3-child-probe) — methods/headers/body, Huffman QPACK over quic-state
-- [HTTP response matching](docs/matching.md) — keyword/regex scopes for HTTP/1, h2 and http3
-- [ZBanner audit](docs/zbanner-audit.md) — complexity, boundary issues and refactor plan
-- [Interactive mode](docs/interactive-mode.md) — TTY/script mode, completion, history and Chinese help
-- [Platform support](docs/platform-support.md) — CMake 3.13, old distros, Ninja and musl builds
-- [Build artifacts](docs/build-artifacts.md) — aliases, exact toolchain names, Debug/DLL layout
-- [Testing policy](docs/testing.md) — required Tier 0/1/2 checks after a change
-- [Agent Skill](docs/agent-skill.md) — installable playbook for external AI agents using MCP
-- [MCP server](docs/mcp-server.md) — stdio tools, resources, route planning and safety limits
-- [Control plane](docs/control-plane.md) — local JSON-lines API shared by the GUI and MCP
-- [Job model](docs/job-model.md) — managed scan jobs, timeouts, heartbeats and results
-- [Input modules](docs/input-modules.md) — static target sets vs generate streams and error policy
-- [Troubleshooting](docs/troubleshooting.md) · [Known limitations](docs/known-limitations.md)
+### MCP server and Agent Skill
 
-中文文档：[`docs/zh-CN/`](docs/zh-CN/README.md)
+```bash
+export XTATE_CONTROL_TOKEN="$(openssl rand -hex 16)"
+xtate --mcp
+```
+
+The MCP server exposes 14 tools for capabilities, interfaces, modules, route
+explanation, preflight, config validation, job start/status/list/cancel,
+result manifest and bounded result records. `start_scan` requires
+`authorized: true` and uses a flat request object. The server never executes a
+shell command. The Agent Skill is a reviewed Markdown playbook for external AI
+clients; it is not an embedded agent and it is not a privilege boundary. See
+[Agent Skill](docs/agent-skill.md), [MCP server](docs/mcp-server.md),
+[control plane](docs/control-plane.md) and [job model](docs/job-model.md).
 
 ## Build
 
-See [Testing policy](docs/testing.md) for the required build/test matrix after a change.
+The build is plain CMake. `./build.sh` is an interactive wrapper for compiler,
+configuration and generator selection; `scripts\build-windows.ps1` is its
+Windows counterpart.
 
 ### Linux
 
@@ -323,6 +366,7 @@ See [Testing policy](docs/testing.md) for the required build/test matrix after a
 sudo apt install build-essential cmake pkg-config libpcap-dev \
   libssl-dev libpcre2-dev libxml2-dev libbson-dev libmongoc-dev \
   libngtcp2-dev libngtcp2-crypto-gnutls-dev libgnutls28-dev libzstd-dev
+
 ./build.sh                                  # interactive: compiler + config
 ./build.sh --compiler gcc --config release  # explicit
 ./build.sh --compiler clang --config debug  # explicit debug
@@ -331,196 +375,118 @@ sudo apt install build-essential cmake pkg-config libpcap-dev \
 ```
 
 Outputs: `bin/xtate` (release alias), `bin/xtate_debug` (debug alias), and
-`bin/xtate-<compiler>-<config>` per-toolchain files. `--generator ninja|make`
-selects the CMake generator; see [Platform support](docs/platform-support.md). See
-[Build artifacts](docs/build-artifacts.md) for the alias rules. Build trees are
-`build-<compiler>-<config>-<generator>`; `./clean.sh` removes them and `bin/xtate*` while
-preserving `bin/.gitignore`.
+`bin/xtate-<compiler>-<config>` per-toolchain files. Ubuntu 22.04/24.04 are the
+reference environments. On Fedora/Arch install the equivalent development
+packages. See [Platform support](docs/platform-support.md) and
+[Build artifacts](docs/build-artifacts.md).
 
-Ubuntu 22.04/24.04 are the reference environments. On Fedora/Arch, install the equivalent development packages (`libpcap`, `openssl`, `pcre2`, `libxml2`, `libbson`, `mongo-c-driver`, `zstd`).
-
-### Ubuntu 24.04 full-feature Docker image
-
-The reference Linux build is reproducible without installing dependencies on
-the host:
+The reproducible full-feature Linux build, including HTTP/3, QUIC, zstd and the
+GUI, is the Ubuntu 24.04 Docker image:
 
 ```bash
 docker/ubuntu24-build/build.sh
 docker run --rm xtate:ubuntu24-full --list-capabilities
 ```
 
-This image builds with HTTP/3, QUIC transport, zstd and all 12 scan modules, and
-it is the supported way to run the GUI from a Docker host. Mainland-China mirror
-options, host GUI publishing and capability checks are in
-[Ubuntu 24.04 Docker build](docs/docker-build.md).
+See [Ubuntu 24.04 Docker build](docs/docker-build.md).
 
-PCRE2 discovery uses CMake's package config when available and falls back to `pkg-config` on Debian/Ubuntu, so `pkg-config` is required alongside `libpcre2-dev` there.
+### Windows
 
-Recommended compilers: GCC, Clang, MSVC and MinGW-w64. Xtate requires a 64-bit little-endian host; CMake stops early otherwise.
-
-<details>
-<summary><b>Windows build</b></summary>
-
-Install **Npcap** (runtime), CMake, and Visual Studio 2022/2026 or MinGW-w64. For a
-step-by-step beginner walkthrough, see [Windows quick start](docs/windows-quickstart.md);
-the full platform/toolchain matrix and troubleshooting live in
-[Getting started](docs/getting-started.md#build-on-windows).
-
-Optional dependencies via Scoop (MSVC/clang-cl):
+Install **Npcap** (runtime), CMake, and Visual Studio 2022/2026 or MinGW-w64.
+For a step-by-step walkthrough, see [Windows quick start](docs/windows-quickstart.md).
 
 ```powershell
-scoop install openssl-lts lua54
-```
-
-Scoop does not package PCRE2, libbson or libmongoc; use vcpkg for the complete
-probe/output set, or accept the reduced module count.
-
-MSVC:
-
-```powershell
+# MSVC
 cmake -S . -B build-msvc -G "Visual Studio 17 2022" -A x64 `
   -DOPENSSL_ROOT_DIR="$env:USERPROFILE\scoop\apps\openssl-lts\current"
 cmake --build build-msvc --config Release -j 8
-```
 
-MinGW:
-
-```powershell
+# MinGW
 cmake -S . -B build-mingw -G "MinGW Makefiles" `
   -DCMAKE_C_COMPILER=gcc -DCMAKE_BUILD_TYPE=Release
 cmake --build build-mingw -j 8
 ```
 
-Run `scripts\build-windows.ps1` with no parameters to choose **one compiler**
-and **one configuration** interactively. It asks before copying the source to
-an ASCII staging directory and cleans the staging tree afterwards. The primary
-binary is placed in `bin\xtate.exe` (or `bin\xtate_debug.exe` for Debug);
-per-toolchain copies are `bin\xtate-<toolchain>-<config>.exe` (the Linux
-`build.sh` convention is `bin/xtate`).
+`scripts\build-windows.ps1` with no parameters asks for one compiler and one
+configuration. The primary binary is `bin\xtate.exe`; per-toolchain copies are
+`bin\xtate-<toolchain>-<config>.exe`. All of MSVC, ClangCL, MinGW UCRT64 and
+MinGW MINGW64 support Release and Debug. Npcap is required at runtime;
+`wpcap.dll` is loaded dynamically.
 
-All three toolchains support Release and Debug: pass `-Config Debug` with
-`-Toolchain msvc|clangcl|mingw`. Use `-Toolchain all` only when you explicitly
-want the full matrix.
-
-Npcap must be installed for packet I/O; `wpcap.dll` is loaded at runtime.
-
-To remove project build trees and binaries (the Windows counterpart of
-`clean.sh`):
-
-```powershell
-pwsh -File .\scripts\clean-windows.ps1
-pwsh -File .\scripts\clean-windows.ps1 -IncludeStage  # also remove %LOCALAPPDATA%\xtate-build
-```
-</details>
-
-<details>
-<summary><b>Optional dependencies and what they unlock</b></summary>
+### Optional dependencies
 
 | Dependency | Unlocks | Switch |
 |:---|:---|:---|
-| OpenSSL ≥ 1.1.1 | TLS/stateful probes such as `tls-state`, `jarm`, `ssh-kex`; some QUIC builds | `-DWITH_OPENSSL=OFF` |
-| PCRE2 (8-bit) | regex matching across `hello`, `http`, `recog`, `nmap` and several protocol probes | `-DWITH_PCRE2=OFF` |
-| LibXml2 | Recog XML fingerprint files | `-DWITH_LIBXML2=OFF` |
+| OpenSSL ≥ 1.1.1 | TLS/stateful probes, JARM, SSH KEX, some QUIC builds | `-DWITH_OPENSSL=OFF` |
+| PCRE2 (8-bit) | regex matching in HTTP/recog/nmap and protocol probes | `-DWITH_PCRE2=OFF` |
+| LibXml2 | Recog XML fingerprints | `-DWITH_LIBXML2=OFF` |
 | libbson / libmongoc | BSON and MongoDB output | `-DWITH_BSON=OFF`, `-DWITH_MONGOC=OFF` |
-| zstd | chunked result compression (`--result-compress=zstd`) | `-DWITH_ZSTD=OFF` |
+| zstd | chunked result compression | `-DWITH_ZSTD=OFF` |
+| ngtcp2 + GnuTLS | `quic-state`, `http3-state` (Linux) | `-DWITH_NGTCP2=OFF` |
 | libpcap / Npcap | packet I/O (runtime) | loaded dynamically |
-| PF_RING | zero-copy packet I/O on Linux (runtime) | optional |
+| PF_RING | high-performance packet I/O on Linux (runtime) | optional |
 | Lua 5.3/5.4 | `lua-tcp`, `lua-udp` (runtime) | optional |
-| ngtcp2 + GnuTLS | `quic-state` QUIC transport scanner | `-DWITH_NGTCP2=OFF` |
 
-`quic-state` and `http3-state` are currently Linux + ngtcp2/GnuTLS only; Windows MSVC omits them. OpenSSL backend support is a [roadmap TODO](docs/roadmap.md#windows-quic-state-todo).
-
-Missing optional libraries simply remove the corresponding modules at compile time — the core scanner still builds. On Windows, CMake may warn about a found-but-incomplete PCRE2 from Conda, or about LibXml2/libbson/libmongoc/zstd not being installed; those are optional. Install a matching vcpkg triplet (for example `vcpkg install pcre2 libxml2 mongo-c-driver zstd --triplet x64-windows`; see [Windows optional dependencies](docs/windows-dependencies.md) for MinGW/MSYS2 and full setup) if you need those modules.
-</details>
+Missing optional libraries remove the corresponding modules; the core scanner
+still builds. See [Windows optional dependencies](docs/windows-dependencies.md)
+for vcpkg/MinGW setup.
 
 > [!NOTE]
-> Raw sockets need root on Linux or Administrator on Windows. On Linux, `sudo setcap cap_net_raw,cap_net_admin=eip ./bin/xtate` is an alternative to `sudo` for each run, if you know what you are doing.
+> Raw sockets need root on Linux or Administrator on Windows. On Linux,
+> `sudo setcap cap_net_raw,cap_net_admin=eip ./bin/xtate` is an alternative to
+> `sudo` for each run, if you know what you are doing.
 
-## Explore the CLI
+## Platforms and toolchains
 
-```bash
-xtate --usage                 # short usage and examples
-xtate --help                  # every global parameter
-xtate --intro                 # the architecture tour
-xtate --list-capabilities     # JSON: module counts, HTTP/3 and QUIC availability
-xtate --list-scan             # 11, or 12 with quic-state on Linux
-xtate --list-probe            # 59, or 60 with http3-state
-xtate --list-out              # 7 output modules
-xtate --list-gen              # 5 generate modules
-xtate --help-scan zbanner     # module-specific parameters
-xtate --lang zh --help        # Chinese human help (English fallback for untranslated strings)
-xtate --interact              # interactive shell (TTY: completion/history; pipe: scripts)
-```
+| Area | Supported |
+|:---|:---|
+| Build system | **CMake 3.13+**, Unix Makefiles or **Ninja** |
+| Linux glibc | **GCC / Clang**, Release/Debug; Debian 10-class CMake 3.13 baseline |
+| Linux musl | **Alpine/musl**, dynamic build and basic `--static --minimal` build |
+| Windows | **MSVC / ClangCL / MinGW UCRT64 / MinGW MINGW64**, Release/Debug, Npcap + optional vcpkg DLLs |
+| Binary layout | project-local `bin/`, aliases plus exact per-toolchain names |
 
-## Browser GUI
+Xtate requires a 64-bit little-endian host; CMake stops early otherwise. Windows
+CI exercises all four toolchain variants. See
+[Platform support](docs/platform-support.md),
+[Windows quick start](docs/windows-quickstart.md) and
+[Build artifacts](docs/build-artifacts.md).
 
-Xtate includes a scan-first loopback browser console. It is another control-plane
-client and never scans in-process:
+## Documentation
 
-```bash
-xtate --gui
-```
+The README is the landing page. The manual and reference live in
+[`docs/`](docs/README.md):
 
-Without `--control-connect`, the GUI starts a private control plane for its own
-lifetime and stops it on exit. To attach to an existing daemon instead:
+- [3.0 manual](docs/manual/README.md) — CLI-first install, first scan, scan/probe,
+  targets, output and protocols, with the GUI and MCP as additional clients
+- [Migration to 3.0](docs/migration-3.0.md) — breaking changes from 2.44.x,
+  result paths, MCP shape and rollback
+- [Getting started](docs/getting-started.md) — build, permissions, first scan, firewall
+- [Targets and ports](docs/targets-and-ports.md) — IPv4/IPv6 input, files, ASN, excludes, sharding
+- [Scanning modes](docs/scanning-modes.md) — stateless vs stateful, scan/probe pairings, recipes
+- [Output](docs/output.md) — result levels, formats, MongoDB
+- [Modules](docs/modules.md) — the four module types and what ships with Xtate
+- [Module development](docs/module-development.md) — C interfaces, registration and slot-plan examples
+- [Architecture](docs/architecture.md) · [ZBanner](docs/zbanner.md) · [HLTCP](docs/hltcp.md)
+- [GUI console](docs/gui.md) · [MCP server](docs/mcp-server.md) · [Agent Skill](docs/agent-skill.md)
+- [Control plane](docs/control-plane.md) · [Job model](docs/job-model.md)
+- [Platform support](docs/platform-support.md) · [Build artifacts](docs/build-artifacts.md)
+- [Testing policy](docs/testing.md) · [Troubleshooting](docs/troubleshooting.md) · [Known limitations](docs/known-limitations.md)
 
-```bash
-xtate --control-plane=/tmp/xtate-ctl.sock
-# in another terminal, with the same XTATE_CONTROL_TOKEN if one is set:
-xtate --gui --control-connect=/tmp/xtate-ctl.sock
-```
+中文文档：[`docs/zh-CN/`](docs/zh-CN/README.md)
 
-The page is served at `http://127.0.0.1:8787/` by default. `xtate --gui` prints
-the URL, a per-session token and the control endpoint, and does **not** launch a
-browser; open the address yourself. New scan is the entry point: set targets,
-method, ports, rate and interface, expand module details, choose from 23
-validated global parameters, run the server-side preflight, confirm
-authorization, then watch the live job and inspect results. The console switches
-between English and Chinese, and each run gets its own timestamped folder under
-the managed state directory. Use `--gui-listen=127.0.0.1:PORT` to change the
-port, and read [GUI console](docs/gui.md) for the security model, limits and
-troubleshooting.
-
-## AI integration (MCP / Agent Skill)
-
-Xtate ships an MCP stdio server and a reviewed Agent Skill for AI clients. The
-skill is a Markdown playbook; it is not an embedded agent or a privilege
-boundary. `xtate --mcp` starts a private control plane for its own lifetime, so
-one command is enough:
-
-```bash
-export XTATE_CONTROL_TOKEN="$(openssl rand -hex 16)"
-xtate --mcp
-```
-
-To attach an MCP server to an already-running daemon instead, pass the endpoint
-and the same token to both sides:
-
-```bash
-xtate --control-plane=/tmp/xtate-ctl.sock
-xtate --mcp --control-connect=/tmp/xtate-ctl.sock
-```
-
-The tools report protocol capabilities (`capabilities`), list modules
-(`list_modules`, `describe_probe`), enumerate capture interfaces (`iface.list`),
-run a packet-free preflight (`preflight`), explain target routes
-(`explain_target`, `check`), validate a closed scan request (`validate_config`),
-start a managed job (`start_scan`), and list/query/cancel jobs (`job_list`,
-`job_status`, `job_cancel`, `job_result_manifest`). Bounded result pages are
-available through `job.records`; `start_scan` requires `authorized: true`. The server never executes
-a shell command. Install the Agent Skill from
-[`skills/xtate/`](skills/xtate/SKILL.md); see [Agent Skill](docs/agent-skill.md),
-[MCP server](docs/mcp-server.md), [control plane](docs/control-plane.md),
-[job model](docs/job-model.md) and [input modules](docs/input-modules.md) for the
-contract and limits.
-
-## Papers and citation
+## Research and citation
 
 Xtate's two engines come from our research:
 
-- **ZBanner: Fast Stateless Scanning Capable of Obtaining Responses over TCP** — [arXiv:2405.07409](https://arxiv.org/abs/2405.07409) · [IPCCC 2024](https://doi.org/10.1109/IPCCC59868.2024.10850469)
-- **Efficient Application-Layer Scanning with Hybrid-State Lightweight TCP Stack for TLS-based Service Monitoring** — [ICCT 2024](https://doi.org/10.1109/ICCT62411.2024.10946306)
-- **Master's thesis:** *Research on Technologies of Network Protocol and Device Identification Based on Application-Layer Scanning* (NUDT, 2024)
+- **ZBanner: Fast Stateless Scanning Capable of Obtaining Responses over TCP** —
+  [arXiv:2405.07409](https://arxiv.org/abs/2405.07409) ·
+  [IPCCC 2024](https://doi.org/10.1109/IPCCC59868.2024.10850469)
+- **Efficient Application-Layer Scanning with Hybrid-State Lightweight TCP Stack
+  for TLS-based Service Monitoring** —
+  [ICCT 2024](https://doi.org/10.1109/ICCT62411.2024.10946306)
+- **Master's thesis:** *Research on Technologies of Network Protocol and Device
+  Identification Based on Application-Layer Scanning* (NUDT, 2024)
 
 <details>
 <summary><b>BibTeX</b></summary>
@@ -557,14 +523,22 @@ issue for a vulnerability.
 
 ## License and responsible use
 
-AGPL-3.0. See [LICENSE](LICENSE). If you run a modified Xtate as a network service, the AGPL's network-use clause applies.
+AGPL-3.0. See [LICENSE](LICENSE). If you run a modified Xtate as a network
+service, the AGPL's network-use clause applies.
 
 > [!WARNING]
-> Xtate is a dual-use tool for measurement and security research. Use it only on networks you own or have written permission to test. You are responsible for complying with local law, ISP policy and the target network's rules.
+> Xtate is a dual-use tool for measurement and security research. Use it only on
+> networks you own or have written permission to test. You are responsible for
+> complying with local law, ISP policy and the target network's rules.
 
-Xtate started from [Masscan](https://github.com/robertdavidgraham/masscan)'s codebase; thanks to Robert Graham and every upstream project noted in the source. Xtate is a member of [404Starlink](https://github.com/knownsec/404StarLink).
+Xtate started from [Masscan](https://github.com/robertdavidgraham/masscan)'s
+codebase; thanks to Robert Graham and every upstream project noted in the source.
+Xtate is a member of [404Starlink](https://github.com/knownsec/404StarLink).
 
-Created by **Alvin Chen** (陈驰昱) · [shineccy@aliyun.com](mailto:shineccy@aliyun.com). The original code was written during his master's studies at the National University of Defense Technology and the Anhui Province Key Laboratory of Cyberspace Security Situation Awareness and Evaluation.
+Created by **Alvin Chen** (陈驰昱) · [shineccy@aliyun.com](mailto:shineccy@aliyun.com).
+The original code was written during his master's studies at the National
+University of Defense Technology and the Anhui Province Key Laboratory of
+Cyberspace Security Situation Awareness and Evaluation.
 
 <div align="center">
   <sub>God is Stateless. Physical layer? We stop at the wire.</sub>

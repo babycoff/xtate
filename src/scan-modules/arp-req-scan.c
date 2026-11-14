@@ -99,7 +99,7 @@ Scanner ArpReqScan = {
             "one) with target ipv4 addr we request. Expect an ARP Reply packet "
             "with actual mac addr of requested target and print mac addr as "
             "report. ArpReqScan does not support ipv6 target because ipv6 use "
-            "neighbor discovery messages of Neighbor Dicovery Protocol(NDP) "
+            "neighbor discovery messages of Neighbor Discovery Protocol(NDP) "
             "implemented by ICMPv6 to discover neighbors and their mac addr. "
             "ArpReqScan will ignore ipv6 targets.\n"
             "NOTE1: ArpReqScan works in local area network only, so remember "

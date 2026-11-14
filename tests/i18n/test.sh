@@ -26,6 +26,10 @@ out="$("$BIN" --lang zh --usage)"
 check "zh usage welcome" grep -q "欢迎使用 Xtate" <<<"$out"
 check "zh usage examples" grep -q "Xtate 基础用法示例" <<<"$out"
 check "zh usage translated example" grep -q "使用 TcpSyn 扫描模块" <<<"$out"
+check "zh usage module listing" grep -q "其它类型模块分别用" <<<"$out"
+
+intro_out="$("$BIN" --lang zh --intro)"
+check "zh intro heading" grep -q "Xtate 内部工作流程如下" <<<"$intro_out"
 
 help_out="$("$BIN" --lang zh --help)"
 check "zh help basic section" grep -q "基础参数" <<<"$help_out"

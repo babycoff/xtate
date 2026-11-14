@@ -169,6 +169,8 @@ and RSS are noisy on shared runners. See `tests/bench/README.md`.
 |:---|:---|:---|
 | header self-containment | `tests/include/check_headers.sh` | every header compiles on its own |
 | selftest | `xtate --selftest` | built-in regression |
+| version consistency | `python tests/release/test_version_consistency.py` | CMake/version header/README/docs/release notes agree |
+| surface consistency | `python tests/release/test_surface_consistency.py` | modules, usage examples, help count, MCP tools and GUI routes match the binary and docs; enforces the release-checklist sync points |
 | i18n | `tests/i18n/test.sh` | Chinese help coverage |
 | target syntax | `tests/target/test.sh` | address/CIDR/explicit/component ranges |
 | interactive | `tests/interactive/test.sh` | non-TTY commands/help/state |

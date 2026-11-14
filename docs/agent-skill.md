@@ -103,13 +103,14 @@ the [MCP server guide](./mcp-server.md) and the
 
 Before changing the skill, run a no-skill baseline on a scoped scan scenario and
 record the failure. After changing it, run the same scenario and check that the
-agent uses `target` (singular), flat `start_scan` fields (no nested `arguments`),
+agent passes `target` (a single string) to `explain_target`/`check` and `targets`
+(an array) to `start_scan`, uses flat `start_scan` fields (no nested `arguments`),
 `timeout_sec`, an explicit scope confirmation, and a dedicated `result_path` when
 one is supplied (otherwise the managed run directory is used).
 
 ## Related
 
 - [MCP server](./mcp-server.md) — tools, resources, limits
-- [Control plane](./control-plane.md) — job API shared by MCP/TUI/GUI
+- [Control plane](./control-plane.md) — job API shared by MCP and GUI
 - [Job model](./job-model.md) — lifecycle, heartbeat, cancellation
 - [AI integration design](./ai-integration.md) — how the skill fits the layers

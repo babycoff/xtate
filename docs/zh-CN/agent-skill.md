@@ -97,6 +97,6 @@ skill。保持 `skills/xtate/` 中的示例与 [MCP server 指南](./mcp-server.
 ## 相关
 
 - [MCP server](./mcp-server.md)——工具、resource 与限制
-- [控制面](./control-plane.md)——MCP/TUI/GUI 共用的 job API
+- [控制面](./control-plane.md)——MCP/GUI 共用的 job API
 - [Job 模型](./job-model.md)——生命周期、心跳与取消
 - [AI 集成设计](./ai-integration.md)——skill 在分层中的位置

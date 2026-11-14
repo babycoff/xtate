@@ -27,8 +27,8 @@ dependencies are present, so the complete module set is compiled in.
 |:---|:---|:---|:---|
 | Ubuntu 24.04 | GCC 13.3 | build + `--selftest` pass, 12/60/7/5 modules | OpenSSL, PCRE2, LibXml2, BSON, mongoc, ngtcp2/GnuTLS |
 | Ubuntu 24.04 | Clang 18.1 | build + `--selftest` pass, 12/60/7/5 modules | OpenSSL, PCRE2, LibXml2, BSON, mongoc, ngtcp2/GnuTLS |
-| Windows 10/11 | MSVC 19.5x (Visual Studio 2022/2026) | build + `--selftest` pass; probe count depends on optional libs | OpenSSL via Scoop; PCRE2/BSON/mongoc/zstd not installed |
-| Windows 10/11 | Clang 23 (clang-cl) | build + `--selftest` pass; probe count depends on optional libs | OpenSSL via Scoop; PCRE2/BSON/mongoc/zstd not installed |
+| Windows 10/11 | MSVC 19.5x (Visual Studio 2022/2026) | build + `--selftest` pass; probe count depends on optional libs | OpenSSL via Scoop; PCRE2, LibXml2, BSON/mongoc and zstd via vcpkg |
+| Windows 10/11 | Clang 23 (clang-cl) | build + `--selftest` pass; probe count depends on optional libs | OpenSSL via Scoop; PCRE2, LibXml2, BSON/mongoc and zstd via vcpkg |
 | Windows 10/11 | MinGW-w64 GCC 16 | build + `--selftest` pass; probe count depends on optional libs | no OpenSSL (Scoop build is MSVC-only) |
 
 The module counts are a quick way to verify your dependencies: 60 probes, 7
@@ -317,7 +317,7 @@ What to expect:
 - Only `success`-level results are shown by default. For `tcp-syn`, closed ports are `failed` level (`"closed" because "rst"`); `zbanner` reports open/closed at `info` level unless you promote them. Add `-show failed` and/or `-show info` to see more.
 - A live status bar (rate, progress, queue levels) is drawn on **stderr**, so `... > results.txt` keeps the file clean. `--no-status` hides it.
 - The interface is selected from the target route; if several default interfaces exist and `-if` is omitted, Xtate fails closed. Use `--list-if` to inspect adapters, `--explain-target <ip>` for a read-only route summary, and `-if <index|description>` to pin one.
-- Always give `-p` for TCP/UDP scans. Without any port Xtate warns and substitutes a fake `o:0` endpoint, which is not a TCP/UDP port, so the scan sends nothing at all.
+- Always give `-p` for TCP/UDP scans. Without any port Xtate warns and substitutes a fake `o:0` endpoint, which is not a TCP/UDP port, so a TCP/UDP engine has nothing valid to probe; the Yarrp modules need an explicit `o:` range such as `-p o:1-20`.
 - Stop with a single `Ctrl-C`: transmission stops, late replies are still collected for `--wait` seconds (default 10). Pressing `Ctrl-C` again aborts.
 
 ## Banner and stateful scans: stop the kernel from answering

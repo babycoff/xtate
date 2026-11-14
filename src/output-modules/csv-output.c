@@ -169,7 +169,7 @@ Output CsvOutput = {
     .need_file  = true,
     .params     = NULL,
     .short_desc = "Save results in CSV(Comma-Separated Values) format.",
-    .desc = "CsvOutput save results in Comma-Seperated Values(csv) format to "
+    .desc = "CsvOutput save results in Comma-Separated Values(csv) format to "
             "specified file.\n"
             "NOTE: CsvOutput doesn't convert any escaped chars actively.",
 

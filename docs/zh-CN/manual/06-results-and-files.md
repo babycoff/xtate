@@ -133,7 +133,7 @@ xtate --ip2asn-v4 ip2asn-v4.tsv --output-as-info \
 
 ## 托管 job：心跳、分片与 manifest
 
-通过控制面启动的 job（GUI、TUI、MCP 或 `--job-run`）把结果写到由 job 管理器拥有的文件：
+通过控制面启动的 job（GUI、MCP 或 `--job-run`）把结果写到由 job 管理器拥有的文件：
 
 ```bash
 xtate --job-run=request.json --job-result=out.ndjson --job-timeout=30

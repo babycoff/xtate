@@ -616,14 +616,14 @@ Scanner TcpStateScan = {
     .params              = tcpstate_parameters,
     .short_desc          = "Stateful TCP scan with specified ProbeModule.",
     .desc =
-        "TcpStateScan tries to contruct TCP conn with target port with a "
+        "TcpStateScan tries to construct TCP conn with target port with a "
         "hybrid-state lightweight TCP stack(HLTCP) and do further scan. It "
         "could do more things than ZBannerScan like grabbing complete webpage, "
         "further interacting with server and etc. But TcpStateScan consumes "
         "more resources because of the complex user-space TCP stack and "
         "stateful connections.\n"
         "NOTE1: TcpStateScan will construct complete TCP conns. So must avoid "
-        "Linux system sending RST automatically by adding iptable rules "
+        "Linux system sending RST automatically by adding iptables rules "
         "displayed in `firewall` directory.\n"
         "NOTE2: TcpStateScan causes so many packets with little data because "
         "of the default small -tcp-win. You may set a new -tcp-win and adjust "
@@ -639,8 +639,8 @@ Scanner TcpStateScan = {
         " is not a browser, crawler or any other tools concentrated on "
         "contents in protocol. We must focus on protocol itself with activate "
         "scanning.\n"
-        "NOTE5: Slow send rate may cause target host's retransmition.\n"
-        "NOTE6: Deduplicating relevant parms are useless for TcpStateScan.",
+        "NOTE5: Slow send rate may cause target host's retransmission.\n"
+        "NOTE6: Deduplication parameters do not apply to TcpStateScan.",
 
     .init_cb     = &tcpstate_init,
     .transmit_cb = &tcpstate_transmit,

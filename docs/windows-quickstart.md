@@ -2,11 +2,14 @@
 
 **English** · [中文](zh-CN/windows-quickstart.md)
 
-This guide is for a **first local try** on Windows 10/11 x64. It builds Xtate
-from source, because a release may not include a pre-built Windows executable.
-It deliberately uses only the core scanner: `tcp-syn` and the basic TCP probes
-build without optional libraries. TLS/PCRE2/XML/MongoDB are optional and are
-covered in [Windows optional dependencies](./windows-dependencies.md).
+This guide is for a **first local try** on Windows 10/11 x64. Release assets
+include a pre-built `xtate-<version>-windows-x64.zip` with checksums, so the
+fastest path is usually to download and unpack it. This guide also covers the
+from-source build, which remains useful for custom builds and for releases
+without a Windows artifact. It deliberately uses only the core scanner:
+`tcp-syn` and the basic TCP probes build without optional libraries.
+TLS/PCRE2/XML/MongoDB are optional and are covered in
+[Windows optional dependencies](./windows-dependencies.md).
 
 > Scans need Administrator privileges and the Npcap driver. Building and
 > `--selftest` do not need Npcap.
@@ -109,7 +112,8 @@ What the script does:
   `%LOCALAPPDATA%\xtate-build`;
 - finds Visual Studio, configures CMake and builds;
 - writes the main binary to `bin\xtate.exe`;
-- keeps per-toolchain copies in `bin\` and `artifacts\`.
+- keeps per-toolchain copies in `bin\` and under
+  `%LOCALAPPDATA%\xtate-build\artifacts\`.
 
 If PowerShell refuses to run the script:
 
@@ -181,9 +185,13 @@ Notes:
 Expected output includes rows such as:
 
 ```text
-open  192.168.1.10:80
-closed 192.168.1.11:80
+[+] host: 192.168.1.10 port: 80 "open" because "syn-ack"
+[x] host: 192.168.1.11 port: 80 "closed" because "rst"
 ```
+
+(These are the default stdout rows. The `text` output module additionally
+inserts `in tcp` and an explicit `is`, for example
+`[+] host: 192.168.1.10 port: 80 in tcp is "open" because "syn-ack"`.)
 
 ## 5. Optional features
 
@@ -236,6 +244,7 @@ Uninstall Npcap from **Settings → Apps** if you no longer need packet capture.
 ## 8. What Windows CI covers
 
 The repository's Windows CI builds with **MSVC, ClangCL, and MinGW** using both **UCRT64 and legacy MINGW64** MSYS2 environments, runs
-`--version`, `--selftest`, and the parser/i18n tests. It does **not** install the
+`--version`, `--selftest`, the parser/i18n tests, and the MCP, Agent Skill and
+version-contract tests. It does **not** install the
 Npcap driver and does **not** run live packet tests. A local Npcap installation
 and an Administrator shell are still required for a real scan.

@@ -73,28 +73,29 @@ parameter of `tls-state` itself.
 ### STARTTLS SMTP
 
 ```bash
-sudo ./bin/xtate -ip 203.0.113.10 -p 25 -scan tcp-state -probe tls-state   -probe-arg "-subprobe smtp-state --starttls smtp \
-              -subprobe-arg --after-tls \
-              -sni mail.example -alpn h2 --dump-cert-details"
+sudo ./bin/xtate -ip 203.0.113.10 -p 25 -scan tcp-state -probe tls-state \
+  -probe-arg "-subprobe smtp-state --starttls smtp -subprobe-arg --after-tls -sni mail.example -alpn h2 --dump-cert-details"
 ```
 
 ### Implicit TLS SMTP
 
 ```bash
-sudo ./bin/xtate -ip 203.0.113.10 -p 465 -scan tcp-state -probe tls-state   -probe-arg "-subprobe smtp-state -subprobe-arg --after-tls \
-              -sni mail.example --dump-cert-details"
+sudo ./bin/xtate -ip 203.0.113.10 -p 465 -scan tcp-state -probe tls-state \
+  -probe-arg "-subprobe smtp-state -subprobe-arg --after-tls -sni mail.example --dump-cert-details"
 ```
 
 ### Implicit TLS PostgreSQL
 
 ```bash
-sudo ./bin/xtate -ip 203.0.113.10 -p 5432 -scan tcp-state -probe tls-state   -probe-arg "-subprobe postgres-state -subprobe-arg --after-tls"
+sudo ./bin/xtate -ip 203.0.113.10 -p 5432 -scan tcp-state -probe tls-state \
+  -probe-arg "-subprobe postgres-state -subprobe-arg --after-tls"
 ```
 
 ### Implicit TLS MongoDB
 
 ```bash
-sudo ./bin/xtate -ip 203.0.113.10 -p 27017 -scan tcp-state -probe tls-state   -probe-arg "-subprobe mongodb-state"
+sudo ./bin/xtate -ip 203.0.113.10 -p 27017 -scan tcp-state -probe tls-state \
+  -probe-arg "-subprobe mongodb-state"
 ```
 
 ## When not to use it

@@ -1,10 +1,14 @@
 # Xtate 3.0 manual
 
-This is the task-oriented manual for the Xtate 3.0 scan console and the
-command-line, control-plane and job workflows behind it. It is written against
-the code in this tree: the browser console in `web/gui.html`, the loopback GUI
-server in `src/util-scan/gui.c` and the scan engine, control plane and job
-manager it uses.
+This is the task-oriented manual for Xtate 3.0. The command line is the primary
+interface and the reference for everything the scanner does: scan options,
+module behavior, job control and result formats are defined by the CLI and the
+local control plane. The browser console (chapter 02) and the MCP server are
+additional local clients of the same scan engine and job manager.
+
+The manual is written against the code in this tree: the browser console in
+`web/gui.html`, the local GUI server in `src/util-scan/gui.c` and the scan
+engine, control plane and job manager it uses.
 
 This manual describes the **3.0.0-rc.10 release candidate**. It documents what
 exists in this tree and is exercised by the tests; where behavior is still
@@ -12,11 +16,13 @@ limited, it says so instead of promising a future feature.
 
 ## Who this manual is for
 
-- **Operators who want the console.** Start with
+- **New users and script authors.** Start with
   [01 · Install and quick start](./01-install-and-quickstart.md), then
-  [02 · GUI console](./02-gui-console.md).
-- **Users who prefer the command line.** Start with
-  [03 · CLI and jobs](./03-cli-and-jobs.md).
+  [03 · CLI and jobs](./03-cli-and-jobs.md), the reference chapter.
+- **Operators who want the browser console.** Follow
+  [01](./01-install-and-quickstart.md), then the optional
+  [02 · GUI console](./02-gui-console.md). Anything the console can do is also
+  available from the CLI and the control plane.
 - **Automation and AI clients.** Read the control-plane and job material in
   [03](./03-cli-and-jobs.md), then the deep references
   [MCP server](../mcp-server.md) and [Agent Skill](../agent-skill.md).
@@ -29,9 +35,9 @@ limited, it says so instead of promising a future feature.
 
 | Chapter | What it covers |
 |:---|:---|
-| [01 · Install and quick start](./01-install-and-quickstart.md) | Build or verify a binary, permissions, first scan, first GUI session |
-| [02 · GUI console](./02-gui-console.md) | Every console page and field, preflight, authorization, security model, limits |
-| [03 · CLI and jobs](./03-cli-and-jobs.md) | Scan options and examples, output, control plane, managed jobs, result files |
+| [01 · Install and quick start](./01-install-and-quickstart.md) | Build or verify a binary, permissions, first scan, optional first GUI session |
+| [02 · GUI console](./02-gui-console.md) | Optional browser console: every page and field, preflight, authorization, security model, limits |
+| [03 · CLI and jobs](./03-cli-and-jobs.md) | Reference chapter: scan options and examples, output, control plane, managed jobs, result files |
 | [04 · Targets and scanning](./04-targets-and-scanning.md) | IPv4/IPv6, CIDR/ranges/files/excludes, ports, scan engines and attempt counts |
 | [05 · Modules and parameters](./05-modules-and-parameters.md) | Scan/probe/output/generate modules, pairing rules, common parameters |
 | [06 · Results and files](./06-results-and-files.md) | NDJSON records, manifests, chunks, index, compression and quotas |
@@ -42,9 +48,9 @@ limited, it says so instead of promising a future feature.
 ## Reading paths
 
 1. **First scan, fastest path:** [01](./01-install-and-quickstart.md) → first CLI
-   scan → [03](./03-cli-and-jobs.md) for output.
-2. **Console-first:** [01](./01-install-and-quickstart.md) → `xtate --gui` →
-   [02](./02-gui-console.md) page by page.
+   scan → [03](./03-cli-and-jobs.md) for output and job control.
+2. **Console (optional):** [01](./01-install-and-quickstart.md) → `xtate --gui`
+   → [02](./02-gui-console.md) page by page.
 3. **Banner and stateful work:** [04](./04-targets-and-scanning.md) →
    [05](./05-modules-and-parameters.md) →
    [firewall rules](../firewall.md).
@@ -65,9 +71,9 @@ limited, it says so instead of promising a future feature.
   `-if` selects an adapter. Options are case-sensitive.
 - Result levels in this manual are `success`, `failed` and `info`, matching the
   output contract.
-- The GUI, TUI and MCP are clients of one local control plane, so a job started
-  in one client can be listed and cancelled from another. The TUI is deprecated
-  in 3.0; the GUI is the supported interactive interface.
+- The CLI is the reference interface. The GUI and MCP are clients of one local
+  control plane, so a job started in one client can be listed and cancelled
+  from another. The GUI is the supported interactive interface.
 
 ## Accuracy and scope
 
@@ -76,9 +82,8 @@ substitute for `--help`: when the manual and `--help` disagree, the binary is th
 authority. The console behavior is covered by `python tests/gui/test_gui.py`;
 the MCP behavior by `python tests/mcp/test_mcp.py`.
 
-The manual does not cover building the embedded browser page, packaging or the
-historical TUI workflow; see [Build artifacts](../build-artifacts.md) and
-[TUI](../tui.md).
+The manual does not cover building the embedded browser page or packaging; see
+[Build artifacts](../build-artifacts.md).
 
 ## Related documentation
 

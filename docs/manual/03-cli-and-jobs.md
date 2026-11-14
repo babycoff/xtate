@@ -1,10 +1,10 @@
 # 03 · CLI and jobs
 
-The CLI is the reference interface: the GUI, the TUI and MCP all drive the same
-scan engine and the same job manager. This chapter covers scan commands,
+The CLI is the reference interface: the GUI and MCP both drive the same scan
+engine and the same job manager. This chapter covers scan commands,
 output, the local control plane and managed jobs.
 
-In the examples below `xtate` means `./bin/xtate` on Linux/macOS and
+In the examples below `xtate` means `./bin/xtate` on Linux and
 `.\bin\xtate.exe` on Windows. Raw-socket scans need `sudo` or an elevated shell.
 
 ## Command-line basics
@@ -173,8 +173,8 @@ non-zero for startup/validation failures, `--selftest` failures and failed
 ## Managed jobs
 
 A long scan should be a job: a child process owned by a local daemon, with
-timeouts, cancellation and result files. The same job manager backs MCP, the
-TUI and the GUI.
+timeouts, cancellation and result files. The same job manager backs MCP and the
+GUI.
 
 ### Run one job and wait
 
@@ -218,6 +218,9 @@ Start a server:
 ```bash
 xtate --control-plane=/tmp/xtate-ctl.sock
 ```
+
+On Windows the endpoint is a named pipe instead, for example
+`xtate --control-plane=\\.\pipe\xtate-control`.
 
 Send a request from another process (or another terminal):
 
@@ -293,9 +296,11 @@ Completed results become `<result>.<id>.ndjson` chunks plus
 `<result>.manifest.json` and an optional index; `job.result_manifest` returns
 the manifest path. Compression is `none` by default; `--result-compress=zstd`
 works when the build includes zstd (otherwise it falls back to uncompressed).
-`--result-quota` is enforced while the scan runs; when the result file reaches the quota, the scan stops and the job reports a quota error; it does
-not stop a running scan. Completed-job retention and pruning are enforced by
-the job manager.
+`--result-quota` is a post-run check: after the job reaches a terminal state the
+job manager compares the result size with the quota and logs a warning when it
+is exceeded. It does not stop or truncate a running scan, and a later chunking
+pass may therefore produce incomplete chunks. Completed-job retention and
+pruning are enforced by the job manager.
 
 ### Attach other clients
 
@@ -305,8 +310,7 @@ Any client can attach to a running daemon. For the console:
 xtate --control-connect=/tmp/xtate-ctl.sock --gui
 ```
 
-The TUI uses the same endpoint model (`--tui`; see [TUI](../tui.md)). MCP is the
-automation interface and exposes the same job lifecycle as tools; see
+MCP is the automation interface and exposes the same job lifecycle as tools; see
 [MCP server](../mcp-server.md) and [Agent Skill](../agent-skill.md). Because
 all clients share one daemon, a job started by the GUI can be cancelled by a
 control-plane request and listed by MCP.
@@ -336,5 +340,5 @@ contract; check stderr and the JSON error object instead.
   [JSON contracts](../json-contracts.md), [error codes](../error-codes.md)
 - [Scanning modes](../scanning-modes.md), [modules](../modules.md),
   [targets and ports](../targets-and-ports.md)
-- [MCP server](../mcp-server.md), [TUI](../tui.md)
+- [MCP server](../mcp-server.md), [Agent Skill](../agent-skill.md)
 - [Troubleshooting](../troubleshooting.md)

@@ -1,12 +1,16 @@
 # Browser GUI
 
 Xtate ships a browser console that binds loopback by default. It is a
-client, like MCP and the TUI: it starts authorized scans, observes them live,
+client, like MCP: it starts authorized scans, observes them live,
 cancels work and opens results, but the control plane still owns workers,
 timeouts, result files and the actual scan process.
 
 The GUI is intended for a local analyst workstation. It is not a remote web
-service and does not expose the control plane over TCP.
+service and does not expose the control plane over TCP. The listener is
+loopback-only unless you explicitly opt in to a non-loopback bind (see
+[Security model](#security-model)); the documented container path sets
+`XTATE_GUI_ALLOW_REMOTE=1`, publishes the port and still relies on the session
+token.
 
 ## Requirements
 
@@ -66,7 +70,7 @@ yourself. Options:
 
 | Option | Meaning |
 |---|---|
-| `--gui-listen=127.0.0.1:PORT` | Listen port; only loopback hosts are accepted. `:0` picks a free port. |
+| `--gui-listen=HOST:PORT` | `HOST` must be `127.0.0.1`, `localhost` or (with `XTATE_GUI_ALLOW_REMOTE`) `0.0.0.0`; the port is mandatory and `:0` picks a free one. |
 | `--control-connect=...` | Optional endpoint. Use it to attach to an existing control plane; omitted starts a private one. |
 
 The browser URL is printed as `http://127.0.0.1:<port>/`. The session token is
@@ -91,9 +95,10 @@ falls back to `%LOCALAPPDATA%\xtate`, then `%TEMP%\xtate-state`, then
 The GUI is scan-first: the default page is **New scan**, not a job table.
 
 - **New scan** accepts IPv4/IPv6 targets in comma, range or CIDR form, picks one
-  of the 11 scan engines, shows probe choices only when the engine needs one,
-  and hides ports for ICMP/ARP/NDP scans. Rate, timeout and an optional interface
-  are set here.
+  of the available scan engines (11 on a Windows or reduced-dependency build, 12
+  with `quic-state` on a full Linux build), shows probe choices only when the
+  engine needs one, and hides ports for ICMP/ARP/NDP scans. Rate, timeout and an
+  optional interface are set here.
 - The server-side **preflight** (`POST /api/preflight`) parses the same request
   as `job.start`, verifies target syntax and counts, resolves route, source,
   gateway, link type and raw-IP capability, and rejects unknown scans/probes,
@@ -120,9 +125,10 @@ The GUI is scan-first: the default page is **New scan**, not a job table.
   application (with a text-editor fallback on Windows when `.log`/`.ndjson` has
   no file association). Cancelling asks for confirmation.
 - **Results** lists jobs from `job.list`; opening one moves to Live with that job
-  selected. **Load records** reads the completed result file through
+  selected. **Load records** reads the job's result file through
   `GET /api/results?job_id=...&offset=...&limit=...` (50 records per page) and
-  **Load more** pages through it. Only valid NDJSON records are returned;
+  **Load more** pages through it; records already written by a running job can be
+  read too. Only valid NDJSON records are returned;
   malformed or partial lines are skipped.
 - **Interfaces** lists capture adapters with IPv4/IPv6, MAC, gateway, default
   flag, link type and raw-IP capability. **Modules** groups scan modules, probe
@@ -143,17 +149,23 @@ arguments are editable in the Method panel.
 
 ## Security model
 
-- **Loopback only.** The listener binds `127.0.0.1`; `--gui-listen` rejects
-  non-loopback hosts. There is no TLS because there is no network path.
+- **Loopback by default.** The listener binds `127.0.0.1`; `--gui-listen`
+  requires an explicit `host:port` and accepts `127.0.0.1` or `localhost`. A
+  non-loopback bind (`0.0.0.0`) is rejected unless `XTATE_GUI_ALLOW_REMOTE` is
+  set to `1`, `true` or `yes`; that is an explicit opt-in for containers and
+  reverse proxies and removes the loopback protection, so keep the token and
+  publish the port deliberately (see [docker-build.md](docker-build.md)). There
+  is no TLS because the default deployment has no network path.
 - **Session token.** A random 128-bit token is generated at startup. The page
   sends it in `X-Xtate-GUI-Token`; the server compares it in constant time.
 - **Host validation.** Requests with a non-loopback `Host` header are rejected,
   which prevents DNS-rebinding pages from reaching the API.
 - **Method allowlist.** Only `job.list`, `job.status`, `job.cancel`,
   `job.result_manifest` and `job.start` are forwarded through `/api/rpc`.
-  `/api/system`, `/api/interfaces`, `/api/modules`, `/api/options`,
+  `/api/info`, `/api/system`, `/api/interfaces`, `/api/modules`, `/api/options`,
   `/api/preflight`, `/api/results` and `/api/open` are server-side handlers;
-  they cannot call arbitrary control methods. `/api/results` accepts only
+  they cannot call arbitrary control methods. `/api/info` returns only the
+  attached control endpoint and the GUI version. `/api/results` accepts only
   `job-<digits>` and
   reads the result path reported by that job's manifest, never an arbitrary
   client path. `/api/open` accepts only `job_id` plus `kind` (`log`, `result`

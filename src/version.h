@@ -11,7 +11,7 @@
 #define XTATE_VERSION_MAJOR    3
 #define XTATE_VERSION_MINOR    0
 #define XTATE_VERSION_PATCH    0
-#define XTATE_VERSION_SUFFIX   "-rc.8"
+#define XTATE_VERSION_SUFFIX   "-rc.10"
 #define XTATE_WITH_VERSION     "xtate/3.0.0-rc.10"
 #define XTATE_DESCRIPTION      "A modular all-stack network scanner for next-generation internet surveys."
 #define XTATE_AUTHOR           "Alvin Chen"

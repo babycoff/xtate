@@ -1,20 +1,20 @@
 # 浏览器 GUI
 
-Xtate 提供一个仅监听环回地址的浏览器控制平面控制台。它和 MCP、TUI 一样是客户端：
+Xtate 提供一个默认绑定环回地址的浏览器控制台。它和 MCP 一样是客户端：
 负责启动已授权扫描、实时观察、取消任务和打开结果；worker、超时、结果文件与真实扫描过程仍由
-控制平面掌握。
+控制面掌握。
 
-GUI 面向本机分析工作站，不是公网 Web 服务，也不会通过 TCP 暴露控制平面。
+GUI 面向本机分析工作站，不是公网 Web 服务，也不会通过 TCP 暴露控制面。
 
 ## 前提
 
-- 一个已连接的控制平面端点（Unix socket 或 Windows Named Pipe），或直接使用
-  `xtate --gui` 自动启动的私有控制平面。
-- 连接已有控制平面时，如果该控制平面设置了 `XTATE_CONTROL_TOKEN`，GUI 必须使用
+- 一个已连接的控制面端点（Unix socket 或 Windows Named Pipe），或直接使用
+  `xtate --gui` 自动启动的私有控制面。
+- 连接已有控制面时，如果该控制面设置了 `XTATE_CONTROL_TOKEN`，GUI 必须使用
   同一个值。
 - 支持 `fetch` 与 `<dialog>` 的现代浏览器。
 
-控制平面的启动方式见 [control-plane.md](control-plane.md)。
+控制面的启动方式见 [control-plane.md](control-plane.md)。
 
 ## 启动
 
@@ -32,7 +32,7 @@ Windows PowerShell：
 ```
 
 这种私有模式下启动的任务会随 GUI 退出而停止。如果环境中尚未设置
-`XTATE_CONTROL_TOKEN`，GUI 会为私有控制平面生成一个临时的 128 位令牌并传给子进程，
+`XTATE_CONTROL_TOKEN`，GUI 会为私有控制面生成一个临时的 128 位令牌并传给子进程，
 因此本机其他账户无法直接连接该管道或 socket；令牌在 GUI 退出时清除，且不会打印。
 若要连接已有控制面（用于长任务或其他客户端），显式传入端点：
 
@@ -59,14 +59,14 @@ $env:XTATE_CONTROL_TOKEN = 'change-me'
 
 | 选项 | 含义 |
 |---|---|
-| `--gui-listen=127.0.0.1:PORT` | 监听端口；只接受环回地址，`:0` 表示自动选择空闲端口。 |
+| `--gui-listen=HOST:PORT` | `HOST` 可为 `127.0.0.1`、`localhost`，或设置 `XTATE_GUI_ALLOW_REMOTE` 后使用 `0.0.0.0`；端口必填，`:0` 表示自动选择空闲端口。 |
 | `--control-connect=...` | 可选端点。指定时连接已有控制面；省略时自动启动私有控制面。 |
 
 浏览器 URL 形如 `http://127.0.0.1:<port>/`。会话 token 只打印一次，同时注入页面；
 没有匹配 `X-Xtate-GUI-Token` 请求头的调用会被拒绝。
 
 在 Windows 上，结果与日志写入 `xtate.exe` 同级、可见的 `xtate-state` 目录，
-方便直接找到和删除。控制平面使用托管状态目录：Windows 上是
+方便直接找到和删除。控制面使用托管状态目录：Windows 上是
 `xtate.exe` 同级的 `xtate-state`，Linux 上是 `$XDG_STATE_HOME/xtate`
 （回退到 `$HOME/.local/state/xtate`）。设置 `XTATE_STATE_DIR` 可以覆盖它。
 每次扫描在 `runs/<YYYYMMDD-HHMMSS>-<seq>/` 下拥有独立目录，包含 `scan.ndjson`、
@@ -115,15 +115,19 @@ JSON 控制 API。scan/probe 参数可在 Method 面板中编辑。
 
 ## 安全模型
 
-- **仅环回。** 监听 `127.0.0.1`；`--gui-listen` 拒绝非环回主机。没有网络路径，
-  因此也不提供 TLS。
+- **默认仅环回。** 默认监听 `127.0.0.1`；`--gui-listen` 需要显式 `host:port`，
+  并接受 `127.0.0.1` 或 `localhost`。除非设置了 `XTATE_GUI_ALLOW_REMOTE=1`（或
+  `true`/`yes`），否则拒绝非环回绑定（`0.0.0.0`）。这是容器和反向代理场景的显式
+  选择，会移除环回保护，因此必须保留 token 并谨慎发布端口（见
+  [docker-build.md](docker-build.md)）。默认部署没有网络路径，因此不提供 TLS。
 - **会话 token。** 启动时生成 128 位随机 token。页面通过 `X-Xtate-GUI-Token`
   发送，服务端使用常数时间比较。
 - **Host 校验。** 非环回 `Host` 请求会被拒绝，防止 DNS rebinding 页面访问 API。
 - **方法白名单。** `/api/rpc` 仅转发 `job.list`、`job.status`、`job.cancel`、
-  `job.result_manifest` 和 `job.start`。`/api/system`、`/api/interfaces`、
-  `/api/modules`、`/api/options`、`/api/preflight`、`/api/results` 和
-  `/api/open` 是服务端处理器，不能调用任意控制方法。`/api/results` 只接受
+  `job.result_manifest` 和 `job.start`。`/api/info`、`/api/system`、
+  `/api/interfaces`、`/api/modules`、`/api/options`、`/api/preflight`、
+  `/api/results` 和 `/api/open` 是服务端处理器，不能调用任意控制方法。
+  `/api/info` 只返回当前控制端点与 GUI 版本。`/api/results` 只接受
   `job-<数字>`，读取该 job manifest
   报告的结果路径，绝不接受客户端任意路径。`/api/open` 只接受 `job_id` 加 `kind`
   （`log`、`result` 或 `manifest`）；服务端从 job status/manifest 解析路径，绝不打开
@@ -131,12 +135,12 @@ JSON 控制 API。scan/probe 参数可在 Method 面板中编辑。
 - **不转交浏览器、不经过 shell。** GUI 从不启动或控制浏览器：只打印 URL，按 Ctrl-C
   退出。打开日志/结果在 Windows 直接创建 Notepad 进程，在 Unix 使用 `xdg-open`；
   不经过 shell、DDE 或 explorer.exe。
-- **token 处理。** 连接已有控制平面时，其 control-plane token 只从环境读取并由服务端
+- **token 处理。** 连接已有控制面时，其 control-plane token 只从环境读取并由服务端
   添加；页面 JavaScript 不会拿到它。私有模式下若环境没有 token，GUI 会生成临时 token
   并在退出时清除。浏览器会话 token 会出现在页面源码中，因此应把浏览器配置视为
   可信本机状态。
 
-GUI 不是扫描的安全边界。授权、目标数量、速率、路由预检和结果路径检查仍在控制平面
+GUI 不是扫描的安全边界。授权、目标数量、速率、路由预检和结果路径检查仍在控制面
 与 MCP server 中执行。
 
 ## 故障排查
@@ -157,7 +161,7 @@ GUI 不是扫描的安全边界。授权、目标数量、速率、路由预检�
 python tests/gui/test_gui.py
 ```
 
-测试会启动真实控制平面和 GUI 桥接，使用工作区 `XTATE_STATE_DIR`，检查页面、
+测试会启动真实控制面和 GUI 桥接，使用工作区 `XTATE_STATE_DIR`，检查页面、
 语言切换标记、token、system/interfaces/modules/options/preflight 和 results 端点，
 验证英文/中文模块与选项内容，拒绝非环回 Host 与缺失 token，在不启动任何应用的情况下
 拒绝非法的 `/api/open` 请求，校验预检中的 `global_args`，检查每次扫描的独立结果目录，
@@ -166,7 +170,7 @@ python tests/gui/test_gui.py
 ## 相关文档
 
 - [3.0 手册](manual/README.md)
-- [控制平面](control-plane.md)
+- [控制面](control-plane.md)
 - [任务模型](job-model.md)
 - [TUI 面板](tui.md)（3.0 中已弃用）
 - [MCP server](mcp-server.md)

@@ -45,6 +45,18 @@ static const I18nEntry i18n_catalog[] = {
     {"detailed help of global params:", "查看全局参数详细帮助："},
     {"basic use examples of Xtate:\n", "Xtate 基础用法示例：\n"},
     {"basic use examples of xtate:\n", "Xtate 基础用法示例：\n"},
+    {"check interface, route, source address and link type without sending "
+     "packets.\n",
+     "不发送数据包，检查网卡、路由、源地址和链路类型。\n"},
+    {"show the route selected for a target and the capture interface.\n",
+     "显示目标选择的路由和抓包网卡。\n"},
+    {"list capture interfaces with addresses, MAC and link type.\n",
+     "列出抓包网卡及其地址、MAC 和链路类型。\n"},
+    {"print build and module capabilities as JSON for scripts and agents.\n",
+     "以 JSON 输出构建和模块能力，供脚本和智能体读取。\n"},
+    {"start the MCP stdio server for an AI agent.\n",
+     "启动供 AI 智能体使用的 MCP stdio 服务器。\n"},
+    {"start the local browser console.\n", "启动本地浏览器控制台。\n"},
     {"use TcpSyn ScanModule to scan web ports on 10.x.x.x at 10kpps.\n",
      "使用 TcpSyn 扫描模块以 10kpps 扫描 10.x.x.x 的 Web 端口。\n"},
     {"use udp ScanModule to scan UDP 80 port with echo ProbeModule and "
@@ -64,16 +76,18 @@ static const I18nEntry i18n_catalog[] = {
      "在本地网络中使用 LAN 模式做 ARP 扫描。\n"},
     {"do NDP NS scan with a link-local source IP in local network.\n",
      "在本地网络中使用链路本地源 IP 做 NDP NS 扫描。\n"},
-    {"list all ScanModules and other types of module are the same.\n",
-     "列出全部扫描模块；其它类型模块的用法相同。\n"},
-    {"see help of TcpSyn ScanModule in detail.\n",
+    {"list all ScanModules; use -list-probe, -list-out and -list-gen for the "
+     "other module types.\n",
+     "列出全部扫描模块；其它类型模块分别用 -list-probe、-list-out、-list-gen "
+     "列出。\n"},
+    {"show detailed help for the TcpSyn ScanModule.\n",
      "查看 TcpSyn 扫描模块的详细帮助。\n"},
-    {"set params and do scanning in an user-friendly interactive mode.\n",
+    {"set parameters and run scans in a user-friendly interactive mode.\n",
      "在交互模式中设置参数并执行扫描。\n"},
     {"print version and compilation info.\n", "打印版本和编译信息。\n"},
     {"show the design and architecture of Xtate.\n",
      "展示 Xtate 的设计与架构。\n"},
-    {"display this usage text of using examples.\n", "显示这份用法示例。\n"},
+    {"display this usage summary with examples.\n", "显示这份用法示例。\n"},
     {"display detailed help text of all parameters.\n",
      "显示全部参数的详细帮助。\n"},
 
@@ -97,7 +111,7 @@ static const I18nEntry i18n_catalog[] = {
     {"MISCELLANEOUS", "其他"},
 
     /* Intro */
-    {"This is how Xtate working internally:\n", "Xtate 内部工作流程如下：\n"},
+    {"This is how Xtate works internally:\n", "Xtate 内部工作流程如下：\n"},
     {"This is what ScanModules and ProbeModules mean:\n",
      "ScanModules 与 ProbeModules 的关系如下：\n"},
 
@@ -258,7 +272,7 @@ typedef struct I18nParamEntry {
 
 static const I18nParamEntry i18n_global_help[] = {
     {"seed", "设置目标/端口随机化和 cookie 生成的全局随机种子。可填整数；不同种子改变发送顺序。填 time 使用本地时间自动生成新顺序；不设置时默认 time。--echo 可保存配置以复现实验。"},
-    {"rate", "设置所有发送线程共享的总发包速率（packets/second），支持小数（如 0.1）和很大值。日常 Windows 约 250k pps，较新的 Linux 约 2.5M pps；25M pps 需要 PF_RING。该值是总速率，不是每线程速率。"},
+    {"rate", "设置所有发送线程共享的总发包速率（packets/second），支持小数（如 0.1）和很大值。实际可达速率取决于操作系统、抓包后端、网卡、CPU 和报文大小；该值是总速率，不是每线程速率。"},
     {"wait", "所有发送线程结束后，继续接收和处理回包的秒数；默认 10 秒。调大可等待慢响应，但会延长进程退出时间。"},
     {"forever", "把 --wait 设为很大的值，用于持续接收/长期运行。"},
     {"shard", "用 x/y 把扫描空间分给多个实例：x 是当前实例编号（从 1 开始），y 是实例总数；例如 1/2 从索引 0 开始每隔一个发送，2/2 从索引 1 开始。仅默认 GenerateModule 实现该功能。"},
@@ -285,7 +299,7 @@ static const I18nParamEntry i18n_global_help[] = {
     {"exclude-asn-v6", "按 IPv6 ASN 排除目标；AS 信息来自 --ip2asn-v6 文件。"},
     {"adapter", "使用指定原始网卡接口（如 eth0、dna1）。未指定时选择第一个带默认网关的接口，或自动探测。"},
     {"source-ip", "设置发送报文的源 IP。可指定范围，但范围大小必须是 2 的幂（1/2/4/8/...）。IPv6 链路本地地址需要手动指定。"},
-    {"source-port", "设置发送报文的源端口或范围（范围大小必须是 2 的幂）。未指定时在 40000-59999 随机。建议用防火墙过滤这些端口，避免主机协议栈干扰回包。"},
+    {"source-port", "设置发送报文的源端口或范围（范围大小必须是 2 的幂）。未指定时随机选择一个起始于 40000-59999 的 256 端口窗口。建议用防火墙过滤这些端口，避免主机协议栈干扰回包。"},
     {"source-mac", "设置发送报文的源 MAC；未指定时使用网卡绑定的第一个 MAC。"},
     {"router-ip", "设置 IPv4 路由器/网关 IP。"},
     {"router-mac", "设置发送报文的目标路由器 MAC；未指定时通过 ARP 获取网关 MAC。可用后缀分别设置 IPv4/IPv6 路由器 MAC。"},
@@ -330,9 +344,9 @@ static const I18nParamEntry i18n_global_help[] = {
     {"output-file", "设置输出文件名。MongoDB 输出时这里是连接 URI；部分模块用 `-` 表示 stdout。"},
     {"append-output", "以追加方式打开输出文件，而不是覆盖；不适用于 MongoDB 等非文件输出。"},
     {"output-screen", "同时把成功结果输出到屏幕。"},
-    {"show-output", "选择要显示的结果级别（如 success/info/failure）。"},
-    {"no-show-output", "关闭结果打印。"},
-    {"no-escape-char", "关闭输出字符串的转义。可能产生非法 JSON/CSV；除非下游自行解析，否则不建议使用。"},
+    {"show-output", "选择要额外显示的结果类型：all、success（successed）、fail（failed/failure）或 info（information）。"},
+    {"no-show-output", "选择不显示的结果类型：all、success（successed）、fail（failed/failure）或 info（information）。"},
+    {"no-escape-char", "把结果字符串中的不可打印字节再转义一层。默认会归一化为 `\\xNN`；开启后变成 `\\\\xNN`，下游 JSON 解析器会把它当作字面转义序列，而不是自行解释。不要对 BSON 等已经自行转义的输出模块使用，否则会产生双重转义。"},
     {"output-as-info", "把 success 结果标记为 info 级别，便于只看 info/失败或调整输出过滤。"},
     {"generate-module", "选择目标生成模块；默认 blackrock。生成模块参数用 --gen-arg 传入。"},
     {"list-generate-modules", "列出全部生成模块。"},
@@ -349,17 +363,17 @@ static const I18nParamEntry i18n_global_help[] = {
     {"tcp-sackok", "启用/关闭 TCP SACK permitted 选项；影响丢包恢复行为。"},
     {"tcp-tsecho", "设置 TCP timestamp echo 选项；研究用途，错误值会影响握手/测量。"},
     {"packet-trace", "打印每个发送/接收报文的调试信息，可能非常耗时。"},
-    {"bpf-filter", "设置自定义 BPF 过滤器，覆盖 ScanModule 默认过滤器；语法错误会导致启动失败。"},
+    {"bpf-filter", "用给定表达式替换所选 ScanModule 的默认 BPF 过滤器。可用 --help-scan <module> 查看默认过滤器。该表达式直接用于抓包，不会在模块过滤器之上再叠加。"},
     {"no-bpf-filter", "关闭 ScanModule 默认 BPF 过滤器；需要自行确保收到所需报文，否则会漏结果。"},
     {"max-packet-len", "设置接收报文的最大长度；需与 --tcp-win、--snaplen 配合。"},
     {"raw-socket", "使用原始套接字发送报文，绕过内核 TCP/UDP 发送路径。"},
     {"sendmmsg", "使用 Linux sendmmsg 批量发送报文，减少系统调用开销。"},
     {"sendmmsg-batch", "设置 sendmmsg 每批发送数量。"},
-    {"sendmmsg-retries", "设置 sendmmsg 批处理重试次数。"},
-    {"send-queue", "使用发送队列解耦发送与接收；可能增加内存占用并改变时序。"},
+    {"sendmmsg-retries", "设置 sendmmsg 调用失败后的最大重试次数，默认 10。"},
+    {"send-queue", "在 Windows 上使用 Npcap/Winpcap 的 sendqueue 批量发送数据包；实际吞吐取决于网卡和驱动，请在当前系统实测。"},
     {"send-queue-size", "设置发送队列容量；过大增加内存，过小可能阻塞。"},
     {"pfring", "使用 PF_RING 高速抓包/发送；需要 PF_RING 驱动和库。"},
-    {"offline", "离线模式：不实际发包，只处理已有输入/输出，便于调试和回放。"},
+    {"offline", "不实际发送报文；适合低速率配合 --packet-trace 检查将发送内容，或高速率压测发送路径（不依赖零开销网卡），结果取决于驱动和负载。"},
     {"config-file", "从配置文件加载参数；通常由 --echo 生成。命令行参数可覆盖/补充配置。"},
     {"resume-index", "从指定扫描索引恢复扫描。"},
     {"no-resume-file", "不写 resume.conf，避免在磁盘留下可恢复配置。"},
@@ -367,7 +381,7 @@ static const I18nParamEntry i18n_global_help[] = {
     {"pcap-filename", "把收到的报文保存为 pcap 文件。"},
     {"no-ansi-control", "关闭 ANSI 控制字符，适合日志/非交互终端。"},
     {"no-dedup", "关闭接收去重。"},
-    {"dedup-win", "设置接收去重窗口大小；越大能覆盖更多乱序/重复包，但消耗更多内存。"},
+    {"dedup-win", "设置接收去重窗口大小；去重表为带 LRU 淘汰的哈希表，窗口大小即条目数，默认 1000000。"},
     {"stack-buf-count", "设置协议栈缓冲区数量；影响可同时处理的报文/连接缓冲。"},
     {"dispatch-buf-count", "设置接收分发队列大小；队列过小可能丢包，过大增加内存和延迟。"},
     {"infinite", "无限重复扫描，直到手动终止；适合压力/性能测试，会持续消耗带宽和目标资源。"},
@@ -377,7 +391,7 @@ static const I18nParamEntry i18n_global_help[] = {
     {"ip2asn-v4-file", "指定 IPv4 ASN 数据库文件（ip2asn 格式）。"},
     {"ip2asn-v6-file", "指定 IPv6 ASN 数据库文件。"},
     {"no-back-trace", "崩溃时不打印调用栈。"},
-    {"explain-target", "只读诊断：输出目标、按目标路由选择的接口、源 IP/MAC 和网关，不发送任何探测包。"},
+    {"explain-target", "只读诊断：输出目标、按目标路由选择的接口、源 IP、网关和链路类型，不发送任何探测包。"},
     {"check", "只读预检：检查接口、源 IP、网关和链路类型；Linux 防火墙规则需单独检查。"},
     {"job-run", "把 JSON 扫描请求作为受管任务运行，并在结束后打印最终状态；不经过 shell。"},
     {"job-result", "设置 --job-run 的结果文件路径；默认使用请求文件名加 .ndjson 后缀。"},
@@ -386,12 +400,12 @@ static const I18nParamEntry i18n_global_help[] = {
     {"result-compress", "设置结果分块压缩方式：none 或 zstd（构建时启用了 zstd 才可用）。"},
     {"result-index", "写结果分块索引文件，记录各分块的位置和元数据。"},
     {"list-capabilities", "以 JSON 输出构建与模块能力后退出，供代理和图形界面读取。"},
-    {"mcp", "运行 MCP stdio 服务器；未指定 --control-connect 时自动启动私有控制平面。"},
-    {"tui", "运行控制平面全屏任务面板；未指定 --control-connect 时自动启动私有控制平面。"},
-    {"gui", "启动本地浏览器控制平面面板；未指定 --control-connect 时自动启动私有控制平面。"},
-    {"gui-listen", "GUI 监听地址，仅允许环回地址，默认 127.0.0.1:8787。"},
+    {"mcp", "运行 MCP stdio 服务器；未指定 --control-connect 时自动启动私有控制面。"},
+    {"tui", "运行旧版 TUI 全屏任务面板（3.0 中已弃用，请优先使用 --gui）；未指定 --control-connect 时自动启动私有控制面。"},
+    {"gui", "启动浏览器控制台；默认只监听环回地址，未指定 --control-connect 时自动启动私有控制面。"},
+    {"gui-listen", "GUI 监听地址，默认 127.0.0.1:8787；绑定非环回地址需要设置 XTATE_GUI_ALLOW_REMOTE=1。"},
     {"gui-no-open", "兼容旧脚本的弃用选项；GUI 不会自动打开浏览器。"},
-    {"control-connect", "设置发送单次原始控制请求所用的控制端点。"},
+    {"control-connect", "客户端模式和原始控制请求共用的控制端点：用于 --mcp、--gui、--control-ping 和 --control-request。--mcp 或 --gui 未指定该参数时，会自动启动私有控制面。"},
     {"control-request", "设置要发送的原始 JSON 控制请求，配合 --control-connect 使用。"},
     {"control-ping", "向控制端点发送 ping 并打印响应，用于检查服务是否可用。"},
     {"control-plane", "提供本地任务控制端点（Unix socket 或 Windows 命名管道）；设置 XTATE_CONTROL_TOKEN 可启用共享令牌认证。"},
@@ -511,7 +525,7 @@ static const I18nModuleParamEntry i18n_module_param_help[] = {
     {"first-probe", "轮换十个 JARM 探针，使标准探针 N（1..10）最先发送；仍发送全部十个。首个 SYN 是 N，收到可接受回复后其余九个按 N+1..10,1..N-1 批量发送。jarm_slot 保留标准编号，因此聚合与发送顺序无关。默认 1；例如 --first-probe 7 的发送顺序是 7,8,9,10,1,2,3,4,5,6。"},
     {"starttls", "在 TLS 前完成明文 STARTTLS 升级：smtp（EHLO/STARTTLS）、imap（a001 STARTTLS）、pop3（STLS）、ftp（AUTH TLS）或 managesieve（STARTTLS）。探针处理服务器问候、发送升级命令，升级成功后才开始 TLS；证书/cipher/版本和子探测都在升级后的 TLS 内运行。失败输出 starttls error。示例：-subprobe close-state --starttls smtp --dump-cert-details。"},
     {"subprobe", "必需的 state 子探测；只有 TLS 握手成功（以及 STARTTLS 升级成功）后才初始化，并在加密流内运行。只取证书时使用 close-state。"},
-    {"explain-target", "只读诊断：输出目标、按目标路由选择的接口、源 IP/MAC 和网关，不发送任何探测包。"},
+    {"explain-target", "只读诊断：输出目标、按目标路由选择的接口、源 IP、网关和链路类型，不发送任何探测包。"},
     {"check", "只读预检：检查接口、源 IP、网关和链路类型；Linux 防火墙规则需单独检查。"},
     {"doh-h2", "DNS over HTTPS over HTTP/2：在 tls-state 内发送 HTTP/2 POST application/dns-message 并解析 DNS 响应；需要 -alpn h2。"},
     {"doh", "DNS over HTTPS（DoH）state 子探针：在 tls-state 内用 HTTP/1.1 POST 发送 application/dns-message 并解析 DNS 响应；TLS 由 tls-state 负责。需要 -alpn http/1.1。"},
@@ -973,7 +987,7 @@ const char *i18n_interactive_help(void) {
                "按 <TAB> 查看命令、参数和模块补全；`help-param`/`help-scan` "
                "等查看详细帮助。\n"
                "`run` 执行扫描，`quit` 保存并退出，`exit` 不保存直接退出。\n"
-               "配置会自动保存到 `recover.conf`，交互历史会保存在用户目录。\n";
+               "配置会自动保存到 `recover.conf`，交互历史保存在用户配置目录（Windows 为 `%APPDATA%`，Linux 为用户主目录）。\n";
     }
     return "Xtate"
            "'s interactive mode lets you set parameters one by one and run "
@@ -984,6 +998,6 @@ const char *i18n_interactive_help(void) {
            "`help-param`/`help-scan`/... for details.\n"
            "`run` starts scanning, `quit` saves and exits, `exit` exits "
            "without saving.\n"
-           "Configuration is saved to `recover.conf`; history is kept in your "
-           "home directory.\n";
+           "Configuration is saved to `recover.conf`; history is kept in the user "
+           "profile directory (`%APPDATA%` on Windows, home on Linux).\n";
 }
