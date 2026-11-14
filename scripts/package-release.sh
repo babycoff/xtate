@@ -2,7 +2,7 @@
 # Package a Linux release tree and emit SHA256SUMS + build provenance.
 #
 # Usage: scripts/package-release.sh --binary reports/docker-out/xtate-linux \
-#          --version 3.0.0-rc.9 [--out dist] [--docker-image xtate:ubuntu24-full]
+#          --version 3.0.0-rc.10 [--out dist] [--docker-image xtate:ubuntu24-full]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -38,7 +38,11 @@ for item in LICENSE README.md README.zh-CN.md docs schemas skills firewall; do
 done
 chmod 0755 "$STAGE/firewall/"*.sh 2>/dev/null || true
 
-"$STAGE/xtate" --list-capabilities > "$STAGE/capabilities.json"
+if [[ -n "$IMAGE" ]]; then
+    docker run --rm "$IMAGE" --list-capabilities > "$STAGE/capabilities.json"
+else
+    "$STAGE/xtate" --list-capabilities > "$STAGE/capabilities.json"
+fi
 COMMIT="${XTATE_COMMIT:-$(git rev-parse HEAD 2>/dev/null || echo unknown)}"
 BUILT_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 {

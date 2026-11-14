@@ -41,7 +41,7 @@ CLI 仍是事实来源；控制面拥有 job，MCP server 只是控制面的轻�
   预检输出；扫描启动时以可操作的提示拒绝不支持的链路类型。
 - 扫描启动横幅和元信息输出实际 `Rate:`（默认值或 `--rate`）。
 
-3.0.0-rc.9 已交付（候选版本）：
+3.0.0-rc.10 已交付（候选版本）：
 
 - `xtate --mcp` 一条命令启动带令牌保护的私有控制面；
 - `capabilities` 与 `iface.list` MCP 工具，以及 `--list-capabilities` JSON；

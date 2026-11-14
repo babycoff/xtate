@@ -4,7 +4,7 @@
 Package the Windows release tree and emit SHA256SUMS + build provenance.
 
 .EXAMPLE
-./scripts/package-release.ps1 -Version 3.0.0-rc.9 -OutputDir dist
+./scripts/package-release.ps1 -Version 3.0.0-rc.10 -OutputDir dist
 #>
 [CmdletBinding()]
 param(

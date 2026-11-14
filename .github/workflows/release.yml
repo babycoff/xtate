@@ -81,8 +81,9 @@ jobs:
       - name: Package
         shell: pwsh
         run: |
-          $version = & .\bin\xtate.exe --version
-          $version = ($version -split ' ')[2]
+          $version = (& .\bin\xtate.exe --version | Out-String)
+          if ($version -notmatch 'Xtate version\s+([^\s]+)') { throw "cannot parse Xtate version" }
+          $version = $Matches[1]
           ./scripts/package-release.ps1 -Version $version -OutputDir dist
 
       - uses: actions/upload-artifact@v4
