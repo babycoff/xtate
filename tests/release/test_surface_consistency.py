@@ -276,7 +276,7 @@ def check_transport_metadata(binary):
         )
     expected = {
         "tcp-state": ({"tcp"}, set()),
-        "quic-state": ({"quic"}, {"stream-data"}),
+        "quic-state": ({"quic"}, set()),
     }
     for name, (transports, caps) in expected.items():
         m = next((x for x in by_kind.get("scan", []) if x.get("name") == name), None)
@@ -293,6 +293,14 @@ def check_transport_metadata(binary):
         assert h3.get("state_transports") == ["quic"], "http3-state must be QUIC-only"
         assert "stream-data" in (h3.get("capabilities") or []), (
             "http3-state must declare stream-data"
+        )
+    cs = next((x for x in by_kind.get("probe", []) if x.get("name") == "close-state"), None)
+    if cs:
+        assert set(cs.get("state_transports") or []) == {"tcp", "quic"}, (
+            "close-state must work on both TCP and QUIC"
+        )
+        assert "stream-data" not in (cs.get("capabilities") or []), (
+            "close-state must not require stream-data"
         )
 
 

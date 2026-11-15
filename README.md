@@ -82,6 +82,13 @@ the CLI.
 - **HLTCP: state only where it earns its keep.** A TCB is created after a
   SYN-ACK, then a user-space TCP/TLS conversation can collect certificates,
   ciphers and HTTP evidence without putting the host kernel on the path.
+- **QUIC-state: QUIC is a first-class engine, not a side quest.** Raw UDP, our
+  own TX pipeline and pacing, ngtcp2/GnuTLS for the handshake. `close-state`
+  gives you certificate/ALPN evidence and stops; `http3-state` goes on to make
+  a real HTTP/3 request. The flow table is deliberately a first milestone
+  (bounded hash table with a global lock), so treat today's high-rate ceiling as
+  a number to measure, not a promise. More QUIC application probes are planned.
+  Linux-only for now; Windows says so instead of pretending.
 - **Protocol breadth with explicit capability reporting.** HTTP/1.0, HTTP/1.1,
   HTTP/2 (HPACK including Huffman), HTTP/3 over QUIC when the build supports it,
   TLS evidence, DNS/DNSSEC/DoT/DoH, JARM, SSH, mail, databases, industrial and
@@ -303,6 +310,14 @@ sequence.
 When statelessness ends, HLTCP sends the first SYN without state, creates a TCB
 only after the SYN-ACK, completes the optional TLS handshake in user space, and
 retires the flow with a final RST. Read [HLTCP](docs/hltcp.md).
+
+`quic-state` is the third send engine, next to ZBanner and HLTCP and just as
+deliberate as the stateless UDP path: it owns the UDP 4-tuple, packet pacing and
+QUIC timers, then hands the decrypted stream to a probe. `close-state` is the
+cheap "just the handshake, please" option; `http3-state` is the current HTTP/3
+application probe. The QUIC flow table is intentionally a first milestone, so
+measure your own scale before treating it as an Internet-wide hammer. Read
+[QUIC-state](docs/quic-state.md).
 
 ## Modules
 

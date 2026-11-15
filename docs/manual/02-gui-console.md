@@ -104,7 +104,7 @@ the engine's probe type, state transport and capabilities:
 | `zbanner` | TCP | `http`, `echo`, `ssh` |
 | `tcp-state` | state (TCP) | `tls-state`, `http-state`, `smtp-state` |
 | `udp` | UDP | `dns`, `snmp`, `ntp` |
-| `quic-state` (optional, Linux) | state (QUIC + `stream-data`) | `http3-state` (optional) |
+| `quic-state` (optional, Linux) | state (QUIC) | `http3-state` (HTTP/3) or `close-state` (handshake only) |
 | `tcp-syn`, `sctp-init`, `yarrp-udp` | none | — |
 
 State cards show `TCP · stateful`, `QUIC · stateful` or `TCP/QUIC · stateful`

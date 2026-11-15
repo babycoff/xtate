@@ -120,6 +120,8 @@ static const I18nEntry i18n_catalog[] = {
     {"Probe Type Required: ", "所需探测类型："},
     {"Probe Transport Required: ", "所需有状态传输："},
     {"State Transport: ", "有状态传输："},
+    {"Probe Capability Required: ", "所需探测能力："},
+    {"Probe Capability: ", "探测能力："},
     {"Default BPF Filter:\n", "默认 BPF 过滤器：\n"},
     {"Description:\n", "描述：\n"},
     {"ProbeModule Name: ", "探测模块名称："},

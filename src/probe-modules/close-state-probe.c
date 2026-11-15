@@ -24,15 +24,16 @@ static unsigned closestate_parse_response(DataPass *pass, ProbeState *state,
 Probe CloseStateProbe = {
     .name       = "close-state",
     .type       = ProbeType_STATE,
-    .state_transports = ProbeTransport_TCP,
+    .state_transports = ProbeTransport_TCP | ProbeTransport_QUIC,
     .hello_wait = 0,
     .params     = NULL,
-    .short_desc = "Send nothing and just close lower-layer connection in "
-                  "stateful TCP scan.",
+    .short_desc = "Send nothing and close the transport after the handshake in "
+                  "a stateful TCP or QUIC scan.",
     .desc =
-        "CloseState Probe does nothing but close after lower level connection "
-        "established. It's useful when we just want to obtain some information "
-        "of connection by lower level module.",
+        "CloseState Probe does nothing but close after the lower-level "
+        "connection is established. It is useful when you only want to obtain "
+        "information from the handshake of the transport module, for example "
+        "TLS over TCP or QUIC.",
 
     .init_cb           = &probe_init_nothing,
     .conn_init_cb      = &probe_conn_init_nothing,

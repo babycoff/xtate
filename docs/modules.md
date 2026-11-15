@@ -42,14 +42,15 @@ xtate --help-gen blackrock
 | `zbanner` | tcp | Stateless TCP handshake; payload rides on the third ACK; first banner is parsed by the probe. |
 | `tcp-state` | state (TCP) | HLTCP user-space TCP; full conversations for TCP state probes. |
 | `udp` | udp | Single-packet UDP scan with a probe payload; ICMP port-unreachable means closed. |
-| `quic-state` | state (QUIC + `stream-data`) | Raw-UDP stateful QUIC handshake with ngtcp2/GnuTLS; reports version, TLS/ALPN and certificate fields, then runs a QUIC stream-data probe (`http3-state`). Optional build. |
+| `quic-state` | state (QUIC) | Raw-UDP stateful QUIC handshake with ngtcp2/GnuTLS; reports version, TLS/ALPN and certificate fields. `http3-state` adds HTTP/3, `close-state` stops after the handshake. Optional build. |
 
 `state` is a shared stateful ABI, split by transport. `tcp-state` accepts state
 probes that declare TCP support (for example `tls-state`, `http-state`,
-`close-state`). `quic-state` requires a state probe that declares QUIC support
-and the `stream-data` capability; currently that is `http3-state`. The module
-JSON exposes `state_transports` and `capabilities`, and Xtate rejects an
-incompatible pair before sending any packet.
+`close-state`). `quic-state` requires a state probe that declares QUIC support;
+`http3-state` additionally declares the `stream-data` capability, while
+`close-state` needs no stream and works on both. The module JSON exposes
+`state_transports` and `capabilities`, and Xtate rejects an incompatible pair
+before sending any packet.
 
 Typical stateful pairs:
 
@@ -61,6 +62,9 @@ xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
 # QUIC/HTTP3: requires the optional ngtcp2/GnuTLS Linux build
 xtate -ip 203.0.113.10 -p U:443 -scan quic-state -probe http3-state \
       -probe-arg "--method=HEAD"
+
+# QUIC handshake only: certificate/ALPN evidence, no application stream
+xtate -ip 203.0.113.10 -p U:443 -scan quic-state -probe close-state
 ```
 | `icmp-echo` | - | ICMP echo host discovery; can record TTL and IPID. |
 | `icmp-time` | - | ICMP timestamp discovery, IPv4 only. |
@@ -77,7 +81,7 @@ firewall rules, is covered in [Scanning modes](./scanning-modes.md).
 ## Probe modules (59, plus optional `http3-state`)
 
 A probe declares a **type** that must match the scan module: `tcp` for `zbanner`, `udp` for
-`udp`, `state` (TCP) for `tcp-state`, and `state` (QUIC with `stream-data`) for
+`udp`, `state` (TCP) for `tcp-state`, and `state` (QUIC) for
 `quic-state`. State probes also declare which transports they support, so the scan
 engine and probe must agree on TCP or QUIC (and on optional capabilities such as
 `stream-data`). A probe may declare
@@ -319,13 +323,13 @@ The example scripts in `lua-probes/` declare `ProbeName`, `ProbeType` and
 |:---|:---:|:---|
 | `null` | tcp | Sends no payload; any received data is reported as a banner. |
 | `get-state` | state (TCP) | Debug probe that issues an HTTP GET over a stateful connection. |
-| `close-state` | state (TCP) | Sends nothing and closes the connection immediately. |
+| `close-state` | state (TCP + QUIC) | Sends nothing and closes the connection after the handshake. |
 
 `null` is useful when a scan module requires a probe but you only want the server's
 greeting. State probes pair with `tcp-state` (TCP state probes) or
-`quic-state` (QUIC state probes with `stream-data`, currently `http3-state`);
-`tls-state` additionally needs a TCP `state` sub-probe (`-subprobe`), because TLS
-is a middle layer, not a leaf.
+`quic-state` (QUIC state probes; `http3-state` for HTTP/3, `close-state` for
+handshake-only). `tls-state` additionally needs a TCP `state` sub-probe
+(`-subprobe`), because TLS is a middle layer, not a leaf.
 
 ## Output modules (7)
 

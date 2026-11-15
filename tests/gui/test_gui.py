@@ -189,14 +189,24 @@ def main():
         modules = catalog.get("modules", [])
         quic_mod = next((m for m in modules if m.get("name") == "quic-state"), None)
         http3_mod = next((m for m in modules if m.get("name") == "http3-state"), None)
+        close_mod = next((m for m in modules if m.get("name") == "close-state"), None)
         if quic_mod is not None and http3_mod is not None:
             if quic_mod.get("required_state_transports") != ["quic"]:
                 print("GUI quic-state transport metadata missing:", quic_mod,
                       file=sys.stderr)
                 return 1
+            if quic_mod.get("required_capabilities"):
+                print("GUI quic-state unexpectedly requires capabilities:", quic_mod,
+                      file=sys.stderr)
+                return 1
             if (http3_mod.get("state_transports") != ["quic"]
                     or "stream-data" not in http3_mod.get("capabilities", [])):
                 print("GUI http3-state capability metadata missing:", http3_mod,
+                      file=sys.stderr)
+                return 1
+            if (close_mod is not None
+                    and set(close_mod.get("state_transports", [])) != {"tcp", "quic"}):
+                print("GUI close-state transport metadata wrong:", close_mod,
                       file=sys.stderr)
                 return 1
         status, body = http_json(port, "/api/modules?lang=zh", token)

@@ -127,7 +127,7 @@ xtate -ip 203.0.113.10 -p 8080 --top-port 100 -scan tcp-syn
 | `zbanner` | tcp | 无状态握手 | ≈3（SYN、ACK+载荷、RST） | 需要 |
 | `tcp-state` | state（TCP） | 有状态 TCB | 取决于会话 | 需要 |
 | `udp` | udp | 无状态 | 1 个数据报 | 需要 |
-| `quic-state` | state（QUIC + `stream-data`） | 有状态 QUIC | 握手 | 按 UDP 指引 |
+| `quic-state` | state（QUIC） | 有状态 QUIC | 握手 | 按 UDP 指引 |
 | `icmp-echo` | 无 | 无状态 | 1 个 echo | 不需要 |
 | `icmp-time` | 无 | 无状态 | 1 个 timestamp | 不需要 |
 | `sctp-init` | 无 | 无状态 | 1 个 INIT | 不需要 |
@@ -136,7 +136,7 @@ xtate -ip 203.0.113.10 -p 8080 --top-port 100 -scan tcp-syn
 | `yarrp-echo` | 无 | 无状态 | 每 TTL 1 个 | 不需要 |
 | `yarrp-udp` | 无 | 无状态 | 每 TTL 1 个 | 不需要 |
 
-探测类型必须匹配：`zbanner` 需要 `tcp` 探测，`udp` 需要 `udp` 探测；`state` 是两种传输共享的有状态 ABI。`tcp-state` 只接受声明 TCP 支持的 state 探测；`quic-state` 只接受声明 QUIC 支持并具备 `stream-data` 能力的 state 探测。Xtate 在启动时校验，不匹配就以错误退出，而不是静默发出错误的报文：
+探测类型必须匹配：`zbanner` 需要 `tcp` 探测，`udp` 需要 `udp` 探测；`state` 是两种传输共享的有状态 ABI。`tcp-state` 只接受声明 TCP 支持的 state 探测；`quic-state` 接受声明 QUIC 支持的 state 探测（`http3-state` 做 HTTP/3，`close-state` 只做握手）。Xtate 在启动时校验，不匹配就以错误退出，而不是静默发出错误的报文：
 
 ```bash
 # 错误：tls-state 是 TCP state 探测，tcp-syn 不支持任何探测

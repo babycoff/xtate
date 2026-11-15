@@ -73,6 +73,11 @@ Xtate 面向以互联网测量为职业的人：网络与安全研究者、测�
   SipHash cookie 证明响应属于本次扫描。这是互联网级 banner 普查的引擎。
 - **HLTCP：只在值得的地方保留状态。** 收到 SYN-ACK 后才创建 TCB，随后在用户态
   TCP/TLS 会话中收集证书、密码套件和 HTTP 证据，不把主机内核放进这条路径。
+- **QUIC-state：QUIC 是一等引擎，不是支线任务。** 原始 UDP、自己的发送与限速管道、
+  ngtcp2/GnuTLS 负责握手。`close-state` 只拿证书/ALPN 就走；`http3-state` 继续发
+  真正的 HTTP/3 请求。流表刻意只是第一个里程碑（有界哈希表 + 全局锁），所以今天的
+  高速上限是“测出来的数”，不是承诺。后续会增加更多 QUIC 上层协议探针。目前仅
+  Linux 构建支持；Windows 会诚实报告不可用。
 - **协议覆盖广，能力报告诚实。** HTTP/1.0、HTTP/1.1、HTTP/2（含 Huffman 的
   HPACK）、构建支持时的 QUIC 上的 HTTP/3、TLS 证据、DNS/DNSSEC/DoT/DoH、
   JARM、SSH、邮件、数据库、工业与 IoT 协议。Windows 构建会明确报告 HTTP/3 和
@@ -277,6 +282,12 @@ handle 线程通过无锁环把后续报文（ACK、RST、下一个探针）送�
 
 无状态不够时，HLTCP 先发无状态 SYN，只在收到 SYN-ACK 后创建 TCB，在用户态完成
 可选 TLS 握手，最后用 RST 结束流。详见 [HLTCP](docs/zh-CN/hltcp.md)。
+
+`quic-state` 是第三个发送引擎，与 ZBanner、HLTCP 并列，也和 UDP 无状态路径一样
+讲究取舍：它自己持有 UDP 四元组、发包节奏和 QUIC 定时器，再把解密后的流交给探针。
+`close-state` 是“只要握手，别废话”的轻量选项；`http3-state` 是目前唯一发 HTTP/3
+请求的应用探针。QUIC 流表刻意先做成有界第一版，所以拿它做互联网级大锤之前，请先
+测自己的规模。详见 [QUIC-state](docs/zh-CN/quic-state.md)。
 
 ## 模块
 

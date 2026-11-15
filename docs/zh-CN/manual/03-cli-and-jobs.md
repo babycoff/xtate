@@ -59,7 +59,7 @@ xtate --help-probe http
 | `zbanner` | TCP 探测（`http`、`echo`、`ssh`、`ftp` 等） | banner 与协议问候 |
 | `tcp-state` | TCP state 探测（`tls-state`、`http-state`、`smtp-state` 等） | 完成 TCP 握手后再探测 |
 | `udp` | UDP 探测（`dns`、`snmp`、`ntp`、`echo` 等） | 无状态 UDP 请求/应答 |
-| `quic-state` | 带 `stream-data` 能力的 QUIC state 探测（`http3-state`） | 仅 Linux + ngtcp2；QUIC 上的 HTTP/3 |
+| `quic-state` | QUIC state 探测（`http3-state` 做 HTTP/3，`close-state` 只做握手） | 仅 Linux + ngtcp2 |
 | `icmp-echo` | 无 | 主机发现，无端口 |
 | `arp-req`, `ndp-ns` | 无 | 本地 LAN 发现（ARP 用 `-lan`） |
 | `yarrp-echo`, `yarrp-udp` | 无 / UDP | TTL 受限测量 |

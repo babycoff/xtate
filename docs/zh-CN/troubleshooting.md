@@ -33,7 +33,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 443 -scan tcp-syn -rate 100 -show info -s
 按下面的顺序检查：
 
 0. **Linux 防火墙规则（`zbanner`/`tcp-state`/`tls-state` 先查这一项）。** 缺少 `./firewall/add_rules.sh` 是"端口开放但没有 banner/TLS 输出"的最常见原因：内核 RST 会杀掉半开流。先用 `./firewall/check_rules.sh` 确认，然后安装规则、扫描，并立刻移除规则。所有 state 探针都适用，不只是 ZBanner。
-1. **模块配对。** 配对错误时 Xtate 会拒绝启动并提示 `ScanModule <x> needs probe of <type> type.`；`tcp-syn` 不需要探测模块，`zbanner` 需要 TCP 类型的探测模块，`udp` 需要 UDP 类型，`tcp-state` 需要 TCP state 探测（如 `tls-state`），`quic-state` 需要带 `stream-data` 的 QUIC state 探测（`http3-state`）。用 `--list-scan` / `--list-probe` 确认名称，用 `--help-scan <module>` 查看参数。
+1. **模块配对。** 配对错误时 Xtate 会拒绝启动并提示 `ScanModule <x> needs probe of <type> type.`；`tcp-syn` 不需要探测模块，`zbanner` 需要 TCP 类型的探测模块，`udp` 需要 UDP 类型，`tcp-state` 需要 TCP state 探测（如 `tls-state`），`quic-state` 需要 QUIC state 探测（`http3-state` 做 HTTP/3，`close-state` 只做握手）。用 `--list-scan` / `--list-probe` 确认名称，用 `--help-scan <module>` 查看参数。
 2. **目标和端口非空。** 没有目标会报 `target IP address list empty.`；没有端口只会给出一条警告并塞入一个假的 `o:0` 端点，于是 TCP 扫描悄无声息地什么都不探测。务必传入 `-p`。
 3. **网卡与源地址。** `sudo ./bin/xtate --list-if` 列出网卡；自动选择会挑第一个带默认网关的接口。用 `-if eth0` 指定（Windows 上也可以直接用 `--list-if` 打印的数字编号，例如 `-if 3`）。`-src-ip`/`-src-port` 配错会让回包过不了 `is_my_ip`/`is_my_port` 检查而被静默丢弃；源地址/源端口区间的大小必须是 2 的幂。
 4. **报文过滤器。** 每个扫描模块都会装自己的 BPF 过滤器；`--bpf-filter` 会*替换*它，范围过窄的过滤器会藏掉有效回包。用 `--no-bpf` 重跑同一条扫描——如果结果出现了，问题就在过滤器（你的或模块的）。一个已知案例：内置的 `tcp-syn` 过滤器精确匹配裸 RST，因此用 RST+ACK 回应关闭端口的那类协议栈，其回包可能在 Xtate 看到之前就被滤掉；用 `--no-bpf` 可以确认。

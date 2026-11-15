@@ -150,7 +150,7 @@ Scanner ExampleStateScan = {
 };
 ```
 
-`tcp-state` 要求 TCP；`quic-state` 要求 QUIC 加 `stream-data`。如果探测确实
+`tcp-state` 要求 TCP；`quic-state` 要求 QUIC 传输；HTTP/3 应用探针可再声明 `stream-data`，`close-state` 不需要。如果探测确实
 同时支持两种传输，可以声明 `ProbeTransport_TCP | ProbeTransport_QUIC`，因此
 兼容性判断是能力交集，而不是 probe type 完全相等。CLI、interactive、MCP 和
 GUI 都调用 `probe_compatible_with_scanner()`，不要在客户端重复实现这套规则。

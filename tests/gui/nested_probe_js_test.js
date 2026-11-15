@@ -74,7 +74,7 @@ gui.state.modules = [
     name: "quic-state",
     probe_type: "state",
     required_state_transports: ["quic"],
-    required_capabilities: ["stream-data"],
+    required_capabilities: [],
   },
   { kind: "scan", name: "icmp-echo", probe_type: "none" },
   {
@@ -97,7 +97,7 @@ gui.state.modules = [
     kind: "probe",
     name: "close-state",
     probe_type: "state",
-    state_transports: ["tcp"],
+    state_transports: ["tcp", "quic"],
     capabilities: [],
     parameters: [],
   },
@@ -129,9 +129,9 @@ assert.deepStrictEqual(
   "only TCP state probes are valid TLS subprobes",
 );
 assert.deepStrictEqual(
-  gui.probeCandidatesForScan("quic-state").map((m) => m.name),
-  ["http3-state", "dual-state"],
-  "quic-state requires QUIC + stream-data state probes",
+  gui.probeCandidatesForScan("quic-state").map((m) => m.name).sort(),
+  ["close-state", "dual-state", "http3-state"],
+  "quic-state requires QUIC-capable state probes",
 );
 assert.deepStrictEqual(
   gui.probeCandidatesForScan("tcp-state").map((m) => m.name),
@@ -142,7 +142,7 @@ assert.strictEqual(gui.scanInfo("zbanner").probe, "tcp");
 assert.strictEqual(gui.scanInfo("tcp-state").probe, "state");
 assert.deepStrictEqual(gui.scanInfo("tcp-state").transports, ["tcp"]);
 assert.deepStrictEqual(gui.scanInfo("quic-state").transports, ["quic"]);
-assert.deepStrictEqual(gui.scanInfo("quic-state").capabilities, ["stream-data"]);
+assert.deepStrictEqual(gui.scanInfo("quic-state").capabilities, []);
 assert.strictEqual(gui.scanInfo("udp").probe, "udp");
 assert.strictEqual(gui.scanInfo("icmp-echo").probe, null);
 assert.strictEqual(gui.scanInfo("icmp-echo").ports, false);

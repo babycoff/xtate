@@ -33,7 +33,7 @@ The pairing is checked at startup. A probe declares one of three types:
 | `tcp` | `zbanner` (and stateless TCP scans) | One request, one reply, no per-target state |
 | `udp` | `udp` | One datagram request, one datagram reply |
 | `state (TCP)` | `tcp-state` (HLTCP) | Full TCP/TLS conversation with a user-space TCB |
-| `state (QUIC + stream-data)` | `quic-state` | QUIC handshake and HTTP/3 stream probe |
+| `state (QUIC)` | `quic-state` | QUIC handshake; `http3-state` adds HTTP/3, `close-state` stops after handshake |
 
 A mismatch is a startup error, not a silent fallback:
 `ScanModule <name> needs probe of <type> type.` Use `--list-probe` to see each
@@ -60,8 +60,8 @@ The table lists the protocols with a dedicated probe in this tree. The full modu
 |:---|:---|:---|:---|
 | HTTP/1.1 | `http`, `http-state` | `tcp`, `state` | Structured status/headers/body metadata; stateful variant inside HLTCP |
 | HTTP/2 | `h2c`, `h2` | `tcp`, `state` | `h2c` is cleartext prior knowledge; `h2` runs inside `tls-state` with ALPN `h2` |
-| HTTP/3 | `http3-state` (probe) on `quic-state` (scan) | `state` (QUIC + stream-data) | Linux + ngtcp2/GnuTLS only |
-| QUIC transport | `quic` (capability), `quic-state` (transport) | `udp`, `state` (QUIC + stream-data) | `quic` classifies a server's Initial response; `quic-state` completes handshakes |
+| HTTP/3 | `http3-state` (probe) on `quic-state` (scan) | `state (QUIC + stream-data)` | Linux + ngtcp2/GnuTLS only |
+| QUIC transport | `quic` (capability), `quic-state` (transport) | `udp`, `state (QUIC)` | `quic` classifies a server's Initial response; `quic-state` completes handshakes |
 | TLS | `tls-state`, `tls-hello` | `state`, `tcp` | Certificates, ALPN, SNI, version, cipher |
 | JARM | `jarm` | `tcp` | Salesforce 1.0 TLS fingerprint |
 | DNS | `dns` | `udp` | Plain DNS over UDP |

@@ -36,7 +36,7 @@ result paths.
 - Match scan and probe metadata before starting. Stateful scans use
   `ProbeType_STATE` plus a transport: `tcp-state` accepts TCP state probes
   (`tls-state`, `http-state`, `close-state`, …); `quic-state` needs a QUIC
-  state probe with `stream-data`, currently `http3-state`. `list_modules` and
+  state probe (`http3-state` for HTTP/3, `close-state` for handshake-only). `list_modules` and
   `describe_probe` expose `required_state_transports`, `state_transports` and
   `capabilities`; `preflight`/`validate_config` reject mismatches.
 - For a TCP state probe with a nested subprobe (`tls-state` only), pass

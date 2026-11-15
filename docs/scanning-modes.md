@@ -25,7 +25,7 @@ parameters go through `-scan-arg` and `-probe-arg`, one quoted string each (`--h
 | `zbanner` | `tcp` | `http`, `hello`, `tls-hello` | real TCP handshake + first banner | **yes** |
 | `tcp-state` | `state` (TCP) | `tls-state`, `http-state`, `hello-state` | full TCP conversation, TLS, HTTP | **yes** |
 | `udp` | `udp` | `echo`, `dns`, `snmp`, `hello-udp` | UDP response or ICMP port-unreachable | **yes** |
-| `quic-state` | `state` (QUIC + `stream-data`) | `http3-state` | QUIC/TLS handshake and certificate evidence; full Linux build with ngtcp2/GnuTLS only | **yes** |
+| `quic-state` | `state` (QUIC) | `http3-state`, `close-state` | QUIC/TLS handshake, certificate evidence; `http3-state` adds HTTP/3, `close-state` stops after the handshake. Full Linux build with ngtcp2/GnuTLS only | **yes** |
 | `icmp-echo` | none | - | alive hosts | no |
 | `icmp-time` | none | - | alive hosts, IPv4 only | no |
 | `sctp-init` | none | - | open/closed SCTP ports | no |
@@ -40,9 +40,12 @@ the local kernel cannot tear down connections it does not know about. The probe 
 also a constraint: a `none`-probe module takes no `-probe` at all, `zbanner` takes a `tcp`
 probe, `udp` a `udp` probe and `tcp-state` a `state` probe. `state` is a shared ABI, not a
 transport: `tcp-state` accepts only state probes declaring TCP support, while `quic-state`
-requires QUIC plus the `stream-data` capability. A probe may declare both transports when it
-genuinely works on both. `quic-state + http3-state` is the valid HTTP/3 pair; `quic-state +
-http-state` and `tcp-state + http3-state` are rejected before any packet is sent.
+requires QUIC support. A probe that needs an application stream declares
+`stream-data` (`http3-state`); a probe that only needs the handshake
+(`close-state`) declares both TCP and QUIC and needs no capability. A probe may declare
+both transports when it genuinely works on both. `quic-state + http3-state` is the
+valid HTTP/3 pair, `quic-state + close-state` is the handshake-only pair, and
+`quic-state + http-state` / `tcp-state + http3-state` are rejected before any packet is sent.
 
 ## Stateless versus stateful
 

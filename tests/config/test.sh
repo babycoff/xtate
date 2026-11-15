@@ -91,6 +91,9 @@ if "$BIN" --list-scan 2>/dev/null | grep -q "quic-state"; then
     if "$BIN" --list-probe 2>/dev/null | grep -q "http3-state"; then
         run_ok "quic-state accepts http3-state" "${IF_OPT[@]}" --offline -ip 127.0.0.1 -p U:443 -scan quic-state -probe http3-state --wait 1
     fi
+    if "$BIN" --list-probe 2>/dev/null | grep -q "close-state"; then
+        run_ok "quic-state accepts close-state" "${IF_OPT[@]}" --offline -ip 127.0.0.1 -p U:443 -scan quic-state -probe close-state --wait 1
+    fi
 fi
 if "$BIN" --list-probe 2>/dev/null | grep -q "http3-state"; then
     run_fail "tcp-state rejects http3-state" "${IF_OPT[@]}" --offline -ip 127.0.0.1 -p 443 -scan tcp-state -probe http3-state --wait 1

@@ -68,7 +68,7 @@ xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
 
 ## 扫描模块
 
-扫描模块要求的探测类型必须与所选探测匹配，否则 Xtate 拒绝启动。`none` 表示"没有探测模块"。`state` 是共享的有状态 ABI，分为 TCP 和 QUIC 两种传输：`tcp-state` 接受声明 TCP 支持的 state 探测，`quic-state` 要求 QUIC 支持并具备 `stream-data` 能力。真正同时支持两种传输的探测可以同时声明。
+扫描模块要求的探测类型必须与所选探测匹配，否则 Xtate 拒绝启动。`none` 表示"没有探测模块"。`state` 是共享的有状态 ABI，分为 TCP 和 QUIC 两种传输：`tcp-state` 接受声明 TCP 支持的 state 探测，`quic-state` 接受 QUIC 支持的 state 探测（`http3-state` 或 `close-state`）；只有应用层探针需要 `stream-data`。真正同时支持两种传输的探测可以同时声明。
 
 | 扫描模块 | 探测类型 | 用途 |
 |:---|:---|:---|
@@ -76,7 +76,7 @@ xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
 | `zbanner` | tcp | 无状态握手加 banner 抓取 |
 | `tcp-state` | state（TCP） | 带真实 TCB 的有状态 TCP（HLTCP） |
 | `udp` | udp | 单报文 UDP 扫描 |
-| `quic-state` | state（QUIC + stream-data） | 有状态 QUIC 握手（可选构建） |
+| `quic-state` | state（QUIC） | 有状态 QUIC 握手（可选构建） |
 | `icmp-echo` | 无 | ICMP echo 可达性 |
 | `icmp-time` | 无 | ICMP 时间戳可达性 |
 | `sctp-init` | 无 | SCTP INIT 开放/关闭 |
@@ -191,7 +191,7 @@ xtate -ip 203.0.113.10 -p o:1-20 -scan yarrp-udp \
 
 ## 探测模块
 
-探测只有配合兼容的扫描模块才有用。`tcp` 探测配合 `zbanner`；`udp` 探测配合 `udp`。`state` 探测会声明自己支持的有状态传输：`tcp-state` 需要 TCP，`quic-state` 需要 QUIC 加 `stream-data`。`--help-probe` 和 `--list-modules-json` 会打印类型与传输，GUI 显示为 `TCP · stateful`、`QUIC · stateful` 或 `TCP/QUIC · stateful`；不兼容的组合会在发送任何报文前被拒绝。
+探测只有配合兼容的扫描模块才有用。`tcp` 探测配合 `zbanner`；`udp` 探测配合 `udp`。`state` 探测会声明自己支持的有状态传输：`tcp-state` 需要 TCP，`quic-state` 需要 QUIC 支持（`http3-state` 或 `close-state`）。`--help-probe` 和 `--list-modules-json` 会打印类型与传输，GUI 显示为 `TCP · stateful`、`QUIC · stateful` 或 `TCP/QUIC · stateful`；不兼容的组合会在发送任何报文前被拒绝。
 
 探测分组（基础列表 59 个探测；带 ngtcp2 的构建增加一个 HTTP/3 探测，共 60 个）：
 

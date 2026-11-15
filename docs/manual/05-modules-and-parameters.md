@@ -99,7 +99,7 @@ problem entirely.
 A scan module's required probe type must match the selected probe, otherwise
 Xtate refuses to start. `none` means "no probe module". `state` is a shared
 stateful ABI with two transports: `tcp-state` accepts state probes declaring
-TCP support, while `quic-state` requires QUIC plus the `stream-data`
+TCP support, while `quic-state` requires QUIC; an application probe such as `http3-state` additionally declares `stream-data`, and `close-state` needs only the QUIC transport
 capability. A probe that genuinely works on both can declare both transports.
 
 | Scan module | Probe type | Use |
@@ -108,7 +108,7 @@ capability. A probe that genuinely works on both can declare both transports.
 | `zbanner` | tcp | Stateless handshake plus banner capture |
 | `tcp-state` | state (TCP) | Stateful TCP with a real TCB (HLTCP) |
 | `udp` | udp | Single-packet UDP scan |
-| `quic-state` | state (QUIC + stream-data) | Stateful QUIC handshake (optional build) |
+| `quic-state` | state (QUIC) | Stateful QUIC handshake; `http3-state` adds HTTP/3, `close-state` stops after the handshake (optional build) |
 | `icmp-echo` | none | ICMP echo reachability |
 | `icmp-time` | none | ICMP timestamp reachability |
 | `sctp-init` | none | SCTP INIT open/closed |

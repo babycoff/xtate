@@ -114,7 +114,7 @@ GUI 以扫描为中心：默认页是 **New scan**，不是 job 表格。
 输出路径由服务端管理。include 文件、分块和配额等设置请直接使用 MCP server 或
 JSON 控制 API。scan/probe 参数可在 Method 面板中编辑。探针列表由 `probe_type`、
 扫描引擎要求的传输类型和探针声明的能力共同决定：`quic-state` 只列出
-QUIC/stream-data 探针（如 `http3-state`），`tcp-state` 只列出 TCP 有状态探针，
+QUIC state 探针（如 `http3-state`，以及只做握手的 `close-state`），`tcp-state` 只列出 TCP 有状态探针，
 不会出现 `http3-state`。GUI 不再硬编码具体探针名称；同一份元数据还驱动
 `TCP · 有状态`、`QUIC · 有状态`、`TCP/QUIC · 有状态` 标签。选中的探针支持嵌套探针时
 （`tls-state` 支持），会出现 **子探针 / Subprobe** 选择器，其参数显示在选择器下方。

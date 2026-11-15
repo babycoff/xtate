@@ -705,9 +705,9 @@ textarea { font-size: 13.5px; line-height: 1.5; }
       <section class="card">
         <div class="card-head"><div class="card-title">Security model</div><div class="field-hint mono">loopback only</div></div>
         <div class="card-body stack">
-          <p class="sys-note">The server binds to <b>127.0.0.1</b> only, validates the <b>Host</b> header, requires a per-session token, and exposes only allowlisted control methods. The scan child is owned by the control plane.</p>
-          <p class="sys-note">The GUI page never receives the control-plane token; the server adds it to control requests. Authorization is checked before Start and again by the server.</p>
-          <p class="sys-note" style="margin:0">Result and log files stay in the visible <code>xtate-state</code> folder beside <code>xtate.exe</code> on Windows (or the per-user state directory on Linux). Requests are removed when a scan finishes.</p>
+          <p class="sys-note" data-i18n-html="The server binds to 127.0.0.1 only, validates the Host header, requires a per-session token, and exposes only allowlisted control methods. The scan child is owned by the control plane.">The server binds to <b>127.0.0.1</b> only, validates the <b>Host</b> header, requires a per-session token, and exposes only allowlisted control methods. The scan child is owned by the control plane.</p>
+          <p class="sys-note" data-i18n-html="The GUI page never receives the control-plane token; the server adds it to control requests. Authorization is checked before Start and again by the server.">The GUI page never receives the control-plane token; the server adds it to control requests. Authorization is checked before Start and again by the server.</p>
+          <p class="sys-note" style="margin:0" data-i18n-html="Result and log files stay in the visible xtate-state folder beside xtate.exe on Windows (or the per-user state directory on Linux). Requests are removed when a scan finishes.">Result and log files stay in the visible <code>xtate-state</code> folder beside <code>xtate.exe</code> on Windows (or the per-user state directory on Linux). Requests are removed when a scan finishes.</p>
         </div>
       </section>
     </div>
@@ -815,15 +815,44 @@ function tf(template, vars) {
   for (const [k, v] of Object.entries(vars || {})) out = out.split("{" + k + "}").join(String(v));
   return out;
 }
+function setText(el, en) {
+  if (!el) return;
+  el.dataset.i18nText = en;
+  el.textContent = state.lang === "zh" ? t(en) : en;
+}
+function setBadge(el, en, cls) {
+  if (!el) return;
+  el.className = cls;
+  el.innerHTML = '<span class="dot"></span><span></span>';
+  setText(el.lastElementChild, en);
+}
+function setTpl(el, template, vars) {
+  if (!el) return;
+  el.dataset.i18nTemplate = template;
+  el.dataset.i18nVars = JSON.stringify(vars || {});
+  el.textContent = tf(template, vars);
+}
 function applyI18n(root) {
   const scope = root || document.body;
+  for (const el of scope.querySelectorAll("[data-i18n-html]")) {
+    if (el.__enHTML === undefined) el.__enHTML = el.innerHTML;
+    el.innerHTML = state.lang === "zh" ? t(el.dataset.i18nHtml) : el.__enHTML;
+  }
+  for (const el of scope.querySelectorAll("[data-i18n-template]")) {
+    let vars = {};
+    try { vars = JSON.parse(el.dataset.i18nVars || "{}"); } catch (_) {}
+    el.textContent = tf(el.dataset.i18nTemplate, vars);
+  }
+  for (const el of scope.querySelectorAll("[data-i18n-text]")) {
+    el.textContent = state.lang === "zh" ? t(el.dataset.i18nText) : el.dataset.i18nText;
+  }
   const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
   const nodes = [];
   while (walker.nextNode()) nodes.push(walker.currentNode);
   for (const node of nodes) {
     const parent = node.parentElement;
     if (!parent) continue;
-    if (parent.closest("pre, code, textarea, script, style, #live-log")) continue;
+    if (parent.closest("pre, code, textarea, script, style, #live-log, [data-i18n-text], [data-i18n-html], [data-i18n-template]")) continue;
     const m = node.nodeValue.match(/^(\s*)(.*?)(\s*)$/s);
     if (!m || !m[2]) continue;
     if (node.__en === undefined) node.__en = m[2];
@@ -1077,11 +1106,10 @@ function markDirty() {
   state.dirty = true;
   state.preflight = null;
   $("btn-start").disabled = true;
-  $("start-hint").textContent = "Waiting for a valid preflight.";
-  $("pf-state").className = "pf-state idle";
-  $("pf-state").innerHTML = '<span class="dot"></span><span>PREFLIGHT · PENDING</span>';
+  setText($("start-hint"), "Waiting for a valid preflight.");
+  setBadge($("pf-state"), "PREFLIGHT · PENDING", "pf-state idle");
   $("pf-attempts").textContent = "—";
-  $("pf-summary").textContent = "Checking scope and route…";
+  setText($("pf-summary"), "Checking scope and route…");
 }
 function schedulePreflight() {
   markDirty();
@@ -1092,36 +1120,32 @@ async function runPreflight() {
   const input = parsePreflightInput();
   const seq = ++state.preflightSeq;
   if (!input.targets.trim()) {
-    $("scope-count").textContent = state.lang === "zh" ? "0 个目标" : "0 targets";
+    setTpl($("scope-count"), "{n} targets", {n: 0});
     $("parsed").innerHTML = "";
-    $("pf-state").className = "pf-state idle";
-    $("pf-state").innerHTML = '<span class="dot"></span><span>PREFLIGHT · IDLE</span>';
-    $("pf-summary").textContent = "Enter a scope to calculate targets and route.";
+    setBadge($("pf-state"), "PREFLIGHT · IDLE", "pf-state idle");
+    setText($("pf-summary"), "Enter a scope to calculate targets and route.");
     $("pf-targets").textContent = "—"; $("pf-ports").textContent = "—";
     $("pf-iface").textContent = "—"; $("pf-source").textContent = "—";
     $("pf-gateway").textContent = "—"; $("pf-link").textContent = "—";
     $("pf-checks").innerHTML = "";
     $("btn-start").disabled = true;
-    $("start-hint").textContent = "Waiting for a valid preflight.";
-    $("preflight-badge").className = "badge";
-    $("preflight-badge").innerHTML = '<span class="dot"></span><span>waiting for target</span>';
+    setText($("start-hint"), "Waiting for a valid preflight.");
+    setBadge($("preflight-badge"), "waiting for target", "badge");
     return;
   }
   const inputError = formInputError();
   if (inputError) {
     state.preflight = null;
     state.dirty = true;
-    $("pf-state").className = "pf-state bad";
-    $("pf-state").innerHTML = '<span class="dot"></span><span>' + t("PREFLIGHT · BLOCKED") + "</span>";
-    $("pf-summary").textContent = inputError;
+    setBadge($("pf-state"), "PREFLIGHT · BLOCKED", "pf-state bad");
+    setText($("pf-summary"), inputError);
     $("pf-targets").textContent = "—"; $("pf-ports").textContent = "—";
     $("pf-iface").textContent = "—"; $("pf-source").textContent = "—";
     $("pf-gateway").textContent = "—"; $("pf-link").textContent = "—";
     $("pf-checks").innerHTML = "";
     $("btn-start").disabled = true;
-    $("start-hint").textContent = t("Fix the preflight errors above.");
-    $("preflight-badge").className = "badge red";
-    $("preflight-badge").innerHTML = '<span class="dot"></span><span>blocked</span>';
+    setText($("start-hint"), "Fix the preflight errors above.");
+    setBadge($("preflight-badge"), "blocked", "badge red");
     return;
   }
   try {
@@ -1131,39 +1155,40 @@ async function runPreflight() {
     state.dirty = !res.ok;
     renderPreflight(res);
     const parts = splitTargets(input.targets);
-    $("scope-count").textContent = tf("{n} targets", {n: (res.targets != null ? res.targets : 0)});
+    setTpl($("scope-count"), "{n} targets", {n: (res.targets != null ? res.targets : 0)});
     $("parsed").innerHTML = parts.slice(0, 8).map((p) => '<span class="chip">' + esc(p) + "</span>").join("") +
       (parts.length > 8 ? '<span class="chip">' + tf("+{n} more", {n: parts.length - 8}) + "</span>" : "");
-    $("preflight-badge").className = "badge " + (res.ok ? "mint" : "red");
-    $("preflight-badge").innerHTML = '<span class="dot"></span><span>' + t(res.ok ? "preflight ready" : "blocked") + "</span>";
+    setBadge($("preflight-badge"), res.ok ? "preflight ready" : "blocked", "badge " + (res.ok ? "mint" : "red"));
     $("btn-start").disabled = !(res.ok && $("auth").checked);
-    $("start-hint").textContent = res.ok
-      ? ($("auth").checked ? t("Ready to start.") : t("Confirm authorization to enable Start."))
-      : t("Fix the preflight errors above.");
+    setText($("start-hint"), res.ok
+      ? ($("auth").checked ? "Ready to start." : "Confirm authorization to enable Start.")
+      : "Fix the preflight errors above.");
     applyI18n();
   } catch (err) {
     if (seq !== state.preflightSeq) return;
     state.preflight = null;
-    $("pf-state").className = "pf-state bad";
-    $("pf-state").innerHTML = '<span class="dot"></span><span>PREFLIGHT · ERROR</span>';
-    $("pf-summary").textContent = err.message;
+    setBadge($("pf-state"), "PREFLIGHT · ERROR", "pf-state bad");
+    setText($("pf-summary"), err.message);
     $("btn-start").disabled = true;
-    $("start-hint").textContent = "Preflight request failed.";
+    setText($("start-hint"), "Preflight request failed.");
   }
 }
 function renderPreflight(res) {
   const route = (res.routes && res.routes[0]) || res.interface || {};
-  $("pf-state").className = "pf-state " + (res.ok ? "ok" : "bad");
-  $("pf-state").innerHTML = '<span class="dot"></span><span>' + (res.ok ? "PREFLIGHT · PASSED" : "PREFLIGHT · BLOCKED") + "</span>";
+  setBadge($("pf-state"), res.ok ? "PREFLIGHT · PASSED" : "PREFLIGHT · BLOCKED", "pf-state " + (res.ok ? "ok" : "bad"));
   $("pf-attempts").textContent = res.attempts != null ? Number(res.attempts).toLocaleString() : "—";
   const targets = Number(res.targets || 0);
   const portsN = Number(res.ports || 0);
-  $("pf-summary").textContent = res.ok
-    ? (portsN > 0
-        ? tf(portsN === 1 ? "{targets} addresses will be probed on {ports} port." : "{targets} addresses will be probed on {ports} ports.",
-             {targets: targets.toLocaleString(), ports: portsN})
-        : tf("{targets} addresses will be scanned without ports.", {targets: targets.toLocaleString()}))
-    : (res.errors && res.errors[0]) || t("Request blocked.");
+  if (res.ok) {
+    if (portsN > 0) {
+      setTpl($("pf-summary"), portsN === 1 ? "{targets} addresses will be probed on {ports} port." : "{targets} addresses will be probed on {ports} ports.",
+        {targets: targets.toLocaleString(), ports: portsN});
+    } else {
+      setTpl($("pf-summary"), "{targets} addresses will be scanned without ports.", {targets: targets.toLocaleString()});
+    }
+  } else {
+    $("pf-summary").textContent = (res.errors && res.errors[0]) || t("Request blocked.");
+  }
   $("pf-targets").textContent = res.targets != null ? Number(res.targets).toLocaleString() : "—";
   $("pf-ports").textContent = Number(res.ports) > 0 ? res.ports : "—";
   $("pf-iface").textContent = shortIface(route.interface || "—");
@@ -1599,7 +1624,7 @@ async function startScan() {
   if ($("interface").value) payload.interface = $("interface").value;
   else if (route.interface) payload.interface = route.interface;
   $("btn-start").disabled = true;
-  $("start-hint").textContent = "Starting scan…";
+  setText($("start-hint"), "Starting scan…");
   try {
     const res = await api("/api/rpc", {method: "POST", body: payload});
     if (!res || !res.result || !res.result.job_id) throw new Error("control plane did not return a scan id");
@@ -1608,7 +1633,7 @@ async function startScan() {
   } catch (err) {
     toast("Start failed: " + err.message, true);
     $("btn-start").disabled = !(state.preflight && state.preflight.ok && $("auth").checked);
-    $("start-hint").textContent = "Start failed. Check the preflight and try again.";
+    setText($("start-hint"), "Start failed. Check the preflight and try again.");
   }
 }
 
@@ -1692,7 +1717,7 @@ function resetLiveView() {
   $("live-elapsed").textContent = "—"; $("live-exit").textContent = "—";
   $("live-pps").textContent = "—";
   $("live-manifest").innerHTML = ""; $("live-log").textContent = state.jobId ? "Waiting for worker output…" : "No output yet.";
-  $("live-records").textContent = "No records loaded."; $("live-record-meta").textContent = "—";
+  setText($("live-records"), "No records loaded."); $("live-record-meta").textContent = "—";
   $("live-result").textContent = "—"; $("live-logpath").textContent = "—"; $("live-error").textContent = "—";
   $("btn-cancel").disabled = !state.jobId; $("btn-records").disabled = true; $("btn-records-more").disabled = true;
   $("btn-open-log").disabled = true; $("btn-open-result").disabled = true;
@@ -1765,7 +1790,7 @@ async function pollJob() {
       state.logText = cleaned;
       $("live-log").textContent = cleaned;
     } else if (terminal && !state.logText) {
-      $("live-log").textContent = "No worker log output.";
+      setText($("live-log"), "No worker log output.");
     }
     const man = await api("/api/rpc", {method: "POST", body: {id: Date.now(), method: "job.result_manifest", job_id: state.jobId}});
     const m = (man && man.result) || {};
@@ -1829,9 +1854,9 @@ function init() {
   $("interface").addEventListener("change", schedulePreflight);
   $("auth").addEventListener("change", () => {
     $("btn-start").disabled = !(state.preflight && state.preflight.ok && $("auth").checked && !state.dirty);
-    $("start-hint").textContent = state.preflight && state.preflight.ok
+    setText($("start-hint"), state.preflight && state.preflight.ok
       ? ($("auth").checked ? "Ready to start." : "Confirm authorization to enable Start.")
-      : "Waiting for a valid preflight.";
+      : "Waiting for a valid preflight.");
   });
   $("btn-start").addEventListener("click", startScan);
   $("btn-cancel").addEventListener("click", cancelScan);

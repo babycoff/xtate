@@ -33,7 +33,7 @@ python3 tests/release/test_surface_consistency.py --binary ./bin/xtate
 | 帮助 | 模块描述和每个参数描述；用 `--help-scan|probe|out|gen <name>` 实测。 |
 | 数量 | `README.md`、`docs/modules.md` 及所有引用数量的页面中的 Windows 与完整 Linux 数量。 |
 | MCP | `list_modules`、`describe_probe`、`start_scan` 从注册表读取；不要另建硬编码列表。只有工具契约变化时才改 `docs/mcp-server.md`。 |
-| GUI | 模块目录由 `/api/modules` 提供；scan→probe 选项来自 `probe_type`、`required_state_transports` 和 `required_capabilities`，不得硬编码模块列表。每个 state 探针必须声明 `state_transports`；仅支持 QUIC 的探针还必须声明 `stream-data` 能力。只有渲染契约变化时才改 `docs/gui.md`。 |
+| GUI | 模块目录由 `/api/modules` 提供；scan→probe 选项来自 `probe_type`、`required_state_transports` 和 `required_capabilities`，不得硬编码模块列表。每个 state 探针必须声明 `state_transports`；需要读取应用层数据的 QUIC 探针声明 `stream-data`（`close-state` 这种只做握手的探针不需要）。只有渲染契约变化时才改 `docs/gui.md`。 |
 | Docker | Ubuntu 镜像从源码构建可选模块；若模块新增依赖，检查 `docker/ubuntu24-build/Dockerfile` 和能力输出。 |
 | 测试 | 加入对应的 schema/module validator 预期和最小行为测试。 |
 

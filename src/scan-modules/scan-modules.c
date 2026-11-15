@@ -109,6 +109,9 @@ void help_scan_module(Scanner *module) {
                get_probe_transport_name(module->required_state_transports,
                                         tbuf, sizeof(tbuf)));
     }
+    if (module->required_probe_caps & ProbeCapability_StreamData) {
+        printf("  %sstream-data\n", i18n_tr("Probe Capability Required: "));
+    }
     printf("  %s", i18n_tr("Default BPF Filter:\n"));
     xprint(module->bpf_filter ? module->bpf_filter : "null", 6, 80);
     printf("\n");

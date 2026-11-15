@@ -33,9 +33,9 @@ xtate --help-gen blackrock
 | `zbanner` | tcp | 无状态 TCP 握手；载荷搭在第三个 ACK 上；首个 banner 由探测模块解析。 |
 | `tcp-state` | state（TCP） | HLTCP 用户态 TCP；为 TCP state 探测模块提供完整会话。 |
 | `udp` | udp | 携带探测载荷的单包 UDP 扫描；ICMP port-unreachable 表示 closed。 |
-| `quic-state` | state（QUIC + `stream-data`） | 原始 UDP + ngtcp2/GnuTLS 的有状态 QUIC 握手；输出版本、TLS/ALPN、证书字段并运行 QUIC stream-data 探测（`http3-state`）。可选构建。 |
+| `quic-state` | state（QUIC） | 原始 UDP + ngtcp2/GnuTLS 的有状态 QUIC 握手；输出版本、TLS/ALPN、证书字段。`http3-state` 继续 HTTP/3，`close-state` 握手后停止。可选构建。 |
 
-`state` 是共享的有状态 ABI，按传输区分。`tcp-state` 只接受声明 TCP 支持的 state 探测（如 `tls-state`、`http-state`、`close-state`）；`quic-state` 要求 state 探测声明 QUIC 支持并具备 `stream-data` 能力，目前是 `http3-state`。模块 JSON 会输出 `state_transports` 和 `capabilities`；不兼容的组合在发送任何报文前就会被拒绝。
+`state` 是共享的有状态 ABI，按传输区分。`tcp-state` 只接受声明 TCP 支持的 state 探测（如 `tls-state`、`http-state`、`close-state`）；`quic-state` 接受声明 QUIC 支持的 state 探测：`http3-state`（HTTP/3）或 `close-state`（仅握手）。模块 JSON 会输出 `state_transports` 和 `capabilities`；不兼容的组合在发送任何报文前就会被拒绝。
 
 常见的有状态组合：
 
@@ -60,7 +60,7 @@ xtate -ip 203.0.113.10 -p U:443 -scan quic-state -probe http3-state \
 
 ## 探测模块（59，另有可选 `http3-state`）
 
-探测模块会声明一个**类型**，必须与扫描模块匹配：`zbanner` 用 `tcp`，`udp` 用 `udp`，`tcp-state` 或 `quic-state` 用 `state`。state 探测还会声明自己支持的有状态传输，扫描引擎与探测必须就 TCP/QUIC（以及 `stream-data` 等可选能力）达成一致。它可以声明 `ProbeSlotPlan`（JARM 和 `slot-test` 示例）；见[扫描模式](./scanning-modes.md#探测-slot)。
+探测模块会声明一个**类型**，必须与扫描模块匹配：`zbanner` 用 `tcp`，`udp` 用 `udp`，`tcp-state` 或 `quic-state` 用 `state`（有状态 ABI，按传输区分）。state 探测还会声明自己支持的有状态传输，扫描引擎与探测必须就 TCP/QUIC（以及 `stream-data` 等可选能力）达成一致。它可以声明 `ProbeSlotPlan`（JARM 和 `slot-test` 示例）；见[扫描模式](./scanning-modes.md#探测-slot)。
 
 ### ProbeSlotPlan（多 slot 探测）
 
@@ -282,9 +282,9 @@ Lua 在运行期加载；如果没有可用的 Lua 共享库，这些探测仍�
 |:---|:---:|:---|
 | `null` | tcp | 不发送载荷；收到的任何数据都作为 banner 报告。 |
 | `get-state` | state (TCP) | 调试用探测：在有状态连接上发一个 HTTP GET。 |
-| `close-state` | state (TCP) | 什么都不发，立即关闭连接。 |
+| `close-state` | state (TCP + QUIC) | 什么都不发，握手后立即关闭 TCP 或 QUIC 连接。 |
 
-当扫描模块要求探测模块、而你只想要服务器的问候语时，`null` 很有用。state 探测配合 `tcp-state`（TCP state 探测）或 `quic-state`（带 `stream-data` 的 QUIC state 探测，目前是 `http3-state`）使用；`tls-state` 还额外需要一个 TCP `state` 子探测（`-subprobe`），因为 TLS 是中间层，而不是叶子层。
+当扫描模块要求探测模块、而你只想要服务器的问候语时，`null` 很有用。state 探测配合 `tcp-state`（TCP state 探测）或 `quic-state`（`http3-state` 或 `close-state`）使用；`tls-state` 还额外需要一个 TCP `state` 子探测（`-subprobe`），因为 TLS 是中间层，而不是叶子层。
 
 ## 输出模块（7）
 

@@ -156,10 +156,12 @@ Scanner ExampleStateScan = {
 };
 ```
 
-`tcp-state` requires TCP; `quic-state` requires QUIC plus `stream-data`. A probe
-may declare `ProbeTransport_TCP | ProbeTransport_QUIC` when it genuinely works
-on both, so compatibility is a capability intersection rather than an exact
-probe-type match. CLI, interactive mode, MCP and GUI all call
+`tcp-state` requires TCP; `quic-state` requires QUIC. A probe that needs an
+application stream (for example `http3-state`) additionally declares
+`ProbeCapability_StreamData`; `close-state` needs no stream and works on either
+transport. A probe may declare `ProbeTransport_TCP | ProbeTransport_QUIC` when
+it genuinely works on both, so compatibility is a capability intersection rather
+than an exact probe-type match. CLI, interactive mode, MCP and GUI all call
 `probe_compatible_with_scanner()`; never duplicate this rule in a client. The
 GUI and `/api/modules` derive labels and filtering from the same fields.
 

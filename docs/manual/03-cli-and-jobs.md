@@ -70,7 +70,7 @@ TTL for those scans.
 | `zbanner` | TCP probe (`http`, `echo`, `ssh`, `ftp`, …) | Banner and protocol greeting |
 | `tcp-state` | TCP state probe (`tls-state`, `http-state`, `smtp-state`, …) | Complete TCP handshake, then probe |
 | `udp` | UDP probe (`dns`, `snmp`, `ntp`, `echo`, …) | Stateless UDP request/reply |
-| `quic-state` | QUIC state probe with `stream-data` (`http3-state`) | Linux + ngtcp2 only; HTTP/3 over QUIC |
+| `quic-state` | QUIC state probe (`http3-state` for HTTP/3, `close-state` for handshake only) | Linux + ngtcp2 only |
 | `icmp-echo` | none | Host discovery, no ports |
 | `arp-req`, `ndp-ns` | none | Local LAN discovery (`-lan` for ARP) |
 | `yarrp-echo`, `yarrp-udp` | none / UDP | TTL-limited measurement |

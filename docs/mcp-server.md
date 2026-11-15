@@ -207,8 +207,7 @@ to verify it.
 
 - `scan` must name a registered scan module; `probe` must name a registered probe.
 - A stateful scan/probe pair must agree on transport: `tcp-state` accepts TCP
-  state probes, while `quic-state` requires a QUIC state probe with the
-  `stream-data` capability (currently `http3-state`). `validate_config` and
+  state probes, while `quic-state` accepts QUIC state probes; `http3-state` declares the additional `stream-data` capability for HTTP/3, and `close-state` needs only QUIC and stops after the handshake. `validate_config` and
   `start_scan` reject incompatible pairs before any packet is sent.
 - Inline `targets` are limited to 20000 array entries; port values must be 0-65535.
 - `rate` accepts any positive number, including fractional values such as `0.5` (one packet every two seconds) and millions of packets per second; when omitted, the worker uses the default of 100 packets per second. The browser GUI caps the field at 10000 for interface stability only; that is not an engine or MCP limit.

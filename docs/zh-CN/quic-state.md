@@ -50,7 +50,7 @@ CMake 开关：
   -> 去掉 IP/UDP
   -> ngtcp2_conn_read_pkt()
   -> TLS 握手 + 证书
-  -> stream-data 应用探测（http3-state）
+  -> stream-data 应用探测（http3-state）或握手后停止（close-state）
 ```
 
 当前 flow 表是带全局互斥锁的有界哈希分桶表，这是第一个里程碑，不是最终高吞吐
@@ -69,12 +69,16 @@ xtate -ip 192.0.2.10 -p U:443 -scan quic-state -probe http3-state \
   -scan-arg "--alpn h3 --sni example.test" -probe-arg "--method HEAD" \
   --wait 5 --no-status -show info
 
+# 只拿握手和证书证据：QUIC 握手完成后立即关闭
+xtate -ip 192.0.2.10 -p U:443 -scan quic-state -probe close-state \
+  -scan-arg "--alpn h3 --sni example.test" --wait 5 --no-status -show info
+
 # 确认模块存在
 xtate --list-scan | grep quic-state
 ```
 
-`quic-state` 要求 `state` 探测声明 QUIC 传输支持并具备 `stream-data` 能力；
-目前只有 `http3-state` 满足。QUIC 握手会先记录证书/版本/ALPN 证据，再运行
+`quic-state` 要求 `state` 探测声明 QUIC 传输支持；应用层探针（`http3-state`）再声明 `stream-data`，`close-state` 只需握手。
+满足 QUIC 传输的探针有 `http3-state`（HTTP/3）和 `close-state`（握手后停止）。QUIC 握手会先记录证书/版本/ALPN 证据，再运行
 应用探测。`tls-state`、`http-state`、`close-state` 是 TCP state 探测，会被拒绝。
 未来真正同时支持两种传输的探测可以同时声明 TCP 和 QUIC。
 

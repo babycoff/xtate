@@ -351,6 +351,9 @@ void help_probe_module(Probe *module) {
                get_probe_transport_name(module->state_transports, tbuf,
                                         sizeof(tbuf)));
     }
+    if (module->capabilities & ProbeCapability_StreamData) {
+        printf("  %sstream-data\n", i18n_tr("Probe Capability: "));
+    }
     printf("  %s%u\n", i18n_tr("Slot count: "),
            probe_slot_count(module));
     printf("  %s%s\n", i18n_tr("Slot trigger: "),

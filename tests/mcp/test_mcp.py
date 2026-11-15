@@ -86,6 +86,8 @@ try:
         assert not okq["result"]["isError"], okq
         badq = rpc({"jsonrpc":"2.0","id":327,"method":"tools/call","params":{"name":"validate_config","arguments":{"config":{"scan":"quic-state","probe":"http-state","targets":[SCAN_TARGET]}}}})
         assert badq["result"]["isError"], badq
+        okc = rpc({"jsonrpc":"2.0","id":328,"method":"tools/call","params":{"name":"validate_config","arguments":{"config":{"scan":"quic-state","probe":"close-state","targets":[SCAN_TARGET]}}}})
+        assert not okc["result"]["isError"], okc
         assert "stateful" in badq["result"]["content"][0]["text"].lower(), badq
     badjob = rpc({"jsonrpc":"2.0","id":33,"method":"tools/call","params":{"name":"job_status","arguments":{"job_id":"job-nope"}}})
     assert badjob["result"]["isError"]

@@ -163,7 +163,7 @@ required. With blackrock and no ports at all, Xtate warns and inserts a fake
 | `zbanner` | tcp | stateless handshake | ≈3 (SYN, ACK+payload, RST) | needed |
 | `tcp-state` | state (TCP) | stateful TCB | conversation-dependent | needed |
 | `udp` | udp | stateless | 1 datagram | needed |
-| `quic-state` | state (QUIC + `stream-data`) | stateful QUIC | handshake | UDP guidance |
+| `quic-state` | state (QUIC) | stateful QUIC | handshake | UDP guidance |
 | `icmp-echo` | none | stateless | 1 echo | not needed |
 | `icmp-time` | none | stateless | 1 timestamp | not needed |
 | `sctp-init` | none | stateless | 1 INIT | not needed |
@@ -174,8 +174,9 @@ required. With blackrock and no ports at all, Xtate warns and inserts a fake
 
 The probe type must match: `zbanner` needs a `tcp` probe, `udp` needs a `udp`
 probe, and `state` is a stateful ABI shared by two transports. `tcp-state`
-accepts state probes that declare TCP support; `quic-state` accepts only state
-probes that declare QUIC support and the `stream-data` capability. Xtate
+accepts state probes that declare TCP support; `quic-state` accepts state probes
+that declare QUIC support (`http3-state` for HTTP/3, `close-state` for handshake
+evidence). Xtate
 validates this at startup and exits with an error instead of silently sending
 the wrong packet:
 

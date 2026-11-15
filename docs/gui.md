@@ -99,9 +99,7 @@ The GUI is scan-first: the default page is **New scan**, not a job table.
   with `quic-state` on a full Linux build), shows probe choices only when the
   engine needs one, and hides ports for ICMP/ARP/NDP scans. Probe lists are
   derived from `probe_type`, the engine's required state transports and the
-  probe's declared capabilities: `quic-state` offers only QUIC/stream-data
-  probes such as `http3-state`, while `tcp-state` offers TCP state probes and
-  never `http3-state`. The GUI does not hard-code individual probe names. The
+  probe's declared capabilities: `quic-state` offers QUIC state probes such as `http3-state` (HTTP/3) and `close-state` (handshake-only), while `tcp-state` offers TCP state probes and never `http3-state`. The GUI does not hard-code individual probe names. The
   same metadata drives the `TCP · stateful`, `QUIC · stateful` and
   `TCP/QUIC · stateful` badges. Rate, timeout and an optional interface are set
   here. The GUI rate field is capped at 10000 for interface stability only; it
