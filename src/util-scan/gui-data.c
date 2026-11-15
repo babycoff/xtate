@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifndef _WIN32
+#include <net/if.h>
+#endif
+
 #include "../crypto/crypto-json.h"
 #include "../rawsock/rawsock.h"
 #include "../rawsock/rawsock-route.h"
@@ -159,6 +163,13 @@ char *gui_interfaces_json(void) {
 
         if (!name) continue;
         if (!desc) desc = "";
+#ifndef _WIN32
+        /* libpcap on Linux also reports capture pseudo-devices such as "any",
+         * nflog, nfqueue and bluetooth-monitor. They are not real netdevs;
+         * probing their MAC/IP logs ENODEV noise and they cannot be used for
+         * raw L2 scans. Keep only interfaces that the kernel can resolve. */
+        if (if_nametoindex(name) == 0) continue;
+#endif
         loopback = strstr(desc, "Loopback") != NULL ||
                    strstr(desc, "loopback") != NULL ||
                    strstr(name, "Loopback") != NULL;

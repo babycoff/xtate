@@ -181,6 +181,13 @@ def main():
             if key not in first_if:
                 print("GUI interface field missing:", key, file=sys.stderr)
                 return 1
+        pseudo = {"any", "bluetooth-monitor", "nflog", "nfqueue",
+                  "dbus-system", "dbus-session"}
+        found_pseudo = sorted(pseudo & {i.get("name") for i in interfaces["interfaces"]})
+        if found_pseudo:
+            print("GUI interface list contains pcap pseudo-devices:",
+                  ", ".join(found_pseudo), file=sys.stderr)
+            return 1
         status, body = http_json(port, "/api/modules", token)
         catalog = json.loads(body.decode()) if status == 200 else {}
         if status != 200 or not any(m.get("name") == "tcp-syn"
