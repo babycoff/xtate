@@ -15,7 +15,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.1.0-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -51,10 +51,12 @@ the CLI.
 > permission to test. Unauthorized scanning may be illegal where you live.
 > You are responsible for the rate you send and for the targets you choose.
 
-> **3.0 is released.** The 3.0 line adds a scan-first browser console, a
-> one-command MCP server, a bilingual manual, explicit protocol capability
-> reporting, and a stronger CLI. The CLI remains the primary interface for
-> expert measurement work; 2.44.2 is the previous stable line.
+> **3.1 is released.** The 3.1 line adds explicit probe transport and
+> `stream-data` capability metadata, QUIC handshake-only probing with
+> `close-state`, and cleaner bilingual GUI states. The 3.0 line introduced the
+> scan-first browser console, one-command MCP server, bilingual manual and
+> explicit protocol capability reporting. The CLI remains the primary interface
+> for expert measurement work; 3.0.0 is the previous stable line.
 
 ## Contents
 
@@ -481,7 +483,7 @@ CI exercises all four toolchain variants. See
 The README is the landing page. The manual and reference live in
 [`docs/`](docs/README.md):
 
-- [3.0 manual](docs/manual/README.md) — CLI-first install, first scan, scan/probe,
+- [3.1 manual](docs/manual/README.md) — CLI-first install, first scan, scan/probe,
   targets, output and protocols, with the GUI and MCP as additional clients
 - [Migration to 3.0](docs/migration-3.0.md) — breaking changes from 2.44.x,
   result paths, MCP shape and rollback

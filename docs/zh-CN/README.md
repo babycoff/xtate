@@ -2,17 +2,17 @@
 
 [English](../README.md) · **中文**
 
-本目录是 **Xtate v3.0.0** 的用户手册——一款面向互联网级测量的模块化全栈网络扫描器。
+本目录是 **Xtate v3.1.0** 的用户手册——一款面向互联网级测量的模块化全栈网络扫描器。
 
 项目 [README](../../README.zh-CN.md) 是落地页。如果你想上手使用 Xtate，而不是只扫一眼功能列表，就从这里开始。
 
-**发布说明：** [3.0.0](./release-notes/3.0.0.md)——3.0 首个正式版：扫描优先 GUI、一条命令 MCP/Skill 集成、双语手册、明确的协议能力报告、Linux Docker 镜像、发布门禁、带校验和的 Windows/Linux 资产，以及 2.44.x → 3.0 迁移指南。
+**发布说明：** [3.1.0](./release-notes/3.1.0.md)——探针传输与能力元数据、基于 `close-state` 的 QUIC 握手阶段探测、更清晰的 CLI/GUI 模块发现、双语 GUI 修复，以及 3.0.0 的发布基础：扫描优先 GUI、一条命令 MCP/Skill 集成、双语手册、明确的协议能力报告、Linux Docker 镜像、发布门禁、带校验和的 Windows/Linux 资产，以及 2.44.x → 3.0 迁移指南。
 
 ## 从哪里开始
 
 | 你的情况 | 建议阅读 |
 |---|---|
-| 刚接触 Xtate | [3.0 手册](./manual/README.md) → [快速上手](./getting-started.md) |
+| 刚接触 Xtate | [3.1 手册](./manual/README.md) → [快速上手](./getting-started.md) |
 | 从 2.44.x 升级 | [迁移指南](./migration-3.0.md) |
 | 正在规划一次扫描 | [目标与端口](./targets-and-ports.md) → [扫描模式](./scanning-modes.md) |
 | 要把结果接入流水线 | [输出](./output.md) → [聚合](./aggregation.md) |
@@ -73,7 +73,7 @@
 
 ### 自动化与集成
 
-- [3.0 手册](./manual/README.md)——按任务组织的安装、GUI、CLI、模块、结果、协议与故障排查
+- [3.1 手册](./manual/README.md)——按任务组织的安装、GUI、CLI、模块、结果、协议与故障排查
 - [迁移到 3.0](./migration-3.0.md)——2.44.x 到 3.0 的破坏性变化、结果路径、MCP 形状与回滚
 - [MCP server](./mcp-server.md)——stdio 工具、resource、prompt、路由规划与限制
 - [GUI 控制台](./gui.md)——扫描优先的环回控制台，含预检、实时视图、网卡与模块
@@ -109,7 +109,7 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-本文档基于 v3.0.0 的代码树编写。如果你在更新的 commit 上发现内容有出入，请以二进制为准，也欢迎提 issue。
+本文档基于 v3.1.0 的代码树编写。如果你在更新的 commit 上发现内容有出入，请以二进制为准，也欢迎提 issue。
 
 ## 生成参考
 

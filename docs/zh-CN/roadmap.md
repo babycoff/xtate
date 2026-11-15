@@ -34,9 +34,10 @@
 
 ## 当前优先级调整
 
-截至 3.0.0，QUIC 探测、Linux 专属 `quic-state`/`http3-state` 传输、扫描控制台
-GUI、MCP 接口，以及九章英文和中文手册均已交付。3.0.0 已正式发布；交付内容见
-[Xtate 3.0 路线图](./roadmap-3.0.md)。当前优先级：
+截至 3.1.0，QUIC 探测、Linux 专属 `quic-state`/`http3-state` 传输、扫描控制台
+GUI、MCP 接口、显式的探针传输/能力元数据，以及九章英文和中文手册均已交付。
+3.0.0 引入了扫描优先的 3.0 界面；3.1.0 增加了有状态探针传输模型与模块元数据发现。
+交付内容见 [Xtate 3.0 路线图](./roadmap-3.0.md)。当前优先级：
 
 1. **Agent 评测套件与打包**——用真实 agent 宿主验证 MCP/Skill 路径，并发布可复现
    的软件包。
@@ -257,9 +258,20 @@ CLI 仍是事实来源；控制面拥有 job，MCP 是类型化客户端。
   镜像、宿主机 GUI 访问，能力项均已验证；
 - `docs/manual/` 与 `docs/zh-CN/manual/` 下的双语 10 章手册。
 
+3.1.0 已交付：
+
+- 有状态探针与扫描模块的 `ProbeTransport`（`TCP`、`QUIC`）和
+  `ProbeCapability`（`stream-data`）元数据，并在 CLI、interactive 模式、
+  GUI 预检、MCP 与模块 JSON 契约中一致执行；
+- `close-state` 可关闭 TCP 或 QUIC 握手，并可被 `tcp-state`、`tls-state` 和
+  `quic-state` 接受；`http3-state` 仍是 QUIC 的 `stream-data` 应用探针；
+- `--list-scan`/`--list-probe` 与 `--help-scan`/`--help-probe` 说明探针类型、
+  状态传输和所需能力；GUI 模块页展示传输与能力徽标，GUI 本地化不再出现
+  中英混杂；
+- GUI 网卡枚举过滤 libpcap 伪接口，消除容器中反复出现的 `No such device` 日志。
+
 仍待完成：
 
-- 只有 RC 试用反馈修复后才发布正式 3.0.0；
 - agent 评测套件与打包；
 - MCP generate/流式输入（目前只有静态 `targets` 和 `include_file`）；
 - 扫描期间的单 job 磁盘配额强制（目前只在完成后报告）。
@@ -274,8 +286,8 @@ CLI 仍是事实来源；控制面拥有 job，MCP 是类型化客户端。
 2.44.1  TUI/GUI 一条命令启动私有控制面（已完成，已发布）
 2.44.2  RAW/TUN 链路预检 + 启动速率显示（已完成）
 3.0.0  正式版：重新设计的 GUI + AI/MCP 工具 + 能力报告
-下一步  RC 试用修复、评测套件与打包
-以后    MCP generate/流式输入
+3.1.0  有状态探针传输/能力元数据 + QUIC close-state
+下一步  评测套件、打包与 MCP generate/流式输入
 ```
 
 见 [AI 集成设计](./ai-integration.md) 和 [MCP server](./mcp-server.md)。

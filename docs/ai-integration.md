@@ -48,7 +48,22 @@ Delivered for 2.44.2:
 - scan startup and meta output include the effective `Rate:` (default or
   `--rate`).
 
-Delivered for 3.0.0 (candidate):
+Delivered for 3.1.0:
+
+- explicit probe transport and capability metadata: `ProbeTransport`
+  (`TCP`, `QUIC`) and `ProbeCapability` (`stream-data`) are now declared by
+  modules and surfaced through module JSON, CLI lists/help, the GUI, MCP tool
+  descriptions and the Agent Skill;
+- `close-state` now works on `tcp-state`, `tls-state` and `quic-state`;
+  `http3-state` remains the QUIC `stream-data` application probe;
+- CLI `--list-*` and `--help-*` now explain probe type, state transport and
+  required capability;
+- the GUI Modules page shows the same metadata and the GUI state labels are
+  fully localized in both languages;
+- libpcap pseudo-interfaces are filtered from GUI interface enumeration, which
+  removes repeated `No such device` log noise in containers.
+
+Delivered for 3.0.0:
 
 - one-command `xtate --mcp` with a token-protected private control plane;
 - `capabilities` and `iface.list` MCP tools, plus `--list-capabilities` JSON;
@@ -68,7 +83,6 @@ Delivered for 3.0.0 (candidate):
 
 Still pending:
 
-- final 3.0.0 after RC trial feedback;
 - an agent evaluation suite and packaging;
 - exposing generate/stream input through MCP (MCP is static `targets` or
   `include_file` only).
@@ -190,7 +204,7 @@ agent evaluation for prompt-injection and target-scope violations
 See [MCP server](./mcp-server.md), [control plane](./control-plane.md) and
 [job model](./job-model.md).
 
-## Delivered in 3.0.0
+## Delivered in 3.0.0 and 3.1.0
 
 ```text
 2.42.0  jobs + control plane + MCP server
@@ -198,7 +212,8 @@ See [MCP server](./mcp-server.md), [control plane](./control-plane.md) and
 2.44.x  browser GUI, private control plane, RAW/TUN link preflight
 3.0.0   scan-first GUI, flat start_scan contract, typed MCP tools,
         bounded result reads, Docker image, release gates and checksummed assets
+3.1.0   state probe transport/capability metadata, QUIC close-state,
+        module metadata discovery in CLI/GUI/MCP/Skill
 ```
 
-Remaining work is tracked in the [roadmap](./roadmap.md); it is not part of the
-3.0.0 release.
+Remaining work is tracked in the [roadmap](./roadmap.md).

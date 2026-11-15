@@ -15,7 +15,7 @@
   </p>
 
   <p>
-    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.0.0-blueviolet?style=flat-square" alt="version"></a>
+    <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/version-3.1.0-blueviolet?style=flat-square" alt="version"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square" alt="license"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/C-99-00599C?style=flat-square&amp;logo=c" alt="C99"></a>
     <a href="https://github.com/babycoff/xtate"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-informational?style=flat-square" alt="platform"></a>
@@ -46,9 +46,10 @@ Xtate 面向以互联网测量为职业的人：网络与安全研究者、测�
 > Xtate 发送原始报文。只扫描你拥有或获得明确书面授权的网络。未经授权的扫描
 > 在部分国家和地区可能违法。你对自己发送的速率和目标选择负责。
 
-> **3.0 已正式发布。** 3.0 系列增加了以扫描为中心的浏览器控制台、一条命令启动的
-> MCP 服务、双语文档、明确的协议能力报告，并强化了命令行。命令行仍是测量专家
-> 的主要接口；2.44.2 是上一个稳定版本。
+> **3.1 已正式发布。** 3.1 系列增加了显式的探针传输与 `stream-data` 能力元数据、
+> 基于 `close-state` 的 QUIC 握手阶段探测，以及更干净的中英双语 GUI 状态。
+> 3.0 系列引入了以扫描为中心的浏览器控制台、一条命令启动的 MCP 服务、双语文档
+> 和明确的协议能力报告。命令行仍是测量专家的主要接口；3.0.0 是上一个稳定版本。
 
 ## 目录
 
@@ -442,7 +443,7 @@ Xtate 要求 64 位小端主机；CMake 会提前拒绝其它平台。Windows CI
 
 README 是入口页，手册与参考位于 [`docs/zh-CN/`](docs/zh-CN/README.md)：
 
-- [3.0 手册](docs/zh-CN/manual/README.md) —— 以 CLI 为主线，覆盖安装、第一次
+- [3.1 手册](docs/zh-CN/manual/README.md) —— 以 CLI 为主线，覆盖安装、第一次
   扫描、scan/probe、目标、输出与协议；GUI 和 MCP 作为附加客户端
 - [迁移到 3.0](docs/zh-CN/migration-3.0.md) —— 从 2.44.x 升级的破坏性变更、
   结果路径、MCP 形状与回滚

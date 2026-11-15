@@ -180,7 +180,7 @@ python tests/gui/test_gui.py
 
 ## 相关文档
 
-- [3.0 手册](manual/README.md)
+- [3.1 手册](manual/README.md)
 - [控制面](control-plane.md)
 - [任务模型](job-model.md)
 - [TUI 面板](tui.md)（3.0 中已弃用）

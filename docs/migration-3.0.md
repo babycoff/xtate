@@ -2,14 +2,15 @@
 
 **English** · [中文](zh-CN/migration-3.0.md)
 
-Xtate 3.0 is a release-candidate line focused on the operator experience: a
+Xtate 3.0 is the first stable 3.0 line, focused on the operator experience: a
 scan-first GUI, a one-command MCP server, a bilingual manual, explicit protocol
 capability reporting, and managed result storage. The packet engines and module
 types are unchanged, but several interfaces and defaults moved. Read this page
 before upgrading automation that wraps Xtate.
 
-> 3.0.0 is currently an RC. Trial it before replacing a stable deployment. The
-> last stable tag is 2.44.2.
+> 3.0.0 is stable. The current release is 3.1.0; it is additive for scan
+> configuration, result files and the MCP request shape. See the
+> [3.1.0 release notes](./release-notes/3.1.0.md).
 
 ## Quick upgrade checklist
 
@@ -160,7 +161,7 @@ you added it only for 3.0.
 
 ## Related
 
-- [3.0 manual](./manual/README.md)
+- [3.1 manual](./manual/README.md)
 - [MCP server](./mcp-server.md)
 - [GUI console](./gui.md)
 - [Control plane](./control-plane.md)

@@ -2,17 +2,17 @@
 
 **English** · [中文](zh-CN/README.md)
 
-This directory is the user manual for **Xtate v3.0.0** — a modular all-stack network scanner for Internet-scale surveys.
+This directory is the user manual for **Xtate v3.1.0** — a modular all-stack network scanner for Internet-scale surveys.
 
 The [README](../README.md) is the landing page. Start here if you want to use Xtate rather than skim its feature list.
 
-**Release notes:** [3.0.0](./release-notes/3.0.0.md) — the first stable 3.0 release: scan-first GUI, one-command MCP/Skill integration, bilingual manual, explicit protocol capability reporting, Linux Docker image, release gates, checksummed Windows/Linux assets, and the 2.44.x → 3.0 migration guide.
+**Release notes:** [3.1.0](./release-notes/3.1.0.md) — probe transport and capability metadata, QUIC handshake-only probing with `close-state`, clearer CLI/GUI module discovery, bilingual GUI fixes, and the 3.0.0 release foundation: scan-first GUI, one-command MCP/Skill integration, bilingual manual, explicit protocol capability reporting, Linux Docker image, release gates, checksummed Windows/Linux assets, and the 2.44.x → 3.0 migration guide.
 
 ## Where to start
 
 | If you are… | Read |
 |---|---|
-| New to Xtate | [3.0 manual](./manual/README.md) → [Getting started](./getting-started.md) |
+| New to Xtate | [3.1 manual](./manual/README.md) → [Getting started](./getting-started.md) |
 | Upgrading from 2.44.x | [Migration guide](./migration-3.0.md) |
 | Planning a scan | [Targets and ports](./targets-and-ports.md) → [Scanning modes](./scanning-modes.md) |
 | Wiring results into a pipeline | [Output](./output.md) → [Aggregation](./aggregation.md) |
@@ -73,7 +73,7 @@ The [README](../README.md) is the landing page. Start here if you want to use Xt
 
 ### Automation and integration
 
-- [3.0 manual](./manual/README.md) — task-oriented install, GUI, CLI, modules, results, protocols and troubleshooting
+- [3.1 manual](./manual/README.md) — task-oriented install, GUI, CLI, modules, results, protocols and troubleshooting
 - [Migration to 3.0](./migration-3.0.md) — breaking changes from 2.44.x, result paths, MCP shape and rollback
 - [MCP server](./mcp-server.md) — stdio tools, resources, prompts, route planning and limits
 - [GUI console](./gui.md) — scan-first loopback console with preflight, live view, interfaces and modules
@@ -109,7 +109,7 @@ xtate --help-scan <module>
 xtate --help-probe <module>
 ```
 
-The docs are written against the v3.0.0 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
+The docs are written against the v3.1.0 tree. If you are on a newer commit and something differs, trust the binary and please open an issue.
 
 ## Generated reference and recipes
 

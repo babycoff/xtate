@@ -232,7 +232,7 @@ require a browser.
 
 ## Related
 
-- [3.0 manual](manual/README.md)
+- [3.1 manual](manual/README.md)
 - [Control plane](control-plane.md)
 - [Job model](job-model.md)
 - [TUI dashboard](tui.md) (deprecated in 3.0)

@@ -39,10 +39,12 @@ Completed work is noted so the next change does not silently regress it.
 
 ## Priority reset (current direction)
 
-As of 3.0.0, the QUIC probe, Linux-only `quic-state`/`http3-state`
-transport, the scan console GUI, the MCP surface, and the nine-chapter English
-and Chinese manuals are delivered. 3.0.0 is released; what shipped is recorded
-in the [Xtate 3.0 roadmap](./roadmap-3.0.md). The current priorities are:
+As of 3.1.0, the QUIC probe, Linux-only `quic-state`/`http3-state`
+transport, the scan console GUI, the MCP surface, explicit probe
+transport/capability metadata and the nine-chapter English and Chinese manuals
+are delivered. 3.0.0 introduced the scan-first 3.0 surface; 3.1.0 adds the
+state-probe transport model and module-metadata discovery. What shipped is
+recorded in the [Xtate 3.0 roadmap](./roadmap-3.0.md). The current priorities are:
 
 1. **Agent evaluation suite and packaging** — exercise the MCP/Skill path with
    real agent hosts and publish reproducible packages.
@@ -317,7 +319,22 @@ Delivered in 3.0.0:
 - bilingual 10-chapter manual under `docs/manual/` and
   `docs/zh-CN/manual/`.
 
-Remaining after 3.0.0:
+Delivered in 3.1.0:
+
+- `ProbeTransport` (`TCP`, `QUIC`) and `ProbeCapability` (`stream-data`)
+  metadata for stateful probes and scanners, enforced consistently by CLI,
+  interactive mode, GUI preflight, MCP and the module JSON contract;
+- `close-state` can close a TCP or QUIC handshake and is accepted by
+  `tcp-state`, `tls-state` and `quic-state`; `http3-state` remains the QUIC
+  `stream-data` application probe;
+- `--list-scan`/`--list-probe` and `--help-scan`/`--help-probe` explain probe
+  type, state transport and required capability; the GUI Modules page shows
+  transport and capability badges, and GUI localization no longer leaks one
+  language into the other;
+- libpcap pseudo-interfaces are filtered from GUI interface enumeration,
+  eliminating repeated `No such device` noise in containers.
+
+Remaining after 3.1.0:
 
 - agent evaluation suite and packaging;
 - MCP generate/stream input (static `targets` and `include_file` only for now);
@@ -334,6 +351,7 @@ Release history:
 2.44.1  one-command local TUI/GUI startup (done, released)
 2.44.2  RAW/TUN link preflight + startup rate display (done)
 3.0.0  final: redesigned GUI + AI/MCP tools + capability reporting
+3.1.0  state-probe transport/capability metadata + QUIC close-state
 future  evaluation suite, packaging and MCP generate/stream input
 ```
 
