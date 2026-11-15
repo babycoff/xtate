@@ -79,6 +79,14 @@ try:
         assert not rr["result"]["isError"], rr
     rr = rpc({"jsonrpc":"2.0","id":325,"method":"tools/call","params":{"name":"validate_config","arguments":{"config":{"scan":"tcp-syn","targets":[SCAN_TARGET],"rate":0}}}})
     assert rr["result"]["isError"], rr
+    scans = subprocess.check_output([BIN, "--list-scan"], text=True, encoding="utf-8", errors="replace")
+    probes = subprocess.check_output([BIN, "--list-probe"], text=True, encoding="utf-8", errors="replace")
+    if "quic-state" in scans and "http3-state" in probes:
+        okq = rpc({"jsonrpc":"2.0","id":326,"method":"tools/call","params":{"name":"validate_config","arguments":{"config":{"scan":"quic-state","probe":"http3-state","targets":[SCAN_TARGET]}}}})
+        assert not okq["result"]["isError"], okq
+        badq = rpc({"jsonrpc":"2.0","id":327,"method":"tools/call","params":{"name":"validate_config","arguments":{"config":{"scan":"quic-state","probe":"http-state","targets":[SCAN_TARGET]}}}})
+        assert badq["result"]["isError"], badq
+        assert "stateful" in badq["result"]["content"][0]["text"].lower(), badq
     badjob = rpc({"jsonrpc":"2.0","id":33,"method":"tools/call","params":{"name":"job_status","arguments":{"job_id":"job-nope"}}})
     assert badjob["result"]["isError"]
     badres = rpc({"jsonrpc":"2.0","id":34,"method":"resources/read","params":{"uri":"xtate://nope"}})

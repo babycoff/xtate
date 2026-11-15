@@ -185,40 +185,12 @@ static int _main_scan(XConf *xconf) {
         xcmd_try_reboot();
         exit(1);
     }
-    /*validate probe type*/
-    if (xconf->scanner->required_probe_type == ProbeType_NULL) {
-        if (xconf->probe) {
-            LOG(LEVEL_ERROR, "ScanModule %s does not support any probe.\n",
-                xconf->scanner->name);
-            xcmd_try_reboot();
-            exit(1);
-        }
-    } else {
-        if (!xconf->probe ||
-            xconf->probe->type != xconf->scanner->required_probe_type) {
-            LOG(LEVEL_ERROR, "ScanModule %s needs probe of %s type.\n",
-                xconf->scanner->name,
-                get_probe_type_name(xconf->scanner->required_probe_type));
-            xcmd_try_reboot();
-            exit(1);
-        }
-    }
-    /* Protocol-specific probe compatibility beyond the generic type check. */
-    if (xconf->probe) {
-        if (strcmp(xconf->scanner->name, "quic-state") == 0 &&
-            strcmp(xconf->probe->name, "tls-state") == 0) {
-            LOG(LEVEL_ERROR,
-                "invalid probe combination: ScanModule quic-state cannot use "
-                "probe tls-state; tls-state expects a TCP/TLS stream. Use "
-                "http3-state or close-state.\n");
-            xcmd_try_reboot();
-            exit(1);
-        }
-        if (strcmp(xconf->scanner->name, "tcp-state") == 0 &&
-            strcmp(xconf->probe->name, "http3-state") == 0) {
-            LOG(LEVEL_ERROR,
-                "invalid probe combination: ScanModule tcp-state cannot use "
-                "probe http3-state; http3-state requires quic-state.\n");
+    /*validate probe type and transport compatibility*/
+    {
+        char probe_err[256] = {0};
+        if (!probe_compatible_with_scanner(xconf->scanner, xconf->probe,
+                                           probe_err, sizeof(probe_err))) {
+            LOG(LEVEL_ERROR, "%s\n", probe_err);
             xcmd_try_reboot();
             exit(1);
         }

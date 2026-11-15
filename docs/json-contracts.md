@@ -22,7 +22,12 @@ xtate --list-modules-json
 ```
 
 emits every scan/probe/output/generate module with `name`, `kind`,
-`probe_type`, descriptions and parameters. Coverage validation:
+`probe_type`, descriptions and parameters. Stateful scan modules also expose
+`required_state_transports` and `required_capabilities`; state probes expose
+`state_transports` and `capabilities`. Values are `"tcp"`, `"quic"` and
+`"stream-data"`; this is what CLI, interactive, MCP and GUI compatibility checks
+use, so a new state probe must declare at least one transport. Coverage
+validation:
 
 ```bash
 XTATE_BIN=build/bin/xtate python3 tests/schema/validate_modules.py

@@ -940,6 +940,7 @@ static unsigned h2_parse_response(DataPass *pass, ProbeState *state,
 Probe DohH2Probe = {
     .name       = "doh-h2",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .hello_wait = 0,
     .params     = h2_parameters,
     .short_desc = "DNS over HTTPS (DoH) over HTTP/2.",
@@ -958,6 +959,7 @@ Probe DohH2Probe = {
 Probe H2Probe = {
     .name       = "h2",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .slots      = {.count = 1, .trigger = ProbeSlot_None, .continue_cb = NULL},
     .params     = h2_parameters,
     .short_desc = "HTTP/2 over TLS via HLTCP (ALPN h2).",

@@ -1026,6 +1026,8 @@ static void h3_close(void) {
 Probe Http3StateProbe = {
     .name       = "http3-state",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_QUIC,
+    .capabilities = ProbeCapability_StreamData,
     .hello_wait = 0,
     .params     = h3_parameters,
     .short_desc = "HTTP/3 request over quic-state with Huffman QPACK headers.",

@@ -31,9 +31,23 @@ xtate --help-gen blackrock
 |:---|:---:|:---|
 | `tcp-syn` | - | SYN 扫描；收到 SYN-ACK 即 open，收到 RST 即 closed。可选 `--send-rst`、`--fail-zerowin`。 |
 | `zbanner` | tcp | 无状态 TCP 握手；载荷搭在第三个 ACK 上；首个 banner 由探测模块解析。 |
-| `tcp-state` | state | HLTCP 用户态 TCP；为 TLS/HTTP 状态探测模块提供完整会话。 |
+| `tcp-state` | state（TCP） | HLTCP 用户态 TCP；为 TCP state 探测模块提供完整会话。 |
 | `udp` | udp | 携带探测载荷的单包 UDP 扫描；ICMP port-unreachable 表示 closed。 |
-| `quic-state` | state | 原始 UDP + ngtcp2/GnuTLS 的有状态 QUIC 握手；输出版本、TLS/ALPN、证书字段并运行 state 子探测。可选构建。 |
+| `quic-state` | state（QUIC + `stream-data`） | 原始 UDP + ngtcp2/GnuTLS 的有状态 QUIC 握手；输出版本、TLS/ALPN、证书字段并运行 QUIC stream-data 探测（`http3-state`）。可选构建。 |
+
+`state` 是共享的有状态 ABI，按传输区分。`tcp-state` 只接受声明 TCP 支持的 state 探测（如 `tls-state`、`http-state`、`close-state`）；`quic-state` 要求 state 探测声明 QUIC 支持并具备 `stream-data` 能力，目前是 `http3-state`。模块 JSON 会输出 `state_transports` 和 `capabilities`；不兼容的组合在发送任何报文前就会被拒绝。
+
+常见的有状态组合：
+
+```sh
+# TCP/TLS：tls-state，TLS 流内再跑一个 HTTP 子探测
+xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
+      -probe-arg "-subprobe http-state -subprobe-arg '--host=example.com --record-body'"
+
+# QUIC/HTTP3：需要可选的 ngtcp2/GnuTLS Linux 构建
+xtate -ip 203.0.113.10 -p U:443 -scan quic-state -probe http3-state \
+      -probe-arg "--method=HEAD"
+```
 | `icmp-echo` | - | ICMP echo 主机发现；可记录 TTL 和 IPID。 |
 | `icmp-time` | - | ICMP 时间戳发现，仅 IPv4。 |
 | `sctp-init` | - | SCTP INIT 扫描；INIT-ACK 为 open，ABORT 为 closed。 |
@@ -46,7 +60,7 @@ xtate --help-gen blackrock
 
 ## 探测模块（59，另有可选 `http3-state`）
 
-探测模块会声明一个**类型**，必须与扫描模块匹配：`zbanner` 用 `tcp`，`udp` 用 `udp`，`tcp-state` 用 `state`。它可以声明 `ProbeSlotPlan`（JARM 和 `slot-test` 示例）；见[扫描模式](./scanning-modes.md#探测-slot)。
+探测模块会声明一个**类型**，必须与扫描模块匹配：`zbanner` 用 `tcp`，`udp` 用 `udp`，`tcp-state` 或 `quic-state` 用 `state`。state 探测还会声明自己支持的有状态传输，扫描引擎与探测必须就 TCP/QUIC（以及 `stream-data` 等可选能力）达成一致。它可以声明 `ProbeSlotPlan`（JARM 和 `slot-test` 示例）；见[扫描模式](./scanning-modes.md#探测-slot)。
 
 ### ProbeSlotPlan（多 slot 探测）
 
@@ -126,7 +140,7 @@ HTTP/3。不要把 `quic_response: initial` 标成 `http3`。
 
 ### TLS 证据、证书细节与 STARTTLS
 
-`tls-state` 是 HLTCP 中间层，必须指定一个 `state` 子探测。`--after-tls` 与隐式/STARTTLS 示例见 [TLS 组合](./tls-composition.md)。证书和 TLS 字段在
+`tls-state` 是 HLTCP 中间层，必须指定一个 TCP `state` 子探测。`--after-tls` 与隐式/STARTTLS 示例见 [TLS 组合](./tls-composition.md)。证书和 TLS 字段在
 握手成功后输出，与子探测之后做什么无关。
 
 ```bash
@@ -173,28 +187,28 @@ STARTTLS 失败输出 `starttls error`。`--dump-cert-details` 输出
 | 探测 | 类型 | 功能 |
 |:---|:---:|:---|
 | `http` | tcp | 在无状态 TCP 会话上发送用户指定的 HTTP 请求。 |
-| `http-state` | state | 在 HLTCP 上做同样的事，包括经 TLS。 |
+| `http-state` | state (TCP) | 在 HLTCP 上做同样的事，包括经 TLS。 |
 | `hello` | tcp | 用户载荷（string、base64、nmap-string、file）外加可选正则。 |
 | `hello-udp` | udp | UDP 版本。 |
-| `hello-state` | state | 在有状态 TCP 连接上的同一功能。 |
+| `hello-state` | state (TCP) | 在有状态 TCP 连接上的同一功能。 |
 | `tls-hello` | tcp | 固定 ClientHello；读取 ServerHello 的版本/记录层线索，但不完成握手。 |
-| `tls-state` | state | OpenSSL 驱动的 TLS 握手；`--starttls smtp|imap|pop3|ftp` 先完成明文升级；导出证书/密码套件/版本；`--dump-cert-details` 增加结构化 X.509/SAN/公钥/有效期/ALPN；可在 TLS 之上跑子探测。 |
+| `tls-state` | state (TCP) | OpenSSL 驱动的 TLS 握手；`--starttls smtp|imap|pop3|ftp` 先完成明文升级；导出证书/密码套件/版本；`--dump-cert-details` 增加结构化 X.509/SAN/公钥/有效期/ALPN；可在 TLS 之上跑子探测。 |
 | `ssh` | tcp | 可配置 SSH banner，以及 KEX/host-key、cipher/MAC/压缩算法列表。 |
-| `ssh-kex` | state | 未认证的 SSH curve25519 KEX；报告 host-key 类型及其 SHA256 指纹。 |
+| `ssh-kex` | state (TCP) | 未认证的 SSH curve25519 KEX；报告 host-key 类型及其 SHA256 指纹。 |
 | `h2c` | tcp | cleartext h2c preface、可配置 SETTINGS/PING 指纹、帧/settings 解析；不是 TLS 上的 HTTP/2。 |
-| `h2` | state | 通过 HLTCP + TLS ALPN h2 的 HTTP/2：preface、SETTINGS、最小 HPACK 请求、帧/HEADERS/DATA。 |
+| `h2` | state (TCP) | 通过 HLTCP + TLS ALPN h2 的 HTTP/2：preface、SETTINGS、最小 HPACK 请求、帧/HEADERS/DATA。 |
 | `redis` | tcp | 只读 `INFO server` 识别 Redis，输出 version/mode/os/role。 |
 | `memcached` | tcp | `version` 命令和版本行解析。 |
 | `ntp` | udp | NTP v4 mode-3 请求、cookie 校验、leap/stratum/refid/root 字段。 |
 | `mqtt` | tcp | MQTT 3.1.1 CONNECT 与 CONNACK return-code。 |
-| `socks5` | state | SOCKS5 greeting 和方法选择。 |
-| `telnet` | state | 初始 Telnet banner 和 IAC 选项解析。 |
+| `socks5` | state (TCP) | SOCKS5 greeting 和方法选择。 |
+| `telnet` | state (TCP) | 初始 Telnet banner 和 IAC 选项解析。 |
 | `quic` | udp | QUIC v1 Initial 能力探测；分类 Version Negotiation/Retry/Initial/Handshake；不声称 QUIC 握手或 HTTP/3。 |
-| `http3-state` | state | 在 `quic-state` 之上发送 HTTP/3 请求；方法/header/body、Huffman QPACK 字符串、完整 static table、结构化响应 header。可选：仅出现在 ngtcp2/GnuTLS 构建中。 |
+| `http3-state` | state (QUIC + `stream-data`) | 在 `quic-state` 之上发送 HTTP/3 请求；方法/header/body、Huffman QPACK 字符串、完整 static table、结构化响应 header。可选：仅出现在 ngtcp2/GnuTLS 构建中。 |
 | `jarm` | tcp | 通过 10 个 ClientHello slot 做 JARM；`--first-probe 1..10` 轮换哪个标准探针先发，`jarm_slot` 保留标准编号；`--probe-index` 只发一个；`jarm_part` 由 `tools/jarm_aggregate.py` 聚合。 |
-| `doh-h2` | state | `tls-state` 内的 DoH over HTTP/2（`-alpn h2`）；支持 HPACK literal/Huffman。 |
-| `doh` | state | `tls-state` 内的 DNS over HTTPS（HTTP/1.1 POST）。 |
-| `dot` | state | `tls-state` 内的 DNS over TLS（`-alpn dot`），带 2 字节长度前缀。 |
+| `doh-h2` | state (TCP) | `tls-state` 内的 DoH over HTTP/2（`-alpn h2`）；支持 HPACK literal/Huffman。 |
+| `doh` | state (TCP) | `tls-state` 内的 DNS over HTTPS（HTTP/1.1 POST）。 |
+| `dot` | state (TCP) | `tls-state` 内的 DNS over TLS（`-alpn dot`），带 2 字节长度前缀。 |
 | `dns` | udp | DNS 记录请求，可配置名称/类型/递归；`--dnssec` 发送 EDNS0 DO 并报告 DNSSEC 证据（非完整验证）。 |
 | `snmp` | udp | SNMP（v1/v2c）请求，并按 MIB 提取主机信息。 |
 | `echo` | udp | 四个由 cookie 派生的字节；接受包含它们的回包。 |
@@ -204,32 +218,32 @@ STARTTLS 失败输出 `starttls error`。`--dump-cert-details` 输出
 | Probe | Type | What it does |
 |:---|:---:|:---|
 | `mysql` | tcp | 读取 MySQL greeting；protocol/version/capabilities/auth plugin。 |
-| `mysql-state` | state | 有状态 greeting；不认证。`--after-tls` 仅为 lab COM_PING 唤醒，不是标准握手。 |
+| `mysql-state` | state (TCP) | 有状态 greeting；不认证。`--after-tls` 仅为 lab COM_PING 唤醒，不是标准握手。 |
 | `postgres` | tcp | PostgreSQL SSLRequest 能力检查。 |
-| `postgres-state` | state | SSLRequest + 认证边界 StartupMessage。 |
+| `postgres-state` | state (TCP) | SSLRequest + 认证边界 StartupMessage。 |
 | `mongodb` | tcp | OP_MSG `hello`/BSON 识别。 |
-| `mongodb-state` | state | 供 `tls-state` 组合使用的 MongoDB `hello`/BSON 探测。 |
+| `mongodb-state` | state (TCP) | 供 `tls-state` 组合使用的 MongoDB `hello`/BSON 探测。 |
 | `smtp` | tcp | 读取 SMTP 220 banner。 |
-| `smtp-state` | state | SMTP greeting + EHLO 能力/STARTTLS。 |
+| `smtp-state` | state (TCP) | SMTP greeting + EHLO 能力/STARTTLS。 |
 | `imap` | tcp | 读取 IMAP greeting。 |
-| `imap-state` | state | IMAP CAPABILITY/STARTTLS。 |
+| `imap-state` | state (TCP) | IMAP CAPABILITY/STARTTLS。 |
 | `pop3` | tcp | 读取 POP3 +OK banner。 |
-| `pop3-state` | state | POP3 CAPA/STLS。 |
+| `pop3-state` | state (TCP) | POP3 CAPA/STLS。 |
 | `ftp` | tcp | 读取 FTP 220 banner。 |
-| `ftp-state` | state | FTP FEAT/AUTH TLS。 |
+| `ftp-state` | state (TCP) | FTP FEAT/AUTH TLS。 |
 | `managesieve` | tcp | 读取 ManageSieve capability greeting。 |
-| `managesieve-state` | state | ManageSieve 能力/STARTTLS/SASL。`--after-tls` 仅为 lab NOOP 唤醒。 |
+| `managesieve-state` | state (TCP) | ManageSieve 能力/STARTTLS/SASL。`--after-tls` 仅为 lab NOOP 唤醒。 |
 
 ### Batch C 第一批（6）
 
 | Probe | Type | What it does |
 |:---|:---:|:---|
 | `ipp` | tcp | IPP Get-Printer-Attributes over HTTP。 |
-| `ipp-state` | state | IPP over tcp-state/TLS。 |
+| `ipp-state` | state (TCP) | IPP over tcp-state/TLS。 |
 | `amqp` | tcp | AMQP 0-9-1 protocol header/Connection.Start。 |
-| `amqp-state` | state | AMQP over tcp-state/TLS。 |
+| `amqp-state` | state (TCP) | AMQP over tcp-state/TLS。 |
 | `pptp` | tcp | PPTP SCCRQ/SCCRP。 |
-| `pptp-state` | state | PPTP 控制连接。 |
+| `pptp-state` | state (TCP) | PPTP 控制连接。 |
 
 ### 指纹识别（5）
 
@@ -237,7 +251,7 @@ STARTTLS 失败输出 `starttls error`。`--dump-cert-details` 输出
 |:---|:---:|:---|
 | `recog` | tcp | 用 Recog XML 指纹匹配 banner。 |
 | `recog-udp` | udp | UDP 版本。 |
-| `recog-state` | state | 在有状态 TCP 上的同一功能。 |
+| `recog-state` | state (TCP) | 在有状态 TCP 上的同一功能。 |
 | `nmap` | tcp | 运行一条 `nmap-service-probes` 探测并解析其匹配项。 |
 | `nmap-udp` | udp | UDP 版本。 |
 
@@ -267,10 +281,10 @@ Lua 在运行期加载；如果没有可用的 Lua 共享库，这些探测仍�
 | 探测 | 类型 | 功能 |
 |:---|:---:|:---|
 | `null` | tcp | 不发送载荷；收到的任何数据都作为 banner 报告。 |
-| `get-state` | state | 调试用探测：在有状态连接上发一个 HTTP GET。 |
-| `close-state` | state | 什么都不发，立即关闭连接。 |
+| `get-state` | state (TCP) | 调试用探测：在有状态连接上发一个 HTTP GET。 |
+| `close-state` | state (TCP) | 什么都不发，立即关闭连接。 |
 
-当扫描模块要求探测模块、而你只想要服务器的问候语时，`null` 很有用。状态探测只能配合 `-scan tcp-state` 使用；`tls-state` 还额外需要一个 `state` 类型的子探测（`-subprobe`），因为 TLS 是中间层，而不是叶子层。
+当扫描模块要求探测模块、而你只想要服务器的问候语时，`null` 很有用。state 探测配合 `tcp-state`（TCP state 探测）或 `quic-state`（带 `stream-data` 的 QUIC state 探测，目前是 `http3-state`）使用；`tls-state` 还额外需要一个 TCP `state` 子探测（`-subprobe`），因为 TLS 是中间层，而不是叶子层。
 
 ## 输出模块（7）
 

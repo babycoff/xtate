@@ -165,10 +165,14 @@ static ConfRes SET_subprobe(void *conf, const char *name, const char *value) {
         tlsstate_conf.subprobe = NULL;
         return Conf_ERR;
     }
-    if (strcmp(value, "http3-state") == 0) {
+    if (!(tlsstate_conf.subprobe->state_transports & ProbeTransport_TCP)) {
+        char transport[32];
         LOG(LEVEL_ERROR,
-            "invalid subprobe 'http3-state': it requires quic-state, not a "
-            "TLS stream.\n");
+            "invalid subprobe '%s': tls-state needs a TCP state probe, but it "
+            "is stateful %s.\n",
+            value,
+            get_probe_transport_name(tlsstate_conf.subprobe->state_transports,
+                                     transport, sizeof(transport)));
         tlsstate_conf.subprobe = NULL;
         return Conf_ERR;
     }
@@ -346,8 +350,7 @@ static ConfParam tlsstate_parameters[] = {
      SET_subprobe,
      Type_ARG,
      {"sub-probe-module", 0},
-     "Required state subprobe. Only probe modules with probe_type=state are "
-     "accepted; TCP/UDP probes and QUIC-only http3-state are rejected. It is "
+     "Required TCP state subprobe. Only probe modules with probe_type=state " "and TCP transport support are accepted; plain TCP/UDP probes and " "QUIC-only probes such as http3-state are rejected. It is "
      "initialized only after TLS handshake success (and after STARTTLS "
      "upgrade, when enabled), then "
      "runs inside the encrypted stream. Use close-state for certificate-only "
@@ -995,8 +998,11 @@ static bool _extend_buffer(unsigned char **buf, size_t *buf_len) {
 /*init public SSL_CTX*/
 static bool tlsstate_init(const XConf *xconf) {
     if (!tlsstate_conf.subprobe ||
-        tlsstate_conf.subprobe->type != ProbeType_STATE) {
-        LOG(LEVEL_ERROR, "TlsStateProbe need a subprobe in STATE type.\n");
+        tlsstate_conf.subprobe->type != ProbeType_STATE ||
+        !(tlsstate_conf.subprobe->state_transports & ProbeTransport_TCP)) {
+        LOG(LEVEL_ERROR,
+            "TlsStateProbe needs a TCP state subprobe (for example "
+            "http-state or close-state).\n");
         return false;
     }
 
@@ -2042,6 +2048,7 @@ static unsigned tlsstate_parse_response(DataPass *pass, ProbeState *state,
 Probe TlsStateProbe = {
     .name       = "tls-state",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .hello_wait = 0,
     .params     = tlsstate_parameters,
     .short_desc = "Do TLS upper-layer scan with specified probe.",

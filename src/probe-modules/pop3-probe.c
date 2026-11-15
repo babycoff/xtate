@@ -153,6 +153,7 @@ Probe Pop3Probe = {
 Probe Pop3StateProbe = {
     .name       = "pop3-state",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .hello_wait = 0,
     .short_desc = "POP3 greeting and CAPA probe.",
     .params     = pop3_state_parameters,

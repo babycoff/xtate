@@ -40,6 +40,44 @@
         "none"
       ]
     },
+    "required_state_transports": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "tcp",
+          "quic"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "required_capabilities": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "stream-data"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "state_transports": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "tcp",
+          "quic"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "stream-data"
+        ]
+      },
+      "uniqueItems": true
+    },
     "parameters": {
       "type": "array",
       "items": {

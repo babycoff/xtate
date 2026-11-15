@@ -40,9 +40,28 @@ xtate --help-gen blackrock
 |:---|:---:|:---|
 | `tcp-syn` | - | SYN scan; SYN-ACK is open, RST is closed. Optional `--send-rst`, `--fail-zerowin`. |
 | `zbanner` | tcp | Stateless TCP handshake; payload rides on the third ACK; first banner is parsed by the probe. |
-| `tcp-state` | state | HLTCP user-space TCP; full conversations for TLS/HTTP state probes. |
+| `tcp-state` | state (TCP) | HLTCP user-space TCP; full conversations for TCP state probes. |
 | `udp` | udp | Single-packet UDP scan with a probe payload; ICMP port-unreachable means closed. |
-| `quic-state` | state | Raw-UDP stateful QUIC handshake with ngtcp2/GnuTLS; reports version, TLS/ALPN and certificate fields, then runs a state sub-probe. Optional build. |
+| `quic-state` | state (QUIC + `stream-data`) | Raw-UDP stateful QUIC handshake with ngtcp2/GnuTLS; reports version, TLS/ALPN and certificate fields, then runs a QUIC stream-data probe (`http3-state`). Optional build. |
+
+`state` is a shared stateful ABI, split by transport. `tcp-state` accepts state
+probes that declare TCP support (for example `tls-state`, `http-state`,
+`close-state`). `quic-state` requires a state probe that declares QUIC support
+and the `stream-data` capability; currently that is `http3-state`. The module
+JSON exposes `state_transports` and `capabilities`, and Xtate rejects an
+incompatible pair before sending any packet.
+
+Typical stateful pairs:
+
+```sh
+# TCP/TLS: tls-state, with an HTTP subprobe inside the TLS stream
+xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
+      -probe-arg "-subprobe http-state -subprobe-arg '--host=example.com --record-body'"
+
+# QUIC/HTTP3: requires the optional ngtcp2/GnuTLS Linux build
+xtate -ip 203.0.113.10 -p U:443 -scan quic-state -probe http3-state \
+      -probe-arg "--method=HEAD"
+```
 | `icmp-echo` | - | ICMP echo host discovery; can record TTL and IPID. |
 | `icmp-time` | - | ICMP timestamp discovery, IPv4 only. |
 | `sctp-init` | - | SCTP INIT scan; INIT-ACK is open, ABORT is closed. |
@@ -58,7 +77,11 @@ firewall rules, is covered in [Scanning modes](./scanning-modes.md).
 ## Probe modules (59, plus optional `http3-state`)
 
 A probe declares a **type** that must match the scan module: `tcp` for `zbanner`, `udp` for
-`udp`, `state` for `tcp-state`. It may declare a `ProbeSlotPlan` (JARM and the `slot-test` examples); see
+`udp`, `state` (TCP) for `tcp-state`, and `state` (QUIC with `stream-data`) for
+`quic-state`. State probes also declare which transports they support, so the scan
+engine and probe must agree on TCP or QUIC (and on optional capabilities such as
+`stream-data`). A probe may declare
+a `ProbeSlotPlan` (JARM and the `slot-test` examples); see
 [Scanning modes](./scanning-modes.md#probe-slots).
 
 ### ProbeSlotPlan (multi-slot probes)
@@ -150,7 +173,7 @@ label `quic_response: initial` as `http3`.
 
 ### TLS evidence, certificate details and STARTTLS
 
-`tls-state` is an HLTCP middle layer and requires a `state` sub-probe. See [TLS composition](./tls-composition.md) for `--after-tls` and implicit/STARTTLS examples. Certificate
+`tls-state` is an HLTCP middle layer and requires a TCP `state` sub-probe. See [TLS composition](./tls-composition.md) for `--after-tls` and implicit/STARTTLS examples. Certificate
 and TLS fields are emitted after a successful handshake, independent of what the
 sub-probe does afterwards.
 
@@ -199,28 +222,28 @@ STARTTLS is emitted as `starttls error`. `--dump-cert-details` outputs
 | Probe | Type | What it does |
 |:---|:---:|:---|
 | `http` | tcp | User-specified HTTP request over a stateless TCP conversation. |
-| `http-state` | state | The same over HLTCP, including over TLS. |
+| `http-state` | state (TCP) | The same over HLTCP, including over TLS. |
 | `hello` | tcp | User payload (string, base64, nmap-string, file) plus optional regex. |
 | `hello-udp` | udp | The same for UDP. |
-| `hello-state` | state | The same over a stateful TCP connection. |
+| `hello-state` | state (TCP) | The same over a stateful TCP connection. |
 | `tls-hello` | tcp | Fixed ClientHello; reads ServerHello version/record hints without completing a handshake. |
-| `tls-state` | state | OpenSSL-backed TLS handshake; `--starttls smtp\|imap\|pop3\|ftp` upgrades first; certificate/cipher/version dump; `--dump-cert-details` adds structured X.509/SAN/public-key/validity/ALPN; sub-probe over TLS. |
+| `tls-state` | state (TCP) | OpenSSL-backed TLS handshake; `--starttls smtp\|imap\|pop3\|ftp` upgrades first; certificate/cipher/version dump; `--dump-cert-details` adds structured X.509/SAN/public-key/validity/ALPN; sub-probe over TLS. |
 | `ssh` | tcp | Configurable SSH banner plus KEX/host-key and cipher/MAC/compression lists. |
-| `ssh-kex` | state | Unauthenticated SSH curve25519 KEX; reports the host-key type and its SHA256 fingerprint. |
+| `ssh-kex` | state (TCP) | Unauthenticated SSH curve25519 KEX; reports the host-key type and its SHA256 fingerprint. |
 | `h2c` | tcp | Cleartext h2c preface, configurable SETTINGS/PING fingerprint, frame/settings parsing. Not HTTP/2 over TLS. |
-| `h2` | state | TLS/ALPN h2 HTTP/2 via HLTCP; preface, SETTINGS, minimal HPACK request, frames/HEADERS/DATA. |
+| `h2` | state (TCP) | TLS/ALPN h2 HTTP/2 via HLTCP; preface, SETTINGS, minimal HPACK request, frames/HEADERS/DATA. |
 | `redis` | tcp | Read-only `INFO server` Redis identification and structured version/mode/os/role. |
 | `memcached` | tcp | `version` command and version-line parse. |
 | `ntp` | udp | NTP v4 mode-3 request, cookie validation, leap/stratum/refid/root fields. |
 | `mqtt` | tcp | MQTT 3.1.1 CONNECT and CONNACK return-code parse. |
-| `socks5` | state | SOCKS5 greeting and method selection. |
-| `telnet` | state | Initial Telnet banner and IAC option parse. |
+| `socks5` | state (TCP) | SOCKS5 greeting and method selection. |
+| `telnet` | state (TCP) | Initial Telnet banner and IAC option parse. |
 | `quic` | udp | QUIC v1 Initial capability probe; classifies Version Negotiation/Retry/Initial/Handshake; no QUIC handshake or HTTP/3 claim. |
-| `http3-state` | state | HTTP/3 request over `quic-state`; methods/headers/body, Huffman QPACK strings, full static table, structured response headers. Optional: present only in ngtcp2/GnuTLS builds. |
+| `http3-state` | state (QUIC + `stream-data`) | HTTP/3 request over `quic-state`; methods/headers/body, Huffman QPACK strings, full static table, structured response headers. Optional: present only in ngtcp2/GnuTLS builds. |
 | `jarm` | tcp | JARM via 10 ClientHello slots; emits `jarm_part`, aggregated by `tools/jarm_aggregate.py`. |
-| `doh-h2` | state | DoH over HTTP/2 POST inside `tls-state` (`-alpn h2`); HPACK literal/Huffman headers. |
-| `doh` | state | DNS over HTTPS, HTTP/1.1 POST inside `tls-state`. |
-| `dot` | state | DNS over TLS inside `tls-state` (`-alpn dot`); length-prefixed DNS query. |
+| `doh-h2` | state (TCP) | DoH over HTTP/2 POST inside `tls-state` (`-alpn h2`); HPACK literal/Huffman headers. |
+| `doh` | state (TCP) | DNS over HTTPS, HTTP/1.1 POST inside `tls-state`. |
+| `dot` | state (TCP) | DNS over TLS inside `tls-state` (`-alpn dot`); length-prefixed DNS query. |
 | `dns` | udp | DNS record request with configurable name/type/recursion; `--dnssec` sends EDNS0 DO and reports DNSSEC evidence (not validation). |
 | `snmp` | udp | SNMP (v1/v2c) request and MIB-guided host info extraction. |
 | `echo` | udp | Four cookie-derived bytes; accepts a reply containing them. |
@@ -230,32 +253,32 @@ STARTTLS is emitted as `starttls error`. `--dump-cert-details` outputs
 | Probe | Type | What it does |
 |:---|:---:|:---|
 | `mysql` | tcp | Read MySQL server greeting; protocol/version/capabilities/auth plugin. |
-| `mysql-state` | state | Same greeting over tcp-state; no authentication. `--after-tls` is a lab-only COM_PING wake-up, not a standard handshake. |
+| `mysql-state` | state (TCP) | Same greeting over tcp-state; no authentication. `--after-tls` is a lab-only COM_PING wake-up, not a standard handshake. |
 | `postgres` | tcp | PostgreSQL SSLRequest capability check. |
-| `postgres-state` | state | SSLRequest + auth-boundary StartupMessage. |
+| `postgres-state` | state (TCP) | SSLRequest + auth-boundary StartupMessage. |
 | `mongodb` | tcp | OP_MSG `hello` and BSON identification. |
-| `mongodb-state` | state | MongoDB `hello`/BSON probe for `tls-state` composition. |
+| `mongodb-state` | state (TCP) | MongoDB `hello`/BSON probe for `tls-state` composition. |
 | `smtp` | tcp | Read SMTP 220 banner. |
-| `smtp-state` | state | SMTP greeting + EHLO capabilities/STARTTLS. |
+| `smtp-state` | state (TCP) | SMTP greeting + EHLO capabilities/STARTTLS. |
 | `imap` | tcp | Read IMAP greeting. |
-| `imap-state` | state | IMAP CAPABILITY/STARTTLS. |
+| `imap-state` | state (TCP) | IMAP CAPABILITY/STARTTLS. |
 | `pop3` | tcp | Read POP3 +OK banner. |
-| `pop3-state` | state | POP3 CAPA/STLS. |
+| `pop3-state` | state (TCP) | POP3 CAPA/STLS. |
 | `ftp` | tcp | Read FTP 220 banner. |
-| `ftp-state` | state | FTP FEAT/AUTH TLS. |
+| `ftp-state` | state (TCP) | FTP FEAT/AUTH TLS. |
 | `managesieve` | tcp | Read ManageSieve capability greeting. |
-| `managesieve-state` | state | ManageSieve capability/STARTTLS/SASL. `--after-tls` is a lab-only NOOP wake-up. |
+| `managesieve-state` | state (TCP) | ManageSieve capability/STARTTLS/SASL. `--after-tls` is a lab-only NOOP wake-up. |
 
 ### Batch C first wave (6)
 
 | Probe | Type | What it does |
 |:---|:---:|:---|
 | `ipp` | tcp | IPP Get-Printer-Attributes over HTTP. |
-| `ipp-state` | state | IPP over tcp-state/TLS. |
+| `ipp-state` | state (TCP) | IPP over tcp-state/TLS. |
 | `amqp` | tcp | AMQP 0-9-1 protocol header/Connection.Start. |
-| `amqp-state` | state | AMQP over tcp-state/TLS. |
+| `amqp-state` | state (TCP) | AMQP over tcp-state/TLS. |
 | `pptp` | tcp | PPTP Start-Control-Connection-Request/Reply. |
-| `pptp-state` | state | PPTP control connection over tcp-state. |
+| `pptp-state` | state (TCP) | PPTP control connection over tcp-state. |
 
 ### Fingerprinting (5)
 
@@ -263,7 +286,7 @@ STARTTLS is emitted as `starttls error`. `--dump-cert-details` outputs
 |:---|:---:|:---|
 | `recog` | tcp | Match Recog XML fingerprints against the banner. |
 | `recog-udp` | udp | The same for UDP. |
-| `recog-state` | state | The same over stateful TCP. |
+| `recog-state` | state (TCP) | The same over stateful TCP. |
 | `nmap` | tcp | Run an `nmap-service-probes` probe and parse its matches. |
 | `nmap-udp` | udp | The same for UDP. |
 
@@ -295,12 +318,14 @@ The example scripts in `lua-probes/` declare `ProbeName`, `ProbeType` and
 | Probe | Type | What it does |
 |:---|:---:|:---|
 | `null` | tcp | Sends no payload; any received data is reported as a banner. |
-| `get-state` | state | Debug probe that issues an HTTP GET over a stateful connection. |
-| `close-state` | state | Sends nothing and closes the connection immediately. |
+| `get-state` | state (TCP) | Debug probe that issues an HTTP GET over a stateful connection. |
+| `close-state` | state (TCP) | Sends nothing and closes the connection immediately. |
 
 `null` is useful when a scan module requires a probe but you only want the server's
-greeting. State probes only work with `-scan tcp-state`; `tls-state` additionally needs a
-`state` sub-probe (`-subprobe`), because TLS is a middle layer, not a leaf.
+greeting. State probes pair with `tcp-state` (TCP state probes) or
+`quic-state` (QUIC state probes with `stream-data`, currently `http3-state`);
+`tls-state` additionally needs a TCP `state` sub-probe (`-subprobe`), because TLS
+is a middle layer, not a leaf.
 
 ## Output modules (7)
 

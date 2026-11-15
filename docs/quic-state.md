@@ -52,7 +52,7 @@ target / source port
   -> strip IP/UDP
   -> ngtcp2_conn_read_pkt()
   -> TLS handshake + certificate
-  -> state sub-probe
+  -> stream-data application probe (http3-state)
 ```
 
 The flow table is currently a bounded hash table with one global mutex; it is a
@@ -68,17 +68,21 @@ flush.
 xtate -ip 192.0.2.10 -p U:443 -scan quic-state -probe http3-state \
   -scan-arg "--alpn h3" --wait 5 --no-status -show info
 
-# Certificate/version evidence only
-xtate -ip 192.0.2.10 -p U:443 -scan quic-state -probe close-state \
-  -scan-arg "--alpn h3 --sni example.test" --wait 5 --no-status -show info
+# A HEAD request minimizes the response body while still exercising HTTP/3
+xtate -ip 192.0.2.10 -p U:443 -scan quic-state -probe http3-state \
+  -scan-arg "--alpn h3 --sni example.test" -probe-arg "--method HEAD" \
+  --wait 5 --no-status -show info
 
 # Check the module is present
 xtate --list-scan | grep quic-state
 ```
 
-The probe must be a `state` probe; `close-state` is the certificate-only probe.
-`tls-state` is a TCP/TLS probe and is rejected with `quic-state`; use
-`http3-state` for HTTP/3 or `close-state` for certificate-only evidence.
+`quic-state` requires a `state` probe that declares QUIC transport support and
+the `stream-data` capability; currently `http3-state` is the only such probe.
+The QUIC handshake records certificate/version/ALPN evidence before the
+application probe runs. `tls-state`, `http-state` and `close-state` are TCP
+state probes and are rejected. A future probe that genuinely supports both
+transports can declare TCP and QUIC simultaneously.
 
 ## Options
 

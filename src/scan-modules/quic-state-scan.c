@@ -1090,6 +1090,8 @@ static void qs_status(char *status) {
 Scanner QuicStateScan = {
     .name       = "quic-state",
     .required_probe_type = ProbeType_STATE,
+    .required_state_transports = ProbeTransport_QUIC,
+    .required_probe_caps = ProbeCapability_StreamData,
     .bpf_filter = "udp",
     .params     = qs_parameters,
     .short_desc = "Stateful QUIC transport scanner for handshake evidence.",
@@ -1097,9 +1099,10 @@ Scanner QuicStateScan = {
         "QuicStateScan tracks QUIC flows over raw UDP and uses ngtcp2/GnuTLS "
         "for the QUIC/TLS handshake. Xtate retains control of IPv4/IPv6/UDP "
         "headers, source ports, pacing, flow budgets, timers and output. "
-        "The first milestone emits QUIC/TLS/certificate evidence and supports "
-        "a state subprobe; HTTP/3 and DoQ are application probes layered above "
-        "this transport. Requires an ngtcp2/GnuTLS build.",
+        "The first milestone emits QUIC/TLS/certificate evidence and accepts "
+        "a QUIC state probe with the stream-data capability; HTTP/3 is the "
+        "application probe layered above this transport. Requires an "
+        "ngtcp2/GnuTLS build.",
     .init_cb     = &qs_init,
     .transmit_cb = &qs_transmit,
     .validate_cb = &qs_validate,

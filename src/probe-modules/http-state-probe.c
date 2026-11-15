@@ -925,6 +925,7 @@ static void httpstate_close() {
 Probe HttpStateProbe = {
     .name       = "http-state",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .hello_wait = 0,
     .params     = httpstate_parameters,
     .short_desc = "Send user-specified HTTP request and get response in "

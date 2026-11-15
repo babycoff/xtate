@@ -32,11 +32,13 @@ The pairing is checked at startup. A probe declares one of three types:
 |:---|:---|:---|
 | `tcp` | `zbanner` (and stateless TCP scans) | One request, one reply, no per-target state |
 | `udp` | `udp` | One datagram request, one datagram reply |
-| `state` | `tcp-state` (HLTCP) | Full TCP/TLS conversation with a user-space TCB |
+| `state (TCP)` | `tcp-state` (HLTCP) | Full TCP/TLS conversation with a user-space TCB |
+| `state (QUIC + stream-data)` | `quic-state` | QUIC handshake and HTTP/3 stream probe |
 
 A mismatch is a startup error, not a silent fallback:
 `ScanModule <name> needs probe of <type> type.` Use `--list-probe` to see each
-probe's type, and `--help-probe <name>` for the parameters that probe accepts.
+probe's type, and `--help-probe <name>` for its transport/capability and the
+parameters that probe accepts.
 Probe-specific arguments are passed as one quoted string:
 
 ```bash
@@ -58,8 +60,8 @@ The table lists the protocols with a dedicated probe in this tree. The full modu
 |:---|:---|:---|:---|
 | HTTP/1.1 | `http`, `http-state` | `tcp`, `state` | Structured status/headers/body metadata; stateful variant inside HLTCP |
 | HTTP/2 | `h2c`, `h2` | `tcp`, `state` | `h2c` is cleartext prior knowledge; `h2` runs inside `tls-state` with ALPN `h2` |
-| HTTP/3 | `http3-state` (probe) on `quic-state` (scan) | `state` | Linux + ngtcp2/GnuTLS only |
-| QUIC transport | `quic` (capability), `quic-state` (transport) | `udp`, `state` | `quic` classifies a server's Initial response; `quic-state` completes handshakes |
+| HTTP/3 | `http3-state` (probe) on `quic-state` (scan) | `state` (QUIC + stream-data) | Linux + ngtcp2/GnuTLS only |
+| QUIC transport | `quic` (capability), `quic-state` (transport) | `udp`, `state` (QUIC + stream-data) | `quic` classifies a server's Initial response; `quic-state` completes handshakes |
 | TLS | `tls-state`, `tls-hello` | `state`, `tcp` | Certificates, ALPN, SNI, version, cipher |
 | JARM | `jarm` | `tcp` | Salesforce 1.0 TLS fingerprint |
 | DNS | `dns` | `udp` | Plain DNS over UDP |
@@ -199,7 +201,7 @@ target/source tuple
   -> raw socket / NetStack
   -> pcap receive -> strip IP/UDP
   -> ngtcp2_conn_read_pkt()           (TLS handshake, certificate)
-  -> state sub-probe (http3-state)
+  -> stream-data probe (http3-state, HTTP/3 request)
 ```
 
 The flow table is bounded and guarded by one global mutex in the first
@@ -226,11 +228,12 @@ Check that the module exists:
 xtate --list-scan      # quic-state appears only in an ngtcp2/GnuTLS build
 ```
 
-A certificate-only probe of a QUIC endpoint:
+A minimal HTTP/3 exchange for certificate evidence (the QUIC handshake records
+the certificate; `HEAD` avoids downloading a body):
 
 ```bash
-sudo xtate -ip 192.0.2.10 -p U:443 -scan quic-state -probe close-state \
-  -scan-arg "--sni example.com" -show info
+sudo xtate -ip 192.0.2.10 -p U:443 -scan quic-state -probe http3-state \
+  -scan-arg "--sni example.com" -probe-arg "--method HEAD" -show info
 ```
 
 A full HTTP/3 request:
@@ -450,7 +453,7 @@ Two practical notes:
   etc.). Without SNI, read the result as "default virtual host", not as the
   requested hostname.
 - `tls-state` has no usable default sub-probe. Always pass `-subprobe` with a
-  state-type probe, or the TLS session ends immediately.
+  TCP state probe, or the TLS session ends immediately.
 
 ## Raw sockets, link types, TUN and fake-IP
 

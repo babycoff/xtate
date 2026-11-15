@@ -53,6 +53,25 @@ static void jparams(ConfParam *p, const char *module) {
 static const char *ptype(ProbeType t) {
     switch (t) { case ProbeType_TCP: return "tcp"; case ProbeType_UDP: return "udp"; case ProbeType_STATE: return "state"; default: return "none"; }
 }
+static void jtransports(unsigned bits) {
+    int first = 1;
+    fputc('[', g_out);
+    if (bits & ProbeTransport_TCP) {
+        fputs("\"tcp\"", g_out);
+        first = 0;
+    }
+    if (bits & ProbeTransport_QUIC) {
+        if (!first) fputc(',', g_out);
+        fputs("\"quic\"", g_out);
+    }
+    fputc(']', g_out);
+}
+static void jcaps(unsigned bits) {
+    fputc('[', g_out);
+    if (bits & ProbeCapability_StreamData)
+        fputs("\"stream-data\"", g_out);
+    fputc(']', g_out);
+}
 void list_modules_json(void) {
     if (!g_out) g_out = stdout;
     fputs("{\"modules\":[", g_out);
@@ -62,6 +81,8 @@ void list_modules_json(void) {
         if (!first) { fputc(',', g_out); } first = 0;
         fputs("{\"name\":", g_out); jstr(m->name);
         fputs(",\"kind\":\"scan\",\"probe_type\":", g_out); jstr(ptype(m->required_probe_type));
+        fputs(",\"required_state_transports\":", g_out); jtransports(m->required_state_transports);
+        fputs(",\"required_capabilities\":", g_out); jcaps(m->required_probe_caps);
         fputs(",\"short_description\":", g_out); jstr(i18n_tr_module_desc(m->name, m->short_desc));
         fputs(",\"description\":", g_out); jstr(i18n_tr_module_help_desc(m->name, m->desc));
         fputs(",\"parameters\":", g_out); jparams(m->params, m->name);
@@ -72,6 +93,8 @@ void list_modules_json(void) {
         if (!first) { fputc(',', g_out); } first = 0;
         fputs("{\"name\":", g_out); jstr(m->name);
         fputs(",\"kind\":\"probe\",\"probe_type\":", g_out); jstr(ptype(m->type));
+        fputs(",\"state_transports\":", g_out); jtransports(m->state_transports);
+        fputs(",\"capabilities\":", g_out); jcaps(m->capabilities);
         fputs(",\"short_description\":", g_out); jstr(i18n_tr_module_desc(m->name, m->short_desc));
         fputs(",\"description\":", g_out); jstr(i18n_tr_module_help_desc(m->name, m->desc));
         fputs(",\"parameters\":", g_out); jparams(m->params, m->name);

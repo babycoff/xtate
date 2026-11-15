@@ -10,6 +10,7 @@
 #include "probe-types.h"
 
 struct XtateConf;
+struct ScanModule;
 
 /**
  * FIXME: It should be a value a little less than PKT_BUF_SIZE,
@@ -237,6 +238,10 @@ typedef struct ProbeSlotPlan {
 typedef struct ProbeModule {
     const char     *name;
     const ProbeType type;
+    /*ProbeTransport mask; meaningful for ProbeType_STATE only*/
+    const unsigned  state_transports;
+    /*ProbeCapability mask for optional transport callbacks*/
+    const unsigned  capabilities;
     const ProbeSlotPlan slots;
     /*just for statefull scan*/
     unsigned        hello_wait;
@@ -276,6 +281,15 @@ static inline bool probe_slot_plan_valid(const Probe *probe) {
 Probe *get_probe_module_by_name(const char *name);
 
 const char *get_probe_type_name(const ProbeType type);
+
+const char *get_probe_transport_name(unsigned transports, char *buf,
+                                     size_t buf_len);
+
+/* Shared scan/probe compatibility rule used by CLI, interactive, GUI and MCP.
+ * Returns true when the pair is valid; otherwise writes a user-facing reason. */
+bool probe_compatible_with_scanner(const struct ScanModule *scan,
+                                   const Probe *probe, char *err,
+                                   size_t errcap);
 
 int probe_type_to_string(unsigned type, char *string, size_t str_len);
 

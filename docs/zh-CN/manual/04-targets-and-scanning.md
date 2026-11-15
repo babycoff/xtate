@@ -125,9 +125,9 @@ xtate -ip 203.0.113.10 -p 8080 --top-port 100 -scan tcp-syn
 |:---|:---|:---|:---|:---|
 | `tcp-syn` | 无 | 无状态 | 1 SYN（`--send-rst` 时加 RST） | 不需要 |
 | `zbanner` | tcp | 无状态握手 | ≈3（SYN、ACK+载荷、RST） | 需要 |
-| `tcp-state` | state | 有状态 TCB | 取决于会话 | 需要 |
+| `tcp-state` | state（TCP） | 有状态 TCB | 取决于会话 | 需要 |
 | `udp` | udp | 无状态 | 1 个数据报 | 需要 |
-| `quic-state` | state | 有状态 QUIC | 握手 | 按 UDP 指引 |
+| `quic-state` | state（QUIC + `stream-data`） | 有状态 QUIC | 握手 | 按 UDP 指引 |
 | `icmp-echo` | 无 | 无状态 | 1 个 echo | 不需要 |
 | `icmp-time` | 无 | 无状态 | 1 个 timestamp | 不需要 |
 | `sctp-init` | 无 | 无状态 | 1 个 INIT | 不需要 |
@@ -136,18 +136,22 @@ xtate -ip 203.0.113.10 -p 8080 --top-port 100 -scan tcp-syn
 | `yarrp-echo` | 无 | 无状态 | 每 TTL 1 个 | 不需要 |
 | `yarrp-udp` | 无 | 无状态 | 每 TTL 1 个 | 不需要 |
 
-探测类型必须匹配：`zbanner` 需要 `tcp` 探测，`tcp-state` 需要 `state` 探测，`udp` 需要 `udp` 探测。Xtate 在启动时校验，不匹配就以错误退出，而不是静默发出错误的报文：
+探测类型必须匹配：`zbanner` 需要 `tcp` 探测，`udp` 需要 `udp` 探测；`state` 是两种传输共享的有状态 ABI。`tcp-state` 只接受声明 TCP 支持的 state 探测；`quic-state` 只接受声明 QUIC 支持并具备 `stream-data` 能力的 state 探测。Xtate 在启动时校验，不匹配就以错误退出，而不是静默发出错误的报文：
 
 ```bash
-# Error: tls-state is a state probe, but tcp-syn has no probe support
+# 错误：tls-state 是 TCP state 探测，tcp-syn 不支持任何探测
 xtate -ip 203.0.113.10 -p 443 -scan tcp-syn -probe tls-state
+
+# 正确：在 QUIC 有状态引擎上运行 HTTP/3 应用探测
+xtate -ip 203.0.113.10 -p U:443 -scan quic-state -probe http3-state
 ```
 
 ## 选择引擎
 
 - **端口可达性，快速简单** —— `tcp-syn`。不需要防火墙规则，每目标一个报文。关闭的端口显示为失败；需要时加 `-show failed`。
 - **不需要状态的 banner 或协议证据** —— 用带 `tcp` 探测的 `zbanner`。它在用户态用 SipHash cookie 完成握手，是版本探测最常见的选择。
-- **任何需要真实连接的场景** —— 用带 `state` 探测（`tls-state`、`http-state`、`get-state` 等）的 `tcp-state`。它会保留 TCB，因此要为 `--tcb-mem` 和 `--conn-expire` 做预算。
+- **任何需要真实 TCP 连接的场景** —— 用带 state 探测（`tls-state`、`http-state`、`get-state` 等）的 `tcp-state`。它会保留 TCB，因此要为 `--tcb-mem` 和 `--conn-expire` 做预算。
+- **基于 QUIC 的 HTTP/3** —— 在完整 Linux 构建中用 `quic-state` 加 `http3-state`。它使用 UDP 端口（`-p U:443`），有自己的状态机，并拒绝 `tls-state` 这类 TCP 探测。
 - **UDP 服务** —— 用带 UDP 探测的 `udp`；UDP 应答是 `responsed`，ICMP 不可达是 `closed`/`port unreachable`。
 - **主机存活** —— `icmp-echo` 或 `icmp-time`。
 - **本地链路发现** —— `arp-req`（IPv4）或 `ndp-ns`（IPv6）。

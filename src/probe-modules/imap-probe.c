@@ -149,6 +149,7 @@ Probe ImapProbe = {
 Probe ImapStateProbe = {
     .name       = "imap-state",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .hello_wait = 0,
     .short_desc = "IMAP greeting and CAPABILITY probe.",
     .params     = imap_state_parameters,

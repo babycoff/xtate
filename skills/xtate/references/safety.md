@@ -33,8 +33,10 @@ If any item is missing, do not call `start_scan`. Use read-only tools and ask.
 
 - Prefer stateless `tcp-syn` or a single targeted probe. Stateful scans open
   connections and are more intrusive.
-- Start with a small rate. Increase only with authorization; the protocol cap is
-  10000 packets per second, not a target.
+- Start with a small rate. Increase only with authorization. Xtate accepts
+  positive fractional values (`0.5` = one packet every two seconds) and
+  multi-million rates; the 1-10000 limit belongs to the browser GUI only, not
+  to the CLI, MCP or control plane.
 - Set `timeout_sec` for every job. Never start an unbounded scan.
 - Prefer a dedicated `result_path`; if omitted, the server creates a timestamped run folder. Never point an explicit path at an existing important file.
 - Use `include_file` only for a target list in the authorized scope. The file is

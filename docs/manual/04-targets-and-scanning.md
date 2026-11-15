@@ -161,9 +161,9 @@ required. With blackrock and no ports at all, Xtate warns and inserts a fake
 |:---|:---|:---|:---|:---|
 | `tcp-syn` | none | stateless | 1 SYN (+ RST with `--send-rst`) | not needed |
 | `zbanner` | tcp | stateless handshake | ≈3 (SYN, ACK+payload, RST) | needed |
-| `tcp-state` | state | stateful TCB | conversation-dependent | needed |
+| `tcp-state` | state (TCP) | stateful TCB | conversation-dependent | needed |
 | `udp` | udp | stateless | 1 datagram | needed |
-| `quic-state` | state | stateful QUIC | handshake | UDP guidance |
+| `quic-state` | state (QUIC + `stream-data`) | stateful QUIC | handshake | UDP guidance |
 | `icmp-echo` | none | stateless | 1 echo | not needed |
 | `icmp-time` | none | stateless | 1 timestamp | not needed |
 | `sctp-init` | none | stateless | 1 INIT | not needed |
@@ -172,13 +172,19 @@ required. With blackrock and no ports at all, Xtate warns and inserts a fake
 | `yarrp-echo` | none | stateless | 1 per TTL | not needed |
 | `yarrp-udp` | none | stateless | 1 per TTL | not needed |
 
-The probe type must match: `zbanner` needs a `tcp` probe, `tcp-state` needs a
-`state` probe, `udp` needs a `udp` probe. Xtate validates this at startup and
-exits with an error instead of silently sending the wrong packet:
+The probe type must match: `zbanner` needs a `tcp` probe, `udp` needs a `udp`
+probe, and `state` is a stateful ABI shared by two transports. `tcp-state`
+accepts state probes that declare TCP support; `quic-state` accepts only state
+probes that declare QUIC support and the `stream-data` capability. Xtate
+validates this at startup and exits with an error instead of silently sending
+the wrong packet:
 
 ```bash
-# Error: tls-state is a state probe, but tcp-syn has no probe support
+# Error: tls-state is a TCP state probe, but tcp-syn has no probe support
 xtate -ip 203.0.113.10 -p 443 -scan tcp-syn -probe tls-state
+
+# Correct: HTTP/3 application probe over the QUIC state engine
+xtate -ip 203.0.113.10 -p U:443 -scan quic-state -probe http3-state
 ```
 
 ## Choosing an engine
@@ -189,10 +195,13 @@ xtate -ip 203.0.113.10 -p 443 -scan tcp-syn -probe tls-state
 - **Banner or protocol evidence without state** — `zbanner` with a `tcp`
   probe. It completes the handshake in user space with SipHash cookies and is
   the most common choice for version detection.
-- **Anything that needs a real connection** — `tcp-state` with a `state`
+- **Anything that needs a real TCP connection** — `tcp-state` with a state
   probe (`tls-state`, `http-state`, `get-state`, …). It keeps TCBs, so budget
   the module options `--tcb-mem` and `--conn-expire` (pass them with
   `-scan-arg`).
+- **HTTP/3 over QUIC** — `quic-state` with `http3-state` on a full Linux build.
+  It uses UDP ports (`-p U:443`), has its own state machine, and rejects TCP
+  probes such as `tls-state`.
 - **UDP services** — `udp` with a UDP probe; UDP replies are `responsed`,
   ICMP unreachable is `closed`/`port unreachable`.
 - **Host liveness** — `icmp-echo` or `icmp-time`.

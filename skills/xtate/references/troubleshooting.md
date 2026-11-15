@@ -13,7 +13,7 @@ rejected request means nothing was scanned.
 | `targets and include_file are mutually exclusive` | both supplied | choose one; use `include_file` for large sets |
 | `target authorization required: set authorized=true` | missing attestation | confirm scope, then set `authorized: true` |
 | `too many targets` | inline set over the 20000-entry limit | use `include_file`, split the job |
-| `rate must be ...` | non-integer or out of range | integer 0-10000; prefer a lower authorized rate |
+| `rate must be ...` | not a positive finite number | use a fraction or any positive value; leave it out for the default 100 |
 | `timeout_sec ...` | not an integer in 1-86400 | set an explicit bounded timeout |
 | `result_path is not writable` | directory missing, read-only, or permission denied | choose a writable dedicated path |
 | `include_file must be a regular file` | directory, device, FIFO, or `-` | point at a readable target list |

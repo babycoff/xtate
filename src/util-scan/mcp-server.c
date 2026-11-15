@@ -256,12 +256,29 @@ static bool validate_cfg(const char *cfg, char *err, size_t errcap,
         }
     }
     JsonNode *scan = json_find_member(root, "scan");
-    if (!scan || scan->tag != JSON_STRING || !get_scan_module_by_name(scan->string_)) {
+    Scanner *scan_mod = NULL;
+    if (!scan || scan->tag != JSON_STRING ||
+        !(scan_mod = get_scan_module_by_name(scan->string_))) {
         snprintf(err, errcap, "unknown or missing scan"); json_delete(root); return false;
     }
     JsonNode *probe = json_find_member(root, "probe");
-    if (probe && (probe->tag != JSON_STRING || !get_probe_module_by_name(probe->string_))) {
+    Probe *probe_mod = NULL;
+    if (probe && (probe->tag != JSON_STRING ||
+                  !(probe_mod = get_probe_module_by_name(probe->string_)))) {
         snprintf(err, errcap, "unknown probe"); json_delete(root); return false;
+    }
+    if (probe_mod) {
+        char cerr[256];
+        if (!probe_compatible_with_scanner(scan_mod, probe_mod, cerr,
+                                           sizeof(cerr))) {
+            snprintf(err, errcap, "%s", cerr);
+            json_delete(root);
+            return false;
+        }
+    } else if (scan_mod->required_probe_type != ProbeType_NULL) {
+        snprintf(err, errcap, "probe is required for this scan");
+        json_delete(root);
+        return false;
     }
     JsonNode *targets = json_find_member(root, "targets");
     JsonNode *inc = json_find_member(root, "include_file");

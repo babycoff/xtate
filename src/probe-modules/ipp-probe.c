@@ -150,6 +150,7 @@ Probe IppProbe = {
 Probe IppStateProbe = {
     .name       = "ipp-state",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .hello_wait = 0,
     .short_desc = "IPP over HTTP, composable with tls-state.",
     .desc = "Stateful IPP Get-Printer-Attributes probe. Run over tcp-state or "

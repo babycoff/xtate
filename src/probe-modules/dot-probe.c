@@ -209,6 +209,7 @@ static unsigned dot_parse(DataPass *pass, ProbeState *state, OutConf *out,
 Probe DotProbe = {
     .name       = "dot",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .hello_wait = 0,
     .short_desc = "DNS over TLS (DoT) inside tls-state.",
     .desc = "Stateful DNS-over-TLS client for `-scan tcp-state -probe tls-state "

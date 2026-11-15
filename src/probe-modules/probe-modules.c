@@ -1,4 +1,5 @@
 #include "probe-modules.h"
+#include "../scan-modules/scan-modules.h"
 #include "../util-misc/i18n.h"
 
 #include <string.h>
@@ -203,6 +204,86 @@ const char *get_probe_type_name(const ProbeType type) {
     }
 }
 
+const char *get_probe_transport_name(unsigned transports, char *buf,
+                                     size_t buf_len) {
+    if (transports == ProbeTransport_TCP)
+        return "TCP";
+    if (transports == ProbeTransport_QUIC)
+        return "QUIC";
+    if (transports == (ProbeTransport_TCP | ProbeTransport_QUIC))
+        return "TCP/QUIC";
+    if (buf && buf_len)
+        snprintf(buf, buf_len, "unknown transport (0x%x)", transports);
+    return buf ? buf : "";
+}
+
+bool probe_compatible_with_scanner(const struct ScanModule *scan,
+                                   const Probe *probe, char *err,
+                                   size_t errcap) {
+    if (!scan)
+        return true;
+
+    if (scan->required_probe_type == ProbeType_NULL) {
+        if (probe) {
+            snprintf(err, errcap,
+                     "scan module %s does not accept a probe; clear the probe "
+                     "with `unset-probe`.",
+                     scan->name);
+            return false;
+        }
+        return true;
+    }
+
+    if (!probe) {
+        snprintf(err, errcap, "scan module %s requires a %s probe.", scan->name,
+                 get_probe_type_name(scan->required_probe_type));
+        return false;
+    }
+    if (probe->type != scan->required_probe_type) {
+        snprintf(err, errcap,
+                 "probe %s is %s, but scan module %s requires a %s probe.",
+                 probe->name, get_probe_type_name(probe->type), scan->name,
+                 get_probe_type_name(scan->required_probe_type));
+        return false;
+    }
+
+    if (scan->required_probe_type == ProbeType_STATE) {
+        char need_buf[32];
+        char have_buf[32];
+        const char *need = get_probe_transport_name(
+            scan->required_state_transports, need_buf, sizeof(need_buf));
+        const char *have = get_probe_transport_name(
+            probe->state_transports, have_buf, sizeof(have_buf));
+
+        if (!scan->required_state_transports) {
+            snprintf(err, errcap,
+                     "scan module %s does not declare a state transport.",
+                     scan->name);
+            return false;
+        }
+        if (!probe->state_transports) {
+            snprintf(err, errcap,
+                     "probe %s does not declare a state transport.", probe->name);
+            return false;
+        }
+        if (!(probe->state_transports & scan->required_state_transports)) {
+            snprintf(err, errcap,
+                     "probe %s is a stateful %s probe; scan module %s requires "
+                     "stateful %s.",
+                     probe->name, have, scan->name, need);
+            return false;
+        }
+        if ((scan->required_probe_caps & ~probe->capabilities) != 0) {
+            snprintf(err, errcap,
+                     "probe %s lacks a callback required by scan module %s.",
+                     probe->name, scan->name);
+            return false;
+        }
+    }
+
+    return true;
+}
+
 int probe_type_to_string(unsigned type, char *string, size_t str_len) {
     int ret = 0;
 
@@ -264,6 +345,12 @@ void help_probe_module(Probe *module) {
     printf("  %s%s\n", i18n_tr("ProbeModule Name: "), module->name);
     printf("  %s%s\n", i18n_tr("ProbeModule Type: "),
            get_probe_type_name(module->type));
+    if (module->type == ProbeType_STATE) {
+        char tbuf[32];
+        printf("  %s%s\n", i18n_tr("State Transport: "),
+               get_probe_transport_name(module->state_transports, tbuf,
+                                        sizeof(tbuf)));
+    }
     printf("  %s%u\n", i18n_tr("Slot count: "),
            probe_slot_count(module));
     printf("  %s%s\n", i18n_tr("Slot trigger: "),

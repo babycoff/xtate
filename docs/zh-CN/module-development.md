@@ -118,6 +118,44 @@ bash tests/module-examples/test.sh
 所有回调都可能并发执行，必须自身线程安全。无状态探测的 target 不可修改；
 只读并复制需要的数据。
 
+### state 探测：传输与能力元数据
+
+`ProbeType_STATE` 表示有状态回调 ABI，不表示传输类型。每个 state 探测还必须
+声明自己能在哪种传输上运行：
+
+```c
+Probe ExampleStateProbe = {
+    .name = "example-state",
+    .type = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,   /* 或 QUIC，或 TCP|QUIC */
+    .capabilities = 0,                        /* 可选能力位 */
+    ...
+};
+```
+
+当前传输有 `ProbeTransport_TCP` 和 `ProbeTransport_QUIC`。
+`ProbeCapability_StreamData` 表示探测实现了 QUIC 流数据回调；`http3-state`
+这类仅支持 QUIC 的应用探测同时声明
+`.state_transports = ProbeTransport_QUIC` 和
+`.capabilities = ProbeCapability_StreamData`。
+
+对应的扫描引擎声明需求：
+
+```c
+Scanner ExampleStateScan = {
+    .required_probe_type = ProbeType_STATE,
+    .required_state_transports = ProbeTransport_TCP,
+    .required_probe_caps = 0,
+    ...
+};
+```
+
+`tcp-state` 要求 TCP；`quic-state` 要求 QUIC 加 `stream-data`。如果探测确实
+同时支持两种传输，可以声明 `ProbeTransport_TCP | ProbeTransport_QUIC`，因此
+兼容性判断是能力交集，而不是 probe type 完全相等。CLI、interactive、MCP 和
+GUI 都调用 `probe_compatible_with_scanner()`，不要在客户端重复实现这套规则。
+GUI 和 `/api/modules` 的标签与过滤也来自这些字段。
+
 ### 最小单 slot 探测
 
 完整版本见 [`examples/modules/tcp-probe.c`](../../examples/modules/tcp-probe.c)。

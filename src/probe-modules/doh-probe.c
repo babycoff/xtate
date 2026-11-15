@@ -251,6 +251,7 @@ static unsigned doh_parse(DataPass *pass, ProbeState *state, OutConf *out,
 Probe DohProbe = {
     .name = "doh",
     .type = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .hello_wait = 0,
     .short_desc = "DNS over HTTPS (DoH), HTTP/1.1 inside tls-state.",
     .desc = "Stateful DoH client for `-scan tcp-state -probe tls-state "

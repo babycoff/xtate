@@ -170,6 +170,7 @@ Probe MysqlProbe = {
 Probe MysqlStateProbe = {
     .name       = "mysql-state",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .hello_wait = 0,
     .short_desc = "Read the MySQL server greeting over tcp-state.",
     .params     = mysql_state_parameters,

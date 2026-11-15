@@ -612,6 +612,7 @@ static void tcpstate_status(char *status) {
 Scanner TcpStateScan = {
     .name                = "tcp-state",
     .required_probe_type = ProbeType_STATE,
+    .required_state_transports = ProbeTransport_TCP,
     .bpf_filter          = "tcp",
     .params              = tcpstate_parameters,
     .short_desc          = "Stateful TCP scan with specified ProbeModule.",

@@ -151,6 +151,10 @@ typedef struct ScanModule {
     const char     *name;
     /*set zero if not using probe*/
     const ProbeType required_probe_type;
+    /*for STATE probes: required ProbeTransport mask (zero otherwise)*/
+    const unsigned  required_state_transports;
+    /*for STATE probes: required optional callbacks, ProbeCapability mask*/
+    const unsigned  required_probe_caps;
     /*just for pcap to avoid copying uninteresting packets from the kernel to
      * user mode.*/
     const char     *bpf_filter;

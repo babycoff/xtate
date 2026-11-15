@@ -103,6 +103,12 @@ void help_scan_module(Scanner *module) {
     printf("  %s%s\n", i18n_tr("Name of ScanModule:  "), module->name);
     printf("  %s%s\n", i18n_tr("Probe Type Required: "),
            get_probe_type_name(module->required_probe_type));
+    if (module->required_probe_type == ProbeType_STATE) {
+        char tbuf[32];
+        printf("  %s%s\n", i18n_tr("Probe Transport Required: "),
+               get_probe_transport_name(module->required_state_transports,
+                                        tbuf, sizeof(tbuf)));
+    }
     printf("  %s", i18n_tr("Default BPF Filter:\n"));
     xprint(module->bpf_filter ? module->bpf_filter : "null", 6, 80);
     printf("\n");

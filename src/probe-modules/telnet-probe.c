@@ -71,6 +71,7 @@ static unsigned telnet_parse(DataPass *pass, ProbeState *state, OutConf *out,
 Probe TelnetProbe = {
     .name       = "telnet",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .hello_wait = 0,
     .short_desc = "Read the initial Telnet banner and IAC negotiation.",
     .desc = "Wait for the server's initial Telnet data and report the banner "

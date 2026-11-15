@@ -766,6 +766,9 @@ Object.assign(ZH, {
   "Probe type": "探针类型",
   "TCP · stateful": "TCP · 有状态",
   "UDP · stateful": "UDP · 有状态",
+  "QUIC · stateful": "QUIC · 有状态",
+  "TCP/QUIC · stateful": "TCP/QUIC · 有状态",
+  "Stateful": "有状态",
   "Unknown": "未知",
   "Subprobe": "子探针",
   "next-layer probe inside the selected probe": "所选探针内部运行的下一层探针",
@@ -1256,10 +1259,25 @@ const KIND_LABEL = {scan: "scan module", probe: "probe module", output: "output 
 
 function moduleKindLabel(kind) { return t(KIND_LABEL[kind] || (kind + " module")); }
 
-function probeTypeLabel(probeType) {
-  if (probeType === "tcp") return "TCP";
-  if (probeType === "udp") return "UDP";
-  if (probeType === "state") return t("TCP · stateful");
+function transportLabel(transports) {
+  const list = transports || [];
+  const tcp = list.includes("tcp");
+  const quic = list.includes("quic");
+  if (tcp && quic) return "TCP/QUIC";
+  if (quic) return "QUIC";
+  if (tcp) return "TCP";
+  return "";
+}
+
+function probeTypeLabel(m) {
+  if (!m) return "";
+  if (m.probe_type === "tcp") return "TCP";
+  if (m.probe_type === "udp") return "UDP";
+  if (m.probe_type === "state") {
+    const transports = m.kind === "scan" ? m.required_state_transports : m.state_transports;
+    const transport = transportLabel(transports);
+    return transport ? t(transport + " · stateful") : t("Stateful");
+  }
   return "";
 }
 
@@ -1268,7 +1286,7 @@ function moduleCard(m) {
   const expanded = state.expandedModules && state.expandedModules.has(m.name);
   const search = (m.name + " " + (m.short_description || "") + " " + (m.description || "") + " " +
     params.map((p) => p.name + " " + (p.description || "") + " " + (p.aliases || []).join(" ")).join(" ")).toLowerCase();
-  const probeLabel = probeTypeLabel(m.probe_type);
+  const probeLabel = probeTypeLabel(m);
   const probeBadge = probeLabel ? '<span class="probe-type">' + esc(probeLabel) + "</span>" : "";
   const meta = probeLabel ? '<div class="module-meta">' + t("Probe type") + ": <b>" + esc(probeLabel) + "</b></div>" : "";
   const rows = params.map((p) => '<tr><td class="name">' + esc(p.name) + '</td><td class="mono">' + esc(p.type || "arg") +
@@ -1339,7 +1357,12 @@ function scanInfo(name) {
   const mod = selectedModule("scan", name);
   const raw = mod && mod.probe_type;
   const probe = raw && raw !== "none" ? raw : null;
-  return {ports: !portless.has(name), probe};
+  return {
+    ports: !portless.has(name),
+    probe,
+    transports: (mod && mod.required_state_transports) || [],
+    capabilities: (mod && mod.required_capabilities) || [],
+  };
 }
 function selectedModule(kind, name) {
   return (state.modules || []).find((m) => m.kind === kind && m.name === name) || null;
@@ -1364,25 +1387,27 @@ function collectModuleArgs(kind) {
 function probeHasSubprobe(mod) {
   return !!(mod && (mod.parameters || []).some((p) => p.name === "subprobe"));
 }
+function probeMatchesScan(probe, info) {
+  if (!info || probe.probe_type !== info.probe) return false;
+  if (info.probe === "state") {
+    const transports = probe.state_transports || [];
+    if (!(info.transports || []).some((x) => transports.includes(x))) return false;
+    const caps = probe.capabilities || [];
+    if (!(info.capabilities || []).every((x) => caps.includes(x))) return false;
+  }
+  return true;
+}
 function probeCandidatesForScan(scanName) {
   const info = scanInfo(scanName);
   if (!info.probe) return [];
-  let probes = (state.probes || []).filter((m) => m.probe_type === info.probe);
-  // tls-state expects a TCP/TLS byte stream; it cannot run inside QUIC.
-  if (scanName === "quic-state")
-    probes = probes.filter((m) => m.name !== "tls-state");
-  // http3-state is a QUIC application probe and only runs on quic-state.
-  if (scanName === "tcp-state")
-    probes = probes.filter((m) => m.name !== "http3-state");
-  return probes;
+  return (state.probes || []).filter((m) => probeMatchesScan(m, info));
 }
 function subprobeCandidates() {
   const current = $("probe").value;
-  // A TLS/STARTTLS subprobe runs on an already-established stateful stream.
-  // http3-state is QUIC-only, so it cannot be nested inside TLS.
+  // A TLS/STARTTLS subprobe runs on an already-established TCP byte stream.
   return (state.probes || []).filter((m) =>
-    m.probe_type === "state" && m.name !== current && m.name !== "tls-state" &&
-    m.name !== "http3-state" && m.name !== "null");
+    m.probe_type === "state" && (m.state_transports || []).includes("tcp") &&
+    m.name !== current && m.name !== "tls-state" && m.name !== "null");
 }
 function updateSubprobeVisibility() {
   const field = $("subprobe-field");
@@ -1531,7 +1556,9 @@ function updateProbeVisibility() {
   const current = $("probe").value;
   $("probe").innerHTML = '<option value="">— choose probe —</option>' + probes.map((m) =>
     '<option value="' + esc(m.name) + '">' + esc(m.name + (m.short_description ? " — " + m.short_description : "")) + "</option>").join("");
-  const preferred = {tcp: "http", udp: "dns", state: "http-state"}[info.probe];
+  const preferred = info.probe === "state"
+    ? ((info.transports || []).includes("quic") ? "http3-state" : "http-state")
+    : {tcp: "http", udp: "dns"}[info.probe];
   if (probes.some((m) => m.name === current)) $("probe").value = current;
   else if (probes.some((m) => m.name === preferred)) $("probe").value = preferred;
   renderModuleArgs();

@@ -13,4 +13,21 @@ typedef enum ProbeType {
     ProbeType_STATE = 3,
 } ProbeType;
 
+/*
+ * ProbeType_STATE describes the stateful-probe callback ABI.  It is not a
+ * transport: the same ABI is used by tcp-state and quic-state.  A state probe
+ * therefore declares the transports it can run over separately.
+ */
+typedef enum ProbeTransport {
+    ProbeTransport_NONE = 0,
+    ProbeTransport_TCP  = 1u << 0,
+    ProbeTransport_QUIC = 1u << 1,
+} ProbeTransport;
+
+/* Optional callbacks that a transport needs from an application probe. */
+typedef enum ProbeCapability {
+    ProbeCapability_NONE       = 0,
+    ProbeCapability_StreamData = 1u << 0,
+} ProbeCapability;
+
 #endif

@@ -174,6 +174,7 @@ Probe PostgresProbe = {
 Probe PostgresStateProbe = {
     .name       = "postgres-state",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .hello_wait = 0,
     .short_desc = "PostgreSQL SSLRequest and auth-boundary probe.",
     .params     = postgres_state_parameters,

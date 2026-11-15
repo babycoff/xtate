@@ -97,18 +97,22 @@ accept comma lists and numeric ranges (`20-25`). The console sends plain port
 numbers, so CLI protocol prefixes such as `U:`/`S:` are not available here; use
 the CLI or a control-plane request for UDP/SCTP-specific port sets. The probe
 selector appears only for scan engines that take a probe, and it is filtered by
-the engine's probe type:
+the engine's probe type, state transport and capabilities:
 
 | Scan engine | Probe type | Example probe |
 |:---|:---|:---|
 | `zbanner` | TCP | `http`, `echo`, `ssh` |
-| `tcp-state` | state | `tls-state`, `http-state`, `smtp-state` |
+| `tcp-state` | state (TCP) | `tls-state`, `http-state`, `smtp-state` |
 | `udp` | UDP | `dns`, `snmp`, `ntp` |
-| `quic-state` (optional, Linux) | state | `http3-state` (optional) |
+| `quic-state` (optional, Linux) | state (QUIC + `stream-data`) | `http3-state` (optional) |
 | `tcp-syn`, `sctp-init`, `yarrp-udp` | none | — |
 
-`quic-state` never offers `tls-state` (TCP/TLS only); `tcp-state` never offers
-`http3-state` (QUIC only). The backend rejects both combinations.
+State cards show `TCP · stateful`, `QUIC · stateful` or `TCP/QUIC · stateful`
+from module metadata. The GUI and backend use the same transport/capability
+check, so an incompatible choice cannot be started by editing the page.
+`quic-state` never offers `tls-state` or other TCP state probes; `tcp-state`
+never offers `http3-state` or other QUIC-only probes. The backend rejects all
+such combinations.
 
 Rate is in packets per second (1–10000 in the browser GUI, default 100). The
 10000 cap is a GUI input safety limit, not an Xtate limit: the CLI, control
@@ -128,9 +132,10 @@ the argument error.
 
 **Subprobe.** A probe such as `tls-state` can run one further probe after the
 handshake. When that probe is selected, a **Subprobe** field appears below the
-Method row. Only state probes are listed; TCP/UDP probes and `tls-state`
-itself are rejected. Choose the inner probe (for example `http-state`, `h2` or
-`close-state`); its own flags and arguments are shown below the selector. The
+Method row. Only TCP state probes are listed; TCP/UDP probes, QUIC probes and
+`tls-state` itself are rejected. Choose the inner probe (for example
+`http-state`, `h2` or `close-state`); its own flags and arguments are shown
+below the selector. The
 selector starts with no subprobe selected, so a plain TLS scan is unchanged;
 choose one only when the scan should continue inside the TLS session. The
 GUI sends the name as `probe_args.subprobe` and the nested arguments as a

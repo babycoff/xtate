@@ -17,7 +17,8 @@
 #include <string.h>
 
 #include "../crypto/crypto-json.h"
-#include "../util-out/module-json.h"
+#include "../scan-modules/scan-modules.h"
+#include "../probe-modules/probe-modules.h"
 #include "../rawsock/rawsock.h"
 #include "../rawsock/rawsock-route.h"
 #include "../stub/stub-pcap-dlt.h"
@@ -56,73 +57,6 @@ static unsigned proto_offset(int proto) {
     case PREFLIGHT_PROTO_SCTP: return 131072u;
     default: return 0u;
     }
-}
-
-static const char *scan_probe_type(const char *name) {
-    if (!name) return NULL;
-    if (strcmp(name, "zbanner") == 0) return "tcp";
-    if (strcmp(name, "udp") == 0) return "udp";
-    if (strcmp(name, "tcp-state") == 0 || strcmp(name, "quic-state") == 0)
-        return "state";
-    return NULL;
-}
-
-static int catalog_probe_type(const char *name, char *out, size_t cap) {
-    char *catalog = module_json_string();
-    JsonNode *root;
-    JsonNode *mods;
-    JsonNode *m;
-    int found = 0;
-    if (!catalog) return -1;
-    root = json_decode(catalog);
-    free(catalog);
-    if (!root) return -1;
-    mods = json_find_member(root, "modules");
-    if (mods && mods->tag == JSON_ARRAY) {
-        for (m = mods->children.head; m; m = m->next) {
-            JsonNode *k = json_find_member(m, "kind");
-            JsonNode *n = json_find_member(m, "name");
-            if (k && n && k->tag == JSON_STRING && n->tag == JSON_STRING &&
-                strcmp(k->string_, "probe") == 0 &&
-                strcmp(n->string_, name) == 0) {
-                JsonNode *t = json_find_member(m, "probe_type");
-                if (t && t->tag == JSON_STRING && t->string_) {
-                    snprintf(out, cap, "%s", t->string_);
-                    found = 1;
-                }
-                break;
-            }
-        }
-    }
-    json_delete(root);
-    return found;
-}
-
-static int catalog_has(const char *kind, const char *name) {
-    char *catalog = module_json_string();
-    JsonNode *root;
-    JsonNode *mods;
-    JsonNode *m;
-    int found = 0;
-    if (!catalog) return -1;
-    root = json_decode(catalog);
-    free(catalog);
-    if (!root) return -1;
-    mods = json_find_member(root, "modules");
-    if (mods && mods->tag == JSON_ARRAY) {
-        for (m = mods->children.head; m; m = m->next) {
-            JsonNode *k = json_find_member(m, "kind");
-            JsonNode *n = json_find_member(m, "name");
-            if (k && n && k->tag == JSON_STRING && n->tag == JSON_STRING &&
-                strcmp(k->string_, kind) == 0 &&
-                strcmp(n->string_, name) == 0) {
-                found = 1;
-                break;
-            }
-        }
-    }
-    json_delete(root);
-    return found;
 }
 
 /* JSON tool clients send arrays; the GUI sends comma-separated strings.
@@ -272,10 +206,11 @@ char *gui_preflight_json(const char *body) {
     const char *iface = NULL;
     const char *scan_name = NULL;
     const char *probe_name = NULL;
-    const char *probe_required = NULL;
+    Scanner *scan_mod = NULL;
+    Probe *probe_mod = NULL;
+    int probe_required = 0;
     int scan_proto = PREFLIGHT_PROTO_NONE;
     int port_scoped = 0;
-    char probe_type[32] = {0};
     char *text;
 
     root = json_mkobject();
@@ -341,26 +276,27 @@ char *gui_preflight_json(const char *body) {
     if (!scan_name) {
         add_error(root, "scan is required");
     } else {
-        int has_scan = catalog_has("scan", scan_name);
-        if (has_scan < 0)
-            add_error(root, "module catalog is unavailable");
-        else if (!has_scan)
+        scan_mod = get_scan_module_by_name(scan_name);
+        if (!scan_mod) {
             add_error(root, "unknown scan module");
-        else {
-            scan_proto = scan_expected_proto(scan_name);
-            probe_required = scan_probe_type(scan_name);
-            port_scoped = scan_proto != PREFLIGHT_PROTO_NONE;
+        } else {
+            scan_proto     = scan_expected_proto(scan_name);
+            probe_required = scan_mod->required_probe_type != ProbeType_NULL;
+            port_scoped    = scan_proto != PREFLIGHT_PROTO_NONE;
         }
     }
-    if (probe_required && !probe_name)
+    if (scan_mod && probe_required && !probe_name)
         add_error(root, "probe is required for this scan");
-    if (!probe_required && probe_name)
-        add_error(root, "this scan does not accept a probe");
     if (probe_name) {
-        if (catalog_probe_type(probe_name, probe_type, sizeof(probe_type)) != 1)
+        probe_mod = get_probe_module_by_name(probe_name);
+        if (!probe_mod) {
             add_error(root, "unknown probe module");
-        else if (probe_required && strcmp(probe_type, probe_required) != 0)
-            add_error(root, "probe type does not match the scan engine");
+        } else if (scan_mod) {
+            char err[256];
+            if (!probe_compatible_with_scanner(scan_mod, probe_mod, err,
+                                               sizeof(err)))
+                add_error(root, err);
+        }
     }
     if (targets_node && targets_node->tag == JSON_STRING) {
         targets_text = targets_node->string_;

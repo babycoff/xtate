@@ -91,6 +91,7 @@ Probe AmqpProbe = {
 Probe AmqpStateProbe = {
     .name       = "amqp-state",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .hello_wait = 0,
     .short_desc = "AMQP Connection.Start over tcp-state/TLS.",
     .desc = "Stateful AMQP 0-9-1 header probe for tcp-state or tls-state. No "

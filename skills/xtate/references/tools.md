@@ -72,7 +72,7 @@ Poll at 2-5 second intervals.
 | `scan_args` | object | module-specific scan options |
 | `probe_args` | object | module-specific probe options |
 | `global_args` | object | the 23 GUI-safe global options only; use `validate_config`/`preflight` to reject the rest |
-| `rate` | integer | packets per second, 0-10000; use a bounded value |
+| `rate` | number | packets per second; positive finite, default 100; fractions and multi-million values accepted; GUI-only cap 10000 |
 | `timeout_sec` | integer | 1-86400; total wall-clock limit |
 | `result_path` | string | optional writable base path; omit to let the server create a timestamped run folder under its managed state directory |
 | `chunk_size` | integer | >= 1; split completed results into chunks |

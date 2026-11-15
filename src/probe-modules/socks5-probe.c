@@ -59,6 +59,7 @@ static unsigned socks5_parse(DataPass *pass, ProbeState *state, OutConf *out,
 Probe Socks5Probe = {
     .name       = "socks5",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .hello_wait = 0,
     .short_desc = "SOCKS5 greeting and method selection.",
     .desc = "Send a SOCKS5 greeting offering no-authentication, parse the "

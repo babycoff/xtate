@@ -249,6 +249,53 @@ def check_default_rate():
     )
 
 
+def check_transport_metadata(binary):
+    data = json.loads(run(binary, "--list-modules-json"))
+    mods = data.get("modules") or []
+    by_kind = {}
+    for m in mods:
+        by_kind.setdefault(m.get("kind"), []).append(m)
+    for m in by_kind.get("probe", []):
+        if m.get("probe_type") != "state":
+            continue
+        transports = m.get("state_transports") or []
+        assert transports, (
+            "state probe %s declares no state_transports; add ProbeTransport_TCP "
+            "or ProbeTransport_QUIC" % m.get("name")
+        )
+        assert set(transports) <= {"tcp", "quic"}, (
+            "state probe %s has unknown state_transports %r"
+            % (m.get("name"), transports)
+        )
+    for m in by_kind.get("scan", []):
+        if m.get("probe_type") != "state":
+            continue
+        transports = m.get("required_state_transports") or []
+        assert transports, (
+            "stateful scan %s declares no required_state_transports" % m.get("name")
+        )
+    expected = {
+        "tcp-state": ({"tcp"}, set()),
+        "quic-state": ({"quic"}, {"stream-data"}),
+    }
+    for name, (transports, caps) in expected.items():
+        m = next((x for x in by_kind.get("scan", []) if x.get("name") == name), None)
+        if m is None:
+            continue
+        assert set(m.get("required_state_transports") or []) == transports, (
+            "%s required_state_transports mismatch" % name
+        )
+        assert set(m.get("required_capabilities") or []) == caps, (
+            "%s required_capabilities mismatch" % name
+        )
+    h3 = next((x for x in by_kind.get("probe", []) if x.get("name") == "http3-state"), None)
+    if h3:
+        assert h3.get("state_transports") == ["quic"], "http3-state must be QUIC-only"
+        assert "stream-data" in (h3.get("capabilities") or []), (
+            "http3-state must declare stream-data"
+        )
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument(
@@ -273,6 +320,7 @@ def main():
     check_help_count(binary)
     check_mcp_tools()
     check_gui_routes()
+    check_transport_metadata(binary)
 
     print(
         "surface consistency: PASS (version %s, modules %d/%d/%d/%d)"

@@ -119,6 +119,7 @@ Probe PptpProbe = {
 Probe PptpStateProbe = {
     .name       = "pptp-state",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .hello_wait = 0,
     .short_desc = "PPTP control connection over tcp-state.",
     .desc = "Stateful PPTP Start-Control-Connection-Request probe. No GRE or "

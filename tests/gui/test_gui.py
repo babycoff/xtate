@@ -132,6 +132,10 @@ def main():
             return 1
         if ('id="subprobe"' not in text or "collectProbeArgs" not in text
                 or "probeHasSubprobe" not in text
+                or "probeMatchesScan" not in text
+                or "transportLabel" not in text
+                or '"TCP · 有状态"' not in text
+                or '"TCP/QUIC · 有状态"' not in text
                 or 'option value=""' not in text
                 or 'm.name !== "null"' not in text):
             print("GUI nested probe editor is missing", file=sys.stderr)
@@ -182,6 +186,19 @@ def main():
                                     for m in catalog.get("modules", [])):
             print("GUI modules failed:", status, body[:300], file=sys.stderr)
             return 1
+        modules = catalog.get("modules", [])
+        quic_mod = next((m for m in modules if m.get("name") == "quic-state"), None)
+        http3_mod = next((m for m in modules if m.get("name") == "http3-state"), None)
+        if quic_mod is not None and http3_mod is not None:
+            if quic_mod.get("required_state_transports") != ["quic"]:
+                print("GUI quic-state transport metadata missing:", quic_mod,
+                      file=sys.stderr)
+                return 1
+            if (http3_mod.get("state_transports") != ["quic"]
+                    or "stream-data" not in http3_mod.get("capabilities", [])):
+                print("GUI http3-state capability metadata missing:", http3_mod,
+                      file=sys.stderr)
+                return 1
         status, body = http_json(port, "/api/modules?lang=zh", token)
         catalog_zh = json.loads(body.decode()) if status == 200 else {}
         tcp_syn_zh = next((m for m in catalog_zh.get("modules", [])

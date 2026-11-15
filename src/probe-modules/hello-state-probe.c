@@ -518,6 +518,7 @@ static void hellostate_close() {
 Probe HelloStateProbe = {
     .name       = "hello-state",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .hello_wait = 0,
     .params     = hellostate_parameters,
     .short_desc =

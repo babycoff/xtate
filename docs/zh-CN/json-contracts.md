@@ -22,7 +22,10 @@ xtate --list-modules-json
 ```
 
 输出所有 scan/probe/output/generate 模块的 `name`、`kind`、`probe_type`、
-描述和参数。覆盖检查：
+描述和参数。有状态扫描模块还会输出 `required_state_transports` 和
+`required_capabilities`；有状态探针输出 `state_transports` 和 `capabilities`。
+取值为 `"tcp"`、`"quic"`、`"stream-data"`；CLI、interactive、MCP 和 GUI
+的兼容性检查都使用这些元数据，因此新增 state 探针必须至少声明一种传输。覆盖检查：
 
 ```bash
 XTATE_BIN=build/bin/xtate python3 tests/schema/validate_modules.py

@@ -164,6 +164,7 @@ Probe SmtpProbe = {
 Probe SmtpStateProbe = {
     .name       = "smtp-state",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .hello_wait = 0,
     .short_desc = "SMTP greeting and EHLO capability probe.",
     .desc = "Read the 220 greeting, send `EHLO xtate`, parse multiline 250 "

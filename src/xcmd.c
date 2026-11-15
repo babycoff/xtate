@@ -466,49 +466,7 @@ static bool probe_has_param(const Probe *probe, const char *name) {
 
 static bool probe_compatible(const Scanner *scan, const Probe *probe,
                              char *err, size_t errcap) {
-    if (!scan)
-        return true;
-
-    if (scan->required_probe_type == ProbeType_NULL) {
-        if (probe) {
-            snprintf(err, errcap,
-                     "scan module %s does not accept a probe; clear the probe "
-                     "with `unset-probe`.",
-                     scan->name);
-            return false;
-        }
-        return true;
-    }
-
-    if (!probe) {
-        snprintf(err, errcap, "scan module %s requires a %s probe.", scan->name,
-                 get_probe_type_name(scan->required_probe_type));
-        return false;
-    }
-    if (probe->type != scan->required_probe_type) {
-        snprintf(err, errcap,
-                 "probe %s is %s, but scan module %s requires a %s probe.",
-                 probe->name, get_probe_type_name(probe->type), scan->name,
-                 get_probe_type_name(scan->required_probe_type));
-        return false;
-    }
-
-    if (strcmp(scan->name, "quic-state") == 0 &&
-        strcmp(probe->name, "tls-state") == 0) {
-        snprintf(err, errcap,
-                 "quic-state cannot use tls-state: tls-state expects a "
-                 "TCP/TLS stream. Use http3-state or close-state.");
-        return false;
-    }
-    if (strcmp(scan->name, "tcp-state") == 0 &&
-        strcmp(probe->name, "http3-state") == 0) {
-        snprintf(err, errcap,
-                 "tcp-state cannot use http3-state: http3-state requires "
-                 "quic-state.");
-        return false;
-    }
-
-    return true;
+    return probe_compatible_with_scanner(scan, probe, err, errcap);
 }
 
 static void append_probe_args(XConf *xconf, const char *args) {
@@ -639,14 +597,19 @@ static void HDL_set_subprobe(void *conf, char *subcmd) {
             sub->name, sub->name, get_probe_type_name(sub->type));
         return;
     }
+    if (!(sub->state_transports & ProbeTransport_TCP)) {
+        char transport[32];
+        LOG(LEVEL_ERROR,
+            "invalid subprobe %s: a TLS subprobe needs a TCP state probe, but "
+            "%s is stateful %s.\n",
+            sub->name, sub->name,
+            get_probe_transport_name(sub->state_transports, transport,
+                                     sizeof(transport)));
+        return;
+    }
     if (strcmp(sub->name, "tls-state") == 0) {
         LOG(LEVEL_ERROR, "invalid subprobe tls-state: a probe cannot run itself "
                          "as a subprobe.\n");
-        return;
-    }
-    if (strcmp(sub->name, "http3-state") == 0) {
-        LOG(LEVEL_ERROR, "invalid subprobe http3-state: it requires quic-state, "
-                         "not a TLS stream.\n");
         return;
     }
 

@@ -97,12 +97,16 @@ The GUI is scan-first: the default page is **New scan**, not a job table.
 - **New scan** accepts IPv4/IPv6 targets in comma, range or CIDR form, picks one
   of the available scan engines (11 on a Windows or reduced-dependency build, 12
   with `quic-state` on a full Linux build), shows probe choices only when the
-  engine needs one, and hides ports for ICMP/ARP/NDP scans. Probe lists follow
-  the engine's `probe_type`; `tls-state` is not offered for `quic-state`, and
-  `http3-state` is not offered for `tcp-state`. Rate, timeout and an
-  optional interface are set here. The GUI rate field is capped at 10000 for
-  interface stability only; it is not an Xtate limit. The CLI, control plane
-  and MCP accept fractional rates such as `0.5` and multi-million rates.
+  engine needs one, and hides ports for ICMP/ARP/NDP scans. Probe lists are
+  derived from `probe_type`, the engine's required state transports and the
+  probe's declared capabilities: `quic-state` offers only QUIC/stream-data
+  probes such as `http3-state`, while `tcp-state` offers TCP state probes and
+  never `http3-state`. The GUI does not hard-code individual probe names. The
+  same metadata drives the `TCP · stateful`, `QUIC · stateful` and
+  `TCP/QUIC · stateful` badges. Rate, timeout and an optional interface are set
+  here. The GUI rate field is capped at 10000 for interface stability only; it
+  is not an Xtate limit. The CLI, control plane and MCP accept fractional rates
+  such as `0.5` and multi-million rates.
 - The server-side **preflight** (`POST /api/preflight`) parses the same request
   as `job.start`, verifies target syntax and counts, resolves route, source,
   gateway, link type and raw-IP capability, and rejects unknown scans/probes,

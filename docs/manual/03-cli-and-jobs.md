@@ -68,15 +68,15 @@ TTL for those scans.
 |:---|:---|:---|
 | `tcp-syn` | none | Fast stateless port discovery |
 | `zbanner` | TCP probe (`http`, `echo`, `ssh`, `ftp`, …) | Banner and protocol greeting |
-| `tcp-state` | state probe (`tls-state`, `http-state`, `smtp-state`, …) | Complete handshake, then probe |
+| `tcp-state` | TCP state probe (`tls-state`, `http-state`, `smtp-state`, …) | Complete TCP handshake, then probe |
 | `udp` | UDP probe (`dns`, `snmp`, `ntp`, `echo`, …) | Stateless UDP request/reply |
+| `quic-state` | QUIC state probe with `stream-data` (`http3-state`) | Linux + ngtcp2 only; HTTP/3 over QUIC |
 | `icmp-echo` | none | Host discovery, no ports |
 | `arp-req`, `ndp-ns` | none | Local LAN discovery (`-lan` for ARP) |
 | `yarrp-echo`, `yarrp-udp` | none / UDP | TTL-limited measurement |
-| `quic-state` | `http3-state` | Optional, Linux with ngtcp2 only |
 
-Picking a probe whose type does not match the engine is a validation error; the
-GUI preflight and the job worker both reject it.
+Picking a probe whose type or state transport does not match the engine is a
+validation error; the GUI preflight and the job worker both reject it.
 
 ## Example scans
 

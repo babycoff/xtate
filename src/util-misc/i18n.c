@@ -118,6 +118,8 @@ static const I18nEntry i18n_catalog[] = {
     /* Module help labels */
     {"Name of ScanModule:  ", "扫描模块名称：  "},
     {"Probe Type Required: ", "所需探测类型："},
+    {"Probe Transport Required: ", "所需有状态传输："},
+    {"State Transport: ", "有状态传输："},
     {"Default BPF Filter:\n", "默认 BPF 过滤器：\n"},
     {"Description:\n", "描述：\n"},
     {"ProbeModule Name: ", "探测模块名称："},

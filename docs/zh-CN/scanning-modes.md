@@ -18,8 +18,9 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 100
 |:---|:---|:---|:---|:---:|
 | `tcp-syn` | none | - | 开放/关闭判定，无载荷 | 否 |
 | `zbanner` | `tcp` | `http`、`hello`、`tls-hello` | 真实 TCP 握手 + 首个 banner | **是** |
-| `tcp-state` | `state` | `tls-state`、`http-state`、`hello-state` | 完整 TCP 会话、TLS、HTTP | **是** |
+| `tcp-state` | `state`（TCP） | `tls-state`、`http-state`、`hello-state` | 完整 TCP 会话、TLS、HTTP | **是** |
 | `udp` | `udp` | `echo`、`dns`、`snmp`、`hello-udp` | UDP 响应或 ICMP 端口不可达 | **是** |
+| `quic-state` | `state`（QUIC + `stream-data`） | `http3-state` | QUIC/TLS 握手与证书证据；仅完整 Linux 构建（ngtcp2/GnuTLS） | **是** |
 | `icmp-echo` | none | - | 存活主机 | 否 |
 | `icmp-time` | none | - | 存活主机，仅 IPv4 | 否 |
 | `sctp-init` | none | - | SCTP 端口开放/关闭 | 否 |
@@ -28,7 +29,7 @@ sudo ./bin/xtate -ip 192.168.1.0/24 -p 80,443 -scan tcp-syn -rate 100
 | `yarrp-echo` | none | - | 无状态 ICMP 追踪路由跳点 | 否 |
 | `yarrp-udp` | none | - | 无状态 UDP 追踪路由跳点 | 否 |
 
-“内核 RST 规则”是指主机需要 `./firewall/add_rules.sh` 添加的 iptables/ip6tables 规则。这些规则会丢弃向外发送的 TCP RST 和 ICMP 端口不可达报文，使本机内核无法拆掉它不认识的连接。探测类型那一列同时也是约束：`none` 类模块完全不能传 `-probe`，`zbanner` 需要 `tcp` 类型探测，`udp` 需要 `udp` 类型，`tcp-state` 需要 `state` 类型——传错就是启动错误。
+“内核 RST 规则”是指主机需要 `./firewall/add_rules.sh` 添加的 iptables/ip6tables 规则。这些规则会丢弃向外发送的 TCP RST 和 ICMP 端口不可达报文，使本机内核无法拆掉它不认识的连接。探测类型那一列同时也是约束：`none` 类模块完全不能传 `-probe`，`zbanner` 需要 `tcp` 类型探测，`udp` 需要 `udp` 类型。`state` 是共享 ABI，不是传输：`tcp-state` 只接受声明 TCP 支持的 state 探测，`quic-state` 要求 QUIC 支持并具备 `stream-data` 能力；同时支持两者的探测可以都声明。`quic-state + http3-state` 是有效的 HTTP/3 组合，而 `quic-state + http-state`、`tcp-state + http3-state` 会在发送任何报文前被拒绝。
 
 ## 无状态与有状态
 

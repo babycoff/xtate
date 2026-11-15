@@ -37,6 +37,11 @@ run_session "compatible tls-state" \
 run_session "incompatible probe rejected" \
     'set-scan tcp-state\nset-probe http\nexit\n' \
     'requires a state probe'
+if "$BIN" --list-scan 2>/dev/null | grep -qw 'quic-state'; then
+    run_session "quic-state rejects tcp state probe" \
+        'set-scan quic-state\nset-probe http-state\nexit\n' \
+        'stateful'
+fi
 run_session "set-scan clears incompatible probe" \
     'set-scan tcp-state\nset-probe tls-state\nset-scan tcp-syn\nexit\n' \
     'was cleared'

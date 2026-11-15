@@ -23,9 +23,9 @@ parameters go through `-scan-arg` and `-probe-arg`, one quoted string each (`--h
 |:---|:---|:---|:---|:---:|
 | `tcp-syn` | none | - | open/closed, no payload | no |
 | `zbanner` | `tcp` | `http`, `hello`, `tls-hello` | real TCP handshake + first banner | **yes** |
-| `tcp-state` | `state` | `tls-state`, `http-state`, `hello-state` | full TCP conversation, TLS, HTTP | **yes** |
+| `tcp-state` | `state` (TCP) | `tls-state`, `http-state`, `hello-state` | full TCP conversation, TLS, HTTP | **yes** |
 | `udp` | `udp` | `echo`, `dns`, `snmp`, `hello-udp` | UDP response or ICMP port-unreachable | **yes** |
-| `quic-state` | `state` | `quic` (plus `http3-state` in HTTP/3 builds) | QUIC/TLS handshake and certificate evidence; full Linux build with ngtcp2/GnuTLS only | **yes** |
+| `quic-state` | `state` (QUIC + `stream-data`) | `http3-state` | QUIC/TLS handshake and certificate evidence; full Linux build with ngtcp2/GnuTLS only | **yes** |
 | `icmp-echo` | none | - | alive hosts | no |
 | `icmp-time` | none | - | alive hosts, IPv4 only | no |
 | `sctp-init` | none | - | open/closed SCTP ports | no |
@@ -38,7 +38,11 @@ parameters go through `-scan-arg` and `-probe-arg`, one quoted string each (`--h
 `./firewall/add_rules.sh`. They drop outgoing TCP RSTs and ICMP port-unreachable messages so
 the local kernel cannot tear down connections it does not know about. The probe column is
 also a constraint: a `none`-probe module takes no `-probe` at all, `zbanner` takes a `tcp`
-probe, `udp` a `udp` probe and `tcp-state` a `state` probe - anything else is a startup error.
+probe, `udp` a `udp` probe and `tcp-state` a `state` probe. `state` is a shared ABI, not a
+transport: `tcp-state` accepts only state probes declaring TCP support, while `quic-state`
+requires QUIC plus the `stream-data` capability. A probe may declare both transports when it
+genuinely works on both. `quic-state + http3-state` is the valid HTTP/3 pair; `quic-state +
+http-state` and `tcp-state + http3-state` are rejected before any packet is sent.
 
 ## Stateless versus stateful
 

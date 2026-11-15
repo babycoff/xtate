@@ -9,6 +9,13 @@ if [[ ! -x "$BIN" ]]; then
     exit 0
 fi
 
+# Offline scans still resolve an interface. Avoid depending on which default
+# interface the host prefers by pinning the loopback route when available.
+TEST_IFACE="$("$BIN" --explain-target=127.0.0.1 2>/dev/null |
+    sed -n 's/^[[:space:]]*Interface:[[:space:]]*//p' | head -n1)"
+IF_OPT=()
+[[ -n "$TEST_IFACE" ]] && IF_OPT=(-if "$TEST_IFACE")
+
 fail=0
 run_fail() {
     local name="$1"
@@ -21,7 +28,7 @@ run_fail() {
         echo "FAIL: $name (expected nonzero)" >&2
         printf '%s\n' "$out" >&2
         fail=$((fail + 1))
-    elif [[ "$out" != *"unknown"* && "$out" != *"missing"* && "$out" != *"invalid"* && "$out" != *"error"* && "$out" != *"non-digit"* && "$out" != *"failed"* ]]; then
+    elif [[ "$out" != *"unknown"* && "$out" != *"missing"* && "$out" != *"invalid"* && "$out" != *"error"* && "$out" != *"non-digit"* && "$out" != *"failed"* && "$out" != *"stateful"* ]]; then
         echo "FAIL: $name (no explicit error text)" >&2
         printf '%s\n' "$out" >&2
         fail=$((fail + 1))
@@ -71,19 +78,23 @@ run_fail "rate zero" --rate=0 --list-probe
 run_fail "rate trailing junk" --rate=4x --list-probe
 run_ok "nested probe argument token" --list-probe -probe-arg "-subprobe h2 -subprobe-arg --path=/h2"
 run_ok "nested probe argument list" --list-probe -probe-arg "-subprobe http-state -subprobe-arg '--max-body=4096 --user-agent=probe'"
-run_fail "nested probe rejects tcp subprobe" --offline -ip 127.0.0.1 -p 443 -scan tcp-state -probe tls-state -probe-arg "-subprobe http"
-run_fail "nested probe rejects udp subprobe" --offline -ip 127.0.0.1 -p 443 -scan tcp-state -probe tls-state -probe-arg "-subprobe dns"
-run_fail "nested probe rejects recursive tls-state" --offline -ip 127.0.0.1 -p 443 -scan tcp-state -probe tls-state -probe-arg "-subprobe tls-state"
+run_fail "nested probe rejects tcp subprobe" "${IF_OPT[@]}" --offline -ip 127.0.0.1 -p 443 -scan tcp-state -probe tls-state -probe-arg "-subprobe http"
+run_fail "nested probe rejects udp subprobe" "${IF_OPT[@]}" --offline -ip 127.0.0.1 -p 443 -scan tcp-state -probe tls-state -probe-arg "-subprobe dns"
+run_fail "nested probe rejects recursive tls-state" "${IF_OPT[@]}" --offline -ip 127.0.0.1 -p 443 -scan tcp-state -probe tls-state -probe-arg "-subprobe tls-state"
 run_ok "probe help" --help-probe ssh
 run_ok "scan help" --help-scan zbanner
 
 # QUIC/TCP probe compatibility is enforced by the backend, not only the GUI.
 if "$BIN" --list-scan 2>/dev/null | grep -q "quic-state"; then
-    run_fail "quic-state rejects tls-state" --offline -ip 127.0.0.1 -p U:443 -scan quic-state -probe tls-state --wait 1
+    run_fail "quic-state rejects tls-state" "${IF_OPT[@]}" --offline -ip 127.0.0.1 -p U:443 -scan quic-state -probe tls-state --wait 1
+    run_fail "quic-state rejects http-state" "${IF_OPT[@]}" --offline -ip 127.0.0.1 -p U:443 -scan quic-state -probe http-state --wait 1
+    if "$BIN" --list-probe 2>/dev/null | grep -q "http3-state"; then
+        run_ok "quic-state accepts http3-state" "${IF_OPT[@]}" --offline -ip 127.0.0.1 -p U:443 -scan quic-state -probe http3-state --wait 1
+    fi
 fi
 if "$BIN" --list-probe 2>/dev/null | grep -q "http3-state"; then
-    run_fail "tcp-state rejects http3-state" --offline -ip 127.0.0.1 -p 443 -scan tcp-state -probe http3-state --wait 1
-    run_fail "nested probe rejects http3-state" --offline -ip 127.0.0.1 -p 443 -scan tcp-state -probe tls-state -probe-arg "-subprobe http3-state" --wait 1
+    run_fail "tcp-state rejects http3-state" "${IF_OPT[@]}" --offline -ip 127.0.0.1 -p 443 -scan tcp-state -probe http3-state --wait 1
+    run_fail "nested probe rejects http3-state" "${IF_OPT[@]}" --offline -ip 127.0.0.1 -p 443 -scan tcp-state -probe tls-state -probe-arg "-subprobe http3-state" --wait 1
 fi
 
 # Language validation.

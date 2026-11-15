@@ -33,6 +33,17 @@ result paths.
 - `list_modules` to see scan, probe, output and generate modules.
 - `describe_probe` with the chosen scan or probe name; read its parameters
   before inventing `scan_args` / `probe_args`.
+- Match scan and probe metadata before starting. Stateful scans use
+  `ProbeType_STATE` plus a transport: `tcp-state` accepts TCP state probes
+  (`tls-state`, `http-state`, `close-state`, …); `quic-state` needs a QUIC
+  state probe with `stream-data`, currently `http3-state`. `list_modules` and
+  `describe_probe` expose `required_state_transports`, `state_transports` and
+  `capabilities`; `preflight`/`validate_config` reject mismatches.
+- For a TCP state probe with a nested subprobe (`tls-state` only), pass
+  `probe_args: {"subprobe":"http-state","subprobe-arg":"--max-body=4096 --method=POST"}`.
+  The whole nested argument string is one value; do not split it into
+  multiple top-level fields. `set-subprobe`/`set-subprobe-arg` are interactive
+  CLI conveniences, not MCP tools.
 - `explain_target` takes a single `target` string (comma-separated set, CIDR or
   range). `check` is the same route report for a target set.
 
@@ -70,7 +81,7 @@ nested under another `arguments` key). `start_scan` requires
   "scan": "tcp-syn",
   "targets": ["203.0.113.10"],
   "ports": [80, 443],
-  "rate": 1000,
+  "rate": 100,
   "timeout_sec": 300,
   "result_path": "./results/authorized-scan.ndjson",
   "chunk_size": 4194304,
@@ -129,7 +140,7 @@ The MCP argument buffer is 8 KiB, so use `include_file` for large sets:
 
 ```json
 {"scan":"tcp-syn","include_file":"./targets.txt","ports":[443],
- "rate":1000,"timeout_sec":600,"result_path":"./results/large.ndjson",
+ "rate":100,"timeout_sec":600,"result_path":"./results/large.ndjson",
  "authorized":true}
 ```
 

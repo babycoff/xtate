@@ -448,6 +448,7 @@ static void recogstate_close() {
 Probe RecogStateProbe = {
     .name       = "recog-state",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .hello_wait = 0,
     .params     = recogstate_parameters,
     .short_desc = "Try to match Recog fingerprints in stateful TCP scan.",

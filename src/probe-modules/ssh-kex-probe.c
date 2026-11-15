@@ -259,6 +259,7 @@ static unsigned ssh_kex_parse(DataPass *pass, ProbeState *state, OutConf *out,
 Probe SshKexProbe = {
     .name       = "ssh-kex",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .hello_wait = 0,
     .short_desc = "SSH curve25519 KEX with host-key SHA256 fingerprint.",
     .desc = "Perform an unauthenticated curve25519-sha256 SSH key exchange and "

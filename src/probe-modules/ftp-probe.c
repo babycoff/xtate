@@ -157,6 +157,7 @@ Probe FtpProbe = {
 Probe FtpStateProbe = {
     .name       = "ftp-state",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .hello_wait = 0,
     .short_desc = "FTP greeting and FEAT capability probe.",
     .params     = ftp_state_parameters,

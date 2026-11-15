@@ -227,6 +227,7 @@ Probe MongodbProbe = {
 Probe MongodbStateProbe = {
     .name       = "mongodb-state",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .hello_wait = 0,
     .short_desc = "MongoDB hello/BSON probe for tls-state composition.",
     .desc = "Stateful MongoDB OP_MSG hello probe. It can run directly over "

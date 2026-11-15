@@ -97,15 +97,18 @@ problem entirely.
 ## Scan modules
 
 A scan module's required probe type must match the selected probe, otherwise
-Xtate refuses to start. `none` means "no probe module".
+Xtate refuses to start. `none` means "no probe module". `state` is a shared
+stateful ABI with two transports: `tcp-state` accepts state probes declaring
+TCP support, while `quic-state` requires QUIC plus the `stream-data`
+capability. A probe that genuinely works on both can declare both transports.
 
 | Scan module | Probe type | Use |
 |:---|:---|:---|
 | `tcp-syn` | none | Stateless SYN scan; open/closed |
 | `zbanner` | tcp | Stateless handshake plus banner capture |
-| `tcp-state` | state | Stateful TCP with a real TCB (HLTCP) |
+| `tcp-state` | state (TCP) | Stateful TCP with a real TCB (HLTCP) |
 | `udp` | udp | Single-packet UDP scan |
-| `quic-state` | state | Stateful QUIC handshake (optional build) |
+| `quic-state` | state (QUIC + stream-data) | Stateful QUIC handshake (optional build) |
 | `icmp-echo` | none | ICMP echo reachability |
 | `icmp-time` | none | ICMP timestamp reachability |
 | `sctp-init` | none | SCTP INIT open/closed |
@@ -183,9 +186,10 @@ bounded per thread:
 | `--port-success` | off | Report open as success instead of info |
 | `--record-all-ttl/ipid/win/seqno/ackno/len` | off | Record fields from every segment |
 
-`tcp-state` is the only scan module that works with state probes such as
-`tls-state`, `http-state` or `get-state`. Choose it whenever you need a
-protocol conversation, not just a port verdict.
+`tcp-state` is the scan module for TCP state probes such as `tls-state`,
+`http-state` or `get-state` (the QUIC counterpart is `quic-state` with
+`http3-state`). Choose it whenever you need a protocol conversation, not just a
+port verdict.
 
 ### udp
 
@@ -243,8 +247,12 @@ version, ALPN and optionally the certificate:
 ## Probe modules
 
 Probes are only useful with a compatible scan module. A `tcp` probe works with
-`zbanner`; a `state` probe works with `tcp-state`; a `udp` probe works with
-`udp`. The probe type is printed by `--list-probe` and `--help-probe`.
+`zbanner`; a `udp` probe works with `udp`. A `state` probe declares which
+stateful transports it supports: `tcp-state` needs TCP, `quic-state` needs QUIC
+plus `stream-data`. `--help-probe` and `--list-modules-json` print the type and
+transport, and the GUI shows them as `TCP · stateful`, `QUIC · stateful` or
+`TCP/QUIC · stateful`. Xtate rejects an incompatible pair before sending
+anything.
 
 Probe groups (base list, 59 probes; a build with ngtcp2 adds an HTTP/3 probe
 for 60):
@@ -278,7 +286,7 @@ Options: `--no-record-status`, `--no-record-headers`, `--record-body`,
 
 ### tls-state
 
-Requires a state subprobe, OpenSSL and a stateful scan:
+Requires a TCP state subprobe, OpenSSL and a stateful scan:
 
 ```bash
 xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \

@@ -25,9 +25,10 @@ xtate -ip <targets> -p <ports> -scan <engine> [-probe <probe>] [args]
 |:---|:---|:---|
 | `tcp` | `zbanner`（以及无状态 TCP 扫描） | 一个请求、一个回复，无每目标状态 |
 | `udp` | `udp` | 一个数据报请求、一个数据报回复 |
-| `state` | `tcp-state`（HLTCP） | 带用户态 TCB 的完整 TCP/TLS 会话 |
+| `state（TCP）` | `tcp-state`（HLTCP） | 带用户态 TCB 的完整 TCP/TLS 会话 |
+| `state（QUIC + stream-data）` | `quic-state` | QUIC 握手与 HTTP/3 流探测 |
 
-不匹配是启动错误，不是静默回退：`ScanModule <name> needs probe of <type> type.`。用 `--list-probe` 查看每个探测的类型，用 `--help-probe <name>` 查看该探测接受的参数。探测专用参数以一个带引号的字符串传递：
+不匹配是启动错误，不是静默回退：`ScanModule <name> needs probe of <type> type.`。用 `--list-probe` 查看每个探测的类型，用 `--help-probe <name>` 查看其传输/能力要求及接受的参数。探测专用参数以一个带引号的字符串传递：
 
 ```bash
 -probe-arg "--sni example.com --alpn h2,http/1.1"
@@ -43,8 +44,8 @@ xtate -ip <targets> -p <ports> -scan <engine> [-probe <probe>] [args]
 |:---|:---|:---|:---|
 | HTTP/1.1 | `http`、`http-state` | `tcp`、`state` | 结构化状态/头部/正文元数据；有状态变体在 HLTCP 内 |
 | HTTP/2 | `h2c`、`h2` | `tcp`、`state` | `h2c` 是明文 prior knowledge；`h2` 在 `tls-state` 内以 ALPN `h2` 运行 |
-| HTTP/3 | `quic-state`（扫描）上的 `http3-state`（探测） | `state` | 仅 Linux + ngtcp2/GnuTLS |
-| QUIC 传输 | `quic`（能力）、`quic-state`（传输） | `udp`、`state` | `quic` 分类服务器的 Initial 响应；`quic-state` 完成握手 |
+| HTTP/3 | `quic-state`（扫描）上的 `http3-state`（探测） | `state`（QUIC + stream-data） | 仅 Linux + ngtcp2/GnuTLS |
+| QUIC 传输 | `quic`（能力）、`quic-state`（传输） | `udp`、`state`（QUIC + stream-data） | `quic` 分类服务器的 Initial 响应；`quic-state` 完成握手 |
 | TLS | `tls-state`、`tls-hello` | `state`、`tcp` | 证书、ALPN、SNI、版本、密码套件 |
 | JARM | `jarm` | `tcp` | Salesforce 1.0 TLS 指纹 |
 | DNS | `dns` | `udp` | UDP 上的明文 DNS |
@@ -152,7 +153,7 @@ target/source tuple
   -> raw socket / NetStack
   -> pcap receive -> strip IP/UDP
   -> ngtcp2_conn_read_pkt()           (TLS handshake, certificate)
-  -> state sub-probe (http3-state)
+  -> stream-data 探测（http3-state，HTTP/3 请求）
 ```
 
 流表有界，且在第一个里程碑中由一把全局互斥锁保护。把 `quic-state` 视为正确性优先的传输：它还称不上高速率基准目标。
@@ -174,11 +175,11 @@ sudo apt install libngtcp2-dev libngtcp2-crypto-gnutls-dev libgnutls28-dev
 xtate --list-scan | grep quic-state
 ```
 
-对 QUIC 端点做只取证书的探测：
+对 QUIC 端点做最小 HTTP/3 交互以获取证书证据（证书来自 QUIC 握手；`HEAD` 用于避免下载响应体）：
 
 ```bash
-sudo xtate -ip 192.0.2.10 -p U:443 -scan quic-state -probe close-state \
-  -scan-arg "--sni example.com" -show info
+sudo xtate -ip 192.0.2.10 -p U:443 -scan quic-state -probe http3-state \
+  -scan-arg "--sni example.com" -probe-arg "--method HEAD" -show info
 ```
 
 完整的 HTTP/3 请求：
@@ -338,7 +339,7 @@ sudo xtate -ip 203.0.113.10 -p 25 -scan tcp-state -probe tls-state \
 两个实用说明：
 
 - `tls-state` **默认不发送 SNI，也不发送 ALPN**。虚拟主机和 CDN 常常用默认证书/站点应答。知道主机名时传 `--sni`，并传你真正想要的 ALPN（`h2,http/1.1`、`dot` 等）。没有 SNI 时，把结果读作"默认虚拟主机"，而不是所请求的主机名。
-- `tls-state` 没有可用的默认子探测。始终传 `-subprobe` 加一个 state 类型探测，否则 TLS 会话会立即结束。
+- `tls-state` 没有可用的默认子探测。始终传 `-subprobe` 加一个 TCP state 类型探测，否则 TLS 会话会立即结束。
 
 ## 原始套接字、链路类型、TUN 与 fake-IP
 

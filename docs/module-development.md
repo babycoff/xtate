@@ -124,6 +124,45 @@ UDP response, and/or parse a response into an `OutItem`. The registry is
 All callbacks can run concurrently. They must be thread-safe for themselves.
 The stateless probe target is not modifiable; read it and copy anything needed.
 
+### State probes: transport and capability metadata
+
+`ProbeType_STATE` is the stateful callback ABI, not a transport. A state probe
+must also declare where it can run:
+
+```c
+Probe ExampleStateProbe = {
+    .name = "example-state",
+    .type = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,   /* or QUIC, or TCP|QUIC */
+    .capabilities = 0,                        /* optional capability mask */
+    ...
+};
+```
+
+Current transports are `ProbeTransport_TCP` and `ProbeTransport_QUIC`.
+`ProbeCapability_StreamData` marks a probe that implements the QUIC stream data
+callback; a QUIC-only application probe such as `http3-state` declares both
+`.state_transports = ProbeTransport_QUIC` and
+`.capabilities = ProbeCapability_StreamData`.
+
+The matching scan engine declares its requirement:
+
+```c
+Scanner ExampleStateScan = {
+    .required_probe_type = ProbeType_STATE,
+    .required_state_transports = ProbeTransport_TCP,
+    .required_probe_caps = 0,
+    ...
+};
+```
+
+`tcp-state` requires TCP; `quic-state` requires QUIC plus `stream-data`. A probe
+may declare `ProbeTransport_TCP | ProbeTransport_QUIC` when it genuinely works
+on both, so compatibility is a capability intersection rather than an exact
+probe-type match. CLI, interactive mode, MCP and GUI all call
+`probe_compatible_with_scanner()`; never duplicate this rule in a client. The
+GUI and `/api/modules` derive labels and filtering from the same fields.
+
 ### A minimal single-slot probe
 
 The complete version is [`examples/modules/tcp-probe.c`](../examples/modules/tcp-probe.c).

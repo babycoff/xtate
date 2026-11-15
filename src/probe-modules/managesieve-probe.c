@@ -118,6 +118,7 @@ Probe ManageSieveProbe = {
 Probe ManageSieveStateProbe = {
     .name       = "managesieve-state",
     .type       = ProbeType_STATE,
+    .state_transports = ProbeTransport_TCP,
     .hello_wait = 0,
     .short_desc = "ManageSieve capability greeting probe.",
     .params     = sieve_state_parameters,
