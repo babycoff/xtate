@@ -77,10 +77,12 @@ xtate -ip 192.0.2.10 -p U:443 -scan quic-state -probe close-state \
 xtate --list-scan | grep quic-state
 ```
 
-`quic-state` 要求 `state` 探测声明 QUIC 传输支持；应用层探针（`http3-state`）再声明 `stream-data`，`close-state` 只需握手。
-满足 QUIC 传输的探针有 `http3-state`（HTTP/3）和 `close-state`（握手后停止）。QUIC 握手会先记录证书/版本/ALPN 证据，再运行
-应用探测。`tls-state`、`http-state`、`close-state` 是 TCP state 探测，会被拒绝。
-未来真正同时支持两种传输的探测可以同时声明 TCP 和 QUIC。
+`quic-state` 要求 `state` 探测声明 QUIC 传输支持。`http3-state` 再声明
+`stream-data` 能力；`close-state` 只做握手，不需要 stream data。满足 QUIC
+传输的探针有 `http3-state`（HTTP/3）和 `close-state`（握手后停止）。QUIC
+握手会先记录证书/版本/ALPN 证据，再运行应用探测。`tls-state`、`http-state`
+是 TCP state 探测，会被拒绝。未来真正同时支持两种传输的探测可以同时声明 TCP
+和 QUIC。
 
 ## 参数
 

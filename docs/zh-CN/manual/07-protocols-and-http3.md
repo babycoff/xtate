@@ -154,6 +154,7 @@ target/source tuple
   -> pcap receive -> strip IP/UDP
   -> ngtcp2_conn_read_pkt()           (TLS handshake, certificate)
   -> stream-data 探测（http3-state，HTTP/3 请求）
+     或握手后停止（close-state）
 ```
 
 流表有界，且在第一个里程碑中由一把全局互斥锁保护。把 `quic-state` 视为正确性优先的传输：它还称不上高速率基准目标。

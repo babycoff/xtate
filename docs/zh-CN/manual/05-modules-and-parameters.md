@@ -142,7 +142,7 @@ xtate -ip 203.0.113.10 -p 443 -scan tcp-state -probe tls-state \
 | `--port-success` | 关 | 把开放端口报告为 success 而不是 info |
 | `--record-all-ttl/ipid/win/seqno/ackno/len` | 关 | 记录每个分段的字段 |
 
-`tcp-state` 是 TCP state 探测（`tls-state`、`http-state`、`get-state` 等）所用的扫描模块；QUIC 对应的是 `quic-state` 加 `http3-state`。只要需要协议会话而不只是端口判定，就选它。
+`tcp-state` 是 TCP state 探测（`tls-state`、`http-state`、`get-state` 等）所用的扫描模块；QUIC 对应的是 `quic-state` 加 `http3-state`（HTTP/3），或者加 `close-state`（只取握手证据）。只要需要协议会话而不只是端口判定，就选它。
 
 ### udp
 

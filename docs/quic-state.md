@@ -81,12 +81,13 @@ xtate -ip 192.0.2.10 -p U:443 -scan quic-state -probe close-state \
 xtate --list-scan | grep quic-state
 ```
 
-`quic-state` requires a `state` probe that declares QUIC transport support and
-the `stream-data` capability (`http3-state`). `close-state` is the handshake-only QUIC probe and does not need stream data.
-The QUIC handshake records certificate/version/ALPN evidence before the
-application probe runs. `tls-state`, `http-state` and `close-state` are TCP
-state probes and are rejected. A future probe that genuinely supports both
-transports can declare TCP and QUIC simultaneously.
+`quic-state` requires a `state` probe that declares QUIC transport support.
+`http3-state` additionally declares the `stream-data` capability; `close-state`
+is the handshake-only probe and needs no stream data. The QUIC handshake records
+certificate/version/ALPN evidence before the application probe runs.
+`tls-state` and `http-state` are TCP state probes and are rejected. A future
+probe that genuinely supports both transports can declare TCP and QUIC
+simultaneously.
 
 ## Options
 

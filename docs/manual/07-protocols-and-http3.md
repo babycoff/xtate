@@ -202,6 +202,7 @@ target/source tuple
   -> pcap receive -> strip IP/UDP
   -> ngtcp2_conn_read_pkt()           (TLS handshake, certificate)
   -> stream-data probe (http3-state, HTTP/3 request)
+     or stop after the handshake (close-state)
 ```
 
 The flow table is bounded and guarded by one global mutex in the first

@@ -188,8 +188,8 @@ bounded per thread:
 
 `tcp-state` is the scan module for TCP state probes such as `tls-state`,
 `http-state` or `get-state` (the QUIC counterpart is `quic-state` with
-`http3-state`). Choose it whenever you need a protocol conversation, not just a
-port verdict.
+`http3-state` for HTTP/3, or `close-state` for handshake evidence). Choose it
+whenever you need a protocol conversation, not just a port verdict.
 
 ### udp
 

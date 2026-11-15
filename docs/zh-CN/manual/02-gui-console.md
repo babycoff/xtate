@@ -71,7 +71,7 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 | `zbanner` | TCP | `http`、`echo`、`ssh` |
 | `tcp-state` | state | `tls-state`、`http-state`、`smtp-state` |
 | `udp` | UDP | `dns`、`snmp`、`ntp` |
-| `quic-state`（可选，Linux） | state | `http3-state`（可选） |
+| `quic-state`（可选，Linux） | state | `http3-state`（HTTP/3）或 `close-state`（仅握手） |
 | `tcp-syn`、`sctp-init`、`yarrp-udp` | 无 | — |
 
 `quic-state` 不会提供 `tls-state`（后者只适用于 TCP/TLS）；`tcp-state` 不会
