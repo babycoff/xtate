@@ -61,6 +61,24 @@ Scanner *get_scan_module_by_name(const char *name) {
 
 #define printf i18n_printf
 
+static void print_scan_attributes(const Scanner *module) {
+    char tbuf[32];
+
+    printf("    %s%s", i18n_tr("type: "),
+           module->required_probe_type == ProbeType_NULL
+               ? i18n_tr("none")
+               : get_probe_type_i18n_name(module->required_probe_type));
+    if (module->required_probe_type == ProbeType_STATE) {
+        printf("; %s%s", i18n_tr("transport required: "),
+               get_probe_transport_name(module->required_state_transports,
+                                        tbuf, sizeof(tbuf)));
+        if (module->required_probe_caps & ProbeCapability_StreamData) {
+            printf("; %sstream-data", i18n_tr("capability required: "));
+        }
+    }
+    printf("\n");
+}
+
 void list_searched_scan_modules(const char *name) {
     int len = (int)(ARRAY_SIZE(scan_modules_list)) - 1;
     int distance;
@@ -77,6 +95,7 @@ void list_searched_scan_modules(const char *name) {
                        scan_modules_list[i]->short_desc
                            ? scan_modules_list[i]->short_desc
                            : scan_modules_list[i]->desc));
+            print_scan_attributes(scan_modules_list[i]);
         }
     }
 }
@@ -88,6 +107,7 @@ void list_all_scan_modules() {
 
     for (int i = 0; i < len; i++) {
         printf("  %d.%s\n", i + 1, scan_modules_list[i]->name);
+        print_scan_attributes(scan_modules_list[i]);
         printf("    %s\n", i18n_tr_module_desc(scan_modules_list[i]->name, scan_modules_list[i]->short_desc ? scan_modules_list[i]->short_desc : scan_modules_list[i]->desc));
         printf("\n");
     }
@@ -102,7 +122,12 @@ void help_scan_module(Scanner *module) {
     printf("\n");
     printf("  %s%s\n", i18n_tr("Name of ScanModule:  "), module->name);
     printf("  %s%s\n", i18n_tr("Probe Type Required: "),
-           get_probe_type_name(module->required_probe_type));
+           module->required_probe_type == ProbeType_NULL
+               ? i18n_tr("none")
+               : get_probe_type_i18n_name(module->required_probe_type));
+    if (module->required_probe_type == ProbeType_NULL) {
+        printf("  %s\n", i18n_tr("This scan module does not accept a probe."));
+    }
     if (module->required_probe_type == ProbeType_STATE) {
         char tbuf[32];
         printf("  %s%s\n", i18n_tr("Probe Transport Required: "),
@@ -111,6 +136,13 @@ void help_scan_module(Scanner *module) {
     }
     if (module->required_probe_caps & ProbeCapability_StreamData) {
         printf("  %sstream-data\n", i18n_tr("Probe Capability Required: "));
+        printf("  %s\n", i18n_tr(
+                   "The probe must consume decrypted application stream data "
+                   "after the handshake."));
+    }
+    if (module->required_probe_type == ProbeType_STATE) {
+        printf("  %s\n", i18n_tr(
+                   "Accepted probes must declare this state transport."));
     }
     printf("  %s", i18n_tr("Default BPF Filter:\n"));
     xprint(module->bpf_filter ? module->bpf_filter : "null", 6, 80);

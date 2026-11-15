@@ -81,6 +81,11 @@ known values (`lang`, output levels, flags), module names and file paths
 (including `conf-save`/`conf-read`). After selecting a module, the
 `*-module-args` parameters complete that module's `--options`.
 
+`list-scan` and `list-probe` print a compact metadata line after each name:
+probe type, state transport and `stream-data` capability where applicable.
+`help-scan` and `help-probe` explain what the scan accepts and whether a probe
+consumes an application stream.
+
 ## Scan/probe compatibility and check
 
 `set-scan` clears an incompatible probe and prints a warning; `set-probe`

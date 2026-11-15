@@ -70,6 +70,22 @@ run_fail "negative rate" --rate -1 --list-probe
 
 # Existing module/help paths should remain usable without a scan.
 run_ok "list probes" --list-probe
+if ! "$BIN" --list-probe 2>/dev/null | grep -q '^    type: tcp$'; then
+    echo "FAIL: list probes missing type metadata" >&2
+    fail=$((fail + 1))
+fi
+if ! "$BIN" --list-probe 2>/dev/null | grep -q '^    type: state; transport: TCP'; then
+    echo "FAIL: list probes missing state transport metadata" >&2
+    fail=$((fail + 1))
+fi
+if ! "$BIN" --list-scan 2>/dev/null | grep -q '^    type: state; transport required: TCP'; then
+    echo "FAIL: list scans missing required transport metadata" >&2
+    fail=$((fail + 1))
+fi
+if ! "$BIN" --help-probe close-state 2>/dev/null | grep -q 'State Transport: TCP/QUIC'; then
+    echo "FAIL: close-state help missing dual transport" >&2
+    fail=$((fail + 1))
+fi
 run_ok "rate equals form" --rate=100 --list-probe
 run_ok "rate colon form" --rate:100 --list-probe
 run_ok "rate fractional" --rate=0.5 --list-probe

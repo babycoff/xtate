@@ -204,6 +204,21 @@ const char *get_probe_type_name(const ProbeType type) {
     }
 }
 
+const char *get_probe_type_i18n_name(const ProbeType type) {
+    switch (type) {
+        case ProbeType_NULL:
+            return i18n_tr("null");
+        case ProbeType_TCP:
+            return i18n_tr("tcp");
+        case ProbeType_UDP:
+            return i18n_tr("udp");
+        case ProbeType_STATE:
+            return i18n_tr("state");
+        default:
+            return "";
+    }
+}
+
 const char *get_probe_transport_name(unsigned transports, char *buf,
                                      size_t buf_len) {
     if (transports == ProbeTransport_TCP)
@@ -303,6 +318,22 @@ int probe_type_to_string(unsigned type, char *string, size_t str_len) {
 
 #define printf i18n_printf
 
+static void print_probe_attributes(const Probe *module) {
+    char tbuf[32];
+
+    printf("    %s%s", i18n_tr("type: "),
+           get_probe_type_i18n_name(module->type));
+    if (module->type == ProbeType_STATE) {
+        printf("; %s%s", i18n_tr("transport: "),
+               get_probe_transport_name(module->state_transports, tbuf,
+                                        sizeof(tbuf)));
+        if (module->capabilities & ProbeCapability_StreamData) {
+            printf("; %sstream-data", i18n_tr("capability: "));
+        }
+    }
+    printf("\n");
+}
+
 void list_searched_probe_modules(const char *name) {
     int len = (int)(ARRAY_SIZE(probe_modules_list)) - 1;
     int distance;
@@ -319,6 +350,7 @@ void list_searched_probe_modules(const char *name) {
                        probe_modules_list[i]->short_desc
                            ? probe_modules_list[i]->short_desc
                            : probe_modules_list[i]->desc));
+            print_probe_attributes(probe_modules_list[i]);
         }
     }
 }
@@ -330,6 +362,7 @@ void list_all_probe_modules() {
 
     for (int i = 0; i < len; i++) {
         printf("  %d.%s\n", i + 1, probe_modules_list[i]->name);
+        print_probe_attributes(probe_modules_list[i]);
         printf("    %s\n", i18n_tr_module_desc(probe_modules_list[i]->name, probe_modules_list[i]->short_desc ? probe_modules_list[i]->short_desc : probe_modules_list[i]->desc));
         printf("\n");
     }
@@ -344,7 +377,7 @@ void help_probe_module(Probe *module) {
     printf("\n");
     printf("  %s%s\n", i18n_tr("ProbeModule Name: "), module->name);
     printf("  %s%s\n", i18n_tr("ProbeModule Type: "),
-           get_probe_type_name(module->type));
+           get_probe_type_i18n_name(module->type));
     if (module->type == ProbeType_STATE) {
         char tbuf[32];
         printf("  %s%s\n", i18n_tr("State Transport: "),
@@ -353,6 +386,13 @@ void help_probe_module(Probe *module) {
     }
     if (module->capabilities & ProbeCapability_StreamData) {
         printf("  %sstream-data\n", i18n_tr("Probe Capability: "));
+        printf("  %s\n", i18n_tr(
+                   "stream-data: the scan passes decrypted application stream "
+                   "data to this probe after the handshake."));
+    } else if (module->type == ProbeType_STATE) {
+        printf("  %s\n", i18n_tr(
+                   "No stream-data capability: this probe stops at the "
+                   "handshake and does not consume application data."));
     }
     printf("  %s%u\n", i18n_tr("Slot count: "),
            probe_slot_count(module));

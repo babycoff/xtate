@@ -101,7 +101,10 @@ The GUI is scan-first: the default page is **New scan**, not a job table.
   derived from `probe_type`, the engine's required state transports and the
   probe's declared capabilities: `quic-state` offers QUIC state probes such as `http3-state` (HTTP/3) and `close-state` (handshake-only), while `tcp-state` offers TCP state probes and never `http3-state`. The GUI does not hard-code individual probe names. The
   same metadata drives the `TCP · stateful`, `QUIC · stateful` and
-  `TCP/QUIC · stateful` badges. Rate, timeout and an optional interface are set
+  `TCP/QUIC · stateful` badges, plus a `stream-data` capability badge for
+  probes that consume decrypted application bytes after the handshake
+  (`http3-state`). `close-state` needs only the handshake and therefore has no
+  `stream-data` badge. Rate, timeout and an optional interface are set
   here. The GUI rate field is capped at 10000 for interface stability only; it
   is not an Xtate limit. The CLI, control plane and MCP accept fractional rates
   such as `0.5` and multi-million rates.

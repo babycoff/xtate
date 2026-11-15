@@ -77,6 +77,8 @@ xtate --control-connect=/tmp/xtate-ctl.sock --gui
 `quic-state` 不会提供 `tls-state`（后者只适用于 TCP/TLS）；`tcp-state` 不会
 提供 `http3-state`（后者只用于 QUIC）。后端会拒绝这两种组合。state 探测卡片会
 根据模块元数据标出 `TCP · 有状态`、`QUIC · 有状态` 或 `TCP/QUIC · 有状态`；
+如果探针需要在握手后读取解密的应用层字节（`http3-state`），还会显示
+`stream-data` 能力标签，只做握手的 `close-state` 不显示该标签。
 GUI 与后端使用同一套传输/能力检查，所以即使改页面也不能启动不兼容组合。
 
 速率单位是包/秒（GUI 输入框 1–10000，默认 100）。10000 只是 GUI 的输入安全限制，不是 Xtate 的限制：CLI、控制面和 MCP 接受 `0.5` 这类小数和每秒数百万包的速率。持续高速扫描请使用 CLI。超时是总的墙钟时限，单位秒（1–86400，默认 300）。输出固定为带结果 manifest 的 NDJSON；控制台不选择输出模块。

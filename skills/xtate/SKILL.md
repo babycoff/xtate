@@ -38,7 +38,10 @@ result paths.
   (`tls-state`, `http-state`, `close-state`, …); `quic-state` needs a QUIC
   state probe (`http3-state` for HTTP/3, `close-state` for handshake-only). `list_modules` and
   `describe_probe` expose `required_state_transports`, `state_transports` and
-  `capabilities`; `preflight`/`validate_config` reject mismatches.
+  `capabilities`; `preflight`/`validate_config` reject mismatches. A
+  `stream-data` capability means the probe reads decrypted application bytes
+  after the handshake; `close-state` has no such capability, while
+  `http3-state` does.
 - For a TCP state probe with a nested subprobe (`tls-state` only), pass
   `probe_args: {"subprobe":"http-state","subprobe-arg":"--max-body=4096 --method=POST"}`.
   The whole nested argument string is one value; do not split it into

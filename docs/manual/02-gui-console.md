@@ -108,8 +108,11 @@ the engine's probe type, state transport and capabilities:
 | `tcp-syn`, `sctp-init`, `yarrp-udp` | none | — |
 
 State cards show `TCP · stateful`, `QUIC · stateful` or `TCP/QUIC · stateful`
-from module metadata. The GUI and backend use the same transport/capability
-check, so an incompatible choice cannot be started by editing the page.
+from module metadata. A probe that consumes decrypted application bytes after
+the handshake also gets a `stream-data` badge (`http3-state`); a handshake-only
+probe such as `close-state` does not. The GUI and backend use the same
+transport/capability check, so an incompatible choice cannot be started by
+editing the page.
 `quic-state` never offers `tls-state` or other TCP state probes; `tcp-state`
 never offers `http3-state` or other QUIC-only probes. The backend rejects all
 such combinations.

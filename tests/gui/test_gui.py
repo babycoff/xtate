@@ -133,6 +133,7 @@ def main():
         if ('id="subprobe"' not in text or "collectProbeArgs" not in text
                 or "probeHasSubprobe" not in text
                 or "probeMatchesScan" not in text
+                or "capabilityLabel" not in text
                 or "transportLabel" not in text
                 or '"TCP · 有状态"' not in text
                 or '"TCP/QUIC · 有状态"' not in text

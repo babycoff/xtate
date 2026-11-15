@@ -78,6 +78,10 @@ exit                 不保存直接退出
 （包括 `conf-save`/`conf-read`）。选择模块后，`*-module-args` 会补全该模块的
 `--options`。
 
+`list-scan` 和 `list-probe` 会在每个模块名后打印一行紧凑元数据：探测类型、
+有状态传输，以及适用时的 `stream-data` 能力。`help-scan` 和 `help-probe`
+会说明扫描模块接受什么探测，以及探测是否读取应用层数据流。
+
 ## 扫描/探测兼容性与 check
 
 `set-scan` 会清除不兼容的探测并打印警告；`set-probe` 会拒绝当前扫描引擎无法承载的探测。这与 CLI/MCP 的校验一致，包括 `quic-state`/`tls-state` 和 `tcp-state`/`http3-state` 的限制。

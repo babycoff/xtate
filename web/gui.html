@@ -386,6 +386,7 @@ textarea { font-size: 13.5px; line-height: 1.5; }
 .module-detail .long { margin: 0 0 10px; color: var(--muted); font-size: 13px; line-height: 1.65; white-space: pre-wrap; }
 .module-head .kind { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
 .probe-type { padding: 2px 7px; border: 1px solid rgba(11,107,83,.28); border-radius: 999px; color: var(--mint); font-size: 10px; font-weight: 700; letter-spacing: .08em; }
+.probe-type + .probe-type { margin-left: 5px; }
 .module-meta { margin: 0 0 8px; color: var(--faint); font-size: 12px; }
 .module-meta b { color: var(--text); font-weight: 600; }
 .param-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
@@ -764,6 +765,8 @@ Object.assign(ZH, {
   "Module parameters": "模块参数",
   "No modules match.": "没有匹配的模块。",
   "Probe type": "探针类型",
+  "Capability": "能力",
+  "stream-data": "stream-data",
   "TCP · stateful": "TCP · 有状态",
   "UDP · stateful": "UDP · 有状态",
   "QUIC · stateful": "QUIC · 有状态",
@@ -1306,21 +1309,33 @@ function probeTypeLabel(m) {
   return "";
 }
 
+function capabilityLabel(m) {
+  if (!m) return "";
+  const caps = m.kind === "scan" ? m.required_capabilities : m.capabilities;
+  return (caps || []).includes("stream-data") ? "stream-data" : "";
+}
+
 function moduleCard(m) {
   const params = m.parameters || [];
   const expanded = state.expandedModules && state.expandedModules.has(m.name);
+  const capLabelText = capabilityLabel(m);
   const search = (m.name + " " + (m.short_description || "") + " " + (m.description || "") + " " +
+    (capLabelText || "") + " " +
     params.map((p) => p.name + " " + (p.description || "") + " " + (p.aliases || []).join(" ")).join(" ")).toLowerCase();
   const probeLabel = probeTypeLabel(m);
   const probeBadge = probeLabel ? '<span class="probe-type">' + esc(probeLabel) + "</span>" : "";
-  const meta = probeLabel ? '<div class="module-meta">' + t("Probe type") + ": <b>" + esc(probeLabel) + "</b></div>" : "";
+  const capBadge = capLabelText ? '<span class="probe-type">' + esc(t(capLabelText)) + "</span>" : "";
+  const metaParts = [];
+  if (probeLabel) metaParts.push(t("Probe type") + ": <b>" + esc(probeLabel) + "</b>");
+  if (capLabelText) metaParts.push(t("Capability") + ": <b>" + esc(t(capLabelText)) + "</b>");
+  const meta = metaParts.length ? '<div class="module-meta">' + metaParts.join(" · ") + "</div>" : "";
   const rows = params.map((p) => '<tr><td class="name">' + esc(p.name) + '</td><td class="mono">' + esc(p.type || "arg") +
     '</td><td class="desc">' + esc(p.description || t("No parameter description.")) +
     ((p.aliases || []).length ? '<div class="mono" style="font-size:10px;margin-top:2px">' + t("Aliases") + ': ' + esc(p.aliases.join(", ")) + '</div>' : "") +
     "</td></tr>").join("");
   return '<article class="module-card ' + (expanded ? "expanded" : "") + '" data-module-text="' + esc(search) + '">' +
     '<div class="module-head" data-expand="' + esc(m.name) + '" role="button" tabindex="0" aria-expanded="' + (expanded ? "true" : "false") + '">' +
-      '<div><div class="kind"><span>' + esc(moduleKindLabel(m.kind)) + "</span>" + probeBadge + '</div><h3>' + esc(m.name) + "</h3></div>" +
+      '<div><div class="kind"><span>' + esc(moduleKindLabel(m.kind)) + "</span>" + probeBadge + capBadge + '</div><h3>' + esc(m.name) + "</h3></div>" +
       '<span class="module-arrow">›</span></div>' +
     '<p>' + esc(m.short_description || m.description || "") + "</p>" +
     (params.length ? '<div class="desc mono">' + params.length + " " + t("Parameters").toLowerCase() + " · " + esc(params.slice(0, 6).map((p) => p.name).join(", ")) + (params.length > 6 ? " +" + (params.length - 6) : "") + "</div>" : '<div class="desc mono">' + t("No parameter description.") + "</div>") +

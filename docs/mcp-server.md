@@ -209,6 +209,13 @@ to verify it.
 - A stateful scan/probe pair must agree on transport: `tcp-state` accepts TCP
   state probes, while `quic-state` accepts QUIC state probes; `http3-state` declares the additional `stream-data` capability for HTTP/3, and `close-state` needs only QUIC and stops after the handshake. `validate_config` and
   `start_scan` reject incompatible pairs before any packet is sent.
+- Module metadata separates the three properties: `probe_type` is the calling
+  convention (`tcp`/`udp`/`state`), `state_transports` (probe) or
+  `required_state_transports` (scan) is the TCP/QUIC transport, and
+  `capabilities`/`required_capabilities` lists `stream-data` only when the
+  probe consumes decrypted application bytes. `list_modules` and
+  `describe_probe` return these fields; `close-state` declares both transports
+  with no capability, while `http3-state` declares QUIC plus `stream-data`.
 - Inline `targets` are limited to 20000 array entries; port values must be 0-65535.
 - `rate` accepts any positive number, including fractional values such as `0.5` (one packet every two seconds) and millions of packets per second; when omitted, the worker uses the default of 100 packets per second. The browser GUI caps the field at 10000 for interface stability only; that is not an engine or MCP limit.
 - `result_path` is probed for writability before the job starts.

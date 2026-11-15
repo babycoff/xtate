@@ -281,6 +281,7 @@ static inline bool probe_slot_plan_valid(const Probe *probe) {
 Probe *get_probe_module_by_name(const char *name);
 
 const char *get_probe_type_name(const ProbeType type);
+const char *get_probe_type_i18n_name(const ProbeType type);
 
 const char *get_probe_transport_name(unsigned transports, char *buf,
                                      size_t buf_len);

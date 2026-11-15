@@ -183,6 +183,7 @@ include 文件发现路由尚未实现，服务不会声称已经校验。
 
 - `scan` 必须是已注册的扫描模块；`probe` 必须是已注册的探测模块。
 - 有状态扫描模块与探测模块必须传输匹配：`tcp-state` 接受 TCP state 探测；`quic-state` 接受 QUIC state 探测：`http3-state` 额外声明 `stream-data` 能力用于 HTTP/3，`close-state` 只需 QUIC 传输并在握手后停止。`validate_config` 和 `start_scan` 会在发送任何报文前拒绝不兼容的组合。
+- 模块元数据把三个属性分开：`probe_type` 是调用约定（`tcp`/`udp`/`state`），探测的 `state_transports` 或扫描的 `required_state_transports` 是 TCP/QUIC 传输，`capabilities`/`required_capabilities` 只在探测读取解密后的应用层字节时包含 `stream-data`。`list_modules` 和 `describe_probe` 会返回这些字段；`close-state` 声明两种传输但没有能力，`http3-state` 声明 QUIC + `stream-data`。
 - 内联 `targets` 最多 20000 个数组元素；端口必须在 0-65535。
 - `rate` 接受任意正数，包括 `0.5` 这样的小数（两秒一个包）和每秒数百万包；省略时工作进程使用默认值 100 包/秒。浏览器 GUI 为了界面稳定性把输入限制在 10000，这不是引擎或 MCP 的限制。
 - 启动前会探测 `result_path` 是否可写。

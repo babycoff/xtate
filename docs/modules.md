@@ -52,6 +52,26 @@ probes that declare TCP support (for example `tls-state`, `http-state`,
 `state_transports` and `capabilities`, and Xtate rejects an incompatible pair
 before sending any packet.
 
+The three properties are deliberately separate:
+
+- **Probe type** (`tcp`, `udp`, `state`) is the calling convention. It decides
+  whether the probe reads raw packets, a UDP datagram, or a stateful stream.
+- **State transport** (`TCP`, `QUIC`) is only meaningful for `state` probes. It
+  says which stateful scan engine can host the probe.
+- **Capability** (`stream-data`) says the probe consumes decrypted application
+  bytes after the handshake. A state probe without it stops at the handshake.
+
+For example, `tls-state` is `state` + TCP + no `stream-data`; `http3-state` is
+`state` + QUIC + `stream-data`; `close-state` is `state` + TCP/QUIC + no
+`stream-data`, so it can close either kind of handshake without reading an
+application stream.
+
+```text
+type: state; transport: TCP; capability: -            # tls-state
+type: state; transport: QUIC; capability: stream-data # http3-state
+type: state; transport: TCP/QUIC; capability: -       # close-state
+```
+
 Typical stateful pairs:
 
 ```sh
@@ -365,8 +385,10 @@ from their own sub-parameters and use the global target options only where noted
 - Name matching is forgiving: case and `-`, `_`, `.` are ignored, so `tls_state` selects
   `tls-state`. `--search-module <text>` fuzzy-searches all four registries.
 - `--list-scan`, `--list-probe`, `--list-out`, `--list-gen` print the registry in order with
-  a one-line description; `--help-<kind> <name>` prints type, slot plan and
-  the module's own parameter table.
+  a compact attribute line and one-line description; for scan/probe modules the
+  attribute line shows the probe type, state transport and `stream-data`
+  capability. `--help-<kind> <name>` explains the accepted probe shape, slot
+  plan and the module's own parameter table.
 - Optional dependencies change the inventory. A build without OpenSSL has no `jarm`,
   `tls-state`, `quic` or `ssh-kex`; without ngtcp2/GnuTLS there is no `quic-state`
   scan and no `http3-state` probe; without PCRE2 there is no `hello-udp`, `recog*` or

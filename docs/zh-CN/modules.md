@@ -37,6 +37,20 @@ xtate --help-gen blackrock
 
 `state` 是共享的有状态 ABI，按传输区分。`tcp-state` 只接受声明 TCP 支持的 state 探测（如 `tls-state`、`http-state`、`close-state`）；`quic-state` 接受声明 QUIC 支持的 state 探测：`http3-state`（HTTP/3）或 `close-state`（仅握手）。模块 JSON 会输出 `state_transports` 和 `capabilities`；不兼容的组合在发送任何报文前就会被拒绝。
 
+这三个属性是刻意分开的：
+
+- **探测类型**（`tcp`、`udp`、`state`）是调用约定，决定探测读取原始报文、UDP 数据报，还是有状态流。
+- **有状态传输**（`TCP`、`QUIC`）只对 `state` 探测有意义，表示哪个有状态扫描引擎可以承载它。
+- **能力**（`stream-data`）表示探测会在握手后读取解密后的应用层字节；没有该能力的有状态探测在握手处停止。
+
+例如 `tls-state` 是 `state` + TCP、无 `stream-data`；`http3-state` 是 `state` + QUIC + `stream-data`；`close-state` 是 `state` + TCP/QUIC、无 `stream-data`，因此可以在两种握手后直接关闭，不读取应用层流。
+
+```text
+type: state; transport: TCP; capability: -          # tls-state
+type: state; transport: QUIC; capability: stream-data # http3-state
+type: state; transport: TCP/QUIC; capability: -     # close-state
+```
+
 常见的有状态组合：
 
 ```sh
@@ -315,7 +329,7 @@ Lua 在运行期加载；如果没有可用的 Lua 共享库，这些探测仍�
 ## 找到合适的模块
 
 - 名称匹配比较宽容：大小写以及 `-`、`_`、`.` 都会被忽略，所以 `tls_state` 能选中 `tls-state`。`--search-module <text>` 会在四个注册表中做模糊搜索。
-- `--list-scan`、`--list-probe`、`--list-out`、`--list-gen` 按顺序打印注册表并附一行描述；`--help-<kind> <name>` 打印类型、多探测模式、数量以及模块自己的参数表。
+- `--list-scan`、`--list-probe`、`--list-out`、`--list-gen` 按顺序打印注册表，并为扫描/探测模块附一行紧凑属性（探测类型、状态传输、`stream-data` 能力）和一行描述；`--help-<kind> <name>` 会解释可接受的探测形态、多探测模式、数量以及模块自己的参数表。
 - 可选依赖会改变清单。没有 OpenSSL 的构建没有 `jarm` 或 `tls-state`；没有 PCRE2 就没有 `hello-udp`、`recog*` 或 `nmap*`；没有 libbson / libmongoc 就没有 `bson` / `mongodb` 输出；带 Lua 支持的构建仍会列出 `lua-tcp` / `lua-udp`，但缺少共享库时它们会在启动阶段失败。Recog 还需要 libxml2 才能加载指纹文件。
 
 ## 参见

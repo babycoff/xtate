@@ -116,7 +116,7 @@ JSON 控制 API。scan/probe 参数可在 Method 面板中编辑。探针列表�
 扫描引擎要求的传输类型和探针声明的能力共同决定：`quic-state` 只列出
 QUIC state 探针（如 `http3-state`，以及只做握手的 `close-state`），`tcp-state` 只列出 TCP 有状态探针，
 不会出现 `http3-state`。GUI 不再硬编码具体探针名称；同一份元数据还驱动
-`TCP · 有状态`、`QUIC · 有状态`、`TCP/QUIC · 有状态` 标签。选中的探针支持嵌套探针时
+`TCP · 有状态`、`QUIC · 有状态`、`TCP/QUIC · 有状态` 标签；如果探针需要在握手后读取解密的应用层字节（`http3-state`），还会显示 `stream-data` 能力标签，只做握手的 `close-state` 不显示该标签。选中的探针支持嵌套探针时
 （`tls-state` 支持），会出现 **子探针 / Subprobe** 选择器，其参数显示在选择器下方。
 选择器只列出 TCP 类型的有状态探针，UDP 探针、QUIC 专用探针、`tls-state` 本身
 都会被排除。选择器默认不启用子探针，因此普通 TLS 扫描的行为不变；只有需要在 TLS

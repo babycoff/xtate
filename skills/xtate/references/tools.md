@@ -36,8 +36,8 @@ pages, never as the whole result set.
 |---|---|---|
 | `capabilities` | none | version, platform, module counts, HTTP/3/QUIC and raw-socket availability |
 | `iface.list` | none | capture interfaces with addresses, MAC, gateway, default flag, link type and raw-IP capability |
-| `list_modules` | none | scan, probe, output and generate module metadata |
-| `describe_probe` | `{"name":"tls-hello"}` | module parameters, probe type, description |
+| `list_modules` | none | scan, probe, output and generate module metadata, including probe type, state transports and capabilities |
+| `describe_probe` | `{"name":"tls-hello"}` | module parameters, probe type, state transports, capabilities, description |
 | `explain_target` | `{"target":"203.0.113.10"}` | targets, route groups, interface, source, gateway, samples |
 | `check` | `{"target":"203.0.113.0/24"}` | same route report plus link capability; firewall rules are a separate resource |
 | `preflight` | `{"config":{...scan request...}}` | packet-free target/port count, routes, link type, module pairing, errors/warnings |
@@ -45,6 +45,13 @@ pages, never as the whole result set.
 
 `target` is one string: a single address, CIDR, range, or comma-separated set.
 Do not pass a JSON array. `route_groups > 1` means split the job.
+
+For module metadata, `probe_type` is the calling convention (`tcp`, `udp`,
+`state`); `state_transports`/`required_state_transports` is the TCP/QUIC
+transport; `capabilities`/`required_capabilities` contains `stream-data` only
+when the probe consumes decrypted application bytes after the handshake.
+`close-state` declares TCP and QUIC with no capability; `http3-state` declares
+QUIC plus `stream-data`.
 
 ## Job tools
 
