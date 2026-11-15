@@ -96,7 +96,7 @@ jobs:
           if-no-files-found: error
 
   publish:
-    name: Publish GitHub pre-release
+    name: Publish GitHub release
     needs: [linux, windows]
     runs-on: ubuntu-24.04
     steps:
@@ -109,11 +109,18 @@ jobs:
           find release-assets -type f -exec cp {} . \;
           ls -la
 
+      - name: Prepare release notes
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          test -f "docs/release-notes/${VERSION}.md"
+          cp "docs/release-notes/${VERSION}.md" release-body.md
+
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           prerelease: ${{ contains(github.ref_name, '-rc') }}
-          generate_release_notes: true
+          generate_release_notes: false
+          body_path: release-body.md
           files: |
             *.zip
             *.tar.gz
